@@ -2,15 +2,15 @@
 
 /* ── Variables ── */
 :root {
-  --black: #0a0a0a;
-  --dark: #111111;
-  --card-bg: #1a1a1a;
-  --gold: #c9a96e;
-  --gold-light: #dfc08a;
-  --gold-dark: #a8843e;
-  --white: #f5f0eb;
-  --muted: #888880;
-  --border: rgba(201, 169, 110, 0.2);
+  --black: #0f0612;
+  --dark: #190e20;
+  --card-bg: #221430;
+  --gold: #ff2d78;
+  --gold-light: #ff5c95;
+  --gold-dark: #cc1459;
+  --white: #fff0f7;
+  --muted: #a08898;
+  --border: rgba(255, 45, 120, 0.2);
   --font-heading: 'Playfair Display', Georgia, serif;
   --font-body: 'Inter', system-ui, sans-serif;
   --radius: 4px;
@@ -193,13 +193,13 @@ p { color: rgba(245, 240, 235, 0.75); }
 .hero-bg {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a1208 50%, #0a0a0a 100%);
+  background: linear-gradient(135deg, #0f0612 0%, #2a0a2e 40%, #3d0a28 70%, #0f0612 100%);
 }
 .hero-bg::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at center, rgba(201, 169, 110, 0.08) 0%, transparent 70%);
+  background: radial-gradient(ellipse at 60% 40%, rgba(255, 45, 120, 0.15) 0%, transparent 65%);
 }
 .hero-content { position: relative; z-index: 1; max-width: 800px; }
 .hero-eyebrow {
@@ -319,7 +319,7 @@ p { color: rgba(245, 240, 235, 0.75); }
 .page-hero {
   padding: 10rem 5% 5rem;
   text-align: center;
-  background: linear-gradient(180deg, rgba(201, 169, 110, 0.05) 0%, transparent 100%);
+  background: linear-gradient(180deg, rgba(255, 45, 120, 0.07) 0%, transparent 100%);
   border-bottom: 1px solid var(--border);
 }
 .page-hero .section-label { display: block; margin-bottom: 0.75rem; }
