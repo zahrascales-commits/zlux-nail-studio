@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Book an Appointment — ZLUX Nail Studio</title>
+  <meta name="description" content="Book your ZLUX Nail Studio appointment online. Choose your service, pick a date and time, and confirm in minutes." />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="index.html" class="nav-logo">ZLUX</a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="services.html">Services</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="contact.html">Contact</a></li>
+      <li><a href="booking.html" class="btn btn-outline nav-cta">Book Now</a></li>
+    </ul>
+    <button class="nav-toggle" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <div class="page-hero">
+    <span class="section-label">Reserve Your Moment</span>
+    <h1>Book an Appointment</h1>
+    <span class="gold-line" style="margin:1.5rem auto;"></span>
+    <p style="color:rgba(245,240,235,0.6);max-width:420px;margin:0 auto;">Choose your service, pick a time, and we'll take care of the rest.</p>
+  </div>
+
+  <section class="section">
+
+    <!-- Confirmation (hidden until booking succeeds) -->
+    <div id="confirmation-box" class="confirmation-box">
+      <div class="confirmation-icon">&#10003;</div>
+      <h2>You're Booked!</h2>
+      <p>Thank you, <strong id="conf-name"></strong>. Your appointment is confirmed.</p>
+      <p class="confirmation-id" id="conf-id"></p>
+      <p style="font-size:0.85rem;margin:1.5rem 0;">We'll be in touch with any updates. See you soon.</p>
+      <a href="index.html" class="btn btn-outline" style="margin-top:0.5rem;">Back to Home</a>
+    </div>
+
+    <div id="booking-form-area">
+      <!-- Step indicators -->
+      <div class="booking-steps">
+        <div class="step-indicator active" data-step="1">
+          <span class="step-num">1</span>
+          <span>Service &amp; Date</span>
+        </div>
+        <div class="step-indicator" data-step="2">
+          <span class="step-num">2</span>
+          <span>Time Slot</span>
+        </div>
+        <div class="step-indicator" data-step="3">
+          <span class="step-num">3</span>
+          <span>Your Details</span>
+        </div>
+      </div>
+
+      <div class="booking-layout">
+        <!-- Form -->
+        <div>
+          <!-- Step 1 -->
+          <div class="booking-step active" id="step1">
+            <div class="form-group">
+              <label for="service-select">Service</label>
+              <select id="service-select">
+                <option value="">Loading services…</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="date-input">Preferred Date</label>
+              <input type="date" id="date-input" />
+            </div>
+            <button class="btn btn-primary" id="step1-next" disabled>Choose a Time &rarr;</button>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="booking-step" id="step2">
+            <p style="margin-bottom:1.5rem;font-size:0.9rem;color:var(--muted);">Select an available time slot for your appointment.</p>
+            <div class="slots-grid" id="slots-grid">
+              <p class="loading-dots">Loading…</p>
+            </div>
+            <div style="display:flex;gap:1rem;margin-top:2rem;">
+              <button class="btn btn-outline" id="step2-back">&larr; Back</button>
+              <button class="btn btn-primary" id="step2-next" disabled>Continue &rarr;</button>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="booking-step" id="step3">
+            <div class="form-group">
+              <label for="b-name">Full Name</label>
+              <input type="text" id="b-name" placeholder="Jane Smith" autocomplete="name" />
+            </div>
+            <div class="form-group">
+              <label for="b-email">Email Address</label>
+              <input type="email" id="b-email" placeholder="jane@example.com" autocomplete="email" />
+            </div>
+            <div class="form-group">
+              <label for="b-phone">Phone Number</label>
+              <input type="tel" id="b-phone" placeholder="+1 555 000 0000" autocomplete="tel" />
+            </div>
+            <p id="form-error" class="error-msg"></p>
+            <div style="display:flex;gap:1rem;margin-top:0.5rem;">
+              <button class="btn btn-outline" id="step3-back">&larr; Back</button>
+              <button class="btn btn-primary" id="submit-btn">Confirm Booking</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary sidebar -->
+        <div id="booking-summary-area">
+          <div class="booking-summary">
+            <h3>Your Booking</h3>
+            <div class="summary-row">
+              <span class="label">Service</span>
+              <span class="value" id="sum-service">—</span>
+            </div>
+            <div class="summary-row">
+              <span class="label">Duration</span>
+              <span class="value" id="sum-duration">—</span>
+            </div>
+            <div class="summary-row">
+              <span class="label">Date</span>
+              <span class="value" id="sum-date">—</span>
+            </div>
+            <div class="summary-row">
+              <span class="label">Time</span>
+              <span class="value" id="sum-time">—</span>
+            </div>
+            <div class="summary-row summary-total">
+              <span class="label">Total</span>
+              <span class="value" id="sum-price">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="nav-logo">ZLUX</a>
+        <p>Luxury nail studio. Appointments by booking only.</p>
+      </div>
+      <div>
+        <h4>Navigate</h4>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="services.html">Services</a></li>
+          <li><a href="about.html">About</a></li>
+          <li><a href="contact.html">Contact</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Hours</h4>
+        <ul>
+          <li><a>Mon – Fri: 10am – 7pm</a></li>
+          <li><a>Saturday: 10am – 6pm</a></li>
+          <li><a>Sunday: Closed</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 ZLUX Nail Studio. All rights reserved.</span>
+      <span>Luxury. Precision. Art.</span>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script src="js/booking.js"></script>
+</body>
+</html>

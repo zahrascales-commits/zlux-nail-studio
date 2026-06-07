@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/api/services", "destination": "/api/services" },
+    { "source": "/api/availability", "destination": "/api/availability" },
+    { "source": "/api/bookings", "destination": "/api/bookings" }
+  ]
+}

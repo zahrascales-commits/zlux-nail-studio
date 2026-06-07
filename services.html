@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Services — ZLUX Nail Studio</title>
+  <meta name="description" content="Browse ZLUX Nail Studio's full menu of luxury nail services — from classic manicures to bespoke nail art and deluxe pedicures." />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="index.html" class="nav-logo">ZLUX</a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="services.html">Services</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="contact.html">Contact</a></li>
+      <li><a href="booking.html" class="btn btn-outline nav-cta">Book Now</a></li>
+    </ul>
+    <button class="nav-toggle" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <div class="page-hero">
+    <span class="section-label">What We Offer</span>
+    <h1>Our Services</h1>
+    <span class="gold-line" style="margin:1.5rem auto;"></span>
+    <p style="color:rgba(245,240,235,0.6);max-width:480px;margin:0 auto;">Every service is performed by skilled nail artists using only premium, cruelty-free products.</p>
+  </div>
+
+  <section class="section">
+    <div id="services-container" class="services-grid">
+      <!-- loaded by JS -->
+    </div>
+    <noscript>
+      <p style="color:var(--muted);">Please enable JavaScript to view our services.</p>
+    </noscript>
+  </section>
+
+  <!-- Policy note -->
+  <section class="section" style="background:var(--dark);padding-top:3rem;padding-bottom:3rem;">
+    <div style="max-width:680px;margin:0 auto;text-align:center;">
+      <span class="section-label">Good to Know</span>
+      <p style="margin-bottom:0.75rem;">We ask for a <strong style="color:var(--white);">24-hour cancellation notice</strong> for all appointments. Late arrivals may result in a shortened service.</p>
+      <p>A patch test is recommended for first-time gel clients. Please inform us of any nail conditions or sensitivities when booking.</p>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="nav-logo">ZLUX</a>
+        <p>Luxury nail studio. Appointments by booking only.</p>
+      </div>
+      <div>
+        <h4>Navigate</h4>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="services.html">Services</a></li>
+          <li><a href="about.html">About</a></li>
+          <li><a href="contact.html">Contact</a></li>
+          <li><a href="booking.html">Book Now</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Hours</h4>
+        <ul>
+          <li><a>Mon – Fri: 10am – 7pm</a></li>
+          <li><a>Saturday: 10am – 6pm</a></li>
+          <li><a>Sunday: Closed</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 ZLUX Nail Studio. All rights reserved.</span>
+      <span>Luxury. Precision. Art.</span>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script>
+    const fmt = {
+      price: (cents) => `$${(cents / 100).toFixed(0)}`,
+    };
+
+    async function loadServices() {
+      const container = document.getElementById('services-container');
+      try {
+        const res = await fetch('/api/services');
+        const services = await res.json();
+        container.innerHTML = services.map((s) => `
+          <div class="card service-full-card fade-in">
+            <div class="card-head">
+              <h3>${s.name}</h3>
+              <span class="badge">${s.duration_min} min</span>
+            </div>
+            <div class="price-row">
+              <span class="price">${fmt.price(s.price_cents)}</span>
+            </div>
+            <p>${s.description}</p>
+            <a href="booking.html?service=${s.id}" class="btn btn-outline">Book This Service</a>
+          </div>
+        `).join('');
+        // re-observe fade-ins
+        document.querySelectorAll('.fade-in').forEach((el) => {
+          const obs = new IntersectionObserver(([e]) => e.isIntersecting && e.target.classList.add('visible'), { threshold: 0.1 });
+          obs.observe(el);
+        });
+      } catch {
+        container.innerHTML = '<p class="error-msg">Could not load services. Please refresh or try again later.</p>';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadServices);
+  </script>
+</body>
+</html>
