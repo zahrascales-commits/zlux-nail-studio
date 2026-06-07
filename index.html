@@ -4,12 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ZLUX Nail Studio — Luxury Nail Art</title>
-  <meta name="description" content="ZLUX Nail Studio — where luxury meets artistry. Premium manicures, gel sets, bespoke nail art, and pedicures in an intimate, elevated setting." />
+  <meta name="description" content="ZLUX — the luxury nail studio redefining what a nail appointment feels like. Exclusive. Precise. Unforgettable." />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
 
-  <!-- Nav -->
   <nav class="nav">
     <a href="index.html" class="nav-logo">ZLUX</a>
     <ul class="nav-links">
@@ -17,7 +16,7 @@
       <li><a href="services.html">Services</a></li>
       <li><a href="about.html">About</a></li>
       <li><a href="contact.html">Contact</a></li>
-      <li><a href="booking.html" class="btn btn-outline nav-cta">Book Now</a></li>
+      <li><a href="booking.html" class="btn btn-primary nav-cta">Reserve Now</a></li>
     </ul>
     <button class="nav-toggle" aria-label="Menu">
       <span></span><span></span><span></span>
@@ -28,81 +27,88 @@
   <section class="hero">
     <div class="hero-bg"></div>
     <div class="hero-content">
-      <p class="hero-eyebrow">Luxury Nail Studio</p>
-      <h1 class="hero-title">Where Nails Become <em>Art</em></h1>
-      <p class="hero-desc">Premium nail care crafted with precision, intention, and the finest materials — tailored entirely to you.</p>
+      <p class="hero-eyebrow">&#x2736; By Appointment Only &nbsp;&middot;&nbsp; Limited Availability</p>
+      <h1 class="hero-title">
+        Your Nails.<br>
+        <em>Elevated.</em>
+      </h1>
+      <p class="hero-desc">ZLUX is where precision meets indulgence. An experience so refined, your hands will do the talking before you even say a word.</p>
       <div class="hero-actions">
-        <a href="booking.html" class="btn btn-primary">Book an Appointment</a>
+        <a href="booking.html" class="btn btn-primary">Secure Your Appointment</a>
         <a href="services.html" class="btn btn-outline">View Services</a>
       </div>
     </div>
-    <div class="hero-scroll">Scroll</div>
+    <div class="hero-scroll">Discover</div>
   </section>
+
+  <!-- Scarcity strip -->
+  <div class="scarcity-strip">
+    &#x2736;&nbsp; <strong>Spots fill fast.</strong> &nbsp;Book at least 48 hours in advance to guarantee your date. &nbsp;&#x2736;
+  </div>
 
   <!-- Services preview -->
   <section class="section">
     <div class="section-header text-center">
-      <span class="section-label">Our Craft</span>
-      <h2 class="section-title">Curated Services</h2>
+      <span class="section-label">The Collection</span>
+      <h2 class="section-title">Signature Services</h2>
       <span class="gold-line"></span>
-      <p class="section-subtitle">Each service is a considered experience — from the moment you sit down to the final seal.</p>
+      <p class="section-subtitle">Every service is a curated experience — designed for women who expect nothing less than perfection.</p>
     </div>
-    <div class="grid-3" id="services-preview">
-      <!-- loaded by JS -->
+    <div class="grid-3">
       <div class="card service-card fade-in">
-        <h3>Classic Manicure</h3>
-        <p class="price">$35</p>
-        <p class="duration">30 min</p>
-        <p>Shape, buff, cuticle care, and a polish of your choice.</p>
-        <a href="booking.html">Book this &rarr;</a>
+        <h3>Organic Structured Manicure</h3>
+        <p class="price">from $90</p>
+        <p class="duration">60 min</p>
+        <p>The foundation of beautiful nails — organic products, structured perfection, lasting results.</p>
+        <a href="booking.html">Reserve this &rarr;</a>
       </div>
       <div class="card service-card fade-in">
-        <h3>Gel Manicure</h3>
-        <p class="price">$55</p>
-        <p class="duration">45 min</p>
-        <p>Long-lasting gel colour with a mirror-finish top coat.</p>
-        <a href="booking.html">Book this &rarr;</a>
+        <h3>Gel X Extensions</h3>
+        <p class="price">from $95</p>
+        <p class="duration">60 – 90 min</p>
+        <p>Short, medium, or long — Gel X extensions that flex with your life and never let you down.</p>
+        <a href="booking.html">Reserve this &rarr;</a>
       </div>
       <div class="card service-card fade-in">
-        <h3>Luxury Nail Art</h3>
-        <p class="price">$85</p>
-        <p class="duration">75 min</p>
-        <p>Bespoke hand-painted designs — intricate patterns, florals, and fine detail work.</p>
-        <a href="booking.html">Book this &rarr;</a>
+        <h3>Royal Citrus Pedicure</h3>
+        <p class="price">$105</p>
+        <p class="duration">90 min</p>
+        <p>Our most indulgent pedicure. Citrus-infused treatments, extended massage, complete luxury.</p>
+        <a href="booking.html">Reserve this &rarr;</a>
       </div>
     </div>
-    <div style="text-align:center;margin-top:3rem;">
-      <a href="services.html" class="btn btn-outline">See All Services</a>
+    <div style="text-align:center;margin-top:3.5rem;">
+      <a href="services.html" class="btn btn-outline">See Full Menu</a>
     </div>
   </section>
 
-  <!-- About strip -->
-  <section class="section testimonials">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:center;">
-      <div>
-        <span class="section-label">Our Philosophy</span>
-        <h2 class="section-title">Slow Beauty.<br>Intentional Care.</h2>
+  <!-- Why ZLUX -->
+  <section class="section" style="background:var(--dark);">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6rem;align-items:center;">
+      <div class="fade-in">
+        <span class="section-label">Why Women Choose ZLUX</span>
+        <h2 class="section-title">This Isn't<br>Just a Nail Appointment.</h2>
         <span class="gold-line"></span>
-        <p style="margin-bottom:1.5rem;">At ZLUX, we believe a nail appointment should feel like a ritual, not a transaction. Every visit is unhurried — time to breathe, to indulge, to leave feeling polished in every sense.</p>
-        <p style="margin-bottom:2rem;">We work with salon-grade pigments, medical-grade tools, and products that are cruelty-free and 10-free.</p>
-        <a href="about.html" class="btn btn-outline">Our Story</a>
+        <p style="margin-bottom:1.5rem;">It's the moment in your week that belongs entirely to you. No rushing. No compromising. Just expert hands, premium products, and a result that commands attention.</p>
+        <p style="margin-bottom:2.5rem;">We work with a limited clientele — so every appointment gets the full, undivided attention it deserves. That's the ZLUX difference.</p>
+        <a href="booking.html" class="btn btn-primary">Book Your Experience</a>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-        <div class="card" style="text-align:center;padding:2.5rem 1rem;">
-          <p style="font-size:2.5rem;font-family:var(--font-heading);color:var(--gold);margin-bottom:0.5rem;">500+</p>
-          <p style="font-size:0.78rem;letter-spacing:0.12em;text-transform:uppercase;">Happy Clients</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;" class="fade-in">
+        <div class="card" style="text-align:center;padding:2.5rem 1.5rem;">
+          <p class="stat-num">500+</p>
+          <p class="stat-label">Clients Served</p>
         </div>
-        <div class="card" style="text-align:center;padding:2.5rem 1rem;margin-top:1.5rem;">
-          <p style="font-size:2.5rem;font-family:var(--font-heading);color:var(--gold);margin-bottom:0.5rem;">6</p>
-          <p style="font-size:0.78rem;letter-spacing:0.12em;text-transform:uppercase;">Signature Services</p>
+        <div class="card" style="text-align:center;padding:2.5rem 1.5rem;margin-top:1.75rem;">
+          <p class="stat-num">10</p>
+          <p class="stat-label">Signature Services</p>
         </div>
-        <div class="card" style="text-align:center;padding:2.5rem 1rem;">
-          <p style="font-size:2.5rem;font-family:var(--font-heading);color:var(--gold);margin-bottom:0.5rem;">100%</p>
-          <p style="font-size:0.78rem;letter-spacing:0.12em;text-transform:uppercase;">Cruelty-Free</p>
+        <div class="card" style="text-align:center;padding:2.5rem 1.5rem;">
+          <p class="stat-num">100%</p>
+          <p class="stat-label">Cruelty-Free</p>
         </div>
-        <div class="card" style="text-align:center;padding:2.5rem 1rem;margin-top:1.5rem;">
-          <p style="font-size:2.5rem;font-family:var(--font-heading);color:var(--gold);margin-bottom:0.5rem;">5★</p>
-          <p style="font-size:0.78rem;letter-spacing:0.12em;text-transform:uppercase;">Average Rating</p>
+        <div class="card" style="text-align:center;padding:2.5rem 1.5rem;margin-top:1.75rem;">
+          <p class="stat-num">5 &#x2605;</p>
+          <p class="stat-label">Rated Luxury</p>
         </div>
       </div>
     </div>
@@ -111,41 +117,43 @@
   <!-- Testimonials -->
   <section class="section">
     <div class="section-header text-center">
-      <span class="section-label">Client Love</span>
-      <h2 class="section-title">What They Say</h2>
+      <span class="section-label">Client Testimonials</span>
+      <h2 class="section-title">They Said It Best</h2>
       <span class="gold-line"></span>
     </div>
     <div class="grid-3">
       <div class="card testimonial-card fade-in">
-        <blockquote>"Absolutely the best nail experience I've ever had. The attention to detail is unreal — my nails looked like tiny paintings."</blockquote>
+        <blockquote>"I've been to salons all over the city. Nothing comes close. My nails look like they belong in a magazine — every single time."</blockquote>
         <cite>— Amara S.</cite>
       </div>
       <div class="card testimonial-card fade-in">
-        <blockquote>"ZLUX is the definition of luxury. The studio is serene, the team is skilled, and the results are always stunning."</blockquote>
+        <blockquote>"The moment I walk in I feel like royalty. The quality, the attention to detail, the results — ZLUX is worth every penny and then some."</blockquote>
         <cite>— Priya K.</cite>
       </div>
       <div class="card testimonial-card fade-in">
-        <blockquote>"I've been coming here for six months and I wouldn't go anywhere else. My gel set lasts three weeks without a chip."</blockquote>
+        <blockquote>"I used to change nail techs constantly searching for this level. Now I don't go anywhere else. My gel set lasts three full weeks — flawless."</blockquote>
         <cite>— Celeste M.</cite>
       </div>
     </div>
   </section>
 
-  <!-- CTA -->
-  <section class="section" style="text-align:center;background:var(--dark);">
-    <span class="section-label">Ready?</span>
-    <h2 class="section-title">Reserve Your Moment</h2>
-    <span class="gold-line" style="margin:1.5rem auto;"></span>
-    <p style="max-width:420px;margin:0 auto 2.5rem;">Select your service, pick a time, and leave the rest to us. Booking takes under two minutes.</p>
-    <a href="booking.html" class="btn btn-primary">Book Now</a>
+  <!-- Final CTA -->
+  <section class="section" style="background:var(--dark);text-align:center;position:relative;overflow:hidden;">
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(201,168,76,0.1) 0%,transparent 60%);pointer-events:none;"></div>
+    <div style="position:relative;z-index:1;">
+      <span class="section-label">Limited Availability</span>
+      <h2 class="section-title">Ready to Be<br><em style="font-style:italic;color:var(--gold);">Obsessed</em> With Your Nails?</h2>
+      <span class="gold-line"></span>
+      <p style="max-width:400px;margin:0 auto 3rem;font-size:0.95rem;">Spots go fast. Secure yours now — it takes less than two minutes and a 50% deposit holds your date.</p>
+      <a href="booking.html" class="btn btn-primary" style="font-size:0.78rem;padding:1.1rem 3.5rem;">Secure My Spot Now</a>
+    </div>
   </section>
 
-  <!-- Footer -->
   <footer class="footer">
     <div class="footer-grid">
       <div class="footer-brand">
         <a href="index.html" class="nav-logo">ZLUX</a>
-        <p>Luxury nail studio. Appointments by booking only.</p>
+        <p>Luxury nail studio. By appointment only. Limited availability.</p>
       </div>
       <div>
         <h4>Navigate</h4>
@@ -154,21 +162,21 @@
           <li><a href="services.html">Services</a></li>
           <li><a href="about.html">About</a></li>
           <li><a href="contact.html">Contact</a></li>
-          <li><a href="booking.html">Book Now</a></li>
+          <li><a href="booking.html">Reserve Now</a></li>
         </ul>
       </div>
       <div>
         <h4>Hours</h4>
         <ul>
-          <li><a>Mon – Fri: 10am – 7pm</a></li>
-          <li><a>Saturday: 10am – 6pm</a></li>
-          <li><a>Sunday: Closed</a></li>
+          <li><a>Mon – Fri &nbsp; 10am – 7pm</a></li>
+          <li><a>Saturday &nbsp; 10am – 6pm</a></li>
+          <li><a>Sunday &nbsp; Closed</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
       <span>&copy; 2026 ZLUX Nail Studio. All rights reserved.</span>
-      <span>Luxury. Precision. Art.</span>
+      <span>Luxury &middot; Precision &middot; Art</span>
     </div>
   </footer>
 
