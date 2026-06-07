@@ -564,6 +564,60 @@ p { color: rgba(245, 240, 235, 0.75); }
 }
 .fade-in.visible { opacity: 1; transform: translateY(0); }
 
+/* ── Add-ons ── */
+.addons-list { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.25rem; }
+.addon-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color var(--transition);
+}
+.addon-label:hover { border-color: rgba(201, 169, 110, 0.4); }
+.addon-label input[type="checkbox"] { accent-color: var(--gold); width: 16px; height: 16px; cursor: pointer; flex-shrink: 0; }
+.addon-name { flex: 1; font-size: 0.92rem; }
+.addon-price { font-size: 0.85rem; color: var(--gold); font-weight: 500; }
+
+/* ── Deposit box ── */
+.deposit-box {
+  background: rgba(201, 169, 110, 0.06);
+  border: 1px solid rgba(201, 169, 110, 0.3);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.deposit-box-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  padding: 0.4rem 0;
+  color: rgba(245, 240, 235, 0.7);
+}
+.deposit-box-due {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--white);
+  border-top: 1px solid var(--border);
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+}
+.deposit-box-due span:last-child { color: var(--gold); font-family: var(--font-heading); font-size: 1.2rem; }
+.deposit-nonrefundable {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 0.75rem;
+  line-height: 1.5;
+}
+.deposit-nonrefundable strong { color: rgba(245, 240, 235, 0.85); }
+
+/* ── Summary deposit row ── */
+.summary-deposit .label { color: var(--gold); }
+.summary-deposit .value { color: var(--gold); font-family: var(--font-heading); font-size: 1.3rem; }
+
 /* ── Loading / Error states ── */
 .loading-dots { color: var(--muted); font-size: 0.9rem; padding: 1rem 0; }
 .error-msg { color: #e06c75; font-size: 0.88rem; margin-top: 0.5rem; }

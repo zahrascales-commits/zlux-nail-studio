@@ -32,13 +32,17 @@
 
   <section class="section">
 
-    <!-- Confirmation (hidden until booking succeeds) -->
+    <!-- Confirmation -->
     <div id="confirmation-box" class="confirmation-box">
       <div class="confirmation-icon">&#10003;</div>
       <h2>You're Booked!</h2>
       <p>Thank you, <strong id="conf-name"></strong>. Your appointment is confirmed.</p>
       <p class="confirmation-id" id="conf-id"></p>
-      <p style="font-size:0.85rem;margin:1.5rem 0;">We'll be in touch with any updates. See you soon.</p>
+      <div class="deposit-notice" style="margin:1.5rem 0;">
+        <p style="font-size:0.85rem;color:var(--muted);">Deposit due:</p>
+        <p style="font-size:1.6rem;font-family:var(--font-heading);color:var(--gold);" id="conf-deposit"></p>
+        <p style="font-size:0.78rem;color:var(--muted);margin-top:0.25rem;">We'll be in touch shortly with payment instructions.</p>
+      </div>
       <a href="index.html" class="btn btn-outline" style="margin-top:0.5rem;">Back to Home</a>
     </div>
 
@@ -62,7 +66,8 @@
       <div class="booking-layout">
         <!-- Form -->
         <div>
-          <!-- Step 1 -->
+
+          <!-- Step 1: Service, Add-ons, Date -->
           <div class="booking-step active" id="step1">
             <div class="form-group">
               <label for="service-select">Service</label>
@@ -70,6 +75,12 @@
                 <option value="">Loading services…</option>
               </select>
             </div>
+
+            <div class="form-group" id="addons-group" style="display:none;">
+              <label>Add-ons <span style="color:var(--muted);font-size:0.75em;text-transform:none;letter-spacing:0;">(optional)</span></label>
+              <div id="addons-list" class="addons-list"></div>
+            </div>
+
             <div class="form-group">
               <label for="date-input">Preferred Date</label>
               <input type="date" id="date-input" />
@@ -77,7 +88,7 @@
             <button class="btn btn-primary" id="step1-next" disabled>Choose a Time &rarr;</button>
           </div>
 
-          <!-- Step 2 -->
+          <!-- Step 2: Time slot -->
           <div class="booking-step" id="step2">
             <p style="margin-bottom:1.5rem;font-size:0.9rem;color:var(--muted);">Select an available time slot for your appointment.</p>
             <div class="slots-grid" id="slots-grid">
@@ -89,7 +100,7 @@
             </div>
           </div>
 
-          <!-- Step 3 -->
+          <!-- Step 3: Details + Deposit -->
           <div class="booking-step" id="step3">
             <div class="form-group">
               <label for="b-name">Full Name</label>
@@ -103,10 +114,24 @@
               <label for="b-phone">Phone Number</label>
               <input type="tel" id="b-phone" placeholder="+1 555 000 0000" autocomplete="tel" />
             </div>
+
+            <!-- Deposit notice -->
+            <div class="deposit-box">
+              <div class="deposit-box-row">
+                <span>Service total</span>
+                <span id="dep-total">—</span>
+              </div>
+              <div class="deposit-box-row deposit-box-due">
+                <span>Deposit due now <em>(50%)</em></span>
+                <span id="dep-amount">—</span>
+              </div>
+              <p class="deposit-nonrefundable">&#9888; This deposit is <strong>nonrefundable</strong>. By confirming, you agree to this policy.</p>
+            </div>
+
             <p id="form-error" class="error-msg"></p>
-            <div style="display:flex;gap:1rem;margin-top:0.5rem;">
+            <div style="display:flex;gap:1rem;margin-top:1.25rem;">
               <button class="btn btn-outline" id="step3-back">&larr; Back</button>
-              <button class="btn btn-primary" id="submit-btn">Confirm Booking</button>
+              <button class="btn btn-primary" id="submit-btn">Confirm &amp; Pay Deposit</button>
             </div>
           </div>
         </div>
@@ -118,6 +143,10 @@
             <div class="summary-row">
               <span class="label">Service</span>
               <span class="value" id="sum-service">—</span>
+            </div>
+            <div class="summary-row" id="sum-addons-row" style="display:none;">
+              <span class="label">Add-ons</span>
+              <span class="value" id="sum-addons">—</span>
             </div>
             <div class="summary-row">
               <span class="label">Duration</span>
@@ -131,9 +160,13 @@
               <span class="label">Time</span>
               <span class="value" id="sum-time">—</span>
             </div>
-            <div class="summary-row summary-total">
+            <div class="summary-row">
               <span class="label">Total</span>
               <span class="value" id="sum-price">—</span>
+            </div>
+            <div class="summary-row summary-deposit">
+              <span class="label">Deposit (50%)</span>
+              <span class="value" id="sum-deposit">—</span>
             </div>
           </div>
         </div>
