@@ -195,18 +195,38 @@ p { color: rgba(30, 15, 6, 0.62); }
 }
 .hero-bg {
   position: absolute;
-  inset: 0;
-  background: linear-gradient(160deg, #fffcf7 0%, #fff6e0 30%, #ffe8a0 58%, #ffd466 75%, #fffcf7 100%);
+  inset: -30px;
+  background:
+    radial-gradient(ellipse at -8% 55%, rgba(22, 58, 28, 0.96) 0%, rgba(44, 95, 45, 0.72) 18%, transparent 40%),
+    radial-gradient(ellipse at 108% 55%, rgba(22, 58, 28, 0.96) 0%, rgba(44, 95, 45, 0.72) 18%, transparent 40%),
+    radial-gradient(ellipse at 2% 20%,  rgba(38, 82, 38, 0.75) 0%, transparent 22%),
+    radial-gradient(ellipse at 98% 20%, rgba(38, 82, 38, 0.75) 0%, transparent 22%),
+    radial-gradient(ellipse at 5% 90%,  rgba(28, 68, 30, 0.65) 0%, transparent 20%),
+    radial-gradient(ellipse at 95% 90%, rgba(28, 68, 30, 0.65) 0%, transparent 20%),
+    linear-gradient(170deg, #fffdf9 0%, #fff9ee 25%, #fff4d6 52%, #fff9ee 78%, #fffdf9 100%);
+  filter: blur(14px) brightness(1.06) saturate(1.1);
 }
 .hero-bg::after {
   content: '';
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at 70% 20%, rgba(255, 200, 60, 0.35) 0%, transparent 55%),
-    radial-gradient(ellipse at 20% 80%, rgba(196, 135, 13, 0.1) 0%, transparent 50%);
+    radial-gradient(ellipse at 68% 12%, rgba(255, 255, 255, 0.75) 0%, transparent 28%),
+    radial-gradient(ellipse at 32% 88%, rgba(255, 235, 160, 0.25) 0%, transparent 28%),
+    radial-gradient(ellipse at 50% 50%, rgba(255, 248, 220, 0.18) 0%, transparent 60%);
 }
-.hero-content { position: relative; z-index: 1; max-width: 800px; }
+.hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 800px;
+  background: rgba(255, 253, 248, 0.55);
+  backdrop-filter: blur(2px) saturate(1.2);
+  -webkit-backdrop-filter: blur(2px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 2px;
+  padding: 4rem 3.5rem;
+  box-shadow: 0 8px 48px rgba(22, 58, 28, 0.08), 0 2px 16px rgba(255,255,255,0.5) inset;
+}
 .hero-eyebrow {
   font-size: 0.75rem;
   letter-spacing: 0.3em;
