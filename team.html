@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Team Portal — ZLUX</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    body { background: var(--espresso); color: var(--cream); }
+    .worker-header { background: #1a0e06; padding: 1rem 1.5rem; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(201,165,90,0.12); position:fixed; top:0; left:0; right:0; z-index:50; }
+    .worker-logo { font-family:'Cormorant Garamond',serif; font-size:1.4rem; color:var(--champagne); }
+    .worker-main { padding-top:5rem; max-width:680px; margin:0 auto; padding-left:1.25rem; padding-right:1.25rem; padding-bottom:4rem; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;background:var(--espresso);">
+  <div style="width:100%;max-width:360px;background:rgba(245,239,230,0.04);border:1px solid rgba(201,165,90,0.2);padding:2.5rem;">
+    <div class="section-label" style="color:rgba(201,165,90,0.6);margin-bottom:0.5rem;">ZLUX</div>
+    <h2 style="color:var(--cream);font-size:1.75rem;margin-bottom:1.5rem;">Team Portal</h2>
+    <div id="login-step-1">
+      <label class="luxury-label">Email</label>
+      <input class="luxury-input" id="w-email" type="email" placeholder="your@email.com" style="margin-bottom:0.75rem;background:rgba(245,239,230,0.06);color:var(--cream);" />
+      <label class="luxury-label">Password</label>
+      <input class="luxury-input" id="w-pass" type="password" placeholder="••••••••" style="margin-bottom:1.25rem;background:rgba(245,239,230,0.06);color:var(--cream);" />
+      <button class="btn-gold" onclick="wLoginStep1()" style="animation:none;width:100%;">Continue</button>
+    </div>
+    <div id="login-step-2" style="display:none;">
+      <p style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--latte);margin-bottom:1.25rem;line-height:1.7;">Enter your 6-digit authenticator code.</p>
+      <label class="luxury-label">Code</label>
+      <input class="luxury-input" id="w-code" type="text" maxlength="6" placeholder="000000" style="letter-spacing:0.3em;font-size:1.2rem;margin-bottom:1.25rem;background:rgba(245,239,230,0.06);color:var(--cream);" />
+      <button class="btn-gold" onclick="wLoginStep2()" style="animation:none;width:100%;">Sign In</button>
+    </div>
+    <div id="w-error" style="display:none;background:rgba(192,82,74,0.15);border:1px solid rgba(192,82,74,0.3);color:#e08080;font-family:'Jost',sans-serif;font-size:0.82rem;padding:0.65rem 0.875rem;margin-top:0.75rem;"></div>
+    <p style="font-family:'Jost',sans-serif;font-size:0.75rem;color:rgba(166,124,82,0.5);text-align:center;margin-top:1.25rem;"><a href="index.html" style="color:rgba(201,165,90,0.5);">← Back to Studio</a></p>
+  </div>
+</div>
+
+<!-- WORKER DASHBOARD -->
+<div id="worker-screen" style="display:none;">
+  <div class="worker-header">
+    <div class="worker-logo">ZLUX <span style="font-size:0.75rem;font-family:'Jost',sans-serif;color:var(--latte);letter-spacing:0.1em;margin-left:0.5rem;">TEAM</span></div>
+    <div style="display:flex;align-items:center;gap:1.25rem;">
+      <div style="font-family:'Jost',sans-serif;font-size:0.8rem;color:var(--latte);">
+        <span id="worker-name-display">—</span>
+      </div>
+      <button onclick="wLogout()" style="background:none;border:none;color:rgba(166,124,82,0.6);font-family:'Jost',sans-serif;font-size:0.72rem;cursor:pointer;letter-spacing:0.1em;">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="worker-main">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:0.75rem;">
+      <div>
+        <div class="section-label" style="color:rgba(201,165,90,0.6);font-size:0.6rem;">Today's Schedule</div>
+        <h2 style="color:var(--cream);font-size:1.75rem;margin-top:0.2rem;" id="worker-date-display">—</h2>
+      </div>
+      <div style="display:flex;gap:0.5rem;">
+        <button onclick="changeDay(-1)" style="background:rgba(201,165,90,0.1);border:1px solid rgba(201,165,90,0.2);color:var(--champagne);padding:0.4rem 0.75rem;cursor:pointer;font-family:'Jost',sans-serif;font-size:0.8rem;">←</button>
+        <button onclick="changeDay(1)"  style="background:rgba(201,165,90,0.1);border:1px solid rgba(201,165,90,0.2);color:var(--champagne);padding:0.4rem 0.75rem;cursor:pointer;font-family:'Jost',sans-serif;font-size:0.8rem;">→</button>
+      </div>
+    </div>
+
+    <div id="appt-list"></div>
+
+    <div style="margin-top:2rem;padding:1rem 1.25rem;background:rgba(245,239,230,0.03);border:1px solid rgba(201,165,90,0.1);">
+      <div class="section-label" style="color:rgba(201,165,90,0.6);font-size:0.58rem;margin-bottom:0.75rem;">Booking Priority Reminder</div>
+      <p style="font-family:'Jost',sans-serif;font-size:0.8rem;color:var(--latte);line-height:1.7;">Black Card → Luxe → Signature → Guest. Never book a guest over a member without admin approval.</p>
+    </div>
+  </div>
+</div>
+
+<script src="js/portals.js"></script>
+<script>
+  const DEMO_APPTS = [
+    { time:'10:00 AM', client:'Jasmine T.', service:'Long Gel X', tier:'luxe', status:'Scheduled', notes:'' },
+    { time:'11:30 AM', client:'Maya B.', service:'Organic Structured Manicure + Russian', tier:'black', status:'Scheduled', notes:'Prefers extra cuticle work' },
+    { time:'1:00 PM',  client:'Sofia R.', service:'Classic Spa Pedicure', tier:'sig', status:'Scheduled', notes:'' },
+    { time:'2:30 PM',  client:'Destiny L.', service:'Medium Acrylic Set', tier:'guest', status:'Scheduled', notes:'Coming from another salon — has acrylics on' },
+    { time:'4:00 PM',  client:'Ariel M.', service:'Short Gel X', tier:'luxe', status:'Scheduled', notes:'' },
+  ];
+
+  let currentOffset = 0;
+
+  function getDisplayDate(offset) {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    return d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  }
+  function changeDay(dir) {
+    currentOffset += dir;
+    document.getElementById('worker-date-display').textContent = getDisplayDate(currentOffset);
+    renderAppts();
+  }
+  function renderAppts() {
+    const list = document.getElementById('appt-list');
+    if (currentOffset !== 0) {
+      list.innerHTML = '<p style="font-family:\'Jost\',sans-serif;font-size:0.88rem;color:var(--latte);padding:1rem 0;">No appointments scheduled for this day.</p>';
+      return;
+    }
+    list.innerHTML = DEMO_APPTS.map((a,i) => `
+      <div class="appt-block-dark" id="appt-${i}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.75rem;flex-wrap:wrap;">
+          <div>
+            <div class="appt-time appt-time-light">${a.time}</div>
+            <div class="appt-client appt-client-light">${a.client}</div>
+            <div class="appt-service">${a.service}</div>
+            ${a.notes ? `<div style="font-family:'Jost',sans-serif;font-size:0.78rem;color:rgba(166,124,82,0.7);margin-top:0.35rem;font-style:italic;">Note: ${a.notes}</div>` : ''}
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.5rem;">
+            <span class="tier-pill tier-${a.tier}">${{black:'Black Card',luxe:'Luxe',sig:'Signature',guest:'Guest'}[a.tier]}</span>
+            <select class="status-select" onchange="updateStatus(${i},this.value)">
+              <option ${a.status==='Scheduled'?'selected':''}>Scheduled</option>
+              <option ${a.status==='Arrived'?'selected':''}>Arrived</option>
+              <option ${a.status==='In Progress'?'selected':''}>In Progress</option>
+              <option ${a.status==='Completed'?'selected':''}>Completed</option>
+              <option ${a.status==='No Show'?'selected':''}>No Show</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+  function updateStatus(i, status) {
+    DEMO_APPTS[i].status = status;
+    const block = document.getElementById('appt-' + i);
+    block.className = 'appt-block-dark ' + (status === 'In Progress' ? 'in-progress' : status === 'Completed' ? 'completed' : status === 'No Show' ? 'no-show' : '');
+  }
+
+  function wLoginStep1() {
+    const email = document.getElementById('w-email').value.trim();
+    const pass = document.getElementById('w-pass').value;
+    if (!email || !pass) { showWError('Fill in all fields.'); return; }
+    document.getElementById('login-step-1').style.display = 'none';
+    document.getElementById('login-step-2').style.display = 'block';
+    document.getElementById('w-error').style.display = 'none';
+  }
+  function wLoginStep2() {
+    const code = document.getElementById('w-code').value.trim();
+    if (code.length !== 6) { showWError('Enter a 6-digit code.'); return; }
+    const email = document.getElementById('w-email').value.trim();
+    const name = email.split('@')[0].replace(/[._]/g,' ');
+    sessionStorage.setItem('zlux_role', 'WORKER');
+    sessionStorage.setItem('zlux_name', name);
+    showWorkerDash();
+  }
+  function showWError(msg) {
+    const el = document.getElementById('w-error');
+    el.style.display = 'block';
+    el.textContent = msg;
+  }
+  function showWorkerDash() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('worker-screen').style.display = 'block';
+    const name = sessionStorage.getItem('zlux_name') || 'Artist';
+    document.getElementById('worker-name-display').textContent = name.charAt(0).toUpperCase() + name.slice(1);
+    document.getElementById('worker-date-display').textContent = getDisplayDate(0);
+    renderAppts();
+  }
+  function wLogout() {
+    sessionStorage.removeItem('zlux_role');
+    sessionStorage.removeItem('zlux_name');
+    document.getElementById('worker-screen').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('login-step-1').style.display = 'block';
+    document.getElementById('login-step-2').style.display = 'none';
+  }
+
+  if (sessionStorage.getItem('zlux_role') === 'WORKER') showWorkerDash();
+  else if (sessionStorage.getItem('zlux_role') === 'ADMIN') window.location.href = 'dashboard.html';
+</script>
+</body>
+</html>

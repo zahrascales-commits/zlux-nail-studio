@@ -1,7 +1,9 @@
 {
   "rewrites": [
-    { "source": "/api/services", "destination": "/api/services" },
-    { "source": "/api/availability", "destination": "/api/availability" },
-    { "source": "/api/bookings", "destination": "/api/bookings" }
+    { "source": "/api/services",      "destination": "/api/services" },
+    { "source": "/api/availability",  "destination": "/api/availability" },
+    { "source": "/api/bookings",      "destination": "/api/bookings" },
+    { "source": "/api/addons",        "destination": "/api/addons" },
+    { "source": "/api/chat",          "destination": "/api/chat" }
   ]
 }

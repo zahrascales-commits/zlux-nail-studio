@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — ZLUX</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" class="portal-login-page" style="background:var(--espresso);">
+  <a href="index.html" style="position:absolute;top:1.5rem;left:2rem;font-family:'Cormorant Garamond',serif;font-size:1.5rem;color:var(--champagne);">ZLUX</a>
+  <div class="portal-login-box" style="background:rgba(245,239,230,0.04);border-color:rgba(201,165,90,0.2);">
+    <div class="section-label" style="color:rgba(201,165,90,0.6);margin-bottom:0.5rem;">Admin Access</div>
+    <h2 style="color:var(--cream);font-size:1.75rem;margin-bottom:1.5rem;">Dashboard Login</h2>
+    <div id="a-step-1">
+      <label class="luxury-label">Admin Email</label>
+      <input class="luxury-input" id="a-email" type="email" placeholder="zahrascales@gmail.com" style="margin-bottom:0.75rem;background:rgba(245,239,230,0.06);color:var(--cream);" />
+      <label class="luxury-label">Password</label>
+      <input class="luxury-input" id="a-pass" type="password" placeholder="••••••••" style="margin-bottom:1.25rem;background:rgba(245,239,230,0.06);color:var(--cream);" />
+      <button class="btn-gold" onclick="aStep1()" style="animation:none;width:100%;">Continue</button>
+    </div>
+    <div id="a-step-2" style="display:none;">
+      <p style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--latte);margin-bottom:1.25rem;line-height:1.7;">Enter your 6-digit authenticator code.</p>
+      <label class="luxury-label">Code</label>
+      <input class="luxury-input" id="a-code" type="text" maxlength="6" placeholder="000000" style="letter-spacing:0.3em;font-size:1.2rem;margin-bottom:1.25rem;background:rgba(245,239,230,0.06);color:var(--cream);" />
+      <button class="btn-gold" onclick="aStep2()" style="animation:none;width:100%;">Access Dashboard</button>
+    </div>
+    <div id="a-error" style="display:none;background:rgba(192,82,74,0.15);border:1px solid rgba(192,82,74,0.3);color:#e08080;font-family:'Jost',sans-serif;font-size:0.82rem;padding:0.65rem 0.875rem;margin-top:0.75rem;"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="admin-screen" style="display:none;">
+  <div class="portal-layout">
+    <div class="portal-sidebar">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:1.4rem;color:var(--champagne);padding:0.5rem 0.875rem;margin-bottom:1.5rem;">ZLUX</div>
+      <button class="portal-nav-item active" id="an-overview" onclick="aTab('overview')">◈ &nbsp; Overview</button>
+      <button class="portal-nav-item" id="an-members" onclick="aTab('members')">◈ &nbsp; Members</button>
+      <button class="portal-nav-item" id="an-workers" onclick="aTab('workers')">◈ &nbsp; Workers</button>
+      <button class="portal-nav-item" id="an-messages" onclick="aTab('messages')">◈ &nbsp; AI Messages</button>
+      <div style="flex:1;"></div>
+      <button class="portal-nav-item" onclick="aLogout()">← Sign Out</button>
+    </div>
+    <div class="portal-main">
+
+      <!-- Overview Tab -->
+      <div id="atab-overview">
+        <div class="section-label" style="font-size:0.6rem;margin-bottom:0.25rem;">Admin Dashboard</div>
+        <h2 style="font-size:1.75rem;margin-bottom:1.5rem;">Studio Overview</h2>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="section-label" style="font-size:0.6rem;">MRR</div>
+            <div class="stat-value">$4,971</div>
+            <div class="stat-sub">Monthly Recurring</div>
+          </div>
+          <div class="stat-card">
+            <div class="section-label" style="font-size:0.6rem;">Members</div>
+            <div class="stat-value">35</div>
+            <div class="stat-sub">22 Sig · 9 Luxe · 4 Black</div>
+          </div>
+          <div class="stat-card">
+            <div class="section-label" style="font-size:0.6rem;">Today's Appts</div>
+            <div class="stat-value">8</div>
+            <div class="stat-sub">3 completed · 5 upcoming</div>
+          </div>
+          <div class="stat-card">
+            <div class="section-label" style="font-size:0.6rem;">Open Spots</div>
+            <div class="stat-value">15</div>
+            <div class="stat-sub">Sig:3 · Luxe:2 · Black:1</div>
+          </div>
+        </div>
+        <div class="section-label" style="margin-bottom:0.75rem;">Alerts</div>
+        <div class="alert-bar gold">⚠ &nbsp; 3 Signature members haven't booked this month — trigger rebooking reminder</div>
+        <div class="alert-bar red">⚑ &nbsp; 1 failed payment — Maya B. · Luxe · $199 due June 1</div>
+        <div class="alert-bar gold">🎂 &nbsp; 2 birthdays this month — send birthday upgrade messages</div>
+        <div class="section-label" style="margin-top:1.5rem;margin-bottom:0.75rem;">Tier Fill</div>
+        <div style="display:flex;flex-direction:column;gap:0.75rem;">
+          <div>
+            <div class="spot-bar-labels"><span>Signature (25 max)</span><span class="remaining">22 filled</span></div>
+            <div class="spot-bar"><div class="spot-bar-fill" style="width:88%"></div></div>
+          </div>
+          <div>
+            <div class="spot-bar-labels"><span>Luxe (15 max)</span><span class="remaining">13 filled</span></div>
+            <div class="spot-bar"><div class="spot-bar-fill" style="width:87%"></div></div>
+          </div>
+          <div>
+            <div class="spot-bar-labels"><span>Black Card (10 max)</span><span class="remaining">9 filled</span></div>
+            <div class="spot-bar"><div class="spot-bar-fill" style="width:90%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Members Tab -->
+      <div id="atab-members" style="display:none;">
+        <div class="section-label" style="margin-bottom:1rem;">All Members</div>
+        <div style="border:1px solid rgba(201,165,90,0.12);">
+          <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;padding:0.6rem 1rem;background:rgba(201,165,90,0.05);font-family:'Jost',sans-serif;font-size:0.68rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--latte);">
+            <span>Member</span><span>Tier</span><span>Status</span><span>Next Billing</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;padding:0.75rem 1rem;border-top:1px solid rgba(201,165,90,0.08);font-family:'Jost',sans-serif;font-size:0.84rem;align-items:center;">
+            <span>Jasmine T.</span><span class="tier-pill tier-black" style="display:inline;">Black Card</span><span style="color:#6aaa6a;">Active</span><span style="color:var(--latte);">Jul 1</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;padding:0.75rem 1rem;border-top:1px solid rgba(201,165,90,0.08);font-family:'Jost',sans-serif;font-size:0.84rem;align-items:center;">
+            <span>Maya B. ⚑</span><span class="tier-pill tier-luxe" style="display:inline;">Luxe</span><span style="color:#c0524a;">Past Due</span><span style="color:#c0524a;">Jun 1</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;padding:0.75rem 1rem;border-top:1px solid rgba(201,165,90,0.08);font-family:'Jost',sans-serif;font-size:0.84rem;align-items:center;">
+            <span>Sofia R.</span><span class="tier-pill tier-sig" style="display:inline;">Signature</span><span style="color:#6aaa6a;">Active</span><span style="color:var(--latte);">Jul 1</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;padding:0.75rem 1rem;border-top:1px solid rgba(201,165,90,0.08);font-family:'Jost',sans-serif;font-size:0.84rem;align-items:center;">
+            <span>Destiny L.</span><span class="tier-pill tier-luxe" style="display:inline;">Luxe</span><span style="color:#6aaa6a;">Active</span><span style="color:var(--latte);">Jul 1</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;padding:0.75rem 1rem;border-top:1px solid rgba(201,165,90,0.08);font-family:'Jost',sans-serif;font-size:0.84rem;align-items:center;color:var(--latte);">
+            <span style="font-style:italic;">+ 31 more members</span><span></span><span></span><span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Workers Tab -->
+      <div id="atab-workers" style="display:none;">
+        <div class="section-label" style="margin-bottom:1rem;">Team Schedule</div>
+        <div class="grid-2" style="margin-bottom:1.5rem;">
+          <div class="luxury-card">
+            <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+              <div class="team-avatar" style="width:48px;height:48px;font-size:1.2rem;">Z</div>
+              <div>
+                <div style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;">Zahra</div>
+                <span class="availability-badge available">Available Today</span>
+              </div>
+            </div>
+            <div class="services-table">
+              <div class="service-row"><span class="service-name">Today's appointments</span><span class="service-price">5</span></div>
+              <div class="service-row"><span class="service-name">This week</span><span class="service-price">22</span></div>
+              <div class="service-row"><span class="service-name">Days off this month</span><span class="service-price">4</span></div>
+            </div>
+          </div>
+          <div class="luxury-card">
+            <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+              <div class="team-avatar" style="width:48px;height:48px;font-size:1.2rem;">A</div>
+              <div>
+                <div style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;">Artist 2</div>
+                <span class="availability-badge available">Available Today</span>
+              </div>
+            </div>
+            <div class="services-table">
+              <div class="service-row"><span class="service-name">Today's appointments</span><span class="service-price">3</span></div>
+              <div class="service-row"><span class="service-name">This week</span><span class="service-price">14</span></div>
+              <div class="service-row"><span class="service-name">Days off this month</span><span class="service-price">2</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Messages Tab -->
+      <div id="atab-messages" style="display:none;">
+        <div class="section-label" style="margin-bottom:1rem;">Automated Message Log</div>
+        <div style="display:flex;flex-direction:column;gap:0.75rem;">
+          <div class="luxury-card" style="padding:1.25rem;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem;">
+              <div>
+                <div style="font-family:'Jost',sans-serif;font-size:0.85rem;font-weight:600;color:var(--espresso);">Rebooking Reminder → Sofia R.</div>
+                <div style="font-family:'Jost',sans-serif;font-size:0.72rem;color:var(--latte);">SMS · June 10, 2026 · 10:02 AM</div>
+              </div>
+              <span style="background:rgba(106,170,106,0.1);color:#6aaa6a;font-family:'Jost',sans-serif;font-size:0.65rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;padding:0.18rem 0.5rem;">Replied</span>
+            </div>
+            <p style="font-family:'Jost',sans-serif;font-size:0.84rem;color:var(--espresso);background:var(--cream);padding:0.65rem 0.875rem;margin-bottom:0.5rem;">"Hey Sofia ✨ Your Signature membership is active but you haven't booked this month yet — don't let your service go to waste! Book at zluxnails.com/book or reply here."</p>
+            <p style="font-family:'Jost',sans-serif;font-size:0.84rem;color:var(--latte);background:rgba(44,26,14,0.04);padding:0.65rem 0.875rem;">Client reply: "Omg thank you! Booking right now 🙏"</p>
+          </div>
+          <div class="luxury-card" style="padding:1.25rem;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem;">
+              <div>
+                <div style="font-family:'Jost',sans-serif;font-size:0.85rem;font-weight:600;color:var(--espresso);">Birthday Upgrade → Destiny L.</div>
+                <div style="font-family:'Jost',sans-serif;font-size:0.72rem;color:var(--latte);">SMS · June 8, 2026 · 9:00 AM</div>
+              </div>
+              <span style="background:rgba(201,165,90,0.1);color:var(--champagne);font-family:'Jost',sans-serif;font-size:0.65rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;padding:0.18rem 0.5rem;">No Reply</span>
+            </div>
+            <p style="font-family:'Jost',sans-serif;font-size:0.84rem;color:var(--espresso);background:var(--cream);padding:0.65rem 0.875rem;">"Happy birthday, Destiny! 🥂 This month your Luxe service is upgraded — book any service and we'll add a complimentary nail art design. You deserve it."</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="js/portals.js"></script>
+<script>
+  function aStep1() {
+    const email = document.getElementById('a-email').value.trim();
+    const pass = document.getElementById('a-pass').value;
+    if (!email || !pass) { showAErr('Fill in all fields.'); return; }
+    document.getElementById('a-step-1').style.display = 'none';
+    document.getElementById('a-step-2').style.display = 'block';
+    document.getElementById('a-error').style.display = 'none';
+  }
+  function aStep2() {
+    const code = document.getElementById('a-code').value.trim();
+    if (code.length !== 6) { showAErr('Enter a 6-digit code.'); return; }
+    sessionStorage.setItem('zlux_role', 'ADMIN');
+    showAdminDash();
+  }
+  function showAErr(msg) {
+    const el = document.getElementById('a-error');
+    el.style.display = 'block';
+    el.textContent = msg;
+  }
+  function showAdminDash() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-screen').style.display = 'block';
+    // Animate spot bars
+    setTimeout(() => {
+      document.querySelectorAll('.spot-bar-fill').forEach(el => {
+        const w = el.style.width;
+        el.style.width = '0%';
+        setTimeout(() => { el.style.width = w; }, 100);
+      });
+    }, 300);
+  }
+  function aTab(t) {
+    ['overview','members','workers','messages'].forEach(tab => {
+      document.getElementById('atab-' + tab).style.display = tab === t ? 'block' : 'none';
+      document.getElementById('an-' + tab).classList.toggle('active', tab === t);
+    });
+  }
+  function aLogout() {
+    sessionStorage.removeItem('zlux_role');
+    document.getElementById('admin-screen').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('a-step-1').style.display = 'block';
+    document.getElementById('a-step-2').style.display = 'none';
+  }
+
+  if (sessionStorage.getItem('zlux_role') === 'ADMIN') showAdminDash();
+  else if (sessionStorage.getItem('zlux_role') === 'CLIENT') window.location.href = 'client-portal.html';
+  else if (sessionStorage.getItem('zlux_role') === 'WORKER') window.location.href = 'team.html';
+</script>
+</body>
+</html>

@@ -4,146 +4,138 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>About — ZLUX Nail Studio</title>
-  <meta name="description" content="Learn about ZLUX Nail Studio — our story, our values, and the team behind every set." />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
 
-  <nav class="nav">
-    <a href="index.html" class="nav-logo">ZLUX</a>
-    <ul class="nav-links">
-      <li><a href="index.html">Home</a></li>
-      <li><a href="services.html">Services</a></li>
-      <li><a href="about.html">About</a></li>
-      <li><a href="contact.html">Contact</a></li>
-      <li><a href="booking.html" class="btn btn-outline nav-cta">Book Now</a></li>
-    </ul>
-    <button class="nav-toggle" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
-  </nav>
-
-  <div class="page-hero">
-    <span class="section-label">Our Story</span>
-    <h1>About ZLUX</h1>
-    <span class="gold-line" style="margin:1.5rem auto;"></span>
-    <p style="color:rgba(245,240,235,0.6);max-width:520px;margin:0 auto;">A studio built on the belief that beauty is a form of self-expression — and deserves to be treated as such.</p>
+<nav class="nav" id="nav">
+  <a href="index.html" class="nav-logo">ZLUX</a>
+  <div class="nav-links">
+    <a href="services.html">Services</a>
+    <a href="memberships.html">Memberships</a>
+    <a href="about.html" style="color:var(--champagne)">About</a>
+    <a href="contact.html">Contact</a>
+    <a href="client-portal.html">My Portal</a>
+    <a href="booking.html" class="btn-gold" style="animation:none;">Book Now</a>
   </div>
+  <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
+</nav>
+<div class="nav-mobile" id="nav-mobile">
+  <a href="services.html">Services</a><a href="memberships.html">Memberships</a><a href="about.html">About</a><a href="contact.html">Contact</a><a href="client-portal.html">My Portal</a><a href="booking.html">Book Now</a>
+</div>
 
-  <!-- Intro -->
-  <section class="section">
-    <div class="about-intro">
-      <div class="about-intro-text fade-in">
-        <span class="section-label">The Beginning</span>
-        <h2 class="section-title">Built for People Who Care About the Details</h2>
-        <span class="gold-line"></span>
-        <p style="margin-bottom:1.25rem;">ZLUX was founded with a simple conviction: that a nail appointment could be as considered and personal as any other luxury experience. Too often, nail studios rush — a quick dry, a hurried polish. We decided to do the opposite.</p>
-        <p style="margin-bottom:1.25rem;">We opened as an appointment-only studio to give each client undivided attention. No walk-in chaos, no waiting. Just space, skill, and a genuine conversation about what you want.</p>
-        <p>Today we serve a growing community of clients who value artistry, honesty, and the quiet luxury of being truly looked after.</p>
-      </div>
-      <div class="about-intro-visual fade-in">&#10022;</div>
-    </div>
-  </section>
+<div style="padding-top:5rem;background:var(--espresso);padding-bottom:5rem;text-align:center;">
+  <div class="section-label" style="color:rgba(201,165,90,0.6);">Porterville, California</div>
+  <h1 style="color:var(--cream);font-size:clamp(2.5rem,5vw,4rem);margin:0.75rem 0 1.5rem;">The Story Behind ZLUX</h1>
+</div>
 
-  <!-- Values -->
-  <section class="section" style="background:var(--dark);">
-    <div class="section-header text-center">
-      <span class="section-label">What We Stand For</span>
-      <h2 class="section-title">Our Values</h2>
-      <span class="gold-line"></span>
-    </div>
-    <div class="values-grid">
-      <div class="card value-card fade-in">
-        <div class="value-icon">&#10022;</div>
-        <h3>Artistry</h3>
-        <p>Every set is an opportunity to create. We bring craft, curiosity, and imagination to every appointment.</p>
+<section class="section section-soft">
+  <div class="container container-sm">
+    <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:3rem;align-items:start;" id="founder-grid">
+      <div style="text-align:center;">
+        <div class="team-avatar" style="width:120px;height:120px;font-size:3rem;margin:0 auto 1rem;">Z</div>
+        <h2 style="font-size:1.75rem;margin-bottom:0.25rem;">Zahra</h2>
+        <div class="section-label" style="font-size:0.6rem;margin-bottom:0.75rem;">Founder & Lead Artist</div>
+        <span class="availability-badge available">Accepting Members</span>
+        <div style="margin-top:1.25rem;">
+          <a href="booking.html" class="btn-gold" style="animation:none;display:inline-block;">Book with Zahra</a>
+        </div>
       </div>
-      <div class="card value-card fade-in">
-        <div class="value-icon">&#9670;</div>
-        <h3>Integrity</h3>
-        <p>We use only what we'd put on our own hands — 10-free polishes, medical-grade sanitation, no shortcuts.</p>
-      </div>
-      <div class="card value-card fade-in">
-        <div class="value-icon">&#9702;</div>
-        <h3>Intention</h3>
-        <p>Slow beauty over speed. We take the time to understand what you want and deliver it with care.</p>
-      </div>
-      <div class="card value-card fade-in">
-        <div class="value-icon">&#8734;</div>
-        <h3>Community</h3>
-        <p>ZLUX is a place where every client feels seen, welcomed, and celebrated — regardless of background.</p>
+      <div>
+        <div class="section-label" style="margin-bottom:0.75rem;">Why I Built This</div>
+        <p style="font-family:'Jost',sans-serif;font-size:0.95rem;color:var(--espresso);line-height:1.9;margin-bottom:1rem;">
+          I've been doing nails professionally for years — including celebrity clients. I know what a real nail appointment should feel like. Not rushed. Not overbooked. Not a gamble on who shows up.
+        </p>
+        <p style="font-family:'Jost',sans-serif;font-size:0.95rem;color:var(--latte);line-height:1.9;margin-bottom:1rem;">
+          Porterville deserved a studio that actually operates at the level of what I was doing in bigger cities. ZLUX is that studio.
+        </p>
+        <p style="font-family:'Jost',sans-serif;font-size:0.95rem;color:var(--latte);line-height:1.9;margin-bottom:1rem;">
+          I built the membership model because I wanted my best clients to always have a guaranteed spot — and because I believe nail health is a long-term relationship, not a one-time transaction.
+        </p>
+        <p style="font-family:'Jost',sans-serif;font-size:0.95rem;color:var(--latte);line-height:1.9;">
+          ZLUX runs on precision, privacy, and priority. I'm training my artists in the same methods I use. Every client who walks through our door gets the same standard — no exceptions.
+        </p>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- Team -->
-  <section class="section">
-    <div class="section-header text-center">
-      <span class="section-label">The People</span>
-      <h2 class="section-title">Meet Our Team</h2>
-      <span class="gold-line"></span>
+<section class="section section-cream">
+  <div class="container container-sm">
+    <div class="section-header">
+      <div class="section-label">The ZLUX Method</div>
+      <h2>What Makes Us Different</h2>
     </div>
-    <div class="team-grid">
-      <div class="team-card fade-in">
-        <div class="team-avatar">&#9786;</div>
-        <h3>Zara L.</h3>
-        <p class="role">Founder &amp; Lead Artist</p>
-        <p style="margin-top:0.75rem;font-size:0.88rem;">10 years in luxury nail care, trained in Seoul and London. Specialises in fine-line nail art and gel sculpting.</p>
+    <div class="grid-3">
+      <div style="text-align:center;padding:1.5rem;">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:2.5rem;color:var(--champagne);margin-bottom:0.5rem;">01</div>
+        <div class="pillar-title">Nail Health First</div>
+        <p class="pillar-desc" style="margin-top:0.4rem;">We never sacrifice your nail integrity for a look. Products are vetted for long-term health.</p>
       </div>
-      <div class="team-card fade-in">
-        <div class="team-avatar">&#9786;</div>
-        <h3>Nia W.</h3>
-        <p class="role">Senior Nail Technician</p>
-        <p style="margin-top:0.75rem;font-size:0.88rem;">A texture and colour specialist with a background in fashion. Nia's sets are bold, intentional, and always on-trend.</p>
+      <div style="text-align:center;padding:1.5rem;">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:2.5rem;color:var(--champagne);margin-bottom:0.5rem;">02</div>
+        <div class="pillar-title">Trained Artists Only</div>
+        <p class="pillar-desc" style="margin-top:0.4rem;">Every ZLUX artist is trained specifically in our method. No freelancers, no shortcuts.</p>
       </div>
-      <div class="team-card fade-in">
-        <div class="team-avatar">&#9786;</div>
-        <h3>Mei T.</h3>
-        <p class="role">Nail Artist &amp; Pedicure Specialist</p>
-        <p style="margin-top:0.75rem;font-size:0.88rem;">Trained in remedial nail care and pedicure therapy. Mei brings a calm precision and a therapeutic touch to every treatment.</p>
+      <div style="text-align:center;padding:1.5rem;">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:2.5rem;color:var(--champagne);margin-bottom:0.5rem;">03</div>
+        <div class="pillar-title">Membership Model</div>
+        <p class="pillar-desc" style="margin-top:0.4rem;">Limited spots mean each client gets real attention. We know your nails, your preferences, your history.</p>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- CTA -->
-  <section class="section" style="text-align:center;background:var(--dark);">
-    <span class="section-label">Ready to visit?</span>
-    <h2 class="section-title">Book Your Appointment</h2>
-    <span class="gold-line" style="margin:1.5rem auto;"></span>
-    <a href="booking.html" class="btn btn-primary">Reserve a Spot</a>
-  </section>
+<section class="section section-espresso">
+  <div class="container container-sm" style="text-align:center;">
+    <div class="section-label" style="color:rgba(201,165,90,0.6);">Join the Studio</div>
+    <h2 class="light" style="margin:0.75rem 0 1rem;font-size:2.5rem;">Ready to Experience ZLUX?</h2>
+    <p style="font-family:'Jost',sans-serif;font-size:0.9rem;color:var(--latte);margin-bottom:2rem;line-height:1.8;">Membership spots are strictly limited. Once they're gone, the waitlist opens.</p>
+    <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+      <a href="memberships.html" class="btn-gold">View Memberships</a>
+      <a href="booking.html" class="btn-outline">Book a Service</a>
+    </div>
+  </div>
+</section>
 
-  <footer class="footer">
+<footer class="footer">
+  <div class="container">
     <div class="footer-grid">
-      <div class="footer-brand">
-        <a href="index.html" class="nav-logo">ZLUX</a>
-        <p>Luxury nail studio. Appointments by booking only.</p>
-      </div>
-      <div>
-        <h4>Navigate</h4>
-        <ul>
-          <li><a href="index.html">Home</a></li>
-          <li><a href="services.html">Services</a></li>
-          <li><a href="about.html">About</a></li>
-          <li><a href="contact.html">Contact</a></li>
-          <li><a href="booking.html">Book Now</a></li>
-        </ul>
-      </div>
-      <div>
-        <h4>Hours</h4>
-        <ul>
-          <li><a>Mon – Fri: 10am – 7pm</a></li>
-          <li><a>Saturday: 10am – 6pm</a></li>
-          <li><a>Sunday: Closed</a></li>
-        </ul>
-      </div>
+      <div><div class="footer-logo">ZLUX</div><p class="footer-desc">Porterville's luxury nail membership studio.</p></div>
+      <div><div class="footer-heading">Studio</div><div class="footer-links"><a href="services.html">Services</a><a href="memberships.html">Memberships</a><a href="booking.html">Book Now</a><a href="about.html">About</a></div></div>
+      <div><div class="footer-heading">Portals</div><div class="footer-links"><a href="client-portal.html">Client Portal</a><a href="team.html">Team Portal</a><a href="dashboard.html">Admin</a></div></div>
+      <div><div class="footer-heading">Contact</div><div class="footer-links"><a href="contact.html">Get in Touch</a><a href="https://instagram.com/zluxnails" target="_blank">@zluxnails</a></div></div>
     </div>
-    <div class="footer-bottom">
-      <span>&copy; 2026 ZLUX Nail Studio. All rights reserved.</span>
-      <span>Luxury. Precision. Art.</span>
-    </div>
-  </footer>
+    <div class="footer-bottom">© 2026 ZLUX Nail Studio · Porterville, CA</div>
+  </div>
+</footer>
 
-  <script src="js/main.js"></script>
+<div class="chat-widget">
+  <div class="chat-box" id="chat-box">
+    <div class="chat-header">
+      <div><div class="chat-header-title">ZLUX Concierge</div><div class="chat-header-sub">Replies instantly</div></div>
+      <button class="chat-close" onclick="toggleChat()">&times;</button>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-msg zlux">Hi love! 💅 Ask me anything about ZLUX or our services.</div>
+    </div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="chat-input" placeholder="Ask a question…" onkeydown="if(event.key==='Enter')sendChat()" />
+      <button class="chat-send" onclick="sendChat()">→</button>
+    </div>
+  </div>
+  <button class="chat-toggle" onclick="toggleChat()">💅 &nbsp; Ask ZLUX</button>
+</div>
+
+<script src="js/main.js"></script>
+<script src="js/chatbot.js"></script>
+<script>
+  window.addEventListener('scroll', () => { document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60); });
+  document.getElementById('hamburger').addEventListener('click', () => { document.getElementById('nav-mobile').classList.toggle('open'); });
+  // Responsive founder grid
+  if (window.innerWidth < 700) {
+    document.getElementById('founder-grid').style.gridTemplateColumns = '1fr';
+  }
+</script>
 </body>
 </html>

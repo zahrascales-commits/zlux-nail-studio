@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Client Portal — ZLUX</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" class="portal-login-page">
+  <a href="index.html" style="position:absolute;top:1.5rem;left:2rem;font-family:'Cormorant Garamond',serif;font-size:1.5rem;color:var(--espresso);">ZLUX</a>
+  <div class="portal-login-box">
+    <div class="section-label" style="margin-bottom:0.5rem;">Client Portal</div>
+    <h2 style="font-size:1.75rem;margin-bottom:1.5rem;">Welcome Back</h2>
+    <div id="login-step-1">
+      <label class="luxury-label">Email</label>
+      <input class="luxury-input" id="login-email" type="email" placeholder="your@email.com" style="margin-bottom:0.75rem;" />
+      <label class="luxury-label">Password</label>
+      <input class="luxury-input" id="login-password" type="password" placeholder="••••••••" style="margin-bottom:1.25rem;" />
+      <button class="btn-gold" onclick="loginStep1()" style="animation:none;width:100%;">Continue</button>
+      <p style="font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);text-align:center;margin-top:1rem;">Don't have an account? <a href="memberships.html" style="color:var(--champagne);">Join a membership →</a></p>
+    </div>
+    <div id="login-step-2" style="display:none;">
+      <p style="font-family:'Jost',sans-serif;font-size:0.88rem;color:var(--latte);margin-bottom:1.25rem;line-height:1.7;">Enter the 6-digit code from your authenticator app.</p>
+      <label class="luxury-label">Verification Code</label>
+      <input class="luxury-input" id="totp-code" type="text" maxlength="6" placeholder="000000" style="letter-spacing:0.3em;font-size:1.2rem;margin-bottom:1.25rem;" />
+      <button class="btn-gold" onclick="loginStep2()" style="animation:none;width:100%;">Sign In</button>
+      <button onclick="document.getElementById('login-step-1').style.display='block';document.getElementById('login-step-2').style.display='none';" style="background:none;border:none;color:var(--latte);font-family:'Jost',sans-serif;font-size:0.78rem;cursor:pointer;margin-top:0.75rem;width:100%;text-align:center;">← Back</button>
+    </div>
+    <div id="login-error" style="display:none;background:rgba(192,82,74,0.08);border:1px solid rgba(192,82,74,0.2);color:#c0524a;font-family:'Jost',sans-serif;font-size:0.82rem;padding:0.65rem 0.875rem;margin-top:0.75rem;"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard-screen" style="display:none;">
+  <div class="portal-layout">
+    <div class="portal-sidebar">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:1.4rem;color:var(--champagne);padding:0.5rem 0.875rem;margin-bottom:1.5rem;">ZLUX</div>
+      <button class="portal-nav-item active" id="nav-overview" onclick="showTab('overview')">◈ &nbsp; Overview</button>
+      <button class="portal-nav-item" id="nav-book" onclick="showTab('book')">◈ &nbsp; Book</button>
+      <button class="portal-nav-item" id="nav-history" onclick="showTab('history')">◈ &nbsp; History</button>
+      <button class="portal-nav-item" id="nav-payment" onclick="showTab('payment')">◈ &nbsp; Payment</button>
+      <div style="flex:1;"></div>
+      <button class="portal-nav-item" onclick="logout()" style="margin-top:auto;">← Sign Out</button>
+    </div>
+    <div class="portal-main">
+      <!-- Overview Tab -->
+      <div id="tab-overview">
+        <div style="margin-bottom:1.5rem;">
+          <div class="section-label" style="font-size:0.6rem;">Welcome Back</div>
+          <h2 style="font-size:1.75rem;margin-top:0.25rem;" id="welcome-name">Hello</h2>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="section-label" style="font-size:0.6rem;">Membership</div>
+            <div class="stat-value" id="client-tier">—</div>
+            <div class="stat-sub">Current Tier</div>
+          </div>
+          <div class="stat-card">
+            <div class="section-label" style="font-size:0.6rem;">Services</div>
+            <div class="stat-value">2</div>
+            <div class="stat-sub">Remaining This Month</div>
+          </div>
+          <div class="stat-card">
+            <div class="section-label" style="font-size:0.6rem;">Next Appointment</div>
+            <div class="stat-value" style="font-size:1.4rem;">June 18</div>
+            <div class="stat-sub">2:00 PM · Luxe Gel X</div>
+          </div>
+          <div class="stat-card">
+            <div class="section-label" style="font-size:0.6rem;">Member Since</div>
+            <div class="stat-value" style="font-size:1.4rem;">Jan 2026</div>
+            <div class="stat-sub">6 months strong</div>
+          </div>
+        </div>
+        <div style="margin-top:1.5rem;">
+          <div class="section-label" style="margin-bottom:1rem;">Next Appointment</div>
+          <div class="appt-block">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;">
+              <div>
+                <div class="appt-time">Wed, June 18 · 2:00 PM</div>
+                <div class="appt-client" style="font-size:1.1rem;margin:0.2rem 0;">Medium Gel X</div>
+                <div class="appt-service">with Zahra · ZLUX Studio, Porterville CA</div>
+              </div>
+              <span class="tier-pill tier-luxe">Luxe Member</span>
+            </div>
+          </div>
+          <div style="text-align:right;margin-top:0.75rem;">
+            <a href="booking.html" class="btn-gold" style="animation:none;font-size:0.72rem;">Book Another</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Book Tab -->
+      <div id="tab-book" style="display:none;">
+        <div class="member-banner" style="margin-bottom:1.5rem;">
+          ✦ &nbsp; As a member, you have priority booking access.
+        </div>
+        <a href="booking.html" class="btn-gold" style="animation:none;display:inline-block;">Open Booking Page</a>
+      </div>
+
+      <!-- History Tab -->
+      <div id="tab-history" style="display:none;">
+        <div class="section-label" style="margin-bottom:1rem;">Appointment History</div>
+        <div class="appt-block completed">
+          <div class="appt-time">May 22, 2026 · 3:00 PM</div>
+          <div class="appt-client" style="font-size:1.1rem;">Classic Spa Pedicure</div>
+          <div class="appt-service">with Zahra · Completed</div>
+        </div>
+        <div class="appt-block completed">
+          <div class="appt-time">Apr 30, 2026 · 11:00 AM</div>
+          <div class="appt-client" style="font-size:1.1rem;">Long Gel X</div>
+          <div class="appt-service">with Artist 2 · Completed</div>
+        </div>
+        <div class="appt-block completed">
+          <div class="appt-time">Apr 2, 2026 · 2:30 PM</div>
+          <div class="appt-client" style="font-size:1.1rem;">Organic Structured Manicure + Russian Technique</div>
+          <div class="appt-service">with Zahra · Completed</div>
+        </div>
+      </div>
+
+      <!-- Payment Tab -->
+      <div id="tab-payment" style="display:none;">
+        <div class="section-label" style="margin-bottom:1rem;">Membership & Billing</div>
+        <div class="luxury-card" style="margin-bottom:1rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+            <div>
+              <div class="section-label" style="font-size:0.6rem;">Current Plan</div>
+              <div style="font-family:'Cormorant Garamond',serif;font-size:1.6rem;color:var(--champagne);" id="plan-name">Luxe Club</div>
+              <div style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--latte);">$199 / month · Auto-renews July 1</div>
+            </div>
+            <span style="background:rgba(201,165,90,0.12);color:var(--champagne);font-family:'Jost',sans-serif;font-size:0.65rem;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;padding:0.25rem 0.75rem;">Active</span>
+          </div>
+        </div>
+        <div class="section-label" style="margin-bottom:0.75rem;">Recent Charges</div>
+        <div style="border:1px solid rgba(201,165,90,0.1);">
+          <div class="service-row"><span class="service-name">June membership · Luxe</span><span class="service-price">$199</span></div>
+          <div class="service-row"><span class="service-name">May deposit · Long Gel X</span><span class="service-price">$50</span></div>
+          <div class="service-row"><span class="service-name">May membership · Luxe</span><span class="service-price">$199</span></div>
+          <div class="service-row"><span class="service-name">Apr deposit · Organic Manicure + Russian</span><span class="service-price">$60</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/portals.js"></script>
+<script>
+  function loginStep1() {
+    const email = document.getElementById('login-email').value.trim();
+    const pass = document.getElementById('login-password').value;
+    if (!email || !pass) {
+      showError('Please enter your email and password.');
+      return;
+    }
+    document.getElementById('login-step-1').style.display = 'none';
+    document.getElementById('login-step-2').style.display = 'block';
+    document.getElementById('login-error').style.display = 'none';
+  }
+  function loginStep2() {
+    const code = document.getElementById('totp-code').value.trim();
+    if (code.length !== 6) {
+      showError('Enter a 6-digit code.');
+      return;
+    }
+    // Demo: any 6-digit code works
+    const email = document.getElementById('login-email').value.trim();
+    const name = email.split('@')[0].replace(/[._]/g,' ');
+    sessionStorage.setItem('zlux_role', 'CLIENT');
+    sessionStorage.setItem('zlux_name', name);
+    sessionStorage.setItem('zlux_tier', 'Luxe');
+    showDashboard();
+  }
+  function showError(msg) {
+    const el = document.getElementById('login-error');
+    el.style.display = 'block';
+    el.textContent = msg;
+  }
+  function showDashboard() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard-screen').style.display = 'block';
+    const name = sessionStorage.getItem('zlux_name') || 'there';
+    const tier = sessionStorage.getItem('zlux_tier') || '—';
+    document.getElementById('welcome-name').textContent = 'Hello, ' + name.charAt(0).toUpperCase() + name.slice(1);
+    document.getElementById('client-tier').textContent = tier;
+    document.getElementById('plan-name').textContent = tier + ' Club';
+  }
+  function showTab(t) {
+    ['overview','book','history','payment'].forEach(tab => {
+      document.getElementById('tab-' + tab).style.display = tab === t ? 'block' : 'none';
+      document.getElementById('nav-' + tab).classList.toggle('active', tab === t);
+    });
+  }
+  function logout() {
+    sessionStorage.removeItem('zlux_role');
+    sessionStorage.removeItem('zlux_name');
+    sessionStorage.removeItem('zlux_tier');
+    document.getElementById('dashboard-screen').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('login-step-1').style.display = 'block';
+    document.getElementById('login-step-2').style.display = 'none';
+  }
+  // Auto-login if session exists
+  if (sessionStorage.getItem('zlux_role') === 'CLIENT') showDashboard();
+</script>
+</body>
+</html>

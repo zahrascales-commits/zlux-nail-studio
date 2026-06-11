@@ -4,143 +4,162 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Services — ZLUX Nail Studio</title>
-  <meta name="description" content="Browse ZLUX Nail Studio's full menu of luxury nail services — from classic manicures to bespoke nail art and deluxe pedicures." />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
 
-  <nav class="nav">
-    <a href="index.html" class="nav-logo">ZLUX</a>
-    <ul class="nav-links">
-      <li><a href="index.html">Home</a></li>
-      <li><a href="services.html">Services</a></li>
-      <li><a href="about.html">About</a></li>
-      <li><a href="contact.html">Contact</a></li>
-      <li><a href="booking.html" class="btn btn-outline nav-cta">Book Now</a></li>
-    </ul>
-    <button class="nav-toggle" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
-  </nav>
-
-  <div class="page-hero">
-    <span class="section-label">What We Offer</span>
-    <h1>Our Services</h1>
-    <span class="gold-line" style="margin:1.5rem auto;"></span>
-    <p style="color:rgba(245,240,235,0.6);max-width:480px;margin:0 auto;">Every service is performed by skilled nail artists using only premium, cruelty-free products.</p>
+<nav class="nav" id="nav">
+  <a href="index.html" class="nav-logo">ZLUX</a>
+  <div class="nav-links">
+    <a href="services.html" style="color:var(--champagne)">Services</a>
+    <a href="memberships.html">Memberships</a>
+    <a href="about.html">About</a>
+    <a href="contact.html">Contact</a>
+    <a href="client-portal.html">My Portal</a>
+    <a href="booking.html" class="btn-gold" style="animation:none;">Book Now</a>
   </div>
+  <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
+</nav>
+<div class="nav-mobile" id="nav-mobile">
+  <a href="services.html">Services</a><a href="memberships.html">Memberships</a><a href="about.html">About</a><a href="contact.html">Contact</a><a href="client-portal.html">My Portal</a><a href="booking.html">Book Now</a>
+</div>
 
-  <section class="section">
-    <div id="services-container" class="services-grid">
-      <!-- loaded by JS -->
+<div style="padding-top:5rem;background:var(--espresso);padding-bottom:4rem;text-align:center;">
+  <div class="section-label" style="color:rgba(201,165,90,0.6);">What We Offer</div>
+  <h1 style="color:var(--cream);font-size:clamp(2.5rem,5vw,4rem);margin:0.75rem 0 1rem;">The Menu</h1>
+  <p style="font-family:'Jost',sans-serif;font-size:0.95rem;color:var(--latte);max-width:420px;margin:0 auto;">Every service performed with precision. Every appointment protected with a 50% deposit.</p>
+</div>
+
+<section class="section section-soft">
+  <div class="container" style="max-width:860px;">
+    <div class="section-header">
+      <div class="section-label">Manicure Services</div>
     </div>
-    <noscript>
-      <p style="color:var(--muted);">Please enable JavaScript to view our services.</p>
-    </noscript>
-  </section>
-
-  <!-- Add-ons -->
-  <section class="section" style="background:var(--dark);padding-top:4rem;padding-bottom:4rem;">
-    <div style="max-width:680px;margin:0 auto;">
-      <span class="section-label" style="display:block;margin-bottom:0.5rem;">Enhancements</span>
-      <h2 style="margin-bottom:1rem;font-size:1.8rem;">Add-ons</h2>
-      <span class="gold-line"></span>
-      <p style="margin-bottom:2rem;">Add these to any service at booking.</p>
-      <div class="grid-2">
-        <div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:1.5rem 2rem;">
-          <div>
-            <h3 style="font-size:1rem;margin-bottom:0.25rem;">Removal</h3>
-            <p style="font-size:0.85rem;margin:0;">Safe removal of previous set</p>
-          </div>
-          <span style="font-family:var(--font-heading);font-size:1.4rem;color:var(--gold);">+$35</span>
+    <div class="luxury-card" style="margin-bottom:1.5rem;">
+      <h3 style="font-size:1.4rem;margin-bottom:0.5rem;">Organic Structured Manicure</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+        <div>
+          <p style="font-family:'Jost',sans-serif;font-size:0.88rem;color:var(--latte);line-height:1.7;max-width:500px;">The healthiest nail service we offer. Uses your natural nail structure with an organic overlay to add strength without damage. Best for nail growth and long-term nail health.</p>
+          <div style="margin-top:0.75rem;"><span style="background:rgba(201,165,90,0.1);color:var(--champagne);font-family:'Jost',sans-serif;font-size:0.65rem;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;padding:0.2rem 0.6rem;">Recommended</span></div>
         </div>
-        <div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:1.5rem 2rem;">
-          <div>
-            <h3 style="font-size:1rem;margin-bottom:0.25rem;">Russian Manicure</h3>
-            <p style="font-size:0.85rem;margin:0;">Precision e-file cuticle treatment</p>
-          </div>
-          <span style="font-family:var(--font-heading);font-size:1.4rem;color:var(--gold);">+$30</span>
+        <div style="text-align:right;">
+          <div style="font-family:'Cormorant Garamond',serif;font-size:2.2rem;color:var(--champagne);">from $90</div>
+          <a href="booking.html" class="btn-gold" style="animation:none;font-size:0.68rem;margin-top:0.5rem;display:inline-block;">Book This</a>
         </div>
       </div>
     </div>
-  </section>
 
-  <!-- Deposit + Policy note -->
-  <section class="section" style="padding-top:3rem;padding-bottom:3rem;">
-    <div style="max-width:680px;margin:0 auto;text-align:center;">
-      <span class="section-label">Deposit Policy</span>
-      <p style="margin-bottom:0.75rem;">All services require a <strong style="color:var(--white);">nonrefundable deposit of 50% of the total</strong> at the time of booking. Your remaining balance is due at your appointment.</p>
-      <p style="margin-bottom:0.75rem;">We ask for a <strong style="color:var(--white);">72-hour cancellation notice</strong> for all appointments. Late arrivals may result in a shortened service.</p>
-      <p>Please inform us of any nail conditions or sensitivities when booking.</p>
+    <div class="luxury-card" style="padding:1.5rem 2.25rem;margin-bottom:0.5rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+        <div>
+          <h3 style="font-size:1.25rem;margin-bottom:0.25rem;">Gel X Extensions</h3>
+          <p style="font-family:'Jost',sans-serif;font-size:0.84rem;color:var(--latte);">Lightweight, flexible, long-lasting gel extensions in three lengths.</p>
+        </div>
+        <div style="text-align:right;min-width:120px;">
+          <div style="font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);margin-bottom:0.3rem;">Short &nbsp;<span style="color:var(--champagne);font-family:'Cormorant Garamond',serif;font-size:1.2rem;">$95</span></div>
+          <div style="font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);margin-bottom:0.3rem;">Medium &nbsp;<span style="color:var(--champagne);font-family:'Cormorant Garamond',serif;font-size:1.2rem;">$100</span></div>
+          <div style="font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);">Long &nbsp;<span style="color:var(--champagne);font-family:'Cormorant Garamond',serif;font-size:1.2rem;">$110</span></div>
+        </div>
+      </div>
     </div>
-  </section>
+    <div class="luxury-card" style="padding:1.5rem 2.25rem;margin-bottom:2rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+        <div>
+          <h3 style="font-size:1.25rem;margin-bottom:0.25rem;">Acrylic Sets</h3>
+          <p style="font-family:'Jost',sans-serif;font-size:0.84rem;color:var(--latte);">Classic acrylic sculpted for durability and a flawless finish.</p>
+        </div>
+        <div style="text-align:right;min-width:120px;">
+          <div style="font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);margin-bottom:0.3rem;">Short &nbsp;<span style="color:var(--champagne);font-family:'Cormorant Garamond',serif;font-size:1.2rem;">$95</span></div>
+          <div style="font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);margin-bottom:0.3rem;">Medium &nbsp;<span style="color:var(--champagne);font-family:'Cormorant Garamond',serif;font-size:1.2rem;">$100</span></div>
+          <div style="font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);">Long &nbsp;<span style="color:var(--champagne);font-family:'Cormorant Garamond',serif;font-size:1.2rem;">$110</span></div>
+        </div>
+      </div>
+    </div>
 
-  <footer class="footer">
+    <div class="section-header" style="margin-top:1rem;">
+      <div class="section-label">Pedicure Services</div>
+    </div>
+    <div class="grid-3" style="margin-bottom:2rem;">
+      <div class="luxury-card" style="text-align:center;">
+        <h3 style="font-size:1.3rem;margin-bottom:0.5rem;">Hydro Free</h3>
+        <p style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--latte);margin-bottom:1rem;line-height:1.7;">Waterless pedicure — cleaner, more hygienic, better for the skin barrier.</p>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--champagne);margin-bottom:1rem;">$85</div>
+        <a href="booking.html" class="btn-outline-dark" style="font-size:0.68rem;display:block;text-align:center;">Book</a>
+      </div>
+      <div class="luxury-card" style="text-align:center;border:2px solid rgba(201,165,90,0.3);">
+        <h3 style="font-size:1.3rem;margin-bottom:0.5rem;">Classic Spa</h3>
+        <p style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--latte);margin-bottom:1rem;line-height:1.7;">Full spa treatment — soak, scrub, mask, massage, gel or polish finish.</p>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--champagne);margin-bottom:1rem;">$95</div>
+        <a href="booking.html" class="btn-gold" style="animation:none;font-size:0.68rem;display:block;text-align:center;">Book</a>
+      </div>
+      <div class="luxury-card" style="text-align:center;">
+        <h3 style="font-size:1.3rem;margin-bottom:0.5rem;">Royal Citrus</h3>
+        <p style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--latte);margin-bottom:1rem;line-height:1.7;">The full luxury experience with citrus enzyme soak, extended massage, paraffin dip.</p>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--champagne);margin-bottom:1rem;">$105</div>
+        <a href="booking.html" class="btn-outline-dark" style="font-size:0.68rem;display:block;text-align:center;">Book</a>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <div class="section-label">Add-Ons</div>
+    </div>
+    <div class="grid-2">
+      <div class="luxury-card">
+        <h3 style="font-size:1.2rem;margin-bottom:0.4rem;">Soak Off Removal</h3>
+        <p style="font-family:'Jost',sans-serif;font-size:0.84rem;color:var(--latte);margin-bottom:0.75rem;line-height:1.7;">Have nails from another salon? Add this to your new service booking. Required if coming in with existing acrylics, gel, or dip.</p>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:1.8rem;color:var(--champagne);">+$35</div>
+      </div>
+      <div class="luxury-card">
+        <h3 style="font-size:1.2rem;margin-bottom:0.4rem;">Russian Manicure Technique</h3>
+        <p style="font-family:'Jost',sans-serif;font-size:0.84rem;color:var(--latte);margin-bottom:0.75rem;line-height:1.7;">Adds the Russian dry manicure technique to any service — the most precise cuticle work for a clean, editorial finish that lasts weeks longer.</p>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:1.8rem;color:var(--champagne);">+$30</div>
+      </div>
+    </div>
+
+    <div style="background:rgba(201,165,90,0.06);border:1px solid rgba(201,165,90,0.18);padding:1.25rem 1.5rem;margin-top:2rem;text-align:center;">
+      <p style="font-family:'Jost',sans-serif;font-size:0.84rem;color:var(--espresso);line-height:1.7;">All services require a <strong>50% non-refundable deposit</strong> at the time of booking. Members receive add-on discounts based on their tier.</p>
+    </div>
+
+    <div style="text-align:center;margin-top:2.5rem;">
+      <a href="booking.html" class="btn-gold">Reserve Your Appointment</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
     <div class="footer-grid">
-      <div class="footer-brand">
-        <a href="index.html" class="nav-logo">ZLUX</a>
-        <p>Luxury nail studio. Appointments by booking only.</p>
-      </div>
-      <div>
-        <h4>Navigate</h4>
-        <ul>
-          <li><a href="index.html">Home</a></li>
-          <li><a href="services.html">Services</a></li>
-          <li><a href="about.html">About</a></li>
-          <li><a href="contact.html">Contact</a></li>
-          <li><a href="booking.html">Book Now</a></li>
-        </ul>
-      </div>
-      <div>
-        <h4>Hours</h4>
-        <ul>
-          <li><a>Mon – Fri: 10am – 7pm</a></li>
-          <li><a>Saturday: 10am – 6pm</a></li>
-          <li><a>Sunday: Closed</a></li>
-        </ul>
-      </div>
+      <div><div class="footer-logo">ZLUX</div><p class="footer-desc">Porterville's luxury nail membership studio.</p></div>
+      <div><div class="footer-heading">Studio</div><div class="footer-links"><a href="services.html">Services</a><a href="memberships.html">Memberships</a><a href="booking.html">Book Now</a><a href="about.html">About</a></div></div>
+      <div><div class="footer-heading">Portals</div><div class="footer-links"><a href="client-portal.html">Client Portal</a><a href="team.html">Team Portal</a><a href="dashboard.html">Admin</a></div></div>
+      <div><div class="footer-heading">Contact</div><div class="footer-links"><a href="contact.html">Get in Touch</a><a href="https://instagram.com/zluxnails" target="_blank">@zluxnails</a></div></div>
     </div>
-    <div class="footer-bottom">
-      <span>&copy; 2026 ZLUX Nail Studio. All rights reserved.</span>
-      <span>Luxury. Precision. Art.</span>
+    <div class="footer-bottom">© 2026 ZLUX Nail Studio · Porterville, CA</div>
+  </div>
+</footer>
+
+<div class="chat-widget">
+  <div class="chat-box" id="chat-box">
+    <div class="chat-header">
+      <div><div class="chat-header-title">ZLUX Concierge</div><div class="chat-header-sub">Replies instantly</div></div>
+      <button class="chat-close" onclick="toggleChat()">&times;</button>
     </div>
-  </footer>
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-msg zlux">Hi love! 💅 Ask me anything about our services.</div>
+    </div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="chat-input" placeholder="Ask a question…" onkeydown="if(event.key==='Enter')sendChat()" />
+      <button class="chat-send" onclick="sendChat()">→</button>
+    </div>
+  </div>
+  <button class="chat-toggle" onclick="toggleChat()">💅 &nbsp; Ask ZLUX</button>
+</div>
 
-  <script src="js/main.js"></script>
-  <script>
-    const fmt = {
-      price: (cents) => `$${(cents / 100).toFixed(0)}`,
-    };
-
-    async function loadServices() {
-      const container = document.getElementById('services-container');
-      try {
-        const res = await fetch('/api/services');
-        const services = await res.json();
-        container.innerHTML = services.map((s) => `
-          <div class="card service-full-card fade-in">
-            <div class="card-head">
-              <h3>${s.name}</h3>
-              <span class="badge">${s.duration_min} min</span>
-            </div>
-            <div class="price-row">
-              <span class="price">${fmt.price(s.price_cents)}</span>
-            </div>
-            <p>${s.description}</p>
-            <a href="booking.html?service=${s.id}" class="btn btn-outline">Book This Service</a>
-          </div>
-        `).join('');
-        // re-observe fade-ins
-        document.querySelectorAll('.fade-in').forEach((el) => {
-          const obs = new IntersectionObserver(([e]) => e.isIntersecting && e.target.classList.add('visible'), { threshold: 0.1 });
-          obs.observe(el);
-        });
-      } catch {
-        container.innerHTML = '<p class="error-msg">Could not load services. Please refresh or try again later.</p>';
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', loadServices);
-  </script>
+<script src="js/main.js"></script>
+<script src="js/chatbot.js"></script>
+<script>
+  window.addEventListener('scroll', () => { document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60); });
+  document.getElementById('hamburger').addEventListener('click', () => { document.getElementById('nav-mobile').classList.toggle('open'); });
+</script>
 </body>
 </html>

@@ -3,183 +3,370 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ZLUX Nail Studio — Luxury Nail Art</title>
-  <meta name="description" content="ZLUX — the luxury nail studio redefining what a nail appointment feels like. Exclusive. Precise. Unforgettable." />
+  <title>ZLUX Nail Studio — Porterville, CA</title>
+  <meta name="description" content="ZLUX — Porterville's luxury nail membership studio. Exclusive. Precise. Unforgettable." />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
 
-  <nav class="nav">
-    <a href="index.html" class="nav-logo">ZLUX</a>
-    <ul class="nav-links">
-      <li><a href="index.html">Home</a></li>
-      <li><a href="services.html">Services</a></li>
-      <li><a href="about.html">About</a></li>
-      <li><a href="contact.html">Contact</a></li>
-      <li><a href="booking.html" class="btn btn-primary nav-cta">Reserve Now</a></li>
-    </ul>
-    <button class="nav-toggle" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
-  </nav>
-
-  <!-- Hero -->
-  <section class="hero">
-    <div class="hero-bg"></div>
-    <div class="hero-content">
-      <p class="hero-eyebrow">&#x2736; By Appointment Only &nbsp;&middot;&nbsp; Limited Availability</p>
-      <h1 class="hero-title">
-        Your Nails.<br>
-        <em>Elevated.</em>
-      </h1>
-      <p class="hero-desc">ZLUX is where precision meets indulgence. An experience so refined, your hands will do the talking before you even say a word.</p>
-      <div class="hero-actions">
-        <a href="booking.html" class="btn btn-primary">Secure Your Appointment</a>
-        <a href="services.html" class="btn btn-outline">View Services</a>
-      </div>
-    </div>
-    <div class="hero-scroll">Discover</div>
-  </section>
-
-  <!-- Scarcity strip -->
-  <div class="scarcity-strip">
-    &#x2736;&nbsp; <strong>Spots fill fast.</strong> &nbsp;Book at least 48 hours in advance to guarantee your date. &nbsp;&#x2736;
+<!-- NAV -->
+<nav class="nav" id="nav">
+  <a href="index.html" class="nav-logo">ZLUX</a>
+  <div class="nav-links">
+    <a href="services.html">Services</a>
+    <a href="memberships.html">Memberships</a>
+    <a href="about.html">About</a>
+    <a href="contact.html">Contact</a>
+    <a href="client-portal.html">My Portal</a>
+    <a href="booking.html" class="btn-gold" style="animation:none;">Book Now</a>
   </div>
+  <button class="nav-hamburger" id="hamburger" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+<div class="nav-mobile" id="nav-mobile">
+  <a href="services.html">Services</a>
+  <a href="memberships.html">Memberships</a>
+  <a href="about.html">About</a>
+  <a href="contact.html">Contact</a>
+  <a href="client-portal.html">My Portal</a>
+  <a href="booking.html">Book Now</a>
+</div>
 
-  <!-- Services preview -->
-  <section class="section">
-    <div class="section-header text-center">
-      <span class="section-label">The Collection</span>
-      <h2 class="section-title">Signature Services</h2>
-      <span class="gold-line"></span>
-      <p class="section-subtitle">Every service is a curated experience — designed for women who expect nothing less than perfection.</p>
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-content animate-slide-up">
+    <div class="section-label">Porterville, California</div>
+    <h1>Nails That Speak<br><span class="gold-text">Before You Do</span></h1>
+    <p class="hero-sub">A private membership studio where your nails are never an afterthought. Limited spots. Zero compromises.</p>
+    <div class="hero-ctas">
+      <a href="memberships.html" class="btn-gold">Join the Waitlist</a>
+      <a href="booking.html" class="btn-outline">Book a Service</a>
     </div>
-    <div class="grid-3">
-      <div class="card service-card fade-in">
-        <h3>Organic Structured Manicure</h3>
-        <p class="price">from $90</p>
-        <p class="duration">60 min</p>
-        <p>The foundation of beautiful nails — organic products, structured perfection, lasting results.</p>
-        <a href="booking.html">Reserve this &rarr;</a>
-      </div>
-      <div class="card service-card fade-in">
-        <h3>Gel X Extensions</h3>
-        <p class="price">from $95</p>
-        <p class="duration">60 – 90 min</p>
-        <p>Short, medium, or long — Gel X extensions that flex with your life and never let you down.</p>
-        <a href="booking.html">Reserve this &rarr;</a>
-      </div>
-      <div class="card service-card fade-in">
-        <h3>Royal Citrus Pedicure</h3>
-        <p class="price">$105</p>
-        <p class="duration">90 min</p>
-        <p>Our most indulgent pedicure. Citrus-infused treatments, extended massage, complete luxury.</p>
-        <a href="booking.html">Reserve this &rarr;</a>
-      </div>
-    </div>
-    <div style="text-align:center;margin-top:3.5rem;">
-      <a href="services.html" class="btn btn-outline">See Full Menu</a>
-    </div>
-  </section>
+  </div>
+  <div class="hero-scroll">
+    <span>Scroll</span>
+    <div class="hero-scroll-line"></div>
+  </div>
+</section>
 
-  <!-- Why ZLUX -->
-  <section class="section" style="background:var(--dark);">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6rem;align-items:center;">
-      <div class="fade-in">
-        <span class="section-label">Why Women Choose ZLUX</span>
-        <h2 class="section-title">This Isn't<br>Just a Nail Appointment.</h2>
-        <span class="gold-line"></span>
-        <p style="margin-bottom:1.5rem;">It's the moment in your week that belongs entirely to you. No rushing. No compromising. Just expert hands, premium products, and a result that commands attention.</p>
-        <p style="margin-bottom:2.5rem;">We work with a limited clientele — so every appointment gets the full, undivided attention it deserves. That's the ZLUX difference.</p>
-        <a href="booking.html" class="btn btn-primary">Book Your Experience</a>
+<!-- TICKER -->
+<div class="ticker">
+  <p class="ticker-text" id="ticker-text">✦ &nbsp; Every set is custom-crafted. No templates, no rushing. &nbsp; ✦</p>
+</div>
+
+<!-- BRAND STATEMENT -->
+<section class="section section-soft">
+  <div class="container container-sm">
+    <div class="section-header">
+      <div class="section-label">The ZLUX Standard</div>
+      <h2>Quiet Luxury.<br>Loud Results.</h2>
+    </div>
+    <p style="font-family:'Jost',sans-serif;font-size:1rem;color:var(--latte);text-align:center;max-width:520px;margin:0 auto 3rem;line-height:1.9;">
+      ZLUX is not a nail salon. It's a private studio experience built for women who understand that excellence is in the details — from the products we use to the time we protect for you.
+    </p>
+    <div class="philosophy-pillars">
+      <div>
+        <div class="pillar-title">Precision</div>
+        <div class="pillar-desc">Every nail shaped to your exact anatomy. No two sets identical.</div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;" class="fade-in">
-        <div class="card" style="text-align:center;padding:2.5rem 1.5rem;">
-          <p class="stat-num">500+</p>
-          <p class="stat-label">Clients Served</p>
+      <div>
+        <div class="pillar-title">Privacy</div>
+        <div class="pillar-desc">No walk-ins, no crowds, no waiting. Your time is sacred here.</div>
+      </div>
+      <div>
+        <div class="pillar-title">Priority</div>
+        <div class="pillar-desc">Members always book first. Your spot is protected every month.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MEMBERSHIP PREVIEW -->
+<section class="section section-cream">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">Membership</div>
+      <h2>Choose Your Club</h2>
+      <p style="font-family:'Jost',sans-serif;font-size:0.9rem;color:var(--latte);margin-top:0.75rem;">Spots are strictly limited and go fast.</p>
+    </div>
+    <div class="membership-grid">
+      <!-- Signature -->
+      <div class="membership-card">
+        <div class="section-label">Signature Club</div>
+        <div class="membership-price">$99<span>/mo</span></div>
+        <div class="spot-bar-wrap">
+          <div class="spot-bar-labels">
+            <span>25 spots total</span>
+            <span class="remaining" id="sig-remaining">3 left</span>
+          </div>
+          <div class="spot-bar"><div class="spot-bar-fill" id="sig-bar" style="width:0%"></div></div>
         </div>
-        <div class="card" style="text-align:center;padding:2.5rem 1.5rem;margin-top:1.75rem;">
-          <p class="stat-num">10</p>
-          <p class="stat-label">Signature Services</p>
+        <ul class="membership-list">
+          <li>1 service per month</li>
+          <li>Priority booking over guests</li>
+          <li>10% off add-ons</li>
+          <li>Birthday month upgrade</li>
+        </ul>
+        <a href="memberships.html#signature" class="btn-outline-dark" style="width:100%;text-align:center;display:block;">View Details</a>
+      </div>
+      <!-- Luxe -->
+      <div class="membership-card highlighted" id="luxe-card">
+        <div class="membership-badge">Most Popular</div>
+        <div class="section-label">Luxe Club</div>
+        <div class="membership-price">$199<span>/mo</span></div>
+        <div class="spot-bar-wrap">
+          <div class="spot-bar-labels">
+            <span>15 spots total</span>
+            <span class="remaining" id="luxe-remaining">2 left</span>
+          </div>
+          <div class="spot-bar"><div class="spot-bar-fill" id="luxe-bar" style="width:0%"></div></div>
         </div>
-        <div class="card" style="text-align:center;padding:2.5rem 1.5rem;">
-          <p class="stat-num">100%</p>
-          <p class="stat-label">Cruelty-Free</p>
+        <ul class="membership-list">
+          <li>2 services per month</li>
+          <li>Priority over Signature + guests</li>
+          <li>15% off add-ons</li>
+          <li>Complimentary nail art (1x/mo)</li>
+          <li>Birthday month upgrade + gift</li>
+        </ul>
+        <a href="memberships.html#luxe" class="btn-gold" style="width:100%;text-align:center;display:block;">Join Luxe</a>
+      </div>
+      <!-- Black Card -->
+      <div class="membership-card">
+        <div class="founding-badge">Founding Rate</div>
+        <div class="section-label">Black Card</div>
+        <div class="membership-price">$299<span>/mo</span></div>
+        <div class="spot-bar-wrap">
+          <div class="spot-bar-labels">
+            <span>10 spots total</span>
+            <span class="remaining" id="black-remaining">1 left</span>
+          </div>
+          <div class="spot-bar"><div class="spot-bar-fill" id="black-bar" style="width:0%"></div></div>
         </div>
-        <div class="card" style="text-align:center;padding:2.5rem 1.5rem;margin-top:1.75rem;">
-          <p class="stat-num">5 &#x2605;</p>
-          <p class="stat-label">Rated Luxury</p>
+        <ul class="membership-list">
+          <li>4 services per month</li>
+          <li>First booking priority always</li>
+          <li>20% off all add-ons</li>
+          <li>Monthly nail art included</li>
+          <li>VIP event access</li>
+          <li>Direct text line to Zahra</li>
+        </ul>
+        <a href="memberships.html#black-card" class="btn-outline-dark" style="width:100%;text-align:center;display:block;">View Details</a>
+      </div>
+    </div>
+    <p style="text-align:center;margin-top:2rem;font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);">All memberships require a 6-month minimum. <a href="memberships.html" style="color:var(--champagne);">Full terms →</a></p>
+  </div>
+</section>
+
+<!-- MEET THE TEAM -->
+<section class="section section-soft">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">Your Artists</div>
+      <h2>Meet the Team</h2>
+    </div>
+    <div class="grid-2" style="max-width:800px;margin:0 auto;">
+      <div class="team-card">
+        <div class="team-avatar">Z</div>
+        <div>
+          <h3 style="font-size:1.4rem;margin-bottom:0.2rem;">Zahra</h3>
+          <div class="section-label" style="font-size:0.6rem;margin-bottom:0.5rem;">Founder · Lead Artist</div>
+          <span class="availability-badge available">Taking Members</span>
+          <p style="font-family:'Jost',sans-serif;font-size:0.84rem;color:var(--latte);margin:0.75rem 0 1rem;line-height:1.7;">
+            Celebrity nail artist and founder of ZLUX. Known for structured sets that last and nail health that improves over time.
+          </p>
+          <a href="booking.html" class="btn-outline-dark" style="font-size:0.68rem;">Book with Zahra</a>
+        </div>
+      </div>
+      <div class="team-card">
+        <div class="team-avatar">A</div>
+        <div>
+          <h3 style="font-size:1.4rem;margin-bottom:0.2rem;">Artist 2</h3>
+          <div class="section-label" style="font-size:0.6rem;margin-bottom:0.5rem;">ZLUX Certified Artist</div>
+          <span class="availability-badge available">Accepting Clients</span>
+          <p style="font-family:'Jost',sans-serif;font-size:0.84rem;color:var(--latte);margin:0.75rem 0 1rem;line-height:1.7;">
+            Trained under the ZLUX method. Specializes in gel extensions and intricate nail art with a clean, editorial finish.
+          </p>
+          <a href="booking.html" class="btn-outline-dark" style="font-size:0.68rem;">Book with Artist 2</a>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- Testimonials -->
-  <section class="section">
-    <div class="section-header text-center">
-      <span class="section-label">Client Testimonials</span>
-      <h2 class="section-title">They Said It Best</h2>
-      <span class="gold-line"></span>
+<!-- SERVICES MENU -->
+<section class="section section-cream">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">Services</div>
+      <h2>The Menu</h2>
     </div>
-    <div class="grid-3">
-      <div class="card testimonial-card fade-in">
-        <blockquote>"I've been to salons all over the city. Nothing comes close. My nails look like they belong in a magazine — every single time."</blockquote>
-        <cite>— Amara S.</cite>
+    <div class="grid-2" style="max-width:880px;margin:0 auto;">
+      <div>
+        <div class="section-label" style="margin-bottom:1rem;">Manicure</div>
+        <div class="services-table">
+          <div class="service-row"><span class="service-name">Organic Structured Manicure</span><span class="service-price">from $90</span></div>
+          <div class="service-row"><span class="service-name">Short Gel X</span><span class="service-price">$95</span></div>
+          <div class="service-row"><span class="service-name">Medium Gel X</span><span class="service-price">$100</span></div>
+          <div class="service-row"><span class="service-name">Long Gel X</span><span class="service-price">$110</span></div>
+          <div class="service-row"><span class="service-name">Short Acrylic Set</span><span class="service-price">$95</span></div>
+          <div class="service-row"><span class="service-name">Medium Acrylic Set</span><span class="service-price">$100</span></div>
+          <div class="service-row"><span class="service-name">Long Acrylic Set</span><span class="service-price">$110</span></div>
+        </div>
       </div>
-      <div class="card testimonial-card fade-in">
-        <blockquote>"The moment I walk in I feel like royalty. The quality, the attention to detail, the results — ZLUX is worth every penny and then some."</blockquote>
-        <cite>— Priya K.</cite>
-      </div>
-      <div class="card testimonial-card fade-in">
-        <blockquote>"I used to change nail techs constantly searching for this level. Now I don't go anywhere else. My gel set lasts three full weeks — flawless."</blockquote>
-        <cite>— Celeste M.</cite>
+      <div>
+        <div class="section-label" style="margin-bottom:1rem;">Pedicure</div>
+        <div class="services-table">
+          <div class="service-row"><span class="service-name">Hydro Free Pedicure</span><span class="service-price">$85</span></div>
+          <div class="service-row"><span class="service-name">Classic Spa Pedicure</span><span class="service-price">$95</span></div>
+          <div class="service-row"><span class="service-name">Royal Citrus Pedicure</span><span class="service-price">$105</span></div>
+        </div>
+        <div class="section-label" style="margin-top:1.5rem;margin-bottom:1rem;">Add-Ons</div>
+        <div class="services-table">
+          <div class="service-row"><span class="service-name">Soak Off Removal</span><span class="service-price">+$35</span></div>
+          <div class="service-row"><span class="service-name">Russian Manicure Technique</span><span class="service-price">+$30</span></div>
+        </div>
+        <p style="font-family:'Jost',sans-serif;font-size:0.75rem;color:var(--latte);margin-top:1rem;">50% non-refundable deposit required at booking.</p>
       </div>
     </div>
-  </section>
+    <div style="text-align:center;margin-top:2.5rem;">
+      <a href="booking.html" class="btn-gold">Reserve Your Appointment</a>
+    </div>
+  </div>
+</section>
 
-  <!-- Final CTA -->
-  <section class="section" style="background:var(--dark);text-align:center;position:relative;overflow:hidden;">
-    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(201,168,76,0.1) 0%,transparent 60%);pointer-events:none;"></div>
-    <div style="position:relative;z-index:1;">
-      <span class="section-label">Limited Availability</span>
-      <h2 class="section-title">Ready to Be<br><em style="font-style:italic;color:var(--gold);">Obsessed</em> With Your Nails?</h2>
-      <span class="gold-line"></span>
-      <p style="max-width:400px;margin:0 auto 3rem;font-size:0.95rem;">Spots go fast. Secure yours now — it takes less than two minutes and a 50% deposit holds your date.</p>
-      <a href="booking.html" class="btn btn-primary" style="font-size:0.78rem;padding:1.1rem 3.5rem;">Secure My Spot Now</a>
+<!-- INSTAGRAM STRIP -->
+<section class="instagram-strip">
+  <div class="container">
+    <div class="section-header" style="margin-bottom:0;">
+      <div class="section-label" style="color:rgba(201,165,90,0.6);">Follow the Work</div>
+      <h2 class="light" style="font-size:2rem;margin-top:0.5rem;">@zluxnails</h2>
     </div>
-  </section>
+    <div class="insta-grid" style="margin-top:1.5rem;">
+      <div class="insta-cell">◆</div>
+      <div class="insta-cell">◆</div>
+      <div class="insta-cell">◆</div>
+      <div class="insta-cell">◆</div>
+      <div class="insta-cell">◆</div>
+      <div class="insta-cell">◆</div>
+    </div>
+    <p style="text-align:center;margin-top:1.5rem;font-family:'Jost',sans-serif;font-size:0.78rem;color:rgba(166,124,82,0.6);letter-spacing:0.1em;">Gallery coming soon — follow us on Instagram for daily work</p>
+  </div>
+</section>
 
-  <footer class="footer">
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container">
     <div class="footer-grid">
-      <div class="footer-brand">
-        <a href="index.html" class="nav-logo">ZLUX</a>
-        <p>Luxury nail studio. By appointment only. Limited availability.</p>
+      <div>
+        <div class="footer-logo">ZLUX</div>
+        <p class="footer-desc">Porterville's luxury nail membership studio. Precision. Privacy. Priority.</p>
+        <p class="footer-desc" style="margin-top:0.75rem;">Porterville, California</p>
       </div>
       <div>
-        <h4>Navigate</h4>
-        <ul>
-          <li><a href="index.html">Home</a></li>
-          <li><a href="services.html">Services</a></li>
-          <li><a href="about.html">About</a></li>
-          <li><a href="contact.html">Contact</a></li>
-          <li><a href="booking.html">Reserve Now</a></li>
-        </ul>
+        <div class="footer-heading">Studio</div>
+        <div class="footer-links">
+          <a href="services.html">Services</a>
+          <a href="memberships.html">Memberships</a>
+          <a href="booking.html">Book Now</a>
+          <a href="about.html">About</a>
+        </div>
       </div>
       <div>
-        <h4>Hours</h4>
-        <ul>
-          <li><a>Mon – Fri &nbsp; 10am – 7pm</a></li>
-          <li><a>Saturday &nbsp; 10am – 6pm</a></li>
-          <li><a>Sunday &nbsp; Closed</a></li>
-        </ul>
+        <div class="footer-heading">Portals</div>
+        <div class="footer-links">
+          <a href="client-portal.html">Client Portal</a>
+          <a href="team.html">Team Portal</a>
+          <a href="dashboard.html">Admin</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-heading">Contact</div>
+        <div class="footer-links">
+          <a href="contact.html">Get in Touch</a>
+          <a href="https://instagram.com/zluxnails" target="_blank">@zluxnails</a>
+          <a href="mailto:zahrascales@gmail.com">Email Us</a>
+        </div>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>&copy; 2026 ZLUX Nail Studio. All rights reserved.</span>
-      <span>Luxury &middot; Precision &middot; Art</span>
+      © 2026 ZLUX Nail Studio · Porterville, CA · All rights reserved
     </div>
-  </footer>
+  </div>
+</footer>
 
-  <script src="js/main.js"></script>
+<!-- URGENCY BANNER -->
+<div class="urgency-banner" id="urgency-banner">
+  <button class="banner-close" onclick="document.getElementById('urgency-banner').style.display='none'">&times;</button>
+  <div class="section-label" style="font-size:0.58rem;">Limited Availability</div>
+  <div class="banner-title">Black Card: 1 Spot Left</div>
+  <p style="font-family:'Jost',sans-serif;font-size:0.8rem;color:var(--latte);margin-bottom:1rem;line-height:1.6;">The founding rate locks in at $299/mo forever. Don't wait.</p>
+  <a href="memberships.html#black-card" class="btn-gold" style="font-size:0.68rem;padding:0.65rem 1.25rem;animation:none;display:inline-block;">Claim Your Spot</a>
+</div>
+
+<!-- CHATBOT WIDGET -->
+<div class="chat-widget">
+  <div class="chat-box" id="chat-box">
+    <div class="chat-header">
+      <div>
+        <div class="chat-header-title">ZLUX Concierge</div>
+        <div class="chat-header-sub">Replies instantly</div>
+      </div>
+      <button class="chat-close" onclick="toggleChat()">&times;</button>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-msg zlux">Hi love! 💅 I'm the ZLUX concierge. Ask me anything about services, memberships, or booking.</div>
+    </div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="chat-input" placeholder="Ask a question…" onkeydown="if(event.key==='Enter')sendChat()" />
+      <button class="chat-send" onclick="sendChat()">→</button>
+    </div>
+  </div>
+  <button class="chat-toggle" onclick="toggleChat()">💅 &nbsp; Ask ZLUX</button>
+</div>
+
+<script src="js/main.js"></script>
+<script src="js/chatbot.js"></script>
+<script>
+  // Ticker
+  const facts = [
+    'Every set is custom-crafted. No templates, no rushing.',
+    'Members always book before guests — your time is protected.',
+    'Black Card holders get direct text access to Zahra.',
+    '50% deposit secures your appointment and is non-refundable.',
+    'Wrist health is nail health. Every product we use is intentional.',
+    'ZLUX is Porterville\'s only luxury membership nail studio.'
+  ];
+  let ti = 0;
+  setInterval(() => {
+    ti = (ti + 1) % facts.length;
+    const el = document.getElementById('ticker-text');
+    el.style.opacity = 0;
+    setTimeout(() => { el.textContent = '✦   ' + facts[ti] + '   ✦'; el.style.opacity = 1; }, 300);
+  }, 4000);
+
+  // Spot bars (animate in on scroll)
+  setTimeout(() => {
+    document.getElementById('sig-bar').style.width = '88%';   // 22/25
+    document.getElementById('luxe-bar').style.width = '87%';  // 13/15
+    document.getElementById('black-bar').style.width = '90%'; // 9/10
+  }, 600);
+
+  // Urgency banner at 8s
+  setTimeout(() => {
+    document.getElementById('urgency-banner').classList.add('visible');
+  }, 8000);
+
+  // Nav scroll effect
+  window.addEventListener('scroll', () => {
+    document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60);
+  });
+
+  // Hamburger
+  document.getElementById('hamburger').addEventListener('click', () => {
+    document.getElementById('nav-mobile').classList.toggle('open');
+  });
+</script>
 </body>
 </html>

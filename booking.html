@@ -3,219 +3,310 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Book an Appointment — ZLUX Nail Studio</title>
-  <meta name="description" content="Book your ZLUX Nail Studio appointment online. Choose your service, pick a date and time, and confirm in minutes." />
+  <title>Book — ZLUX Nail Studio</title>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
 
-  <nav class="nav">
-    <a href="index.html" class="nav-logo">ZLUX</a>
-    <ul class="nav-links">
-      <li><a href="index.html">Home</a></li>
-      <li><a href="services.html">Services</a></li>
-      <li><a href="about.html">About</a></li>
-      <li><a href="contact.html">Contact</a></li>
-      <li><a href="booking.html" class="btn btn-outline nav-cta">Book Now</a></li>
-    </ul>
-    <button class="nav-toggle" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
-  </nav>
-
-  <div class="page-hero">
-    <span class="section-label">Reserve Your Moment</span>
-    <h1>Book an Appointment</h1>
-    <span class="gold-line" style="margin:1.5rem auto;"></span>
-    <p style="color:rgba(245,240,235,0.6);max-width:420px;margin:0 auto;">Choose your service, pick a time, and we'll take care of the rest.</p>
+<nav class="nav" id="nav">
+  <a href="index.html" class="nav-logo">ZLUX</a>
+  <div class="nav-links">
+    <a href="services.html">Services</a>
+    <a href="memberships.html">Memberships</a>
+    <a href="about.html">About</a>
+    <a href="contact.html">Contact</a>
+    <a href="client-portal.html">My Portal</a>
   </div>
+  <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
+</nav>
+<div class="nav-mobile" id="nav-mobile">
+  <a href="services.html">Services</a>
+  <a href="memberships.html">Memberships</a>
+  <a href="about.html">About</a>
+  <a href="contact.html">Contact</a>
+  <a href="client-portal.html">My Portal</a>
+</div>
 
-  <section class="section">
-
-    <!-- Confirmation -->
-    <div id="confirmation-box" class="confirmation-box">
-      <div class="confirmation-icon">&#10003;</div>
-      <h2>You're Booked!</h2>
-      <p>Thank you, <strong id="conf-name"></strong>. Your appointment is confirmed.</p>
-      <p class="confirmation-id" id="conf-id"></p>
-
-      <div class="deposit-notice" style="margin:1.75rem 0 0;">
-        <p style="font-size:0.78rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;">Deposit due to secure your spot</p>
-        <p style="font-size:2rem;font-family:var(--font-heading);color:var(--gold);margin-bottom:1.5rem;" id="conf-deposit"></p>
-
-        <p style="font-size:0.82rem;color:rgba(255,240,247,0.7);margin-bottom:1.25rem;">Send your deposit via <strong style="color:var(--white);">Apple Pay</strong> within 24 hours — your appointment is not secured until payment is received.</p>
-
-        <div style="background:rgba(255,45,120,0.08);border:1px solid rgba(255,45,120,0.25);border-radius:6px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
-          <p style="font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;">Apple Pay — send to this number</p>
-          <p style="font-size:1.5rem;font-family:var(--font-heading);color:var(--white);letter-spacing:0.05em;">(559) 783-3002</p>
-          <p style="font-size:0.75rem;color:var(--muted);margin-top:0.4rem;">Include your confirmation code in the note</p>
-        </div>
-
-        <p style="font-size:0.75rem;color:var(--muted);">&#9888;&nbsp; Deposits are <strong style="color:var(--white);">nonrefundable</strong>. Cancellations require 72-hour notice.</p>
-      </div>
-
-      <a href="index.html" class="btn btn-outline" style="margin-top:2rem;">Back to Home</a>
+<div class="booking-page">
+  <div class="booking-wrap">
+    <div style="text-align:center;margin-bottom:2rem;">
+      <div class="section-label">ZLUX Nail Studio</div>
+      <h1 style="font-size:2.5rem;margin-top:0.5rem;">Reserve Your Appointment</h1>
     </div>
 
-    <div id="booking-form-area">
-      <!-- Step indicators -->
-      <div class="booking-steps">
-        <div class="step-indicator active" data-step="1">
-          <span class="step-num">1</span>
-          <span>Service &amp; Date</span>
-        </div>
-        <div class="step-indicator" data-step="2">
-          <span class="step-num">2</span>
-          <span>Time Slot</span>
-        </div>
-        <div class="step-indicator" data-step="3">
-          <span class="step-num">3</span>
-          <span>Your Details</span>
-        </div>
-      </div>
+    <!-- Progress -->
+    <div class="booking-progress">
+      <div class="step-dot active" id="dot-1">1</div>
+      <div class="step-line" id="line-1"></div>
+      <div class="step-dot" id="dot-2">2</div>
+      <div class="step-line" id="line-2"></div>
+      <div class="step-dot" id="dot-3">3</div>
+      <div class="step-line" id="line-3"></div>
+      <div class="step-dot" id="dot-4">4</div>
+    </div>
 
-      <div class="booking-layout">
-        <!-- Form -->
+    <!-- Step 1: Member or Guest -->
+    <div class="booking-step active" id="step-1">
+      <div class="step-title">Are you a member?</div>
+      <div class="member-banner">
+        Members always book before guests. <a href="memberships.html">Join a membership →</a>
+      </div>
+      <button class="option-btn" onclick="selectType('member',this)">
         <div>
-
-          <!-- Step 1: Service, Add-ons, Date -->
-          <div class="booking-step active" id="step1">
-            <div class="form-group">
-              <label for="service-select">Service</label>
-              <select id="service-select">
-                <option value="">Loading services…</option>
-              </select>
-            </div>
-
-            <div class="form-group" id="addons-group" style="display:none;">
-              <label>Add-ons <span style="color:var(--muted);font-size:0.75em;text-transform:none;letter-spacing:0;">(optional)</span></label>
-              <div id="addons-list" class="addons-list"></div>
-            </div>
-
-            <div class="form-group">
-              <label for="date-input">Preferred Date</label>
-              <input type="date" id="date-input" />
-            </div>
-            <button class="btn btn-primary" id="step1-next" disabled>Choose a Time &rarr;</button>
-          </div>
-
-          <!-- Step 2: Time slot -->
-          <div class="booking-step" id="step2">
-            <p style="margin-bottom:1.5rem;font-size:0.9rem;color:var(--muted);">Select an available time slot for your appointment.</p>
-            <div class="slots-grid" id="slots-grid">
-              <p class="loading-dots">Loading…</p>
-            </div>
-            <div style="display:flex;gap:1rem;margin-top:2rem;">
-              <button class="btn btn-outline" id="step2-back">&larr; Back</button>
-              <button class="btn btn-primary" id="step2-next" disabled>Continue &rarr;</button>
-            </div>
-          </div>
-
-          <!-- Step 3: Details + Deposit -->
-          <div class="booking-step" id="step3">
-            <div class="form-group">
-              <label for="b-name">Full Name</label>
-              <input type="text" id="b-name" placeholder="Jane Smith" autocomplete="name" />
-            </div>
-            <div class="form-group">
-              <label for="b-email">Email Address</label>
-              <input type="email" id="b-email" placeholder="jane@example.com" autocomplete="email" />
-            </div>
-            <div class="form-group">
-              <label for="b-phone">Phone Number</label>
-              <input type="tel" id="b-phone" placeholder="+1 555 000 0000" autocomplete="tel" />
-            </div>
-
-            <!-- Deposit notice -->
-            <div class="deposit-box">
-              <div class="deposit-box-row">
-                <span>Service total</span>
-                <span id="dep-total">—</span>
-              </div>
-              <div class="deposit-box-row deposit-box-due">
-                <span>Deposit due now <em>(50%)</em></span>
-                <span id="dep-amount">—</span>
-              </div>
-              <p class="deposit-nonrefundable">&#9888; This deposit is <strong>nonrefundable</strong>. By confirming, you agree to this policy.</p>
-            </div>
-
-            <p id="form-error" class="error-msg"></p>
-            <div style="display:flex;gap:1rem;margin-top:1.25rem;">
-              <button class="btn btn-outline" id="step3-back">&larr; Back</button>
-              <button class="btn btn-primary" id="submit-btn">Confirm &amp; Pay Deposit</button>
-            </div>
-          </div>
+          <span class="option-name">Yes — I'm a ZLUX Member</span>
+          <span class="option-sub">Access priority booking slots</span>
         </div>
+        <span style="color:var(--champagne);font-size:0.75rem;letter-spacing:0.1em;">MEMBER ✦</span>
+      </button>
+      <button class="option-btn" onclick="selectType('guest',this)">
+        <div>
+          <span class="option-name">No — Book as a Guest</span>
+          <span class="option-sub">Available slots after members book</span>
+        </div>
+        <span style="color:var(--latte);font-size:0.75rem;letter-spacing:0.1em;">GUEST</span>
+      </button>
+      <div class="step-nav" style="justify-content:flex-end;">
+        <button class="btn-gold" onclick="goStep(2)" style="animation:none;">Continue →</button>
+      </div>
+    </div>
 
-        <!-- Summary sidebar -->
-        <div id="booking-summary-area">
-          <div class="booking-summary">
-            <h3>Your Booking</h3>
-            <div class="summary-row">
-              <span class="label">Service</span>
-              <span class="value" id="sum-service">—</span>
-            </div>
-            <div class="summary-row" id="sum-addons-row" style="display:none;">
-              <span class="label">Add-ons</span>
-              <span class="value" id="sum-addons">—</span>
-            </div>
-            <div class="summary-row">
-              <span class="label">Duration</span>
-              <span class="value" id="sum-duration">—</span>
-            </div>
-            <div class="summary-row">
-              <span class="label">Date</span>
-              <span class="value" id="sum-date">—</span>
-            </div>
-            <div class="summary-row">
-              <span class="label">Time</span>
-              <span class="value" id="sum-time">—</span>
-            </div>
-            <div class="summary-row">
-              <span class="label">Total</span>
-              <span class="value" id="sum-price">—</span>
-            </div>
-            <div class="summary-row summary-deposit">
-              <span class="label">Deposit (50%)</span>
-              <span class="value" id="sum-deposit">—</span>
-            </div>
-          </div>
+    <!-- Step 2: Service + Add-ons + Worker -->
+    <div class="booking-step" id="step-2">
+      <div class="step-title">Choose Your Service</div>
+      <div class="section-label" style="margin-bottom:0.75rem;">Manicure</div>
+      <button class="option-btn" onclick="selectService('Organic Structured Manicure',90,this)">
+        <div><span class="option-name">Organic Structured Manicure</span><span class="option-sub">Healthiest option — recommended for nail growth</span></div>
+        <span class="option-price">from $90</span>
+      </button>
+      <button class="option-btn" onclick="selectService('Short Gel X',95,this)">
+        <div><span class="option-name">Short Gel X</span></div>
+        <span class="option-price">$95</span>
+      </button>
+      <button class="option-btn" onclick="selectService('Medium Gel X',100,this)">
+        <div><span class="option-name">Medium Gel X</span></div>
+        <span class="option-price">$100</span>
+      </button>
+      <button class="option-btn" onclick="selectService('Long Gel X',110,this)">
+        <div><span class="option-name">Long Gel X</span></div>
+        <span class="option-price">$110</span>
+      </button>
+      <button class="option-btn" onclick="selectService('Short Acrylic Set',95,this)">
+        <div><span class="option-name">Short Acrylic Set</span></div>
+        <span class="option-price">$95</span>
+      </button>
+      <button class="option-btn" onclick="selectService('Medium Acrylic Set',100,this)">
+        <div><span class="option-name">Medium Acrylic Set</span></div>
+        <span class="option-price">$100</span>
+      </button>
+      <button class="option-btn" onclick="selectService('Long Acrylic Set',110,this)">
+        <div><span class="option-name">Long Acrylic Set</span></div>
+        <span class="option-price">$110</span>
+      </button>
+      <div class="section-label" style="margin:1rem 0 0.75rem;">Pedicure</div>
+      <button class="option-btn" onclick="selectService('Hydro Free Pedicure',85,this)">
+        <div><span class="option-name">Hydro Free Pedicure</span></div>
+        <span class="option-price">$85</span>
+      </button>
+      <button class="option-btn" onclick="selectService('Classic Spa Pedicure',95,this)">
+        <div><span class="option-name">Classic Spa Pedicure</span></div>
+        <span class="option-price">$95</span>
+      </button>
+      <button class="option-btn" onclick="selectService('Royal Citrus Pedicure',105,this)">
+        <div><span class="option-name">Royal Citrus Pedicure</span></div>
+        <span class="option-price">$105</span>
+      </button>
+      <div class="section-label" style="margin:1rem 0 0.75rem;">Add-Ons (optional)</div>
+      <label style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 0;border-bottom:1px solid rgba(201,165,90,0.1);cursor:pointer;">
+        <input type="checkbox" id="addon-removal" onchange="toggleAddon(35,'addon-removal')">
+        <span style="font-family:'Jost',sans-serif;font-size:0.9rem;color:var(--espresso);flex:1;">Soak Off Removal <span style="font-size:0.78rem;color:var(--latte);">(nails from another salon)</span></span>
+        <span class="option-price">+$35</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 0;border-bottom:1px solid rgba(201,165,90,0.1);cursor:pointer;">
+        <input type="checkbox" id="addon-russian" onchange="toggleAddon(30,'addon-russian')">
+        <span style="font-family:'Jost',sans-serif;font-size:0.9rem;color:var(--espresso);flex:1;">Russian Manicure Technique</span>
+        <span class="option-price">+$30</span>
+      </label>
+      <div class="section-label" style="margin:1rem 0 0.75rem;">Artist Preference</div>
+      <button class="option-btn" onclick="selectWorker('Zahra',this)">
+        <div><span class="option-name">Zahra — Founder & Lead Artist</span><span class="option-sub">Celebrity nail artist, specializes in structured sets</span></div>
+      </button>
+      <button class="option-btn" onclick="selectWorker('Any Artist',this)">
+        <div><span class="option-name">Any Available Artist</span><span class="option-sub">First available appointment</span></div>
+      </button>
+      <div class="step-nav">
+        <button class="btn-outline-dark" onclick="goStep(1)">← Back</button>
+        <button class="btn-gold" onclick="goStep(3)" style="animation:none;">Continue →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Date + Time -->
+    <div class="booking-step" id="step-3">
+      <div class="step-title">Pick a Date & Time</div>
+      <div id="member-priority-note" style="display:none;" class="member-banner" id="priority-note">
+        ✦ &nbsp; As a member, you have priority access to all slots below.
+      </div>
+      <label class="luxury-label" style="margin-top:0.5rem;">Select Date</label>
+      <input type="date" class="luxury-input" id="booking-date" style="margin-bottom:1.25rem;" />
+      <label class="luxury-label">Available Times</label>
+      <div class="timeslot-grid" id="timeslots"></div>
+      <div class="step-nav">
+        <button class="btn-outline-dark" onclick="goStep(2)">← Back</button>
+        <button class="btn-gold" onclick="goStep(4)" style="animation:none;">Continue →</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Info + Deposit -->
+    <div class="booking-step" id="step-4">
+      <div class="step-title">Confirm & Pay Deposit</div>
+      <div class="luxury-card" style="margin-bottom:1.5rem;">
+        <div class="section-label" style="font-size:0.6rem;margin-bottom:0.75rem;">Booking Summary</div>
+        <div style="font-family:'Jost',sans-serif;font-size:0.9rem;color:var(--espresso);line-height:2;">
+          <div>Service: <strong id="summary-service">—</strong></div>
+          <div>Artist: <strong id="summary-worker">—</strong></div>
+          <div>Date: <strong id="summary-date">—</strong></div>
+          <div>Time: <strong id="summary-time">—</strong></div>
+          <div>Total: <strong id="summary-total">—</strong></div>
         </div>
       </div>
+      <div class="deposit-box">
+        <div class="section-label" style="font-size:0.6rem;">Deposit Due Today</div>
+        <div class="deposit-amount" id="deposit-amount">$0</div>
+        <p style="font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);margin-top:0.5rem;line-height:1.6;">
+          This 50% deposit is <strong>non-refundable</strong>. If you cancel with 48+ hours notice, the deposit may be applied to a rescheduled appointment. No-shows forfeit the deposit.
+        </p>
+      </div>
+      <div style="margin:1.25rem 0;">
+        <label class="luxury-label">Full Name</label>
+        <input class="luxury-input" id="client-name" placeholder="Your name" style="margin-bottom:0.75rem;" />
+        <label class="luxury-label">Phone Number</label>
+        <input class="luxury-input" id="client-phone" placeholder="+1 (555) 000-0000" style="margin-bottom:0.75rem;" />
+        <label class="luxury-label">Email</label>
+        <input class="luxury-input" id="client-email" placeholder="your@email.com" style="margin-bottom:0.75rem;" />
+        <label class="luxury-label" style="margin-bottom:0.5rem;">Notes for Your Artist (optional)</label>
+        <textarea class="luxury-input" id="client-notes" rows="2" placeholder="Nail shape, current nails on, inspiration photo link…" style="resize:vertical;"></textarea>
+      </div>
+      <label style="display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:1.25rem;cursor:pointer;">
+        <input type="checkbox" id="policy-agree" style="margin-top:3px;">
+        <span style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--latte);line-height:1.6;">
+          I understand the 50% deposit is non-refundable and agree to the <a href="memberships.html" style="color:var(--champagne);">cancellation policy</a>.
+        </span>
+      </label>
+      <div class="step-nav">
+        <button class="btn-outline-dark" onclick="goStep(3)">← Back</button>
+        <button class="btn-gold" onclick="submitBooking()" style="animation:none;flex:1;text-align:center;">Pay Deposit & Confirm</button>
+      </div>
+      <div id="booking-success" style="display:none;text-align:center;padding:2rem 0;">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--espresso);margin-bottom:0.75rem;">You're Confirmed ✦</div>
+        <p style="font-family:'Jost',sans-serif;font-size:0.88rem;color:var(--latte);line-height:1.8;">A confirmation text and email is on its way. We can't wait to see you.<br>Questions? DM us <strong>@zluxnails</strong> or text us directly.</p>
+        <a href="index.html" class="btn-gold" style="margin-top:1.5rem;display:inline-block;animation:none;">Back to Home</a>
+      </div>
     </div>
-  </section>
+  </div>
+</div>
 
-  <footer class="footer">
-    <div class="footer-grid">
-      <div class="footer-brand">
-        <a href="index.html" class="nav-logo">ZLUX</a>
-        <p>Luxury nail studio. Appointments by booking only.</p>
-      </div>
-      <div>
-        <h4>Navigate</h4>
-        <ul>
-          <li><a href="index.html">Home</a></li>
-          <li><a href="services.html">Services</a></li>
-          <li><a href="about.html">About</a></li>
-          <li><a href="contact.html">Contact</a></li>
-        </ul>
-      </div>
-      <div>
-        <h4>Hours</h4>
-        <ul>
-          <li><a>Mon – Fri: 10am – 7pm</a></li>
-          <li><a>Saturday: 10am – 6pm</a></li>
-          <li><a>Sunday: Closed</a></li>
-        </ul>
-      </div>
-    </div>
-    <div class="footer-bottom">
-      <span>&copy; 2026 ZLUX Nail Studio. All rights reserved.</span>
-      <span>Luxury. Precision. Art.</span>
-    </div>
-  </footer>
+<script src="js/main.js"></script>
+<script>
+  const booking = { type: null, service: null, servicePrice: 0, addons: 0, worker: null, date: null, time: null };
 
-  <script src="js/main.js"></script>
-  <script src="js/booking.js"></script>
+  function selectType(type, btn) {
+    booking.type = type;
+    document.querySelectorAll('#step-1 .option-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  }
+  function selectService(name, price, btn) {
+    booking.service = name;
+    booking.servicePrice = price;
+    document.querySelectorAll('#step-2 .option-btn').forEach(b => { if(b.querySelector('.option-name')?.textContent !== b.querySelector('[style*="ARTIST"]')?.textContent) b.classList.remove('selected'); });
+    btn.classList.add('selected');
+  }
+  function selectWorker(name, btn) {
+    booking.worker = name;
+    document.querySelectorAll('#step-2 .option-btn:last-of-type, #step-2 .option-btn:nth-last-of-type(2)').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  }
+  function toggleAddon(price, id) {
+    const checked = document.getElementById(id).checked;
+    booking.addons += checked ? price : -price;
+  }
+  function goStep(n) {
+    document.querySelectorAll('.booking-step').forEach(s => s.classList.remove('active'));
+    document.getElementById('step-' + n).classList.add('active');
+    for (let i = 1; i <= 4; i++) {
+      const dot = document.getElementById('dot-' + i);
+      if (i < n) { dot.className = 'step-dot done'; }
+      else if (i === n) { dot.className = 'step-dot active'; }
+      else { dot.className = 'step-dot'; }
+      if (i < 4) {
+        const line = document.getElementById('line-' + i);
+        line.className = 'step-line' + (i < n ? ' done' : '');
+      }
+    }
+    if (n === 3) loadTimeslots();
+    if (n === 4) loadSummary();
+    window.scrollTo(0, 0);
+  }
+  function loadTimeslots() {
+    const times = ['10:00 AM','10:30 AM','11:00 AM','11:30 AM','12:00 PM','1:00 PM','2:00 PM','2:30 PM','3:00 PM','3:30 PM','4:00 PM','4:30 PM'];
+    const grid = document.getElementById('timeslots');
+    grid.innerHTML = '';
+    // For guests, hide a few slots (member priority simulation)
+    const available = booking.type === 'member' ? times : times.filter((_,i) => i % 3 !== 0);
+    available.forEach(t => {
+      const btn = document.createElement('button');
+      btn.className = 'timeslot-btn';
+      btn.textContent = t;
+      btn.onclick = () => {
+        document.querySelectorAll('.timeslot-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        booking.time = t;
+      };
+      grid.appendChild(btn);
+    });
+    if (booking.type === 'guest') {
+      const note = document.createElement('p');
+      note.style.cssText = 'font-family:Jost,sans-serif;font-size:0.75rem;color:var(--latte);margin-top:0.75rem;grid-column:1/-1;';
+      note.textContent = 'Members have first access. Remaining slots shown above.';
+      grid.appendChild(note);
+    }
+    // Set min date to tomorrow
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById('booking-date').min = tomorrow.toISOString().split('T')[0];
+    document.getElementById('booking-date').onchange = e => { booking.date = e.target.value; };
+  }
+  function loadSummary() {
+    const total = booking.servicePrice + booking.addons;
+    const deposit = Math.ceil(total * 0.5);
+    document.getElementById('summary-service').textContent = booking.service || '—';
+    document.getElementById('summary-worker').textContent = booking.worker || '—';
+    document.getElementById('summary-date').textContent = booking.date || '—';
+    document.getElementById('summary-time').textContent = booking.time || '—';
+    document.getElementById('summary-total').textContent = total ? '$' + total : '—';
+    document.getElementById('deposit-amount').textContent = deposit ? '$' + deposit : '—';
+  }
+  function submitBooking() {
+    if (!document.getElementById('policy-agree').checked) {
+      alert('Please agree to the cancellation policy before proceeding.');
+      return;
+    }
+    const name = document.getElementById('client-name').value.trim();
+    const phone = document.getElementById('client-phone').value.trim();
+    const email = document.getElementById('client-email').value.trim();
+    if (!name || !phone || !email) {
+      alert('Please fill in your name, phone, and email.');
+      return;
+    }
+    document.getElementById('step-4').querySelector('.step-nav').style.display = 'none';
+    document.getElementById('booking-success').style.display = 'block';
+    document.getElementById('booking-success').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  window.addEventListener('scroll', () => {
+    document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60);
+  });
+  document.getElementById('hamburger').addEventListener('click', () => {
+    document.getElementById('nav-mobile').classList.toggle('open');
+  });
+</script>
 </body>
 </html>
