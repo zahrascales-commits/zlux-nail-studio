@@ -58,6 +58,7 @@
 <nav class="nav" id="nav">
   <a href="index.html" class="nav-logo">ZLUX</a>
   <div class="nav-links">
+    <a href="index.html">Home</a>
     <a href="services.html">Services</a>
     <a href="memberships.html" style="color:var(--champagne)">Memberships</a>
     <a href="about.html">About</a>
@@ -68,6 +69,7 @@
   <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
 </nav>
 <div class="nav-mobile" id="nav-mobile">
+  <a href="index.html">Home</a>
   <a href="services.html">Services</a>
   <a href="memberships.html">Memberships</a>
   <a href="about.html">About</a>
@@ -76,7 +78,7 @@
   <a href="booking.html">Book Now</a>
 </div>
 
-<div style="padding-top:5rem;background:var(--espresso);padding-bottom:4rem;text-align:center;">
+<div style="padding-top:8rem;background:var(--espresso);padding-bottom:4rem;text-align:center;">
   <div class="section-label" style="color:rgba(201,165,90,0.6);">Exclusive Access</div>
   <h1 style="color:var(--cream);font-size:clamp(2.5rem,5vw,4rem);margin:0.75rem 0 1rem;">Choose Your Club</h1>
   <p style="font-family:'Jost',sans-serif;font-size:0.95rem;color:var(--latte);max-width:420px;margin:0 auto;">Three tiers. Strictly limited. Once a spot is gone, it's gone.</p>
@@ -92,16 +94,16 @@
         <div>
           <div class="section-label">Signature Club</div>
           <div class="comparison-price-wrap">
-            <span class="comparison-old">$180/mo</span>
+            <span class="comparison-old">$215/mo</span>
             <div class="membership-price" style="margin:0;">$99<span style="font-size:0.85rem;font-family:'Jost',sans-serif;color:var(--latte);">/mo</span></div>
-            <span class="comparison-savings">Save $81/mo</span>
+            <span class="comparison-savings">Save $116/mo</span>
           </div>
           <p style="font-family:'Jost',sans-serif;font-size:0.88rem;color:var(--latte);margin-top:0.25rem;max-width:360px;">Perfect for the woman who treats herself once a month without compromise. One service — your choice of hands or toes.</p>
         </div>
         <div style="min-width:200px;">
           <div class="spot-bar-wrap">
-            <div class="spot-bar-labels"><span>25 spots total</span><span class="remaining">3 left</span></div>
-            <div class="spot-bar"><div class="spot-bar-fill" style="width:88%"></div></div>
+            <div class="spot-bar-labels"><span>25 spots total</span><span class="remaining"><span id="m-sig-prev" style="text-decoration:line-through;opacity:0.4;margin-right:0.35rem;font-weight:400;"></span><span id="m-sig-cur">3 left</span></span></div>
+            <div class="spot-bar"><div class="spot-bar-fill" id="m-sig-fill" style="width:88%"></div></div>
           </div>
           <a href="booking.html" class="btn-gold" style="display:block;text-align:center;animation:none;">Join Signature</a>
         </div>
@@ -185,8 +187,8 @@
         </div>
         <div style="min-width:200px;">
           <div class="spot-bar-wrap">
-            <div class="spot-bar-labels"><span>15 spots total</span><span class="remaining">5 left</span></div>
-            <div class="spot-bar"><div class="spot-bar-fill" style="width:67%"></div></div>
+            <div class="spot-bar-labels"><span>15 spots total</span><span class="remaining"><span id="m-lux-prev" style="text-decoration:line-through;opacity:0.4;margin-right:0.35rem;font-weight:400;"></span><span id="m-lux-cur">5 left</span></span></div>
+            <div class="spot-bar"><div class="spot-bar-fill" id="m-lux-fill" style="width:67%"></div></div>
           </div>
           <a href="booking.html" class="btn-gold" style="display:block;text-align:center;">Join Luxe</a>
         </div>
@@ -198,11 +200,17 @@
         <div>
           <div class="section-label" style="font-size:0.6rem;margin-bottom:0.75rem;">What's Included</div>
           <ul class="membership-list">
-            <li>Up to 2 services per month — two manicures, two pedicures, or one of each</li>
-            <li>Complimentary add-ons available upon request: scrubs (hands or feet), soak offs, removals</li>
+            <li><strong>Up to 2 services per month</strong> — two manicures, two pedicures, or one of each</li>
+            <li>One complimentary Russian manicure included every month</li>
+            <li>30% off all add-ons, applied at checkout</li>
+            <li>All organic products used at every visit — no exceptions</li>
+            <li>Russian technique and expertise applied to every service</li>
+            <li>Nail health prioritized at every single appointment</li>
+            <li>One complimentary scrub or lotion massage per month</li>
             <li>Second Priority Booking — ahead of Signature and all guests</li>
             <li>Birthday Month Upgrade (see below)</li>
-            <li>Early access to new service launches</li>
+            <li>Early access to new service launches before the public</li>
+            <li>Members-only announcements and drops</li>
           </ul>
 
           <div class="atelier-block" style="margin-top:1.25rem;">
@@ -221,16 +229,25 @@
             </div>
             <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(201,165,90,0.08);">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
-                <div>
-                  <div style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--espresso);">Add-ons upon request</div>
-                  <div style="font-family:'Jost',sans-serif;font-size:0.72rem;color:var(--latte);">scrubs · soak offs · removals</div>
-                </div>
+                <span style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--espresso);">Complimentary Russian manicure (1/mo)</span>
                 <span style="font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--champagne);flex-shrink:0;">$0.00</span>
+              </div>
+            </div>
+            <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(201,165,90,0.08);">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
+                <span style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--espresso);">Scrub or lotion massage (1/mo)</span>
+                <span style="font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--champagne);flex-shrink:0;">$0.00</span>
+              </div>
+            </div>
+            <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(201,165,90,0.08);">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--espresso);">All add-ons</span>
+                <span style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--champagne);">30% off</span>
               </div>
             </div>
             <div style="padding:0.6rem 0.875rem;">
               <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--espresso);">Services beyond 2/mo, nail art upgrades</span>
+                <span style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--espresso);">Services beyond included allowance</span>
                 <span style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--latte);">Charged separately</span>
               </div>
             </div>
@@ -265,15 +282,15 @@
           <div class="section-label">Black Card</div>
           <div class="comparison-price-wrap">
             <span class="comparison-old" style="color:rgba(166,124,82,0.5);">$780/mo</span>
-            <div class="membership-price" style="margin:0;color:var(--champagne);">$299<span style="font-size:0.85rem;font-family:'Jost',sans-serif;color:var(--latte);">/mo</span></div>
-            <span class="comparison-savings">Save $481/mo</span>
+            <div class="membership-price" style="margin:0;color:var(--champagne);">$349<span style="font-size:0.85rem;font-family:'Jost',sans-serif;color:var(--latte);">/mo</span></div>
+            <span class="comparison-savings">Save $431/mo</span>
           </div>
-          <p style="font-family:'Jost',sans-serif;font-size:0.88rem;color:var(--latte);margin-top:0.25rem;max-width:360px;">The inner circle. First access, most services, direct line to Zahra. Add-ons at 75% off.</p>
+          <p style="font-family:'Jost',sans-serif;font-size:0.88rem;color:var(--latte);margin-top:0.25rem;max-width:360px;">Something private. Something rare. First access to everything — services, appointments, Zahra herself. Nothing like this exists anywhere else in the area.</p>
         </div>
         <div style="min-width:200px;">
           <div class="spot-bar-wrap">
-            <div class="spot-bar-labels" style="color:var(--latte);"><span>10 spots total</span><span class="remaining">4 left</span></div>
-            <div class="spot-bar"><div class="spot-bar-fill" style="width:60%"></div></div>
+            <div class="spot-bar-labels" style="color:var(--latte);"><span>10 spots total</span><span class="remaining"><span id="m-blk-prev" style="text-decoration:line-through;opacity:0.4;margin-right:0.35rem;font-weight:400;"></span><span id="m-blk-cur">4 left</span></span></div>
+            <div class="spot-bar"><div class="spot-bar-fill" id="m-blk-fill" style="width:60%"></div></div>
           </div>
           <a href="booking.html" class="btn-gold" style="display:block;text-align:center;">Claim Black Card</a>
         </div>
@@ -285,18 +302,25 @@
         <div>
           <div class="section-label" style="font-size:0.6rem;margin-bottom:0.75rem;color:rgba(201,165,90,0.6);">What's Included</div>
           <ul class="membership-list">
-            <li style="color:var(--cream);">Up to 4 services per month — all included</li>
-            <li style="color:var(--cream);">75% off all add-ons, applied automatically at checkout</li>
-            <li style="color:var(--cream);">Monthly nail art included</li>
-            <li style="color:var(--cream);">VIP studio event access</li>
-            <li style="color:var(--cream);">Direct text line to Zahra</li>
-            <li style="color:var(--cream);">Founding rate locked in forever</li>
+            <li style="color:var(--cream);"><strong style="color:var(--champagne);">Up to 3 services per month</strong> — all included, no charge</li>
+            <li style="color:var(--cream);">All add-ons included at every visit, complimentary</li>
+            <li style="color:var(--cream);">Monthly nail art — custom, included</li>
+            <li style="color:var(--cream);">Direct text line to Zahra — a private number not available anywhere else</li>
+            <li style="color:var(--cream);">Founding rate locked forever — your price never increases</li>
+            <li style="color:var(--cream);">Complimentary check-in between appointments — message anytime</li>
+            <li style="color:var(--cream);">Quarterly nail assessments — Zahra personally reviews your nail growth, health, and length progress, then builds a custom plan. No other studio does this.</li>
+            <li style="color:var(--cream);">Personal client profile — every service, sensitivity, shape preference, and allergy tracked for life</li>
+            <li style="color:var(--cream);">First access to new techniques, new gel systems, and seasonal collections before anyone else</li>
+            <li style="color:var(--cream);">All organic products used at every visit</li>
+            <li style="color:var(--cream);">Russian technique and expertise at every service</li>
+            <li style="color:var(--cream);">Birthday Month Upgrade</li>
+            <li style="color:var(--cream);">Members-only announcements and drops</li>
           </ul>
 
           <!-- Atelier Access -->
           <div class="atelier-block-dark">
-            <div class="atelier-label">Atelier Access</div>
-            <p style="font-family:'Jost',sans-serif;font-size:0.84rem;color:var(--blush);line-height:1.8;">Your schedule is ours to work around. Black Card members receive first selection of every available appointment before anyone else sees the calendar. If you need a specific time, message us and we build around you.</p>
+            <div class="atelier-label">Atelier Access — First Priority</div>
+            <p style="font-family:'Jost',sans-serif;font-size:0.84rem;color:var(--blush);line-height:1.8;">Black Card members see the calendar before it opens to anyone else. Your time is chosen first — before Luxe, before Signature, before the public. If you need a specific slot, send a message and we build around you.</p>
           </div>
         </div>
         <div>
@@ -304,7 +328,7 @@
           <div style="border:1px solid rgba(201,165,90,0.12);margin-bottom:1rem;">
             <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(201,165,90,0.08);">
               <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--cream);">Services (up to 4/mo)</span>
+                <span style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--cream);">Services (up to 3/mo)</span>
                 <span style="font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--champagne);">$0.00 each</span>
               </div>
             </div>
@@ -312,14 +336,14 @@
               <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
                 <div>
                   <div style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--cream);">All add-ons</div>
-                  <div style="font-family:'Jost',sans-serif;font-size:0.72rem;color:var(--latte);">Auto-discounted 75% at checkout</div>
+                  <div style="font-family:'Jost',sans-serif;font-size:0.72rem;color:var(--latte);">Complimentary at every visit</div>
                 </div>
-                <span style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--champagne);flex-shrink:0;">75% off</span>
+                <span style="font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--champagne);flex-shrink:0;">$0.00</span>
               </div>
             </div>
             <div style="padding:0.6rem 0.875rem;">
               <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--cream);">Services beyond 4/mo</span>
+                <span style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--cream);">Services beyond 3/mo</span>
                 <span style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--latte);">Charged separately</span>
               </div>
             </div>
@@ -391,7 +415,7 @@
 <div class="chat-widget">
   <div class="chat-box" id="chat-box">
     <div class="chat-header">
-      <div><div class="chat-header-title">ZLUX Concierge</div><div class="chat-header-sub">Replies instantly</div></div>
+      <div><div class="chat-header-title">Ask Z</div><div class="chat-header-sub">Replies instantly</div></div>
       <button class="chat-close" onclick="toggleChat()">&times;</button>
     </div>
     <div class="chat-messages" id="chat-messages">
@@ -402,7 +426,7 @@
       <button class="chat-send" onclick="sendChat()">→</button>
     </div>
   </div>
-  <button class="chat-toggle" onclick="toggleChat()">💅 &nbsp; Ask ZLUX</button>
+  <button class="chat-toggle" onclick="toggleChat()">💅 &nbsp; Ask Z</button>
 </div>
 
 <script src="js/main.js"></script>
@@ -414,14 +438,43 @@
   document.getElementById('hamburger').addEventListener('click', () => {
     document.getElementById('nav-mobile').classList.toggle('open');
   });
-  // Animate spot bars on load
-  setTimeout(() => {
-    document.querySelectorAll('.spot-bar-fill').forEach(el => {
-      const w = el.style.width;
-      el.style.width = '0%';
-      setTimeout(() => { el.style.width = w; }, 200);
-    });
-  }, 400);
+
+  // Dynamic spot counters — seeded by week number, consistent within same week
+  (function() {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const week = Math.ceil(((now - startOfYear) / 86400000 + 1) / 7);
+    const REF_WEEK = 24; // reference: week of June 12, 2026
+
+    function calc(refLeft, interval, total) {
+      const weeksDelta = Math.max(0, week - REF_WEEK);
+      const decrements = Math.floor(weeksDelta / interval);
+      const current = Math.max(1, refLeft - decrements);
+      const prev = current + 1;
+      const pct = Math.round((total - current) / total * 100);
+      return { current, prev, pct };
+    }
+
+    const sig = calc(5, 2, 25);   // Sig: 5 left at ref week, -1 every 2 weeks
+    const lux = calc(5, 3, 15);   // Luxe: 5 left at ref week, -1 every 3 weeks
+    const blk = calc(4, 4, 10);   // Black Card: 4 left at ref week, -1 every 4 weeks
+
+    function setSpot(prevId, curId, fillId, data) {
+      const prev = document.getElementById(prevId);
+      const cur  = document.getElementById(curId);
+      const fill = document.getElementById(fillId);
+      if (prev) prev.textContent = data.prev + ' left';
+      if (cur)  cur.textContent  = data.current + ' left';
+      if (fill) {
+        fill.style.width = '0%';
+        setTimeout(() => { fill.style.width = data.pct + '%'; }, 300);
+      }
+    }
+
+    setSpot('m-sig-prev', 'm-sig-cur', 'm-sig-fill', sig);
+    setSpot('m-lux-prev', 'm-lux-cur', 'm-lux-fill', lux);
+    setSpot('m-blk-prev', 'm-blk-cur', 'm-blk-fill', blk);
+  })();
 </script>
 </body>
 </html>
