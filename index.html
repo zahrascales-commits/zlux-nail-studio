@@ -6,6 +6,42 @@
   <title>ZLUX Nail Studio — Porterville, CA</title>
   <meta name="description" content="ZLUX — Porterville's luxury nail membership studio. Exclusive. Precise. Unforgettable." />
   <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .comparison-old-home {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.88rem;
+      color: var(--latte);
+      text-decoration: line-through;
+      opacity: 0.5;
+      display: block;
+      margin-bottom: 0.1rem;
+    }
+    .comparison-savings-home {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--champagne);
+      background: rgba(201,165,90,0.1);
+      padding: 0.15rem 0.45rem;
+      display: inline-block;
+      margin-top: 0.2rem;
+    }
+    .priority-label {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 0.18rem 0.55rem;
+      display: inline-block;
+      margin-bottom: 0.5rem;
+    }
+    .priority-third  { background: rgba(166,124,82,0.12); color: var(--latte); }
+    .priority-second { background: rgba(201,165,90,0.15); color: var(--champagne); }
+    .priority-first  { background: var(--espresso); color: var(--champagne); }
+  </style>
 </head>
 <body>
 
@@ -18,7 +54,7 @@
     <a href="about.html">About</a>
     <a href="contact.html">Contact</a>
     <a href="client-portal.html">My Portal</a>
-    <a href="booking.html" class="btn-gold" style="animation:none;">Book Now</a>
+    <a href="memberships.html" class="btn-gold" style="animation:none;">Buy a Membership</a>
   </div>
   <button class="nav-hamburger" id="hamburger" aria-label="Menu">
     <span></span><span></span><span></span>
@@ -30,7 +66,7 @@
   <a href="about.html">About</a>
   <a href="contact.html">Contact</a>
   <a href="client-portal.html">My Portal</a>
-  <a href="booking.html">Book Now</a>
+  <a href="memberships.html">Buy a Membership</a>
 </div>
 
 <!-- HERO -->
@@ -41,8 +77,8 @@
     <h1>Nails That Speak<br><span class="gold-text">Before You Do</span></h1>
     <p class="hero-sub">A private membership studio where your nails are never an afterthought. Limited spots. Zero compromises.</p>
     <div class="hero-ctas">
-      <a href="memberships.html" class="btn-gold">Join the Waitlist</a>
-      <a href="booking.html" class="btn-outline">Book a Service</a>
+      <a href="memberships.html" class="btn-gold">Buy a ZLUX Membership</a>
+      <a href="memberships.html" class="btn-outline">See All Tiers</a>
     </div>
   </div>
   <div class="hero-scroll">
@@ -55,6 +91,107 @@
 <div class="ticker">
   <p class="ticker-text" id="ticker-text">✦ &nbsp; Every set is custom-crafted. No templates, no rushing. &nbsp; ✦</p>
 </div>
+
+<!-- ══════════════════════════════════════════════════
+     MEMBERSHIPS — FIRST SECTION AFTER HERO
+══════════════════════════════════════════════════ -->
+<section class="section section-cream" id="memberships">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">Membership</div>
+      <h2>Choose Your Club</h2>
+      <p style="font-family:'Jost',sans-serif;font-size:0.9rem;color:var(--latte);margin-top:0.75rem;">Three tiers. Strictly limited. Spots are going fast.</p>
+    </div>
+    <div class="membership-grid">
+
+      <!-- ── SIGNATURE ── -->
+      <div class="membership-card">
+        <div class="section-label">Signature Club</div>
+        <div>
+          <span class="comparison-old-home">$180/mo without membership</span>
+          <div class="membership-price">$99<span>/mo</span></div>
+          <span class="comparison-savings-home">Save $81/mo</span>
+        </div>
+        <div class="spot-bar-wrap" style="margin-top:0.85rem;">
+          <div class="spot-bar-labels">
+            <span>25 spots total</span>
+            <span class="remaining" id="sig-remaining">3 left</span>
+          </div>
+          <div class="spot-bar"><div class="spot-bar-fill" id="sig-bar" style="width:0%"></div></div>
+        </div>
+        <div class="priority-label priority-third">Third Priority Booking</div>
+        <ul class="membership-list">
+          <li>1 free service per month — your choice of manicure OR pedicure (not both)</li>
+          <li>Books before drop-ins and guests, after Black Card &amp; Luxe windows</li>
+          <li>10% off all add-ons</li>
+          <li>Birthday Month Upgrade</li>
+          <li>Members-only communication channel</li>
+        </ul>
+        <a href="memberships.html#signature" class="btn-outline-dark" style="width:100%;text-align:center;display:block;">View Details</a>
+      </div>
+
+      <!-- ── LUXE ── -->
+      <div class="membership-card highlighted" id="luxe-card">
+        <div class="membership-badge">Most Popular</div>
+        <div class="section-label">Luxe Club</div>
+        <div>
+          <span class="comparison-old-home">$420/mo without membership</span>
+          <div class="membership-price">$199<span>/mo</span></div>
+          <span class="comparison-savings-home">Save $221/mo</span>
+        </div>
+        <div class="spot-bar-wrap" style="margin-top:0.85rem;">
+          <div class="spot-bar-labels">
+            <span>15 spots total</span>
+            <span class="remaining" id="luxe-remaining">5 left</span>
+          </div>
+          <div class="spot-bar"><div class="spot-bar-fill" id="luxe-bar" style="width:0%"></div></div>
+        </div>
+        <div class="priority-label priority-second">Second Priority Booking</div>
+        <ul class="membership-list">
+          <li>Up to 2 services per month — two manicures, two pedicures, or one of each</li>
+          <li>Complimentary add-ons available upon request (scrubs, soak offs, removals)</li>
+          <li>Priority over Signature members + all guests</li>
+          <li>Birthday Month Upgrade</li>
+          <li>Early access to new service launches</li>
+        </ul>
+        <a href="memberships.html#luxe" class="btn-gold" style="width:100%;text-align:center;display:block;">Buy Luxe Membership</a>
+      </div>
+
+      <!-- ── BLACK CARD ── -->
+      <div class="membership-card">
+        <div class="founding-badge">Founding Rate</div>
+        <div class="section-label">Black Card</div>
+        <div>
+          <span class="comparison-old-home">$780/mo without membership</span>
+          <div class="membership-price">$299<span>/mo</span></div>
+          <span class="comparison-savings-home">Save $481/mo</span>
+        </div>
+        <div class="spot-bar-wrap" style="margin-top:0.85rem;">
+          <div class="spot-bar-labels">
+            <span>10 spots total</span>
+            <span class="remaining" id="black-remaining">4 left</span>
+          </div>
+          <div class="spot-bar"><div class="spot-bar-fill" id="black-bar" style="width:0%"></div></div>
+        </div>
+        <div class="priority-label priority-first">Atelier Access — First Priority</div>
+        <ul class="membership-list">
+          <li>Up to 4 services per month, all included</li>
+          <li>First selection of every slot before the calendar opens to anyone else</li>
+          <li>75% off all add-ons, applied automatically at checkout</li>
+          <li>Monthly nail art included</li>
+          <li>Direct text line to Zahra</li>
+          <li>Founding rate locked forever</li>
+        </ul>
+        <a href="memberships.html#black-card" class="btn-outline-dark" style="width:100%;text-align:center;display:block;">Claim Black Card</a>
+      </div>
+
+    </div>
+    <p style="text-align:center;margin-top:2rem;font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);">All memberships require a 6-month minimum. <a href="memberships.html" style="color:var(--champagne);">Full terms →</a></p>
+    <div style="text-align:center;margin-top:1.5rem;">
+      <a href="memberships.html" class="btn-gold" style="animation:none;">Buy a ZLUX Membership</a>
+    </div>
+  </div>
+</section>
 
 <!-- BRAND STATEMENT -->
 <section class="section section-soft">
@@ -83,84 +220,8 @@
   </div>
 </section>
 
-<!-- MEMBERSHIP PREVIEW -->
-<section class="section section-cream">
-  <div class="container">
-    <div class="section-header">
-      <div class="section-label">Membership</div>
-      <h2>Choose Your Club</h2>
-      <p style="font-family:'Jost',sans-serif;font-size:0.9rem;color:var(--latte);margin-top:0.75rem;">Spots are strictly limited and go fast.</p>
-    </div>
-    <div class="membership-grid">
-      <!-- Signature -->
-      <div class="membership-card">
-        <div class="section-label">Signature Club</div>
-        <div class="membership-price">$99<span>/mo</span></div>
-        <div class="spot-bar-wrap">
-          <div class="spot-bar-labels">
-            <span>25 spots total</span>
-            <span class="remaining" id="sig-remaining">3 left</span>
-          </div>
-          <div class="spot-bar"><div class="spot-bar-fill" id="sig-bar" style="width:0%"></div></div>
-        </div>
-        <ul class="membership-list">
-          <li>1 service per month</li>
-          <li>Priority booking over guests</li>
-          <li>10% off add-ons</li>
-          <li>Birthday month upgrade</li>
-        </ul>
-        <a href="memberships.html#signature" class="btn-outline-dark" style="width:100%;text-align:center;display:block;">View Details</a>
-      </div>
-      <!-- Luxe -->
-      <div class="membership-card highlighted" id="luxe-card">
-        <div class="membership-badge">Most Popular</div>
-        <div class="section-label">Luxe Club</div>
-        <div class="membership-price">$199<span>/mo</span></div>
-        <div class="spot-bar-wrap">
-          <div class="spot-bar-labels">
-            <span>15 spots total</span>
-            <span class="remaining" id="luxe-remaining">2 left</span>
-          </div>
-          <div class="spot-bar"><div class="spot-bar-fill" id="luxe-bar" style="width:0%"></div></div>
-        </div>
-        <ul class="membership-list">
-          <li>2 services per month</li>
-          <li>Priority over Signature + guests</li>
-          <li>15% off add-ons</li>
-          <li>Complimentary nail art (1x/mo)</li>
-          <li>Birthday month upgrade + gift</li>
-        </ul>
-        <a href="memberships.html#luxe" class="btn-gold" style="width:100%;text-align:center;display:block;">Join Luxe</a>
-      </div>
-      <!-- Black Card -->
-      <div class="membership-card">
-        <div class="founding-badge">Founding Rate</div>
-        <div class="section-label">Black Card</div>
-        <div class="membership-price">$299<span>/mo</span></div>
-        <div class="spot-bar-wrap">
-          <div class="spot-bar-labels">
-            <span>10 spots total</span>
-            <span class="remaining" id="black-remaining">1 left</span>
-          </div>
-          <div class="spot-bar"><div class="spot-bar-fill" id="black-bar" style="width:0%"></div></div>
-        </div>
-        <ul class="membership-list">
-          <li>4 services per month</li>
-          <li>First booking priority always</li>
-          <li>20% off all add-ons</li>
-          <li>Monthly nail art included</li>
-          <li>VIP event access</li>
-          <li>Direct text line to Zahra</li>
-        </ul>
-        <a href="memberships.html#black-card" class="btn-outline-dark" style="width:100%;text-align:center;display:block;">View Details</a>
-      </div>
-    </div>
-    <p style="text-align:center;margin-top:2rem;font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);">All memberships require a 6-month minimum. <a href="memberships.html" style="color:var(--champagne);">Full terms →</a></p>
-  </div>
-</section>
-
 <!-- MEET THE TEAM -->
-<section class="section section-soft">
+<section class="section section-cream">
   <div class="container">
     <div class="section-header">
       <div class="section-label">Your Artists</div>
@@ -176,7 +237,7 @@
           <p style="font-family:'Jost',sans-serif;font-size:0.84rem;color:var(--latte);margin:0.75rem 0 1rem;line-height:1.7;">
             Celebrity nail artist and founder of ZLUX. Known for structured sets that last and nail health that improves over time.
           </p>
-          <a href="booking.html" class="btn-outline-dark" style="font-size:0.68rem;">Book with Zahra</a>
+          <a href="memberships.html" class="btn-outline-dark" style="font-size:0.68rem;">Become a Member</a>
         </div>
       </div>
       <div class="team-card">
@@ -184,11 +245,11 @@
         <div>
           <h3 style="font-size:1.4rem;margin-bottom:0.2rem;">Artist 2</h3>
           <div class="section-label" style="font-size:0.6rem;margin-bottom:0.5rem;">ZLUX Certified Artist</div>
-          <span class="availability-badge available">Accepting Clients</span>
+          <span class="availability-badge available">Accepting Members</span>
           <p style="font-family:'Jost',sans-serif;font-size:0.84rem;color:var(--latte);margin:0.75rem 0 1rem;line-height:1.7;">
             Trained under the ZLUX method. Specializes in gel extensions and intricate nail art with a clean, editorial finish.
           </p>
-          <a href="booking.html" class="btn-outline-dark" style="font-size:0.68rem;">Book with Artist 2</a>
+          <a href="memberships.html" class="btn-outline-dark" style="font-size:0.68rem;">Become a Member</a>
         </div>
       </div>
     </div>
@@ -196,11 +257,12 @@
 </section>
 
 <!-- SERVICES MENU -->
-<section class="section section-cream">
+<section class="section section-soft">
   <div class="container">
     <div class="section-header">
       <div class="section-label">Services</div>
       <h2>The Menu</h2>
+      <p style="font-family:'Jost',sans-serif;font-size:0.88rem;color:var(--latte);margin-top:0.5rem;">All services included in your membership at $0.00.</p>
     </div>
     <div class="grid-2" style="max-width:880px;margin:0 auto;">
       <div>
@@ -226,12 +288,13 @@
         <div class="services-table">
           <div class="service-row"><span class="service-name">Soak Off Removal</span><span class="service-price">+$35</span></div>
           <div class="service-row"><span class="service-name">Russian Manicure Technique</span><span class="service-price">+$30</span></div>
+          <div class="service-row"><span class="service-name">Scrub Massage</span><span class="service-price">+$25</span></div>
         </div>
         <p style="font-family:'Jost',sans-serif;font-size:0.75rem;color:var(--latte);margin-top:1rem;">50% non-refundable deposit required at booking.</p>
       </div>
     </div>
     <div style="text-align:center;margin-top:2.5rem;">
-      <a href="booking.html" class="btn-gold">Reserve Your Appointment</a>
+      <a href="memberships.html" class="btn-gold" style="animation:none;">Buy a ZLUX Membership</a>
     </div>
   </div>
 </section>
@@ -267,8 +330,8 @@
       <div>
         <div class="footer-heading">Studio</div>
         <div class="footer-links">
-          <a href="services.html">Services</a>
           <a href="memberships.html">Memberships</a>
+          <a href="services.html">Services</a>
           <a href="booking.html">Book Now</a>
           <a href="about.html">About</a>
         </div>
@@ -300,8 +363,8 @@
 <div class="urgency-banner" id="urgency-banner">
   <button class="banner-close" onclick="document.getElementById('urgency-banner').style.display='none'">&times;</button>
   <div class="section-label" style="font-size:0.58rem;">Limited Availability</div>
-  <div class="banner-title">Black Card: 1 Spot Left</div>
-  <p style="font-family:'Jost',sans-serif;font-size:0.8rem;color:var(--latte);margin-bottom:1rem;line-height:1.6;">The founding rate locks in at $299/mo forever. Don't wait.</p>
+  <div class="banner-title">Black Card: 4 Founding Spots Left</div>
+  <p style="font-family:'Jost',sans-serif;font-size:0.8rem;color:var(--latte);margin-bottom:1rem;line-height:1.6;">The founding rate locks in at $299/mo forever. Once these spots are gone, this price disappears with them.</p>
   <a href="memberships.html#black-card" class="btn-gold" style="font-size:0.68rem;padding:0.65rem 1.25rem;animation:none;display:inline-block;">Claim Your Spot</a>
 </div>
 
@@ -316,7 +379,7 @@
       <button class="chat-close" onclick="toggleChat()">&times;</button>
     </div>
     <div class="chat-messages" id="chat-messages">
-      <div class="chat-msg zlux">Hi love! 💅 I'm the ZLUX concierge. Ask me anything about services, memberships, or booking.</div>
+      <div class="chat-msg zlux">Hi love! 💅 I'm the ZLUX concierge. Ask me anything about memberships, services, or booking.</div>
     </div>
     <div class="chat-input-row">
       <input class="chat-input" id="chat-input" placeholder="Ask a question…" onkeydown="if(event.key==='Enter')sendChat()" />
@@ -331,12 +394,12 @@
 <script>
   // Ticker
   const facts = [
-    'Every set is custom-crafted. No templates, no rushing.',
+    'Membership spots are strictly limited — once they\'re gone, they\'re gone.',
     'Members always book before guests — your time is protected.',
-    'Black Card holders get direct text access to Zahra.',
-    '50% deposit secures your appointment and is non-refundable.',
-    'Wrist health is nail health. Every product we use is intentional.',
-    'ZLUX is Porterville\'s only luxury membership nail studio.'
+    'Black Card members receive Atelier Access — first pick of every available slot.',
+    'Signature members save $81/mo. Luxe members save $221/mo.',
+    'ZLUX is Porterville\'s only luxury nail membership studio.',
+    'The founding rate on Black Card is locked in forever — only 4 spots remain.'
   ];
   let ti = 0;
   setInterval(() => {
@@ -346,11 +409,11 @@
     setTimeout(() => { el.textContent = '✦   ' + facts[ti] + '   ✦'; el.style.opacity = 1; }, 300);
   }, 4000);
 
-  // Spot bars (animate in on scroll)
+  // Spot bars — Luxe: 10/15 (5 left), Black Card: 6/10 (4 left)
   setTimeout(() => {
-    document.getElementById('sig-bar').style.width = '88%';   // 22/25
-    document.getElementById('luxe-bar').style.width = '87%';  // 13/15
-    document.getElementById('black-bar').style.width = '90%'; // 9/10
+    document.getElementById('sig-bar').style.width   = '88%'; // 22/25
+    document.getElementById('luxe-bar').style.width  = '67%'; // 10/15
+    document.getElementById('black-bar').style.width = '60%'; // 6/10
   }, 600);
 
   // Urgency banner at 8s
@@ -358,7 +421,7 @@
     document.getElementById('urgency-banner').classList.add('visible');
   }, 8000);
 
-  // Nav scroll effect
+  // Nav scroll
   window.addEventListener('scroll', () => {
     document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60);
   });
