@@ -5,6 +5,114 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Book — ZLUX Nail Studio</title>
   <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .checkout-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 0.7rem 0;
+      border-bottom: 1px solid rgba(201,165,90,0.08);
+      gap: 1rem;
+    }
+    .checkout-item-name {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.9rem;
+      color: var(--espresso);
+    }
+    .checkout-item-note {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.72rem;
+      color: var(--champagne);
+      margin-top: 0.15rem;
+      letter-spacing: 0.04em;
+    }
+    .checkout-price-wrap {
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .checkout-full-price {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.78rem;
+      color: var(--latte);
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+    .checkout-charged-price {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.15rem;
+      color: var(--espresso);
+    }
+    .checkout-charged-price.free {
+      color: var(--champagne);
+    }
+    .member-id-banner {
+      background: rgba(201,165,90,0.07);
+      border: 1px solid rgba(201,165,90,0.25);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .member-tier-tag {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.65rem;
+    }
+    .addon-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid rgba(201,165,90,0.1);
+      cursor: pointer;
+    }
+    .addon-price-tag {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.1rem;
+      color: var(--champagne);
+      flex-shrink: 0;
+      min-width: 60px;
+      text-align: right;
+    }
+    .addon-free-tag {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--champagne);
+      background: rgba(201,165,90,0.1);
+      padding: 0.15rem 0.45rem;
+      text-transform: uppercase;
+    }
+    .birthday-box {
+      background: linear-gradient(135deg, rgba(201,165,90,0.1), rgba(232,213,196,0.15));
+      border: 1px solid rgba(201,165,90,0.35);
+      padding: 1.1rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .birthday-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.2rem;
+      color: var(--champagne);
+      margin-bottom: 0.35rem;
+    }
+    .atelier-badge {
+      background: var(--espresso);
+      color: var(--champagne);
+      font-family: 'Jost', sans-serif;
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.75rem;
+      display: inline-block;
+      margin-bottom: 0.5rem;
+    }
+  </style>
 </head>
 <body>
 
@@ -45,106 +153,208 @@
       <div class="step-dot" id="dot-4">4</div>
     </div>
 
-    <!-- Step 1: Member or Guest -->
+    <!-- ══ STEP 1: Member ID or Guest ══ -->
     <div class="booking-step active" id="step-1">
-      <div class="step-title">Are you a member?</div>
+      <div class="step-title">Already a Member?</div>
       <div class="member-banner">
-        Members always book before guests. <a href="memberships.html">Join a membership →</a>
+        Members always book before guests — priority slots are reserved for you. <a href="memberships.html">Join a membership →</a>
       </div>
-      <button class="option-btn" onclick="selectType('member',this)">
-        <div>
-          <span class="option-name">Yes — I'm a ZLUX Member</span>
-          <span class="option-sub">Access priority booking slots</span>
+
+      <!-- Member ID entry -->
+      <div style="background:var(--cream);border:1px solid rgba(201,165,90,0.2);padding:1.5rem;margin-bottom:1rem;">
+        <div class="section-label" style="font-size:0.6rem;margin-bottom:0.75rem;">Member Login</div>
+        <label class="luxury-label">Member ID</label>
+        <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;">
+          <input class="luxury-input" id="member-id-input" placeholder="e.g. SIG-1234, LUX-5678, BLK-9999" style="flex:1;" />
+          <button class="btn-gold" onclick="validateMemberId()" style="animation:none;white-space:nowrap;padding:0.875rem 1.25rem;">Verify</button>
         </div>
-        <span style="color:var(--champagne);font-size:0.75rem;letter-spacing:0.1em;">MEMBER ✦</span>
-      </button>
-      <button class="option-btn" onclick="selectType('guest',this)">
+        <p style="font-family:'Jost',sans-serif;font-size:0.72rem;color:var(--latte);">Your Member ID is in your welcome email. Demo IDs: SIG-1234 · LUX-5678 · BLK-9999</p>
+        <div id="member-id-error" style="display:none;color:#c0524a;font-family:'Jost',sans-serif;font-size:0.8rem;margin-top:0.5rem;"></div>
+        <div id="member-verified-banner" style="display:none;" class="member-id-banner" style="margin-top:0.75rem;">
+          <div style="flex:1;">
+            <div id="member-verified-name" style="font-family:'Jost',sans-serif;font-size:0.9rem;color:var(--espresso);font-weight:600;"></div>
+            <div id="member-verified-note" style="font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);margin-top:0.2rem;"></div>
+          </div>
+          <span id="member-tier-tag" class="member-tier-tag"></span>
+        </div>
+
+        <!-- Birthday month (shown after Luxe verified) -->
+        <div id="birthday-month-row" style="display:none;margin-top:1rem;">
+          <label class="luxury-label">Birthday Month <span style="color:var(--latte);font-weight:400;text-transform:none;letter-spacing:0;font-size:0.72rem;">(for your monthly Birthday Upgrade)</span></label>
+          <select class="luxury-input" id="birthday-month" onchange="checkBirthdayMonth()" style="background:white;">
+            <option value="">— Select your birthday month —</option>
+            <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+            <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+            <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+            <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+          </select>
+          <div id="birthday-activated" style="display:none;" class="birthday-box" style="margin-top:0.75rem;">
+            <div class="birthday-title">🎂 Birthday Month Upgrade Unlocked</div>
+            <p style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--espresso);line-height:1.7;">Your birthday upgrade is active this month. Choose one complimentary gift at checkout: <strong>free scrub, free massage, or free removal</strong>. It'll be applied automatically.</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center;margin:1rem 0;font-family:'Jost',sans-serif;font-size:0.75rem;color:var(--latte);letter-spacing:0.1em;">— OR —</div>
+
+      <!-- Guest option -->
+      <button class="option-btn" id="guest-btn" onclick="selectGuest(this)">
         <div>
-          <span class="option-name">No — Book as a Guest</span>
-          <span class="option-sub">Available slots after members book</span>
+          <span class="option-name">Continue as Guest</span>
+          <span class="option-sub">Available slots after member priority. Full service pricing applies.</span>
         </div>
         <span style="color:var(--latte);font-size:0.75rem;letter-spacing:0.1em;">GUEST</span>
       </button>
-      <div class="step-nav" style="justify-content:flex-end;">
+
+      <!-- Black Card Atelier Access note -->
+      <div id="atelier-note" style="display:none;margin-top:1rem;">
+        <div class="atelier-badge">Atelier Access</div>
+        <p style="font-family:'Jost',sans-serif;font-size:0.84rem;color:var(--espresso);line-height:1.75;margin-top:0.4rem;">Your schedule is ours to work around. Black Card members receive first selection of every available appointment before anyone else sees the calendar. If you need a specific time, message us and we build around you.</p>
+      </div>
+
+      <div class="step-nav" style="justify-content:flex-end;margin-top:1.5rem;">
         <button class="btn-gold" onclick="goStep(2)" style="animation:none;">Continue →</button>
       </div>
     </div>
 
-    <!-- Step 2: Service + Add-ons + Worker -->
+    <!-- ══ STEP 2: Service + Add-ons + Artist ══ -->
     <div class="booking-step" id="step-2">
       <div class="step-title">Choose Your Service</div>
+
+      <!-- Member benefit reminder -->
+      <div id="step2-member-reminder" style="display:none;" class="member-id-banner">
+        <div id="step2-reminder-text" style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--espresso);"></div>
+      </div>
+
       <div class="section-label" style="margin-bottom:0.75rem;">Manicure</div>
-      <button class="option-btn" onclick="selectService('Organic Structured Manicure',90,this)">
+      <button class="option-btn" id="svc-btn-0" onclick="selectService('Organic Structured Manicure',90,'manicure',this)">
         <div><span class="option-name">Organic Structured Manicure</span><span class="option-sub">Healthiest option — recommended for nail growth</span></div>
-        <span class="option-price">from $90</span>
+        <div style="text-align:right;"><span class="option-price" id="price-0">from $90</span><div id="tag-0"></div></div>
       </button>
-      <button class="option-btn" onclick="selectService('Short Gel X',95,this)">
+      <button class="option-btn" id="svc-btn-1" onclick="selectService('Short Gel X',95,'manicure',this)">
         <div><span class="option-name">Short Gel X</span></div>
-        <span class="option-price">$95</span>
+        <div style="text-align:right;"><span class="option-price" id="price-1">$95</span><div id="tag-1"></div></div>
       </button>
-      <button class="option-btn" onclick="selectService('Medium Gel X',100,this)">
+      <button class="option-btn" id="svc-btn-2" onclick="selectService('Medium Gel X',100,'manicure',this)">
         <div><span class="option-name">Medium Gel X</span></div>
-        <span class="option-price">$100</span>
+        <div style="text-align:right;"><span class="option-price" id="price-2">$100</span><div id="tag-2"></div></div>
       </button>
-      <button class="option-btn" onclick="selectService('Long Gel X',110,this)">
+      <button class="option-btn" id="svc-btn-3" onclick="selectService('Long Gel X',110,'manicure',this)">
         <div><span class="option-name">Long Gel X</span></div>
-        <span class="option-price">$110</span>
+        <div style="text-align:right;"><span class="option-price" id="price-3">$110</span><div id="tag-3"></div></div>
       </button>
-      <button class="option-btn" onclick="selectService('Short Acrylic Set',95,this)">
+      <button class="option-btn" id="svc-btn-4" onclick="selectService('Short Acrylic Set',95,'manicure',this)">
         <div><span class="option-name">Short Acrylic Set</span></div>
-        <span class="option-price">$95</span>
+        <div style="text-align:right;"><span class="option-price" id="price-4">$95</span><div id="tag-4"></div></div>
       </button>
-      <button class="option-btn" onclick="selectService('Medium Acrylic Set',100,this)">
+      <button class="option-btn" id="svc-btn-5" onclick="selectService('Medium Acrylic Set',100,'manicure',this)">
         <div><span class="option-name">Medium Acrylic Set</span></div>
-        <span class="option-price">$100</span>
+        <div style="text-align:right;"><span class="option-price" id="price-5">$100</span><div id="tag-5"></div></div>
       </button>
-      <button class="option-btn" onclick="selectService('Long Acrylic Set',110,this)">
+      <button class="option-btn" id="svc-btn-6" onclick="selectService('Long Acrylic Set',110,'manicure',this)">
         <div><span class="option-name">Long Acrylic Set</span></div>
-        <span class="option-price">$110</span>
+        <div style="text-align:right;"><span class="option-price" id="price-6">$110</span><div id="tag-6"></div></div>
       </button>
+
       <div class="section-label" style="margin:1rem 0 0.75rem;">Pedicure</div>
-      <button class="option-btn" onclick="selectService('Hydro Free Pedicure',85,this)">
+      <button class="option-btn" id="svc-btn-7" onclick="selectService('Hydro Free Pedicure',85,'pedicure',this)">
         <div><span class="option-name">Hydro Free Pedicure</span></div>
-        <span class="option-price">$85</span>
+        <div style="text-align:right;"><span class="option-price" id="price-7">$85</span><div id="tag-7"></div></div>
       </button>
-      <button class="option-btn" onclick="selectService('Classic Spa Pedicure',95,this)">
+      <button class="option-btn" id="svc-btn-8" onclick="selectService('Classic Spa Pedicure',95,'pedicure',this)">
         <div><span class="option-name">Classic Spa Pedicure</span></div>
-        <span class="option-price">$95</span>
+        <div style="text-align:right;"><span class="option-price" id="price-8">$95</span><div id="tag-8"></div></div>
       </button>
-      <button class="option-btn" onclick="selectService('Royal Citrus Pedicure',105,this)">
+      <button class="option-btn" id="svc-btn-9" onclick="selectService('Royal Citrus Pedicure',105,'pedicure',this)">
         <div><span class="option-name">Royal Citrus Pedicure</span></div>
-        <span class="option-price">$105</span>
+        <div style="text-align:right;"><span class="option-price" id="price-9">$105</span><div id="tag-9"></div></div>
       </button>
-      <div class="section-label" style="margin:1rem 0 0.75rem;">Add-Ons (optional)</div>
-      <label style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 0;border-bottom:1px solid rgba(201,165,90,0.1);cursor:pointer;">
-        <input type="checkbox" id="addon-removal" onchange="toggleAddon(35,'addon-removal')">
-        <span style="font-family:'Jost',sans-serif;font-size:0.9rem;color:var(--espresso);flex:1;">Soak Off Removal <span style="font-size:0.78rem;color:var(--latte);">(nails from another salon)</span></span>
-        <span class="option-price">+$35</span>
+
+      <div class="section-label" style="margin:1.25rem 0 0.75rem;">Add-Ons <span style="font-size:0.65rem;color:var(--latte);text-transform:none;letter-spacing:0;">(optional)</span></div>
+
+      <label class="addon-row" for="addon-removal">
+        <input type="checkbox" id="addon-removal" onchange="toggleAddon('Soak Off Removal',35,this)">
+        <div style="flex:1;">
+          <div style="font-family:'Jost',sans-serif;font-size:0.9rem;color:var(--espresso);">Soak Off Removal</div>
+          <div style="font-family:'Jost',sans-serif;font-size:0.75rem;color:var(--latte);">Coming from another salon with nails on</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="addon-price-tag" id="addon-price-removal">+$35</div>
+          <div id="addon-tag-removal"></div>
+        </div>
       </label>
-      <label style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 0;border-bottom:1px solid rgba(201,165,90,0.1);cursor:pointer;">
-        <input type="checkbox" id="addon-russian" onchange="toggleAddon(30,'addon-russian')">
-        <span style="font-family:'Jost',sans-serif;font-size:0.9rem;color:var(--espresso);flex:1;">Russian Manicure Technique</span>
-        <span class="option-price">+$30</span>
+
+      <label class="addon-row" for="addon-russian">
+        <input type="checkbox" id="addon-russian" onchange="toggleAddon('Russian Manicure Technique',30,this)">
+        <div style="flex:1;">
+          <div style="font-family:'Jost',sans-serif;font-size:0.9rem;color:var(--espresso);">Russian Manicure Technique</div>
+          <div style="font-family:'Jost',sans-serif;font-size:0.75rem;color:var(--latte);">Precision cuticle work for a longer-lasting, editorial finish</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="addon-price-tag" id="addon-price-russian">+$30</div>
+          <div id="addon-tag-russian"></div>
+        </div>
       </label>
-      <div class="section-label" style="margin:1rem 0 0.75rem;">Artist Preference</div>
+
+      <label class="addon-row" for="addon-scrub">
+        <input type="checkbox" id="addon-scrub" onchange="toggleAddon('Scrub Massage',25,this)">
+        <div style="flex:1;">
+          <div style="font-family:'Jost',sans-serif;font-size:0.9rem;color:var(--espresso);">Scrub Massage</div>
+          <div style="font-family:'Jost',sans-serif;font-size:0.75rem;color:var(--latte);">Exfoliating scrub + relaxing hand or foot massage</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="addon-price-tag" id="addon-price-scrub">+$25</div>
+          <div id="addon-tag-scrub"></div>
+        </div>
+      </label>
+
+      <!-- Birthday upgrade choice (Luxe birthday month only) -->
+      <div id="birthday-upgrade-section" style="display:none;">
+        <div class="birthday-box" style="margin-top:1rem;margin-bottom:0.5rem;">
+          <div class="birthday-title">🎂 Birthday Month Upgrade</div>
+          <p style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--espresso);line-height:1.7;margin-bottom:0.75rem;">Choose your complimentary birthday gift — added free to this appointment:</p>
+          <div style="display:flex;flex-direction:column;gap:0.5rem;">
+            <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;">
+              <input type="radio" name="bday-choice" value="scrub" id="bday-scrub" onchange="selectBirthdayGift('Free Scrub')">
+              <span style="font-family:'Jost',sans-serif;font-size:0.88rem;color:var(--espresso);">Free Scrub</span>
+              <span style="color:var(--champagne);font-family:'Jost',sans-serif;font-size:0.7rem;margin-left:auto;">$0.00</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;">
+              <input type="radio" name="bday-choice" value="massage" id="bday-massage" onchange="selectBirthdayGift('Free Massage')">
+              <span style="font-family:'Jost',sans-serif;font-size:0.88rem;color:var(--espresso);">Free Massage</span>
+              <span style="color:var(--champagne);font-family:'Jost',sans-serif;font-size:0.7rem;margin-left:auto;">$0.00</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;">
+              <input type="radio" name="bday-choice" value="removal" id="bday-removal" onchange="selectBirthdayGift('Free Removal')">
+              <span style="font-family:'Jost',sans-serif;font-size:0.88rem;color:var(--espresso);">Free Removal</span>
+              <span style="color:var(--champagne);font-family:'Jost',sans-serif;font-size:0.7rem;margin-left:auto;">$0.00</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label" style="margin:1.25rem 0 0.75rem;">Artist Preference</div>
       <button class="option-btn" onclick="selectWorker('Zahra',this)">
         <div><span class="option-name">Zahra — Founder & Lead Artist</span><span class="option-sub">Celebrity nail artist, specializes in structured sets</span></div>
       </button>
       <button class="option-btn" onclick="selectWorker('Any Artist',this)">
         <div><span class="option-name">Any Available Artist</span><span class="option-sub">First available appointment</span></div>
       </button>
+
       <div class="step-nav">
         <button class="btn-outline-dark" onclick="goStep(1)">← Back</button>
         <button class="btn-gold" onclick="goStep(3)" style="animation:none;">Continue →</button>
       </div>
     </div>
 
-    <!-- Step 3: Date + Time -->
+    <!-- ══ STEP 3: Date + Time ══ -->
     <div class="booking-step" id="step-3">
       <div class="step-title">Pick a Date & Time</div>
-      <div id="member-priority-note" style="display:none;" class="member-banner" id="priority-note">
-        ✦ &nbsp; As a member, you have priority access to all slots below.
+
+      <div id="priority-note-step3" style="display:none;" class="member-id-banner">
+        <span id="priority-note-text" style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--espresso);"></span>
       </div>
+
       <label class="luxury-label" style="margin-top:0.5rem;">Select Date</label>
       <input type="date" class="luxury-input" id="booking-date" style="margin-bottom:1.25rem;" />
       <label class="luxury-label">Available Times</label>
@@ -155,26 +365,60 @@
       </div>
     </div>
 
-    <!-- Step 4: Info + Deposit -->
+    <!-- ══ STEP 4: Checkout ══ -->
     <div class="booking-step" id="step-4">
       <div class="step-title">Confirm & Pay Deposit</div>
-      <div class="luxury-card" style="margin-bottom:1.5rem;">
-        <div class="section-label" style="font-size:0.6rem;margin-bottom:0.75rem;">Booking Summary</div>
-        <div style="font-family:'Jost',sans-serif;font-size:0.9rem;color:var(--espresso);line-height:2;">
-          <div>Service: <strong id="summary-service">—</strong></div>
-          <div>Artist: <strong id="summary-worker">—</strong></div>
-          <div>Date: <strong id="summary-date">—</strong></div>
-          <div>Time: <strong id="summary-time">—</strong></div>
-          <div>Total: <strong id="summary-total">—</strong></div>
+
+      <!-- Member benefit header on checkout -->
+      <div id="checkout-member-banner" style="display:none;" class="member-id-banner" style="margin-bottom:1rem;">
+        <div>
+          <div id="checkout-member-label" style="font-family:'Jost',sans-serif;font-size:0.88rem;color:var(--espresso);font-weight:600;"></div>
+          <div style="font-family:'Jost',sans-serif;font-size:0.75rem;color:var(--latte);margin-top:0.15rem;">Membership benefits applied below</div>
         </div>
       </div>
-      <div class="deposit-box">
-        <div class="section-label" style="font-size:0.6rem;">Deposit Due Today</div>
+
+      <!-- Itemized checkout -->
+      <div class="luxury-card" style="margin-bottom:1.5rem;padding:1.5rem 1.75rem;">
+        <div class="section-label" style="font-size:0.6rem;margin-bottom:1rem;">Order Summary</div>
+
+        <div style="font-family:'Jost',sans-serif;font-size:0.72rem;color:var(--latte);margin-bottom:0.2rem;display:flex;justify-content:space-between;">
+          <span>Artist: <strong id="summary-worker" style="color:var(--espresso);">—</strong></span>
+          <span>Date: <strong id="summary-date" style="color:var(--espresso);">—</strong> &nbsp; <strong id="summary-time" style="color:var(--espresso);">—</strong></span>
+        </div>
+
+        <hr style="border:none;border-top:1px solid rgba(201,165,90,0.1);margin:0.75rem 0;">
+
+        <!-- Line items injected by JS -->
+        <div id="checkout-line-items"></div>
+
+        <!-- Birthday gift line -->
+        <div id="checkout-birthday-line" style="display:none;" class="checkout-line">
+          <div>
+            <div class="checkout-item-name" id="checkout-birthday-name"></div>
+            <div class="checkout-item-note">🎂 Birthday Month Upgrade — Complimentary</div>
+          </div>
+          <div class="checkout-price-wrap">
+            <div class="checkout-charged-price free">$0.00</div>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid rgba(201,165,90,0.15);margin:0.75rem 0;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <span style="font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);letter-spacing:0.08em;text-transform:uppercase;">Appointment Total</span>
+          <span style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;color:var(--espresso);" id="summary-total">—</span>
+        </div>
+      </div>
+
+      <!-- Deposit box -->
+      <div class="deposit-box" style="margin-bottom:1.25rem;">
+        <div class="section-label" style="font-size:0.6rem;">Deposit Due Today (50%)</div>
         <div class="deposit-amount" id="deposit-amount">$0</div>
         <p style="font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);margin-top:0.5rem;line-height:1.6;">
-          This 50% deposit is <strong>non-refundable</strong>. If you cancel with 48+ hours notice, the deposit may be applied to a rescheduled appointment. No-shows forfeit the deposit.
+          This deposit is <strong>non-refundable</strong>. With 48+ hours notice, it may be applied to a rescheduled appointment. No-shows forfeit the deposit in full.
         </p>
       </div>
+
+      <!-- Client info -->
       <div style="margin:1.25rem 0;">
         <label class="luxury-label">Full Name</label>
         <input class="luxury-input" id="client-name" placeholder="Your name" style="margin-bottom:0.75rem;" />
@@ -185,6 +429,7 @@
         <label class="luxury-label" style="margin-bottom:0.5rem;">Notes for Your Artist (optional)</label>
         <textarea class="luxury-input" id="client-notes" rows="2" placeholder="Nail shape, current nails on, inspiration photo link…" style="resize:vertical;"></textarea>
       </div>
+
       <label style="display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:1.25rem;cursor:pointer;">
         <input type="checkbox" id="policy-agree" style="margin-top:3px;">
         <span style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--latte);line-height:1.6;">
@@ -206,107 +451,431 @@
 
 <script src="js/main.js"></script>
 <script>
-  const booking = { type: null, service: null, servicePrice: 0, addons: 0, worker: null, date: null, time: null };
+// ═══════════════════════════════════════════
+// MEMBER TIER RULES
+// ═══════════════════════════════════════════
+const TIER_RULES = {
+  SIGNATURE: {
+    label: 'Signature Club',
+    tagText: 'SIGNATURE',
+    tagStyle: 'background:rgba(166,124,82,0.15);color:var(--latte);',
+    freeManicures: 1,
+    freePedicures: 1,
+    freeServiceCount: null,
+    freeAddonNames: [],
+    freeAddonCount: 0,
+    addonDiscountPct: 10,
+    reminderText: 'Signature: 1 manicure + 1 pedicure included this month. Add-ons at 10% off.',
+    priorityText: '✦  Signature members book before guests — priority slots shown below.'
+  },
+  LUXE: {
+    label: 'Luxe Club',
+    tagText: 'LUXE',
+    tagStyle: 'background:rgba(201,165,90,0.15);color:var(--champagne);',
+    freeManicures: 2,
+    freePedicures: 1,
+    freeServiceCount: null,
+    freeAddonNames: ['Soak Off Removal', 'Russian Manicure Technique', 'Scrub Massage'],
+    freeAddonCount: 2,
+    addonDiscountPct: 0,
+    hasBirthdayUpgrade: true,
+    reminderText: 'Luxe: Up to 2 manicures + 1 pedicure + 2 complimentary add-ons included this month.',
+    priorityText: '✦  Luxe members have priority access — most slots reserved for you.'
+  },
+  BLACK_CARD: {
+    label: 'Black Card',
+    tagText: 'BLACK CARD',
+    tagStyle: 'background:var(--espresso);color:var(--champagne);',
+    freeManicures: null,
+    freePedicures: null,
+    freeServiceCount: 4,
+    freeAddonNames: [],
+    freeAddonCount: 0,
+    addonDiscountPct: 75,
+    reminderText: 'Black Card: Up to 4 services included. All add-ons at 75% off automatically.',
+    priorityText: '✦  Atelier Access — first selection of every available slot before the calendar opens.'
+  }
+};
 
-  function selectType(type, btn) {
-    booking.type = type;
-    document.querySelectorAll('#step-1 .option-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
+// Demo Member IDs
+const DEMO_MEMBERS = {
+  'SIG-1234': { tier: 'SIGNATURE', name: 'Signature Member' },
+  'LUX-5678': { tier: 'LUXE', name: 'Luxe Member' },
+  'BLK-9999': { tier: 'BLACK_CARD', name: 'Black Card Member' },
+};
+
+// ═══════════════════════════════════════════
+// BOOKING STATE
+// ═══════════════════════════════════════════
+const booking = {
+  type: 'guest',
+  memberTier: null,
+  memberLabel: null,
+  birthdayMonth: null,
+  birthdayActive: false,
+  birthdayGift: null,
+  service: null,
+  servicePrice: 0,
+  serviceCategory: null,
+  selectedAddons: [],   // [{name, price, basePrice}]
+  worker: null,
+  date: null,
+  time: null
+};
+
+// ═══════════════════════════════════════════
+// STEP 1: MEMBER ID
+// ═══════════════════════════════════════════
+function validateMemberId() {
+  const raw = document.getElementById('member-id-input').value.trim().toUpperCase();
+  const errEl = document.getElementById('member-id-error');
+  errEl.style.display = 'none';
+
+  // Check demo IDs first
+  let member = DEMO_MEMBERS[raw];
+
+  // Also accept any properly formatted ID
+  if (!member) {
+    if (raw.startsWith('SIG')) member = { tier: 'SIGNATURE', name: 'Signature Member' };
+    else if (raw.startsWith('LUX')) member = { tier: 'LUXE', name: 'Luxe Member' };
+    else if (raw.startsWith('BLK') || raw.startsWith('BLACK')) member = { tier: 'BLACK_CARD', name: 'Black Card Member' };
   }
-  function selectService(name, price, btn) {
-    booking.service = name;
-    booking.servicePrice = price;
-    document.querySelectorAll('#step-2 .option-btn').forEach(b => { if(b.querySelector('.option-name')?.textContent !== b.querySelector('[style*="ARTIST"]')?.textContent) b.classList.remove('selected'); });
-    btn.classList.add('selected');
+
+  if (!member) {
+    errEl.textContent = 'Member ID not found. Check your welcome email or continue as a guest below.';
+    errEl.style.display = 'block';
+    return;
   }
-  function selectWorker(name, btn) {
-    booking.worker = name;
-    document.querySelectorAll('#step-2 .option-btn:last-of-type, #step-2 .option-btn:nth-last-of-type(2)').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
+
+  const rules = TIER_RULES[member.tier];
+  booking.type = 'member';
+  booking.memberTier = member.tier;
+  booking.memberLabel = rules.label;
+
+  // Show verified banner
+  const banner = document.getElementById('member-verified-banner');
+  banner.style.display = 'flex';
+  document.getElementById('member-verified-name').textContent = rules.label + ' · Verified ✓';
+  document.getElementById('member-verified-note').textContent = rules.reminderText;
+  const tag = document.getElementById('member-tier-tag');
+  tag.textContent = rules.tagText;
+  tag.style.cssText = 'font-family:Jost,sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;padding:0.25rem 0.65rem;' + rules.tagStyle;
+
+  // Deselect guest button
+  document.getElementById('guest-btn').classList.remove('selected');
+
+  // Black Card: show Atelier Access note
+  document.getElementById('atelier-note').style.display = member.tier === 'BLACK_CARD' ? 'block' : 'none';
+
+  // Luxe: show birthday month field
+  document.getElementById('birthday-month-row').style.display = member.tier === 'LUXE' ? 'block' : 'none';
+}
+
+function checkBirthdayMonth() {
+  const val = document.getElementById('birthday-month').value;
+  if (!val) return;
+  booking.birthdayMonth = parseInt(val);
+  const currentMonth = new Date().getMonth() + 1;
+  booking.birthdayActive = (booking.birthdayMonth === currentMonth);
+  document.getElementById('birthday-activated').style.display = booking.birthdayActive ? 'block' : 'none';
+}
+
+function selectGuest(btn) {
+  booking.type = 'guest';
+  booking.memberTier = null;
+  booking.memberLabel = null;
+  btn.classList.add('selected');
+  document.getElementById('member-verified-banner').style.display = 'none';
+  document.getElementById('atelier-note').style.display = 'none';
+  document.getElementById('birthday-month-row').style.display = 'none';
+  document.getElementById('member-id-error').style.display = 'none';
+}
+
+function selectBirthdayGift(gift) {
+  booking.birthdayGift = gift;
+}
+
+// ═══════════════════════════════════════════
+// STEP 2: SERVICES & ADD-ONS
+// ═══════════════════════════════════════════
+function updateServiceTags() {
+  if (!booking.memberTier) return;
+  const rules = TIER_RULES[booking.memberTier];
+
+  // Show reminder
+  const rem = document.getElementById('step2-member-reminder');
+  rem.style.display = 'block';
+  document.getElementById('step2-reminder-text').textContent = rules.reminderText;
+
+  // Tag manicure buttons
+  const maniCount = rules.freeManicures || (rules.freeServiceCount ? rules.freeServiceCount : 0);
+  const pediCount = rules.freePedicures || (rules.freeServiceCount ? rules.freeServiceCount : 0);
+
+  for (let i = 0; i <= 6; i++) {
+    const tag = document.getElementById('tag-' + i);
+    if (!tag) continue;
+    if (rules.freeServiceCount !== null || rules.freeManicures > 0) {
+      tag.innerHTML = '<span class="addon-free-tag">Included</span>';
+    }
   }
-  function toggleAddon(price, id) {
-    const checked = document.getElementById(id).checked;
-    booking.addons += checked ? price : -price;
+  for (let i = 7; i <= 9; i++) {
+    const tag = document.getElementById('tag-' + i);
+    if (!tag) continue;
+    if (rules.freeServiceCount !== null || rules.freePedicures > 0) {
+      tag.innerHTML = '<span class="addon-free-tag">Included</span>';
+    }
   }
-  function goStep(n) {
-    document.querySelectorAll('.booking-step').forEach(s => s.classList.remove('active'));
-    document.getElementById('step-' + n).classList.add('active');
-    for (let i = 1; i <= 4; i++) {
-      const dot = document.getElementById('dot-' + i);
-      if (i < n) { dot.className = 'step-dot done'; }
-      else if (i === n) { dot.className = 'step-dot active'; }
-      else { dot.className = 'step-dot'; }
-      if (i < 4) {
-        const line = document.getElementById('line-' + i);
-        line.className = 'step-line' + (i < n ? ' done' : '');
+
+  // Tag add-on prices
+  updateAddonPriceTags();
+
+  // Birthday upgrade section
+  if (rules.hasBirthdayUpgrade && booking.birthdayActive) {
+    document.getElementById('birthday-upgrade-section').style.display = 'block';
+  }
+}
+
+function updateAddonPriceTags() {
+  if (!booking.memberTier) return;
+  const rules = TIER_RULES[booking.memberTier];
+
+  const addonMap = [
+    { id: 'removal', name: 'Soak Off Removal', base: 35 },
+    { id: 'russian', name: 'Russian Manicure Technique', base: 30 },
+    { id: 'scrub',   name: 'Scrub Massage', base: 25 }
+  ];
+
+  addonMap.forEach(a => {
+    const priceEl = document.getElementById('addon-price-' + a.id);
+    const tagEl   = document.getElementById('addon-tag-' + a.id);
+    if (!priceEl || !tagEl) return;
+
+    if (rules.freeAddonNames.includes(a.name) && rules.freeAddonCount > 0) {
+      priceEl.textContent = '$0.00';
+      priceEl.style.color = 'var(--champagne)';
+      tagEl.innerHTML = '<span class="addon-free-tag" style="margin-top:0.2rem;">Complimentary</span>';
+    } else if (rules.addonDiscountPct === 75) {
+      const disc = Math.ceil(a.base * 0.25);
+      priceEl.innerHTML = `<span style="text-decoration:line-through;opacity:0.5;font-size:0.78rem;">+$${a.base}</span> <span style="color:var(--champagne);">+$${disc}</span>`;
+      tagEl.innerHTML = '<span class="addon-free-tag" style="margin-top:0.2rem;">75% off</span>';
+    } else if (rules.addonDiscountPct === 10) {
+      const disc = Math.ceil(a.base * 0.9);
+      priceEl.innerHTML = `<span style="text-decoration:line-through;opacity:0.5;font-size:0.78rem;">+$${a.base}</span> +$${disc}`;
+    } else {
+      priceEl.textContent = '+$' + a.base;
+      tagEl.innerHTML = '';
+    }
+  });
+}
+
+function selectService(name, price, category, btn) {
+  booking.service = name;
+  booking.servicePrice = price;
+  booking.serviceCategory = category;
+  document.querySelectorAll('#step-2 .option-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function selectWorker(name, btn) {
+  booking.worker = name;
+  document.querySelectorAll('#step-2 .option-btn').forEach(b => {
+    if (b.querySelector('.option-name')?.textContent === 'Zahra — Founder & Lead Artist' ||
+        b.querySelector('.option-name')?.textContent === 'Any Available Artist') {
+      b.classList.remove('selected');
+    }
+  });
+  btn.classList.add('selected');
+}
+
+function toggleAddon(name, basePrice, checkbox) {
+  // Remove any existing entry for this addon
+  booking.selectedAddons = booking.selectedAddons.filter(a => a.name !== name);
+  if (checkbox.checked) {
+    let chargedPrice = basePrice;
+    if (booking.memberTier) {
+      const rules = TIER_RULES[booking.memberTier];
+      // Count how many free addons already claimed
+      const freeUsed = booking.selectedAddons.filter(a => a.charged === 0 && rules.freeAddonNames.includes(a.name)).length;
+      if (rules.freeAddonNames.includes(name) && freeUsed < rules.freeAddonCount) {
+        chargedPrice = 0;
+      } else if (rules.addonDiscountPct === 75) {
+        chargedPrice = Math.ceil(basePrice * 0.25);
+      } else if (rules.addonDiscountPct === 10) {
+        chargedPrice = Math.ceil(basePrice * 0.9);
       }
     }
-    if (n === 3) loadTimeslots();
-    if (n === 4) loadSummary();
-    window.scrollTo(0, 0);
+    booking.selectedAddons.push({ name, basePrice, charged: chargedPrice });
   }
-  function loadTimeslots() {
-    const times = ['10:00 AM','10:30 AM','11:00 AM','11:30 AM','12:00 PM','1:00 PM','2:00 PM','2:30 PM','3:00 PM','3:30 PM','4:00 PM','4:30 PM'];
-    const grid = document.getElementById('timeslots');
-    grid.innerHTML = '';
-    // For guests, hide a few slots (member priority simulation)
-    const available = booking.type === 'member' ? times : times.filter((_,i) => i % 3 !== 0);
-    available.forEach(t => {
-      const btn = document.createElement('button');
-      btn.className = 'timeslot-btn';
-      btn.textContent = t;
-      btn.onclick = () => {
-        document.querySelectorAll('.timeslot-btn').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        booking.time = t;
-      };
-      grid.appendChild(btn);
-    });
-    if (booking.type === 'guest') {
-      const note = document.createElement('p');
-      note.style.cssText = 'font-family:Jost,sans-serif;font-size:0.75rem;color:var(--latte);margin-top:0.75rem;grid-column:1/-1;';
-      note.textContent = 'Members have first access. Remaining slots shown above.';
-      grid.appendChild(note);
-    }
-    // Set min date to tomorrow
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    document.getElementById('booking-date').min = tomorrow.toISOString().split('T')[0];
-    document.getElementById('booking-date').onchange = e => { booking.date = e.target.value; };
-  }
-  function loadSummary() {
-    const total = booking.servicePrice + booking.addons;
-    const deposit = Math.ceil(total * 0.5);
-    document.getElementById('summary-service').textContent = booking.service || '—';
-    document.getElementById('summary-worker').textContent = booking.worker || '—';
-    document.getElementById('summary-date').textContent = booking.date || '—';
-    document.getElementById('summary-time').textContent = booking.time || '—';
-    document.getElementById('summary-total').textContent = total ? '$' + total : '—';
-    document.getElementById('deposit-amount').textContent = deposit ? '$' + deposit : '—';
-  }
-  function submitBooking() {
-    if (!document.getElementById('policy-agree').checked) {
-      alert('Please agree to the cancellation policy before proceeding.');
-      return;
-    }
-    const name = document.getElementById('client-name').value.trim();
-    const phone = document.getElementById('client-phone').value.trim();
-    const email = document.getElementById('client-email').value.trim();
-    if (!name || !phone || !email) {
-      alert('Please fill in your name, phone, and email.');
-      return;
-    }
-    document.getElementById('step-4').querySelector('.step-nav').style.display = 'none';
-    document.getElementById('booking-success').style.display = 'block';
-    document.getElementById('booking-success').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ═══════════════════════════════════════════
+// STEP 3: TIMESLOTS
+// ═══════════════════════════════════════════
+function loadTimeslots() {
+  const times = ['10:00 AM','10:30 AM','11:00 AM','11:30 AM','12:00 PM','1:00 PM','2:00 PM','2:30 PM','3:00 PM','3:30 PM','4:00 PM','4:30 PM'];
+  const grid = document.getElementById('timeslots');
+  grid.innerHTML = '';
+  const available = booking.type === 'member' ? times : times.filter((_,i) => i % 3 !== 0);
+
+  const note = document.getElementById('priority-note-step3');
+  const noteText = document.getElementById('priority-note-text');
+  if (booking.memberTier) {
+    note.style.display = 'flex';
+    noteText.textContent = TIER_RULES[booking.memberTier].priorityText;
+  } else {
+    note.style.display = 'none';
   }
 
-  window.addEventListener('scroll', () => {
-    document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60);
+  available.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'timeslot-btn';
+    btn.textContent = t;
+    btn.onclick = () => {
+      document.querySelectorAll('.timeslot-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      booking.time = t;
+    };
+    grid.appendChild(btn);
   });
-  document.getElementById('hamburger').addEventListener('click', () => {
-    document.getElementById('nav-mobile').classList.toggle('open');
+  if (booking.type === 'guest') {
+    const p = document.createElement('p');
+    p.style.cssText = 'font-family:Jost,sans-serif;font-size:0.75rem;color:var(--latte);margin-top:0.75rem;grid-column:1/-1;';
+    p.textContent = 'Members have first access. Remaining slots shown above.';
+    grid.appendChild(p);
+  }
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  document.getElementById('booking-date').min = tomorrow.toISOString().split('T')[0];
+  document.getElementById('booking-date').onchange = e => { booking.date = e.target.value; };
+}
+
+// ═══════════════════════════════════════════
+// STEP 4: CHECKOUT SUMMARY
+// ═══════════════════════════════════════════
+function loadSummary() {
+  document.getElementById('summary-worker').textContent = booking.worker || '—';
+  document.getElementById('summary-date').textContent   = booking.date  || '—';
+  document.getElementById('summary-time').textContent   = booking.time  || '—';
+
+  const rules = booking.memberTier ? TIER_RULES[booking.memberTier] : null;
+
+  // Member banner on checkout
+  const mb = document.getElementById('checkout-member-banner');
+  if (rules) {
+    mb.style.display = 'flex';
+    document.getElementById('checkout-member-label').textContent = rules.label + ' · Benefits Applied';
+  } else {
+    mb.style.display = 'none';
+  }
+
+  const lineItemsEl = document.getElementById('checkout-line-items');
+  lineItemsEl.innerHTML = '';
+  let total = 0;
+
+  // ── Main service ──
+  let serviceCharge = booking.servicePrice;
+  let serviceNote = '';
+  if (rules) {
+    const isMani = booking.serviceCategory === 'manicure';
+    const isPedi = booking.serviceCategory === 'pedicure';
+    if (rules.freeServiceCount !== null) {
+      serviceCharge = 0;
+      serviceNote = 'Included in Black Card (4 services/mo)';
+    } else if (isMani && rules.freeManicures > 0) {
+      serviceCharge = 0;
+      serviceNote = 'Included in ' + rules.label;
+    } else if (isPedi && rules.freePedicures > 0) {
+      serviceCharge = 0;
+      serviceNote = 'Included in ' + rules.label;
+    }
+  }
+  total += serviceCharge;
+  lineItemsEl.innerHTML += buildLine(booking.service || '—', booking.servicePrice, serviceCharge, serviceNote);
+
+  // ── Add-ons ──
+  booking.selectedAddons.forEach(a => {
+    total += a.charged;
+    let note = '';
+    if (a.charged === 0) note = 'Complimentary add-on';
+    else if (rules && rules.addonDiscountPct === 75) note = '75% Black Card discount';
+    else if (rules && rules.addonDiscountPct === 10) note = '10% member discount';
+    lineItemsEl.innerHTML += buildLine(a.name, a.basePrice, a.charged, note);
   });
+
+  // ── Birthday gift ──
+  const bdayLine = document.getElementById('checkout-birthday-line');
+  const bdayName = document.getElementById('checkout-birthday-name');
+  if (booking.birthdayActive && booking.birthdayGift) {
+    bdayLine.style.display = 'flex';
+    bdayName.textContent = booking.birthdayGift;
+  } else {
+    bdayLine.style.display = 'none';
+  }
+
+  document.getElementById('summary-total').textContent = '$' + total;
+  document.getElementById('deposit-amount').textContent = '$' + Math.ceil(total * 0.5);
+}
+
+function buildLine(name, fullPrice, charged, note) {
+  const isFree = charged === 0;
+  const showStrike = !isFree && fullPrice !== charged;
+  return `
+    <div class="checkout-line">
+      <div>
+        <div class="checkout-item-name">${name}</div>
+        ${note ? `<div class="checkout-item-note">${note}</div>` : ''}
+      </div>
+      <div class="checkout-price-wrap">
+        ${showStrike ? `<div class="checkout-full-price">$${fullPrice}</div>` : ''}
+        <div class="checkout-charged-price${isFree ? ' free' : ''}">${isFree ? '$0.00' : '$' + charged}</div>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════
+// STEP NAVIGATION
+// ═══════════════════════════════════════════
+function goStep(n) {
+  document.querySelectorAll('.booking-step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step-' + n).classList.add('active');
+  for (let i = 1; i <= 4; i++) {
+    const dot = document.getElementById('dot-' + i);
+    if (i < n)      dot.className = 'step-dot done';
+    else if (i === n) dot.className = 'step-dot active';
+    else            dot.className = 'step-dot';
+    if (i < 4) {
+      document.getElementById('line-' + i).className = 'step-line' + (i < n ? ' done' : '');
+    }
+  }
+  if (n === 2 && booking.memberTier) updateServiceTags();
+  if (n === 3) loadTimeslots();
+  if (n === 4) loadSummary();
+  window.scrollTo(0, 0);
+}
+
+function submitBooking() {
+  if (!document.getElementById('policy-agree').checked) {
+    alert('Please agree to the cancellation policy before proceeding.');
+    return;
+  }
+  const name  = document.getElementById('client-name').value.trim();
+  const phone = document.getElementById('client-phone').value.trim();
+  const email = document.getElementById('client-email').value.trim();
+  if (!name || !phone || !email) {
+    alert('Please fill in your name, phone, and email.');
+    return;
+  }
+  document.getElementById('step-4').querySelector('.step-nav').style.display = 'none';
+  document.getElementById('booking-success').style.display = 'block';
+  document.getElementById('booking-success').scrollIntoView({ behavior: 'smooth' });
+}
+
+window.addEventListener('scroll', () => {
+  document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60);
+});
+document.getElementById('hamburger').addEventListener('click', () => {
+  document.getElementById('nav-mobile').classList.toggle('open');
+});
 </script>
 </body>
 </html>
