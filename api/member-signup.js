@@ -1,0 +1,165 @@
+const { getDb } = require('../server/db/init');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const Stripe = require('stripe');
+
+const TIER_PRICES = {
+  SIGNATURE:  'price_signature_monthly',
+  LUXE:       'price_luxe_monthly',
+  BLACK_CARD: 'price_black_card_monthly',
+};
+
+const TIER_AMOUNT = {
+  SIGNATURE:  9900,
+  LUXE:       19900,
+  BLACK_CARD: 29900,
+};
+
+function generateMemberId(fullName) {
+  const parts = fullName.trim().split(/\s+/);
+  const initials = parts.map(p => p[0].toUpperCase()).join('').slice(0, 3);
+  const rand = crypto.randomBytes(4).toString('hex').toUpperCase().slice(0, 6);
+  return `ZL-${initials}${rand}`;
+}
+
+function generateReferralCode() {
+  return crypto.randomBytes(4).toString('hex').toUpperCase();
+}
+
+function generateQrSecret() {
+  return crypto.randomBytes(20).toString('hex');
+}
+
+module.exports = async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const { fullName, email, phone, dateOfBirth, heardAbout, tier, password, referralCode, stripePaymentMethodId } = req.body;
+
+  if (!fullName || !email || !tier || !password) {
+    return res.status(400).json({ error: 'Missing required fields.' });
+  }
+
+  const validTiers = ['SIGNATURE', 'LUXE', 'BLACK_CARD'];
+  if (!validTiers.includes(tier)) {
+    return res.status(400).json({ error: 'Invalid tier.' });
+  }
+
+  const db = getDb();
+
+  try {
+    const existing = db.prepare('SELECT id FROM members WHERE email = ?').get(email.toLowerCase().trim());
+    if (existing) {
+      return res.status(409).json({ error: 'An account with this email already exists.' });
+    }
+
+    // Stripe setup
+    const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+    const customer = await stripe.customers.create({
+      name: fullName,
+      email: email.toLowerCase().trim(),
+      phone: phone || undefined,
+      metadata: { tier },
+    });
+
+    await stripe.paymentMethods.attach(stripePaymentMethodId, { customer: customer.id });
+    await stripe.customers.update(customer.id, { invoice_settings: { default_payment_method: stripePaymentMethodId } });
+
+    const subscription = await stripe.subscriptions.create({
+      customer: customer.id,
+      items: [{ price: process.env[`STRIPE_PRICE_${tier}`] || TIER_PRICES[tier] }],
+      payment_behavior: 'default_incomplete',
+      expand: ['latest_invoice.payment_intent'],
+      metadata: { tier, memberEmail: email },
+    });
+
+    const memberId = generateMemberId(fullName);
+    const passwordHash = bcrypt.hashSync(password, 10);
+    const referral = generateReferralCode();
+    const qrSecret = generateQrSecret();
+
+    const now = new Date().toISOString();
+    const nextBilling = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    const referredByCode = referralCode || null;
+
+    db.prepare(`
+      INSERT INTO members
+        (full_name, email, phone, date_of_birth, heard_about, tier, member_id, password_hash, qr_secret,
+         stripe_customer_id, stripe_subscription_id, referral_code, referred_by_code,
+         membership_started_at, next_billing_at, services_reset_month)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `).run(
+      fullName, email.toLowerCase().trim(), phone || null, dateOfBirth || null,
+      heardAbout || null, tier, memberId, passwordHash, qrSecret,
+      customer.id, subscription.id, referral, referredByCode,
+      now, nextBilling, new Date().toISOString().slice(0, 7)
+    );
+
+    // Track referral if code was used
+    if (referredByCode) {
+      const referrer = db.prepare('SELECT member_id FROM members WHERE referral_code = ?').get(referredByCode);
+      if (referrer) {
+        db.prepare(`INSERT INTO referrals (referrer_member_id, referee_email, referee_member_id, status) VALUES (?,?,?,?)`)
+          .run(referrer.member_id, email.toLowerCase().trim(), memberId, 'COMPLETED');
+      }
+    }
+
+    // Send welcome email + SMS (Twilio/SendGrid)
+    try { await sendWelcome({ fullName, email, phone, memberId, tier }); } catch (_) {}
+
+    return res.status(201).json({
+      success: true,
+      memberId,
+      tier,
+      referralCode: referral,
+      nextBillingDate: nextBilling,
+      clientSecret: subscription.latest_invoice?.payment_intent?.client_secret || null,
+    });
+
+  } catch (err) {
+    console.error('Signup error:', err);
+    return res.status(500).json({ error: err.message || 'Signup failed.' });
+  } finally {
+    db.close();
+  }
+};
+
+async function sendWelcome({ fullName, email, phone, memberId, tier }) {
+  const sgMail = require('@sendgrid/mail');
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  const tierLabel = { SIGNATURE: 'Signature Club', LUXE: 'Luxe Club', BLACK_CARD: 'Black Card' }[tier];
+
+  await sgMail.send({
+    to: email,
+    from: 'studio@zluxnails.com',
+    subject: `Welcome to Z Lux — Your Member ID is ${memberId}`,
+    html: `
+      <div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;color:#2C1A0E;">
+        <div style="background:#2C1A0E;padding:2rem;text-align:center;">
+          <h1 style="color:#C9A55A;font-size:2rem;margin:0;">ZLUX</h1>
+        </div>
+        <div style="padding:2.5rem 2rem;">
+          <p>Hello ${fullName},</p>
+          <p>You're in. Welcome to <strong>${tierLabel}</strong>.</p>
+          <p style="font-size:1.4rem;background:#F5EFE6;padding:1rem;text-align:center;letter-spacing:0.1em;font-weight:bold;color:#2C1A0E;">${memberId}</p>
+          <p>This is your Member ID. Keep it safe — you'll use it to book appointments, access your portal, and identify yourself at the studio.</p>
+          <p>Book your first appointment at <a href="https://zluxnailstudio.vercel.app/booking.html">zluxnailstudio.vercel.app</a></p>
+          <p style="color:#A67C52;font-size:0.85rem;">Z Lux Nail Studio &middot; Porterville, CA</p>
+        </div>
+      </div>
+    `,
+  });
+
+  if (phone && process.env.TWILIO_ACCOUNT_SID) {
+    const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    await twilio.messages.create({
+      body: `Welcome to Z Lux, ${fullName.split(' ')[0]}! Your Member ID is ${memberId}. Save it — you'll need it to book. Questions? Reply to this message. — Z Lux Studio`,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: phone,
+    });
+  }
+}

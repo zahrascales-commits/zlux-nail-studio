@@ -1,0 +1,86 @@
+const { getDb } = require('../server/db/init');
+
+function getSession(db, req) {
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+  if (!token) return null;
+  return db.prepare('SELECT * FROM sessions WHERE token = ? AND expires_at > datetime("now")').get(token) || null;
+}
+
+module.exports = async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+
+  const db = getDb();
+  try {
+    const config = db.prepare('SELECT * FROM schedule_config WHERE id = 1').get();
+    const session = getSession(db, req);
+
+    let tier = 'PUBLIC';
+    let daysAhead = config.public_days_ahead;
+
+    if (session) {
+      if (session.role === 'CLIENT') {
+        const member = db.prepare('SELECT tier FROM members WHERE member_id = ?').get(session.user_id);
+        if (member) {
+          tier = member.tier;
+          daysAhead = { SIGNATURE: config.signature_days_ahead, LUXE: config.luxe_days_ahead, BLACK_CARD: config.black_card_days_ahead }[tier] ?? config.public_days_ahead;
+        }
+      } else if (session.role === 'ADMIN') {
+        tier = 'ADMIN';
+        daysAhead = 90;
+      }
+    }
+
+    // Generate available dates
+    const availableDates = [];
+    const now = new Date();
+    const openDate = new Date(now);
+    openDate.setDate(openDate.getDate() + daysAhead);
+
+    for (let i = 0; i < 60; i++) {
+      const d = new Date(openDate);
+      d.setDate(d.getDate() + i);
+      const dateStr = d.toISOString().slice(0, 10);
+
+      // Skip if fully blocked
+      const blocked = db.prepare(`SELECT COUNT(*) as n FROM availability_blocks WHERE block_date = ? AND start_time IS NULL`).get(dateStr);
+      if (blocked.n > 0) continue;
+
+      availableDates.push(dateStr);
+    }
+
+    // Countdown to window open (for Signature/Luxe who can see upcoming dates but can't book yet)
+    let countdownMs = 0;
+    if (tier !== 'PUBLIC' && tier !== 'ADMIN') {
+      // When does MY window open for tomorrow?
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowBookableAt = new Date(tomorrow);
+      tomorrowBookableAt.setDate(tomorrowBookableAt.getDate() - daysAhead);
+      countdownMs = Math.max(0, tomorrowBookableAt - now);
+    }
+
+    const slots = [
+      '06:00','07:00','08:00','09:00','10:00','11:00','12:00',
+      '13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00'
+    ].filter(t => t >= config.studio_open_time && t <= config.studio_close_time);
+
+    return res.status(200).json({
+      tier,
+      daysAhead,
+      availableDates: availableDates.slice(0, 45),
+      slots,
+      countdownMs,
+      windowOpensAt: openDate.toISOString(),
+      config: {
+        openTime:  config.studio_open_time,
+        closeTime: config.studio_close_time,
+      }
+    });
+  } finally {
+    db.close();
+  }
+};

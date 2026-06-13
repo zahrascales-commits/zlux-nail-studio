@@ -1,9 +1,27 @@
 {
   "rewrites": [
-    { "source": "/api/services",      "destination": "/api/services" },
-    { "source": "/api/availability",  "destination": "/api/availability" },
-    { "source": "/api/bookings",      "destination": "/api/bookings" },
-    { "source": "/api/addons",        "destination": "/api/addons" },
-    { "source": "/api/chat",          "destination": "/api/chat" }
+    { "source": "/api/services",          "destination": "/api/services" },
+    { "source": "/api/availability",      "destination": "/api/availability" },
+    { "source": "/api/bookings",          "destination": "/api/bookings" },
+    { "source": "/api/addons",            "destination": "/api/addons" },
+    { "source": "/api/chat",              "destination": "/api/chat" },
+    { "source": "/api/member-signup",     "destination": "/api/member-signup" },
+    { "source": "/api/member-login",      "destination": "/api/member-login" },
+    { "source": "/api/member-profile",    "destination": "/api/member-profile" },
+    { "source": "/api/booking-windows",   "destination": "/api/booking-windows" },
+    { "source": "/api/qr-generate",       "destination": "/api/qr-generate" },
+    { "source": "/api/qr-verify",         "destination": "/api/qr-verify" },
+    { "source": "/api/staff-auth",        "destination": "/api/staff-auth" },
+    { "source": "/api/staff-data",        "destination": "/api/staff-data" },
+    { "source": "/api/admin-auth",        "destination": "/api/admin-auth" },
+    { "source": "/api/admin-members",     "destination": "/api/admin-members" },
+    { "source": "/api/admin-revenue",     "destination": "/api/admin-revenue" },
+    { "source": "/api/admin-messaging",   "destination": "/api/admin-messaging" },
+    { "source": "/api/admin-inventory",   "destination": "/api/admin-inventory" },
+    { "source": "/api/admin-schedule",    "destination": "/api/admin-schedule" },
+    { "source": "/api/waitlist",          "destination": "/api/waitlist" },
+    { "source": "/api/no-show",           "destination": "/api/no-show" },
+    { "source": "/api/referral",          "destination": "/api/referral" },
+    { "source": "/api/stripe-webhook",    "destination": "/api/stripe-webhook" }
   ]
 }

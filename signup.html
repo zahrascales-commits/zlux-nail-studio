@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Join Z Lux — Membership Sign-Up</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://js.stripe.com/v3/"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    body { background:var(--soft-white); }
+    .signup-wrap {
+      max-width: 580px;
+      margin: 0 auto;
+      padding: 7rem 1.5rem 4rem;
+    }
+    .signup-steps {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 2.5rem;
+      position: relative;
+    }
+    .signup-steps::before {
+      content:'';
+      position:absolute;
+      top:18px;
+      left:10%;
+      right:10%;
+      height:1px;
+      background:rgba(201,165,90,0.18);
+    }
+    .step-dot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      position: relative;
+      z-index: 1;
+    }
+    .step-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid rgba(201,165,90,0.25);
+      background: var(--soft-white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1rem;
+      color: var(--latte);
+      transition: all 0.3s;
+    }
+    .step-circle.active {
+      background: var(--champagne);
+      color: var(--espresso);
+      border-color: var(--champagne);
+      font-weight: 600;
+    }
+    .step-circle.done {
+      background: var(--espresso);
+      color: var(--champagne);
+      border-color: var(--espresso);
+    }
+    .step-label {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.6rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--latte);
+    }
+    .step-panel { display: none; }
+    .step-panel.active { display: block; }
+    .signup-card {
+      background: #fff;
+      border: 1px solid rgba(201,165,90,0.15);
+      padding: 2.5rem 2rem;
+    }
+    .signup-heading {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.9rem;
+      color: var(--espresso);
+      margin-bottom: 0.25rem;
+      font-weight: 400;
+    }
+    .signup-sub {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.84rem;
+      color: var(--latte);
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+    .form-field {
+      margin-bottom: 1.25rem;
+    }
+    .form-field label {
+      display: block;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--latte);
+      margin-bottom: 0.4rem;
+    }
+    .form-field input,
+    .form-field select {
+      width: 100%;
+      border: 1px solid rgba(201,165,90,0.22);
+      background: var(--soft-white);
+      font-family: 'Jost', sans-serif;
+      font-size: 0.88rem;
+      color: var(--espresso);
+      padding: 0.65rem 0.875rem;
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+    .form-field input:focus,
+    .form-field select:focus { border-color: var(--champagne); }
+    .form-field .hint {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.72rem;
+      color: var(--latte);
+      margin-top: 0.25rem;
+    }
+    .tier-selector {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .tier-opt {
+      border: 1px solid rgba(201,165,90,0.2);
+      padding: 1rem 0.75rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'Jost', sans-serif;
+    }
+    .tier-opt:hover { border-color: var(--champagne); }
+    .tier-opt.selected { border-color: var(--champagne); background: rgba(201,165,90,0.07); }
+    .tier-opt-name { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--espresso); }
+    .tier-opt-price { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; color: var(--champagne); margin: 0.25rem 0; }
+    .tier-opt-desc { font-size: 0.65rem; color: var(--latte); line-height: 1.4; }
+    .btn-signup {
+      width: 100%;
+      background: var(--champagne);
+      color: var(--espresso);
+      border: none;
+      padding: 0.9rem 1.5rem;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 0.5rem;
+    }
+    .btn-signup:hover { background: #b8924a; }
+    .btn-signup:disabled { opacity: 0.5; cursor: not-allowed; }
+    .error-msg {
+      background: rgba(180,50,50,0.08);
+      border: 1px solid rgba(180,50,50,0.25);
+      color: #b43232;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.82rem;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    .policy-note {
+      background: rgba(201,165,90,0.06);
+      border-left: 3px solid var(--champagne);
+      padding: 0.875rem 1rem;
+      font-family: 'Jost', sans-serif;
+      font-size: 0.78rem;
+      color: var(--latte);
+      line-height: 1.7;
+      margin-bottom: 1.5rem;
+    }
+    .member-id-display {
+      background: var(--espresso);
+      color: var(--cream);
+      padding: 2rem;
+      text-align: center;
+      margin: 1.5rem 0;
+    }
+    .member-id-code {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2.5rem;
+      color: var(--champagne);
+      letter-spacing: 0.18em;
+      display: block;
+      margin: 0.5rem 0;
+    }
+    .copy-row {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+    .copy-btn {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      border: 1px solid var(--champagne);
+      background: transparent;
+      color: var(--champagne);
+      transition: all 0.2s;
+    }
+    .copy-btn:hover { background: var(--champagne); color: var(--espresso); }
+    #stripe-card-element {
+      border: 1px solid rgba(201,165,90,0.22);
+      background: var(--soft-white);
+      padding: 0.75rem 0.875rem;
+      margin-bottom: 0.25rem;
+    }
+    #stripe-card-errors {
+      font-family: 'Jost', sans-serif;
+      font-size: 0.78rem;
+      color: #b43232;
+      min-height: 1.2em;
+    }
+    .confirmation-check {
+      font-size: 3rem;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .confirmation-detail {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.65rem 0;
+      border-bottom: 1px solid rgba(201,165,90,0.1);
+      font-family: 'Jost', sans-serif;
+      font-size: 0.85rem;
+    }
+    .confirmation-detail:last-child { border-bottom: none; }
+    .confirmation-detail .label { color: var(--latte); }
+    .confirmation-detail .value { color: var(--espresso); font-weight: 600; }
+    @media (max-width: 480px) {
+      .tier-selector { grid-template-columns: 1fr; }
+      .signup-wrap { padding: 6rem 1rem 3rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav" id="nav">
+  <a href="index.html" class="nav-logo">ZLUX</a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="services.html">Services</a>
+    <a href="memberships.html">Memberships</a>
+    <a href="about.html">About</a>
+    <a href="contact.html">Contact</a>
+    <a href="client-portal.html">My Portal</a>
+    <a href="booking.html" class="btn-gold" style="animation:none;">Book Now</a>
+  </div>
+  <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
+</nav>
+<div class="nav-mobile" id="nav-mobile">
+  <a href="index.html">Home</a><a href="services.html">Services</a><a href="memberships.html">Memberships</a><a href="about.html">About</a><a href="contact.html">Contact</a><a href="client-portal.html">My Portal</a><a href="booking.html">Book Now</a>
+</div>
+
+<div class="signup-wrap">
+
+  <!-- Step Indicator -->
+  <div class="signup-steps">
+    <div class="step-dot" id="dot-1">
+      <div class="step-circle active" id="circ-1">1</div>
+      <div class="step-label">Your Info</div>
+    </div>
+    <div class="step-dot" id="dot-2">
+      <div class="step-circle" id="circ-2">2</div>
+      <div class="step-label">Payment</div>
+    </div>
+    <div class="step-dot" id="dot-3">
+      <div class="step-circle" id="circ-3">3</div>
+      <div class="step-label">Member ID</div>
+    </div>
+    <div class="step-dot" id="dot-4">
+      <div class="step-circle" id="circ-4">4</div>
+      <div class="step-label">Confirmed</div>
+    </div>
+  </div>
+
+  <!-- ─── STEP 1: Personal Info ─── -->
+  <div class="step-panel active" id="step-1">
+    <div class="signup-card">
+      <h1 class="signup-heading">Join Z Lux</h1>
+      <p class="signup-sub">Choose your tier and fill in your details. You'll set up payment on the next screen.</p>
+
+      <div class="error-msg" id="err-1"></div>
+
+      <div style="margin-bottom:1.25rem;">
+        <div class="form-field" style="margin-bottom:0.5rem;"><label>Select Your Membership Tier</label></div>
+        <div class="tier-selector">
+          <div class="tier-opt" data-tier="SIGNATURE" onclick="selectTier('SIGNATURE')">
+            <div class="tier-opt-name">Signature</div>
+            <div class="tier-opt-price">$99</div>
+            <div class="tier-opt-desc">1 service/mo<br>10% off add-ons</div>
+          </div>
+          <div class="tier-opt" data-tier="LUXE" onclick="selectTier('LUXE')">
+            <div class="tier-opt-name">Luxe</div>
+            <div class="tier-opt-price">$199</div>
+            <div class="tier-opt-desc">2 services/mo<br>30% off add-ons</div>
+          </div>
+          <div class="tier-opt" data-tier="BLACK_CARD" onclick="selectTier('BLACK_CARD')">
+            <div class="tier-opt-name">Black Card</div>
+            <div class="tier-opt-price">$299</div>
+            <div class="tier-opt-desc">3 services/mo<br>Choose your artist</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label>Full Name <span style="color:#b43232;">*</span></label>
+        <input type="text" id="full-name" placeholder="Zahra Scales" autocomplete="name" />
+      </div>
+      <div class="form-field">
+        <label>Email Address <span style="color:#b43232;">*</span></label>
+        <input type="email" id="email" placeholder="you@email.com" autocomplete="email" />
+      </div>
+      <div class="form-field">
+        <label>Phone Number</label>
+        <input type="tel" id="phone" placeholder="(555) 555-5555" autocomplete="tel" />
+        <div class="hint">Your Member ID will be texted here after signing up.</div>
+      </div>
+      <div class="form-field">
+        <label>Date of Birth</label>
+        <input type="date" id="dob" />
+        <div class="hint">Used for your Birthday Month Upgrade. Never shared.</div>
+      </div>
+      <div class="form-field">
+        <label>Create Password <span style="color:#b43232;">*</span></label>
+        <input type="password" id="password" placeholder="Min 8 characters" autocomplete="new-password" />
+      </div>
+      <div class="form-field">
+        <label>Confirm Password <span style="color:#b43232;">*</span></label>
+        <input type="password" id="password-confirm" placeholder="Repeat password" autocomplete="new-password" />
+      </div>
+      <div class="form-field">
+        <label>How did you hear about us? <span style="opacity:0.5;">(optional)</span></label>
+        <select id="heard-about">
+          <option value="">Select…</option>
+          <option value="instagram">Instagram</option>
+          <option value="friend">Friend or family</option>
+          <option value="google">Google</option>
+          <option value="tiktok">TikTok</option>
+          <option value="celebrity">Saw a celebrity client</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Referral Code <span style="opacity:0.5;">(optional)</span></label>
+        <input type="text" id="referral-code" placeholder="e.g. ZL-AB1234" style="text-transform:uppercase;" />
+      </div>
+
+      <button class="btn-signup" onclick="goToStep2()">Continue to Payment →</button>
+    </div>
+  </div>
+
+  <!-- ─── STEP 2: Stripe Payment ─── -->
+  <div class="step-panel" id="step-2">
+    <div class="signup-card">
+      <h1 class="signup-heading">Secure Payment</h1>
+      <p class="signup-sub" id="payment-sub">Your first month is charged today. Membership renews automatically each month.</p>
+
+      <div class="error-msg" id="err-2"></div>
+
+      <div class="policy-note">
+        <strong>6-month minimum commitment.</strong> Your membership will auto-renew monthly via Stripe. You may cancel after 6 months with 30 days written notice. No refunds on months already billed. By continuing you agree to these terms.
+      </div>
+
+      <div id="signup-price-display" style="text-align:center;margin-bottom:1.5rem;">
+        <div style="font-family:'Jost',sans-serif;font-size:0.68rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--latte);margin-bottom:0.25rem;">Today's Charge</div>
+        <div id="price-display" style="font-family:'Cormorant Garamond',serif;font-size:3rem;color:var(--champagne);"></div>
+        <div style="font-family:'Jost',sans-serif;font-size:0.75rem;color:var(--latte);">then monthly — cancel after 6 months</div>
+      </div>
+
+      <div class="form-field">
+        <label>Card Details</label>
+        <div id="stripe-card-element"></div>
+        <div id="stripe-card-errors"></div>
+      </div>
+
+      <button class="btn-signup" id="pay-btn" onclick="submitPayment()">Pay &amp; Join Z Lux →</button>
+      <div style="text-align:center;margin-top:1rem;">
+        <button onclick="goToStep(1)" style="background:none;border:none;font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);cursor:pointer;text-decoration:underline;">← Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── STEP 3: Member ID ─── -->
+  <div class="step-panel" id="step-3">
+    <div class="signup-card" style="text-align:center;">
+      <h1 class="signup-heading" style="text-align:center;">Your Member ID</h1>
+      <p class="signup-sub" style="text-align:center;">This is your permanent identifier at Z Lux. Screenshot it, write it down, or we'll text it to you.</p>
+
+      <div class="member-id-display">
+        <div style="font-family:'Jost',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--latte);margin-bottom:0.5rem;">Your Member ID</div>
+        <span class="member-id-code" id="display-member-id">—</span>
+        <div id="display-tier" style="font-family:'Jost',sans-serif;font-size:0.72rem;color:var(--latte);text-transform:uppercase;letter-spacing:0.12em;"></div>
+      </div>
+
+      <div class="copy-row">
+        <button class="copy-btn" onclick="copyMemberId()">Copy ID</button>
+        <button class="copy-btn" onclick="textMemberId()">Text It to Me</button>
+        <button class="copy-btn" onclick="emailMemberId()">Email It</button>
+      </div>
+
+      <p style="font-family:'Jost',sans-serif;font-size:0.8rem;color:var(--latte);margin-top:1.5rem;line-height:1.7;">
+        Your ID has also been sent to <strong id="display-email"></strong>.<br>
+        Use it with your password to log in to your Client Portal.
+      </p>
+
+      <button class="btn-signup" style="margin-top:1.5rem;" onclick="goToStep(4)">Continue to Confirmation →</button>
+    </div>
+  </div>
+
+  <!-- ─── STEP 4: Confirmation ─── -->
+  <div class="step-panel" id="step-4">
+    <div class="signup-card">
+      <div class="confirmation-check">✦</div>
+      <h1 class="signup-heading" style="text-align:center;">You're In.</h1>
+      <p class="signup-sub" style="text-align:center;">Welcome to Z Lux. Here's a summary of your membership.</p>
+
+      <div style="margin:1.5rem 0;">
+        <div class="confirmation-detail">
+          <span class="label">Member Name</span>
+          <span class="value" id="conf-name">—</span>
+        </div>
+        <div class="confirmation-detail">
+          <span class="label">Member ID</span>
+          <span class="value" id="conf-id" style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--champagne);">—</span>
+        </div>
+        <div class="confirmation-detail">
+          <span class="label">Membership Tier</span>
+          <span class="value" id="conf-tier">—</span>
+        </div>
+        <div class="confirmation-detail">
+          <span class="label">Monthly Rate</span>
+          <span class="value" id="conf-rate">—</span>
+        </div>
+        <div class="confirmation-detail">
+          <span class="label">Next Billing Date</span>
+          <span class="value" id="conf-billing">—</span>
+        </div>
+        <div class="confirmation-detail">
+          <span class="label">Confirmation sent to</span>
+          <span class="value" id="conf-email">—</span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-top:1.5rem;">
+        <a href="client-portal.html" class="btn-signup" style="text-decoration:none;text-align:center;display:block;">Go to My Portal</a>
+        <a href="booking.html" class="btn-signup" style="text-decoration:none;text-align:center;display:block;background:var(--espresso);color:var(--champagne);">Book First Appointment</a>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /signup-wrap -->
+
+<script src="js/main.js"></script>
+<script>
+  // ─── State ───
+  let selectedTier = '';
+  let signupData = {};
+  let stripe, cardElement;
+
+  const TIER_PRICE = { SIGNATURE: '$99/mo', LUXE: '$199/mo', BLACK_CARD: '$299/mo' };
+  const TIER_LABEL = { SIGNATURE: 'Signature Club', LUXE: 'Luxe Club', BLACK_CARD: 'Black Card' };
+  const TIER_AMOUNT = { SIGNATURE: '$99', LUXE: '$199', BLACK_CARD: '$299' };
+
+  // Read tier from URL param
+  const urlTier = new URLSearchParams(window.location.search).get('tier') || '';
+  if (['SIGNATURE','LUXE','BLACK_CARD'].includes(urlTier)) { selectTier(urlTier); }
+
+  // Read referral from URL param
+  const urlRef = new URLSearchParams(window.location.search).get('ref') || '';
+  if (urlRef) {
+    const refInput = document.getElementById('referral-code');
+    if (refInput) refInput.value = urlRef.toUpperCase();
+  }
+
+  function selectTier(t) {
+    selectedTier = t;
+    document.querySelectorAll('.tier-opt').forEach(el => {
+      el.classList.toggle('selected', el.dataset.tier === t);
+    });
+  }
+
+  function showError(id, msg) {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = msg; el.style.display = msg ? 'block' : 'none'; }
+  }
+
+  function goToStep(n) {
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('step-' + n).classList.add('active');
+    for (let i = 1; i <= 4; i++) {
+      const c = document.getElementById('circ-' + i);
+      c.classList.remove('active','done');
+      if (i < n) c.classList.add('done');
+      else if (i === n) c.classList.add('active');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function goToStep2() {
+    showError('err-1', '');
+    if (!selectedTier) return showError('err-1', 'Please select a membership tier.');
+    const name = document.getElementById('full-name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const pass = document.getElementById('password').value;
+    const passConf = document.getElementById('password-confirm').value;
+    if (!name)  return showError('err-1', 'Full name is required.');
+    if (!email || !/\S+@\S+\.\S+/.test(email)) return showError('err-1', 'A valid email is required.');
+    if (!pass || pass.length < 8) return showError('err-1', 'Password must be at least 8 characters.');
+    if (pass !== passConf) return showError('err-1', 'Passwords do not match.');
+
+    signupData.fullName = name;
+    signupData.email = email;
+    signupData.phone = document.getElementById('phone').value.trim();
+    signupData.dob = document.getElementById('dob').value;
+    signupData.password = pass;
+    signupData.heardAbout = document.getElementById('heard-about').value;
+    signupData.referralCode = document.getElementById('referral-code').value.trim().toUpperCase();
+    signupData.tier = selectedTier;
+
+    document.getElementById('price-display').textContent = TIER_AMOUNT[selectedTier];
+    document.getElementById('payment-sub').textContent = `You're joining the ${TIER_LABEL[selectedTier]} at ${TIER_PRICE[selectedTier]}. Your first month is charged today.`;
+
+    goToStep(2);
+    initStripe();
+  }
+
+  function initStripe() {
+    if (stripe) return;
+    stripe = Stripe(document.querySelector('meta[name="stripe-pk"]')?.content || window.STRIPE_PK || 'pk_test_YOUR_KEY_HERE');
+    const elements = stripe.elements();
+    cardElement = elements.create('card', {
+      style: {
+        base: {
+          fontFamily: 'Jost, sans-serif',
+          fontSize: '15px',
+          color: '#2C1A0E',
+          '::placeholder': { color: '#A67C52', fontWeight: '300' },
+        },
+        invalid: { color: '#b43232' },
+      }
+    });
+    cardElement.mount('#stripe-card-element');
+    cardElement.on('change', e => {
+      document.getElementById('stripe-card-errors').textContent = e.error ? e.error.message : '';
+    });
+  }
+
+  async function submitPayment() {
+    const btn = document.getElementById('pay-btn');
+    btn.disabled = true;
+    btn.textContent = 'Processing…';
+    showError('err-2', '');
+
+    try {
+      const { paymentMethod, error } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement,
+        billing_details: {
+          name: signupData.fullName,
+          email: signupData.email,
+          phone: signupData.phone || undefined,
+        }
+      });
+
+      if (error) {
+        showError('err-2', error.message);
+        btn.disabled = false;
+        btn.textContent = 'Pay & Join Z Lux →';
+        return;
+      }
+
+      const res = await fetch('/api/member-signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName:   signupData.fullName,
+          email:      signupData.email,
+          phone:      signupData.phone,
+          dateOfBirth: signupData.dob,
+          heardAbout: signupData.heardAbout,
+          tier:       signupData.tier,
+          password:   signupData.password,
+          referralCode: signupData.referralCode || undefined,
+          stripePaymentMethodId: paymentMethod.id,
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        showError('err-2', data.error || 'Sign-up failed. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Pay & Join Z Lux →';
+        return;
+      }
+
+      signupData.memberId = data.memberId;
+      signupData.nextBilling = data.nextBillingDate;
+      signupData.referralCodeGenerated = data.referralCode;
+
+      // Step 3 — show member ID
+      document.getElementById('display-member-id').textContent = data.memberId;
+      document.getElementById('display-tier').textContent = TIER_LABEL[signupData.tier];
+      document.getElementById('display-email').textContent = signupData.email;
+      goToStep(3);
+
+    } catch (err) {
+      showError('err-2', 'Network error. Please check your connection and try again.');
+      btn.disabled = false;
+      btn.textContent = 'Pay & Join Z Lux →';
+    }
+  }
+
+  function copyMemberId() {
+    const id = document.getElementById('display-member-id').textContent;
+    navigator.clipboard.writeText(id).then(() => {
+      const btn = event.target;
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy ID', 2000);
+    });
+  }
+
+  function textMemberId() {
+    if (!signupData.phone) { alert('No phone number on file. Check your email instead.'); return; }
+    fetch('/api/member-signup', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ action: 'resend_sms', memberId: signupData.memberId, phone: signupData.phone })
+    });
+    alert('Your Member ID has been texted to ' + signupData.phone);
+  }
+
+  function emailMemberId() {
+    alert('Your Member ID has been sent to ' + signupData.email);
+  }
+
+  // Override goToStep(4) to populate confirmation
+  const _origGoToStep = goToStep;
+  function goToStep(n) {
+    if (n === 4 && signupData.memberId) {
+      document.getElementById('conf-name').textContent = signupData.fullName;
+      document.getElementById('conf-id').textContent = signupData.memberId;
+      document.getElementById('conf-tier').textContent = TIER_LABEL[signupData.tier];
+      document.getElementById('conf-rate').textContent = TIER_PRICE[signupData.tier];
+      document.getElementById('conf-billing').textContent = signupData.nextBilling ? new Date(signupData.nextBilling).toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'}) : '—';
+      document.getElementById('conf-email').textContent = signupData.email;
+      localStorage.setItem('zlux_member_id', signupData.memberId);
+      localStorage.setItem('zlux_tier', signupData.tier);
+    }
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('step-' + n).classList.add('active');
+    for (let i = 1; i <= 4; i++) {
+      const c = document.getElementById('circ-' + i);
+      c.classList.remove('active','done');
+      if (i < n) c.classList.add('done');
+      else if (i === n) c.classList.add('active');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  window.addEventListener('scroll', () => { document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60); });
+  document.getElementById('hamburger').addEventListener('click', () => { document.getElementById('nav-mobile').classList.toggle('open'); });
+</script>
+</body>
+</html>

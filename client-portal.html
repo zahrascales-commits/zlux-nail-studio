@@ -3,206 +3,469 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Client Portal — ZLUX</title>
+  <title>My Portal — ZLUX Nail Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <style>
+    body { background: var(--soft-white); }
+    .login-wrap { max-width:400px; margin:0 auto; padding:7rem 1.5rem 3rem; }
+    .login-card { background:#fff; border:1px solid rgba(201,165,90,0.18); padding:2.5rem 2rem; }
+    .portal-heading { font-family:'Cormorant Garamond',serif; font-size:2rem; color:var(--espresso); margin-bottom:0.25rem; font-weight:400; }
+    .portal-sub { font-family:'Jost',sans-serif; font-size:0.84rem; color:var(--latte); margin-bottom:1.75rem; }
+    .pf { margin-bottom:1.1rem; }
+    .pf label { display:block; font-family:'Jost',sans-serif; font-size:0.65rem; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--latte); margin-bottom:0.35rem; }
+    .pf input { width:100%; border:1px solid rgba(201,165,90,0.22); background:var(--soft-white); font-family:'Jost',sans-serif; font-size:0.88rem; color:var(--espresso); padding:0.6rem 0.875rem; outline:none; box-sizing:border-box; }
+    .pf input:focus { border-color:var(--champagne); }
+    .btn-login { width:100%; background:var(--champagne); color:var(--espresso); border:none; padding:0.85rem; font-family:'Jost',sans-serif; font-size:0.75rem; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; cursor:pointer; }
+    .btn-login:hover { background:#b8924a; }
+    .login-err { background:rgba(180,50,50,0.07); border:1px solid rgba(180,50,50,0.2); color:#b43232; font-family:'Jost',sans-serif; font-size:0.8rem; padding:0.6rem 0.875rem; margin-bottom:1rem; display:none; }
+    #portal-dashboard { display:none; }
+    .portal-nav { background:var(--espresso); padding:0.75rem 0; position:sticky; top:0; z-index:50; }
+    .portal-nav-inner { max-width:1100px; margin:0 auto; padding:0 1.5rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+    .portal-nav-logo { font-family:'Cormorant Garamond',serif; font-size:1.35rem; color:var(--champagne); text-decoration:none; }
+    .portal-nav-links { display:flex; gap:1.5rem; }
+    .portal-nav-links button { background:none; border:none; font-family:'Jost',sans-serif; font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--latte); cursor:pointer; }
+    .portal-nav-links button:hover, .portal-nav-links button.active { color:var(--champagne); }
+    .portal-content { max-width:1100px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+    .portal-tab { display:none; }
+    .portal-tab.active { display:block; }
+    .tier-badge { display:inline-block; font-family:'Jost',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; padding:0.22rem 0.7rem; }
+    .tier-badge.SIGNATURE { background:rgba(166,124,82,0.12); color:var(--latte); }
+    .tier-badge.LUXE { background:rgba(201,165,90,0.12); color:var(--champagne); }
+    .tier-badge.BLACK_CARD { background:var(--espresso); color:var(--champagne); }
+    .p-card { background:#fff; border:1px solid rgba(201,165,90,0.15); padding:1.75rem; margin-bottom:1.25rem; }
+    .p-card-title { font-family:'Jost',sans-serif; font-size:0.65rem; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--latte); margin-bottom:1rem; }
+    .stat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+    .stat-box { background:var(--soft-white); border:1px solid rgba(201,165,90,0.12); padding:1.25rem; text-align:center; }
+    .stat-num { font-family:'Cormorant Garamond',serif; font-size:2.5rem; color:var(--champagne); line-height:1; }
+    .stat-label { font-family:'Jost',sans-serif; font-size:0.65rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--latte); margin-top:0.25rem; }
+    .qr-wrap { text-align:center; }
+    .qr-canvas-wrap { display:inline-block; position:relative; padding:1.5rem; background:#fff; border:1px solid rgba(201,165,90,0.2); margin:1rem 0; }
+    .qr-expire { font-family:'Jost',sans-serif; font-size:0.7rem; color:var(--latte); margin-top:0.25rem; }
+    .qr-warning { font-family:'Jost',sans-serif; font-size:0.72rem; color:rgba(180,50,50,0.7); margin-top:0.5rem; }
+    .appt-row { border-bottom:1px solid rgba(201,165,90,0.1); padding:0.9rem 0; }
+    .appt-row:last-child { border-bottom:none; }
+    .appt-date { font-family:'Cormorant Garamond',serif; font-size:1.15rem; color:var(--espresso); }
+    .appt-detail { font-family:'Jost',sans-serif; font-size:0.8rem; color:var(--latte); }
+    .appt-status { display:inline-block; font-family:'Jost',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; padding:0.15rem 0.5rem; }
+    .appt-status.SCHEDULED { background:rgba(60,140,80,0.1); color:#3c8c50; }
+    .appt-status.COMPLETED { background:rgba(201,165,90,0.1); color:var(--champagne); }
+    .appt-status.CANCELLED { background:rgba(180,50,50,0.1); color:#b43232; }
+    .msg-bubble { padding:0.875rem 1rem; margin-bottom:0.75rem; max-width:80%; }
+    .msg-bubble.from-admin { background:var(--espresso); color:var(--cream); margin-right:auto; }
+    .msg-bubble.from-me { background:rgba(201,165,90,0.1); color:var(--espresso); margin-left:auto; text-align:right; }
+    .msg-time { font-family:'Jost',sans-serif; font-size:0.65rem; opacity:0.6; margin-top:0.25rem; }
+    .msg-input-row { display:flex; gap:0.5rem; margin-top:1rem; }
+    .msg-input-row input { flex:1; border:1px solid rgba(201,165,90,0.22); padding:0.6rem 0.875rem; font-family:'Jost',sans-serif; font-size:0.85rem; outline:none; }
+    .msg-send-btn { background:var(--champagne); border:none; color:var(--espresso); padding:0 1.25rem; cursor:pointer; font-weight:700; font-size:1.1rem; }
+    .countdown-strip { background:rgba(201,165,90,0.08); border:1px solid rgba(201,165,90,0.18); padding:1rem 1.25rem; margin-bottom:1.25rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+    .countdown-label { font-family:'Jost',sans-serif; font-size:0.72rem; color:var(--latte); }
+    .countdown-clock { font-family:'Cormorant Garamond',serif; font-size:1.75rem; color:var(--champagne); }
+    @media (max-width:600px) { .portal-nav-links { gap:0.75rem; } .stat-grid { grid-template-columns:1fr 1fr; } }
+  </style>
 </head>
 <body>
 
-<!-- LOGIN SCREEN -->
-<div id="login-screen" class="portal-login-page">
-  <a href="index.html" style="position:absolute;top:1.5rem;left:2rem;font-family:'Cormorant Garamond',serif;font-size:1.5rem;color:var(--espresso);">ZLUX</a>
-  <div class="portal-login-box">
-    <div class="section-label" style="margin-bottom:0.5rem;">Client Portal</div>
-    <h2 style="font-size:1.75rem;margin-bottom:1.5rem;">Welcome Back</h2>
-    <div id="login-step-1">
-      <label class="luxury-label">Email</label>
-      <input class="luxury-input" id="login-email" type="email" placeholder="your@email.com" style="margin-bottom:0.75rem;" />
-      <label class="luxury-label">Password</label>
-      <input class="luxury-input" id="login-password" type="password" placeholder="••••••••" style="margin-bottom:1.25rem;" />
-      <button class="btn-gold" onclick="loginStep1()" style="animation:none;width:100%;">Continue</button>
-      <p style="font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);text-align:center;margin-top:1rem;">Don't have an account? <a href="memberships.html" style="color:var(--champagne);">Join a membership →</a></p>
+<div id="portal-login">
+  <nav class="nav" id="nav">
+    <a href="index.html" class="nav-logo">ZLUX</a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="services.html">Services</a>
+      <a href="memberships.html">Memberships</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+      <a href="client-portal.html" style="color:var(--champagne)">My Portal</a>
     </div>
-    <div id="login-step-2" style="display:none;">
-      <p style="font-family:'Jost',sans-serif;font-size:0.88rem;color:var(--latte);margin-bottom:1.25rem;line-height:1.7;">Enter the 6-digit code from your authenticator app.</p>
-      <label class="luxury-label">Verification Code</label>
-      <input class="luxury-input" id="totp-code" type="text" maxlength="6" placeholder="000000" style="letter-spacing:0.3em;font-size:1.2rem;margin-bottom:1.25rem;" />
-      <button class="btn-gold" onclick="loginStep2()" style="animation:none;width:100%;">Sign In</button>
-      <button onclick="document.getElementById('login-step-1').style.display='block';document.getElementById('login-step-2').style.display='none';" style="background:none;border:none;color:var(--latte);font-family:'Jost',sans-serif;font-size:0.78rem;cursor:pointer;margin-top:0.75rem;width:100%;text-align:center;">← Back</button>
-    </div>
-    <div id="login-error" style="display:none;background:rgba(192,82,74,0.08);border:1px solid rgba(192,82,74,0.2);color:#c0524a;font-family:'Jost',sans-serif;font-size:0.82rem;padding:0.65rem 0.875rem;margin-top:0.75rem;"></div>
+    <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
+  </nav>
+  <div class="nav-mobile" id="nav-mobile">
+    <a href="index.html">Home</a><a href="services.html">Services</a><a href="memberships.html">Memberships</a><a href="about.html">About</a><a href="contact.html">Contact</a>
   </div>
-</div>
-
-<!-- DASHBOARD -->
-<div id="dashboard-screen" style="display:none;">
-  <div class="portal-layout">
-    <div class="portal-sidebar">
-      <div style="font-family:'Cormorant Garamond',serif;font-size:1.4rem;color:var(--champagne);padding:0.5rem 0.875rem;margin-bottom:1.5rem;">ZLUX</div>
-      <button class="portal-nav-item active" id="nav-overview" onclick="showTab('overview')">◈ &nbsp; Overview</button>
-      <button class="portal-nav-item" id="nav-book" onclick="showTab('book')">◈ &nbsp; Book</button>
-      <button class="portal-nav-item" id="nav-history" onclick="showTab('history')">◈ &nbsp; History</button>
-      <button class="portal-nav-item" id="nav-payment" onclick="showTab('payment')">◈ &nbsp; Payment</button>
-      <div style="flex:1;"></div>
-      <button class="portal-nav-item" onclick="logout()" style="margin-top:auto;">← Sign Out</button>
-    </div>
-    <div class="portal-main">
-      <!-- Overview Tab -->
-      <div id="tab-overview">
-        <div style="margin-bottom:1.5rem;">
-          <div class="section-label" style="font-size:0.6rem;">Welcome Back</div>
-          <h2 style="font-size:1.75rem;margin-top:0.25rem;" id="welcome-name">Hello</h2>
-        </div>
-        <div class="stat-grid">
-          <div class="stat-card">
-            <div class="section-label" style="font-size:0.6rem;">Membership</div>
-            <div class="stat-value" id="client-tier">—</div>
-            <div class="stat-sub">Current Tier</div>
-          </div>
-          <div class="stat-card">
-            <div class="section-label" style="font-size:0.6rem;">Services</div>
-            <div class="stat-value">2</div>
-            <div class="stat-sub">Remaining This Month</div>
-          </div>
-          <div class="stat-card">
-            <div class="section-label" style="font-size:0.6rem;">Next Appointment</div>
-            <div class="stat-value" style="font-size:1.4rem;">June 18</div>
-            <div class="stat-sub">2:00 PM · Luxe Gel X</div>
-          </div>
-          <div class="stat-card">
-            <div class="section-label" style="font-size:0.6rem;">Member Since</div>
-            <div class="stat-value" style="font-size:1.4rem;">Jan 2026</div>
-            <div class="stat-sub">6 months strong</div>
-          </div>
-        </div>
-        <div style="margin-top:1.5rem;">
-          <div class="section-label" style="margin-bottom:1rem;">Next Appointment</div>
-          <div class="appt-block">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;">
-              <div>
-                <div class="appt-time">Wed, June 18 · 2:00 PM</div>
-                <div class="appt-client" style="font-size:1.1rem;margin:0.2rem 0;">Medium Gel X</div>
-                <div class="appt-service">with Zahra · ZLUX Studio, Porterville CA</div>
-              </div>
-              <span class="tier-pill tier-luxe">Luxe Member</span>
-            </div>
-          </div>
-          <div style="text-align:right;margin-top:0.75rem;">
-            <a href="booking.html" class="btn-gold" style="animation:none;font-size:0.72rem;">Book Another</a>
-          </div>
-        </div>
-      </div>
-
-      <!-- Book Tab -->
-      <div id="tab-book" style="display:none;">
-        <div class="member-banner" style="margin-bottom:1.5rem;">
-          ✦ &nbsp; As a member, you have priority booking access.
-        </div>
-        <a href="booking.html" class="btn-gold" style="animation:none;display:inline-block;">Open Booking Page</a>
-      </div>
-
-      <!-- History Tab -->
-      <div id="tab-history" style="display:none;">
-        <div class="section-label" style="margin-bottom:1rem;">Appointment History</div>
-        <div class="appt-block completed">
-          <div class="appt-time">May 22, 2026 · 3:00 PM</div>
-          <div class="appt-client" style="font-size:1.1rem;">Classic Spa Pedicure</div>
-          <div class="appt-service">with Zahra · Completed</div>
-        </div>
-        <div class="appt-block completed">
-          <div class="appt-time">Apr 30, 2026 · 11:00 AM</div>
-          <div class="appt-client" style="font-size:1.1rem;">Long Gel X</div>
-          <div class="appt-service">with Artist 2 · Completed</div>
-        </div>
-        <div class="appt-block completed">
-          <div class="appt-time">Apr 2, 2026 · 2:30 PM</div>
-          <div class="appt-client" style="font-size:1.1rem;">Organic Structured Manicure + Russian Technique</div>
-          <div class="appt-service">with Zahra · Completed</div>
-        </div>
-      </div>
-
-      <!-- Payment Tab -->
-      <div id="tab-payment" style="display:none;">
-        <div class="section-label" style="margin-bottom:1rem;">Membership & Billing</div>
-        <div class="luxury-card" style="margin-bottom:1rem;">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
-            <div>
-              <div class="section-label" style="font-size:0.6rem;">Current Plan</div>
-              <div style="font-family:'Cormorant Garamond',serif;font-size:1.6rem;color:var(--champagne);" id="plan-name">Luxe Club</div>
-              <div style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--latte);">$199 / month · Auto-renews July 1</div>
-            </div>
-            <span style="background:rgba(201,165,90,0.12);color:var(--champagne);font-family:'Jost',sans-serif;font-size:0.65rem;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;padding:0.25rem 0.75rem;">Active</span>
-          </div>
-        </div>
-        <div class="section-label" style="margin-bottom:0.75rem;">Recent Charges</div>
-        <div style="border:1px solid rgba(201,165,90,0.1);">
-          <div class="service-row"><span class="service-name">June membership · Luxe</span><span class="service-price">$199</span></div>
-          <div class="service-row"><span class="service-name">May deposit · Long Gel X</span><span class="service-price">$50</span></div>
-          <div class="service-row"><span class="service-name">May membership · Luxe</span><span class="service-price">$199</span></div>
-          <div class="service-row"><span class="service-name">Apr deposit · Organic Manicure + Russian</span><span class="service-price">$60</span></div>
-        </div>
+  <div class="login-wrap">
+    <div class="login-card">
+      <h1 class="portal-heading">Client Portal</h1>
+      <p class="portal-sub">Sign in with your Member ID and password.</p>
+      <div class="login-err" id="login-err"></div>
+      <div class="pf"><label>Member ID</label><input type="text" id="login-id" placeholder="ZL-XXXXXX" style="text-transform:uppercase;" /></div>
+      <div class="pf"><label>Password</label><input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" /></div>
+      <button class="btn-login" onclick="doLogin()">Sign In</button>
+      <div style="margin-top:1.25rem;text-align:center;">
+        <span style="font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);">Not a member yet?</span>
+        <a href="memberships.html" style="font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--champagne);margin-left:0.4rem;">View Memberships</a>
       </div>
     </div>
   </div>
 </div>
 
-<script src="js/portals.js"></script>
+<div id="portal-dashboard">
+  <nav class="portal-nav">
+    <div class="portal-nav-inner">
+      <a href="index.html" class="portal-nav-logo">ZLUX</a>
+      <div class="portal-nav-links">
+        <button onclick="showTab('tab-home')" class="active" id="nav-home">Home</button>
+        <button onclick="showTab('tab-book')" id="nav-book">Book</button>
+        <button onclick="showTab('tab-qr')" id="nav-qr">My QR</button>
+        <button onclick="showTab('tab-history')" id="nav-history">History</button>
+        <button onclick="showTab('tab-messages')" id="nav-messages">Messages</button>
+        <button onclick="showTab('tab-profile')" id="nav-profile">Profile</button>
+        <button onclick="doLogout()" style="color:rgba(166,124,82,0.5);">Sign Out</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="portal-content">
+
+    <div class="portal-tab active" id="tab-home">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:2rem;">
+        <div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--espresso);">Welcome back, <span id="member-first-name">—</span>.</div>
+          <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.35rem;">
+            <span id="member-id-badge" style="font-family:'Jost',sans-serif;font-size:0.72rem;color:var(--latte);"></span>
+            <span id="tier-badge" class="tier-badge"></span>
+          </div>
+        </div>
+        <a href="booking.html" style="background:var(--champagne);color:var(--espresso);font-family:'Jost',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;padding:0.7rem 1.25rem;text-decoration:none;">Book Appointment</a>
+      </div>
+      <div class="countdown-strip" id="countdown-strip" style="display:none;">
+        <div>
+          <div class="countdown-label">Your Booking Window Opens In</div>
+          <div class="countdown-clock" id="countdown-display">—</div>
+        </div>
+        <div style="font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);line-height:1.7;">
+          <a href="memberships.html" style="color:var(--champagne);">Upgrade your tier</a> for earlier access.
+        </div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-num" id="stat-services-left">—</div><div class="stat-label">Services Left This Month</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-upcoming">—</div><div class="stat-label">Upcoming Appointments</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-next-billing-day">—</div><div class="stat-label">Next Billing Date</div></div>
+        <div class="stat-box" style="cursor:pointer;" onclick="showTab('tab-profile')"><div class="stat-num" id="stat-referrals">0</div><div class="stat-label">Referrals Made</div></div>
+      </div>
+      <div class="p-card">
+        <div class="p-card-title">Upcoming Appointments</div>
+        <div id="upcoming-list"><div style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--latte);">No upcoming appointments. <a href="booking.html" style="color:var(--champagne);">Book now.</a></div></div>
+      </div>
+      <div class="p-card" id="announcements-card" style="display:none;">
+        <div class="p-card-title">Studio Announcements</div>
+        <div id="announcements-list"></div>
+      </div>
+    </div>
+
+    <div class="portal-tab" id="tab-book">
+      <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:1.5rem;">Book an Appointment</h2>
+      <div class="countdown-strip" id="book-countdown-strip" style="display:none;">
+        <div><div class="countdown-label">Your Window Opens In</div><div class="countdown-clock" id="book-countdown-display">—</div></div>
+      </div>
+      <div class="p-card">
+        <p style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--latte);line-height:1.8;margin-bottom:1.25rem;">Members book before the public calendar opens. Your tier determines how far ahead you can schedule.</p>
+        <div id="booking-window-info" style="margin-bottom:1.5rem;font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--latte);"></div>
+        <a href="booking.html" style="display:inline-block;background:var(--champagne);color:var(--espresso);font-family:'Jost',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;padding:0.85rem 2rem;text-decoration:none;">Open Booking Calendar</a>
+      </div>
+    </div>
+
+    <div class="portal-tab" id="tab-qr">
+      <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:0.5rem;">Your Member QR</h2>
+      <p style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--latte);margin-bottom:1.5rem;">Show this at the studio. Refreshes every 5 minutes — do not screenshot.</p>
+      <div class="qr-wrap p-card">
+        <div class="qr-canvas-wrap">
+          <canvas id="qr-canvas" width="220" height="220"></canvas>
+          <div id="qr-name-watermark" style="font-family:'Jost',sans-serif;font-size:0.68rem;color:var(--latte);margin-top:0.35rem;"></div>
+        </div>
+        <div class="qr-expire">Refreshes in <strong id="qr-countdown">5:00</strong></div>
+        <div class="qr-warning">Screenshots will not be accepted at the studio. This QR is tied to your live session.</div>
+        <div style="margin-top:1.25rem;">
+          <div id="qr-member-id-show" style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;color:var(--champagne);text-align:center;letter-spacing:0.1em;"></div>
+          <div id="qr-tier-show" style="font-family:'Jost',sans-serif;font-size:0.65rem;text-align:center;text-transform:uppercase;letter-spacing:0.15em;color:var(--latte);margin-top:0.2rem;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="portal-tab" id="tab-history">
+      <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:1.5rem;">Nail History</h2>
+      <div class="p-card">
+        <div class="p-card-title">All Appointments</div>
+        <div id="history-list"><div style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--latte);">No history yet.</div></div>
+      </div>
+    </div>
+
+    <div class="portal-tab" id="tab-messages">
+      <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:1.5rem;">Messages</h2>
+      <div class="p-card">
+        <div id="messages-thread" style="min-height:200px;max-height:400px;overflow-y:auto;"></div>
+        <div class="msg-input-row">
+          <input type="text" id="msg-input" placeholder="Send a message to the studio…" onkeydown="if(event.key==='Enter')sendMessage()" />
+          <button class="msg-send-btn" onclick="sendMessage()">→</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="portal-tab" id="tab-profile">
+      <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:1.5rem;">My Profile</h2>
+      <div class="p-card">
+        <div class="p-card-title">Account Details</div>
+        <div id="profile-details"></div>
+        <div style="display:grid;gap:0.75rem;grid-template-columns:1fr 1fr;margin-top:1.25rem;">
+          <div class="pf" style="grid-column:1/-1;"><label>Preferred Nail Shape</label><input id="pref-shape" placeholder="almond, square, coffin…" /></div>
+          <div class="pf"><label>Preferred Length</label><input id="pref-length" placeholder="short / medium / long" /></div>
+          <div class="pf"><label>Allergies</label><input id="pref-allergies" placeholder="any product allergies" /></div>
+          <div class="pf" style="grid-column:1/-1;"><label>Sensitivities</label><input id="pref-sens" placeholder="e.g. sensitive skin, thin nails" /></div>
+          <div class="pf" style="grid-column:1/-1;"><label>Notes for your artist</label><input id="pref-notes" placeholder="anything else your artist should know" /></div>
+        </div>
+        <button class="btn-login" style="margin-top:0.5rem;" onclick="saveProfile()">Save Preferences</button>
+        <div id="profile-save-msg" style="display:none;font-family:'Jost',sans-serif;font-size:0.8rem;color:#3c8c50;margin-top:0.5rem;">Saved.</div>
+      </div>
+      <div class="p-card">
+        <div class="p-card-title">Referral Program</div>
+        <p style="font-family:'Jost',sans-serif;font-size:0.84rem;color:var(--latte);margin-bottom:1rem;">Share your link. When someone joins Z Lux using it, you receive a credit on your account.</p>
+        <div style="background:var(--soft-white);border:1px solid rgba(201,165,90,0.15);padding:0.875rem 1rem;font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:var(--champagne);word-break:break-all;" id="referral-link-display">—</div>
+        <button class="btn-login" style="margin-top:0.75rem;width:auto;padding:0.6rem 1.5rem;" onclick="copyReferralLink()">Copy Link</button>
+        <div style="margin-top:1rem;font-family:'Jost',sans-serif;font-size:0.8rem;color:var(--latte);">Successful referrals: <strong id="referral-count">0</strong></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/main.js"></script>
 <script>
-  function loginStep1() {
-    const email = document.getElementById('login-email').value.trim();
-    const pass = document.getElementById('login-password').value;
-    if (!email || !pass) {
-      showError('Please enter your email and password.');
-      return;
-    }
-    document.getElementById('login-step-1').style.display = 'none';
-    document.getElementById('login-step-2').style.display = 'block';
-    document.getElementById('login-error').style.display = 'none';
-  }
-  function loginStep2() {
-    const code = document.getElementById('totp-code').value.trim();
-    if (code.length !== 6) {
-      showError('Enter a 6-digit code.');
-      return;
-    }
-    // Demo: any 6-digit code works
-    const email = document.getElementById('login-email').value.trim();
-    const name = email.split('@')[0].replace(/[._]/g,' ');
-    sessionStorage.setItem('zlux_role', 'CLIENT');
-    sessionStorage.setItem('zlux_name', name);
-    sessionStorage.setItem('zlux_tier', 'Luxe');
-    showDashboard();
-  }
-  function showError(msg) {
-    const el = document.getElementById('login-error');
-    el.style.display = 'block';
-    el.textContent = msg;
-  }
-  function showDashboard() {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('dashboard-screen').style.display = 'block';
-    const name = sessionStorage.getItem('zlux_name') || 'there';
-    const tier = sessionStorage.getItem('zlux_tier') || '—';
-    document.getElementById('welcome-name').textContent = 'Hello, ' + name.charAt(0).toUpperCase() + name.slice(1);
-    document.getElementById('client-tier').textContent = tier;
-    document.getElementById('plan-name').textContent = tier + ' Club';
-  }
-  function showTab(t) {
-    ['overview','book','history','payment'].forEach(tab => {
-      document.getElementById('tab-' + tab).style.display = tab === t ? 'block' : 'none';
-      document.getElementById('nav-' + tab).classList.toggle('active', tab === t);
+let authToken = '';
+let profileData = {};
+let qrInterval = null;
+let qrExpireInterval = null;
+
+function showError(msg) {
+  const el = document.getElementById('login-err');
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+
+async function doLogin() {
+  showError('');
+  const id = document.getElementById('login-id').value.trim().toUpperCase();
+  const pass = document.getElementById('login-pass').value;
+  if (!id || !pass) return showError('Member ID and password are required.');
+  try {
+    const res = await fetch('/api/member-login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ memberId: id, password: pass }),
     });
+    const data = await res.json();
+    if (!res.ok) return showError(data.error || 'Login failed.');
+    authToken = data.token;
+    localStorage.setItem('zlux_token', authToken);
+    loadDashboard(data.member);
+  } catch { showError('Network error. Try again.'); }
+}
+
+function doLogout() {
+  localStorage.removeItem('zlux_token');
+  authToken = '';
+  profileData = {};
+  document.getElementById('portal-login').style.display = '';
+  document.getElementById('portal-dashboard').style.display = 'none';
+}
+
+async function loadDashboard(member) {
+  document.getElementById('portal-login').style.display = 'none';
+  document.getElementById('portal-dashboard').style.display = 'block';
+  profileData = member;
+  document.getElementById('member-first-name').textContent = member.fullName.split(' ')[0];
+  document.getElementById('member-id-badge').textContent = member.memberId;
+  const tb = document.getElementById('tier-badge');
+  tb.textContent = { SIGNATURE:'Signature Club', LUXE:'Luxe Club', BLACK_CARD:'Black Card' }[member.tier] || member.tier;
+  tb.className = 'tier-badge ' + member.tier;
+
+  try {
+    const r = await fetch('/api/member-profile', { headers: {'Authorization':'Bearer '+authToken} });
+    if (r.ok) populatePortal(await r.json());
+  } catch (_) {}
+
+  try {
+    const bw = await fetch('/api/booking-windows', { headers: {'Authorization':'Bearer '+authToken} });
+    if (bw.ok) {
+      const d = await bw.json();
+      if (d.countdownMs > 0) {
+        ['countdown-strip','book-countdown-strip'].forEach(id => document.getElementById(id).style.display = 'flex');
+        startCountdown(d.countdownMs);
+      }
+      document.getElementById('booking-window-info').textContent = `You can book ${d.daysAhead} day${d.daysAhead!==1?'s':''} in advance as a ${member.tier.replace('_',' ')} member.`;
+    }
+  } catch (_) {}
+
+  try {
+    const ref = await fetch('/api/referral', { headers:{'Authorization':'Bearer '+authToken} });
+    if (ref.ok) {
+      const rd = await ref.json();
+      document.getElementById('referral-link-display').textContent = rd.referralLink || '—';
+      document.getElementById('referral-count').textContent = rd.completed || 0;
+      document.getElementById('stat-referrals').textContent = rd.completed || 0;
+      profileData._referralLink = rd.referralLink;
+    }
+  } catch (_) {}
+
+  startQrCycle();
+}
+
+function populatePortal(d) {
+  const { member, preferences, history, upcoming, announcements, messages, usage } = d;
+  const tierMax = { SIGNATURE:1, LUXE:2, BLACK_CARD:3 }[member.tier] || 1;
+  document.getElementById('stat-services-left').textContent = Math.max(0, tierMax - (usage.services_used || 0));
+  document.getElementById('stat-upcoming').textContent = upcoming.length;
+  document.getElementById('stat-next-billing-day').textContent = member.nextBilling ? new Date(member.nextBilling).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+
+  const ul = document.getElementById('upcoming-list');
+  if (upcoming.length) {
+    ul.innerHTML = upcoming.map(a=>`<div class="appt-row"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;"><div><div class="appt-date">${new Date(a.appointment_date+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric'})}</div><div class="appt-detail">${a.appointment_time} · ${a.service}</div></div><span class="appt-status ${a.status}">${a.status}</span></div></div>`).join('');
   }
-  function logout() {
-    sessionStorage.removeItem('zlux_role');
-    sessionStorage.removeItem('zlux_name');
-    sessionStorage.removeItem('zlux_tier');
-    document.getElementById('dashboard-screen').style.display = 'none';
-    document.getElementById('login-screen').style.display = 'flex';
-    document.getElementById('login-step-1').style.display = 'block';
-    document.getElementById('login-step-2').style.display = 'none';
+
+  const hl = document.getElementById('history-list');
+  if (history.length) {
+    hl.innerHTML = history.map(h=>`<div class="appt-row"><div class="appt-date">${new Date(h.created_at).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</div><div class="appt-detail">${[h.service,h.shape,h.length,h.color].filter(Boolean).join(' · ')}</div></div>`).join('');
   }
-  // Auto-login if session exists
-  if (sessionStorage.getItem('zlux_role') === 'CLIENT') showDashboard();
+
+  if (announcements.length) {
+    document.getElementById('announcements-card').style.display = 'block';
+    document.getElementById('announcements-list').innerHTML = announcements.map(a=>`<div style="padding:0.75rem 0;border-bottom:1px solid rgba(201,165,90,0.1);"><div style="font-family:'Jost',sans-serif;font-size:0.82rem;font-weight:600;color:var(--espresso);margin-bottom:0.25rem;">${a.subject||'Studio Update'}</div><div style="font-family:'Jost',sans-serif;font-size:0.8rem;color:var(--latte);line-height:1.6;">${a.body}</div></div>`).join('');
+  }
+
+  const mt = document.getElementById('messages-thread');
+  if (messages.length) {
+    mt.innerHTML = messages.slice().reverse().map(m=>`<div class="msg-bubble ${m.from_role==='ADMIN'?'from-admin':'from-me'}"><div style="font-family:'Jost',sans-serif;font-size:0.85rem;">${m.body}</div><div class="msg-time">${new Date(m.created_at).toLocaleString()}</div></div>`).join('');
+    mt.scrollTop = mt.scrollHeight;
+  }
+
+  if (preferences) {
+    document.getElementById('pref-shape').value = preferences.preferred_shape || '';
+    document.getElementById('pref-length').value = preferences.preferred_length || '';
+    document.getElementById('pref-allergies').value = preferences.allergies || '';
+    document.getElementById('pref-sens').value = preferences.sensitivities || '';
+    document.getElementById('pref-notes').value = preferences.notes || '';
+  }
+
+  document.getElementById('profile-details').innerHTML = `<div style="display:grid;gap:0.5rem;margin-bottom:1.25rem;">
+    <div style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--espresso);"><strong style="color:var(--latte);font-size:0.65rem;display:block;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.1rem;">Name</strong>${member.fullName}</div>
+    <div style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--espresso);"><strong style="color:var(--latte);font-size:0.65rem;display:block;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.1rem;">Email</strong>${member.email}</div>
+    <div style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--espresso);"><strong style="color:var(--latte);font-size:0.65rem;display:block;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.1rem;">Member ID</strong><span style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--champagne);">${member.memberId}</span></div>
+    <div style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--espresso);"><strong style="color:var(--latte);font-size:0.65rem;display:block;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.1rem;">Member Since</strong>${member.memberSince ? new Date(member.memberSince).toLocaleDateString('en-US',{month:'long',year:'numeric'}) : '—'}</div>
+  </div>`;
+}
+
+function showTab(id) {
+  document.querySelectorAll('.portal-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.portal-nav-links button').forEach(b=>b.classList.remove('active'));
+  const map = {'tab-home':'nav-home','tab-book':'nav-book','tab-qr':'nav-qr','tab-history':'nav-history','tab-messages':'nav-messages','tab-profile':'nav-profile'};
+  if (map[id]) document.getElementById(map[id]).classList.add('active');
+  if (id === 'tab-qr') startQrCycle();
+}
+
+function startQrCycle() {
+  loadQr();
+  if (qrInterval) clearInterval(qrInterval);
+  qrInterval = setInterval(loadQr, 5*60*1000);
+}
+
+async function loadQr() {
+  if (!authToken) return;
+  try {
+    const r = await fetch('/api/qr-generate', { headers:{'Authorization':'Bearer '+authToken} });
+    if (!r.ok) return;
+    const d = await r.json();
+    const canvas = document.getElementById('qr-canvas');
+    QRCode.toCanvas(canvas, d.qrPayload, { width:220, margin:2, color:{dark:'#2C1A0E',light:'#FFFFFF'} });
+    document.getElementById('qr-name-watermark').textContent = d.fullName+' · '+d.memberId;
+    document.getElementById('qr-member-id-show').textContent = d.memberId;
+    document.getElementById('qr-tier-show').textContent = {SIGNATURE:'Signature Club',LUXE:'Luxe Club',BLACK_CARD:'Black Card'}[d.tier]||d.tier;
+    let sec = Math.floor(d.refreshInMs/1000);
+    if (qrExpireInterval) clearInterval(qrExpireInterval);
+    qrExpireInterval = setInterval(()=>{
+      sec--;
+      if (sec<=0) { clearInterval(qrExpireInterval); return; }
+      document.getElementById('qr-countdown').textContent = Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
+    },1000);
+    document.getElementById('qr-countdown').textContent = Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
+    canvas.addEventListener('contextmenu',e=>e.preventDefault());
+    canvas.addEventListener('dragstart',e=>e.preventDefault());
+  } catch (_) {}
+}
+
+function startCountdown(ms) {
+  let rem = ms;
+  const tick = () => {
+    if (rem<=0) { ['countdown-strip','book-countdown-strip'].forEach(id=>document.getElementById(id).style.display='none'); return; }
+    const h=Math.floor(rem/3600000), m=Math.floor((rem%3600000)/60000), s=Math.floor((rem%60000)/1000);
+    const str = h>0?`${h}h ${m}m`:`${m}m ${s}s`;
+    document.getElementById('countdown-display').textContent=str;
+    document.getElementById('book-countdown-display').textContent=str;
+    rem-=1000;
+    setTimeout(tick,1000);
+  };
+  tick();
+}
+
+async function sendMessage() {
+  const input = document.getElementById('msg-input');
+  const body = input.value.trim();
+  if (!body || !authToken) return;
+  input.value='';
+  try {
+    await fetch('/api/admin-messaging', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+authToken},
+      body: JSON.stringify({ type:'direct', toRole:'ADMIN', toId:'admin', body })
+    });
+    const mt=document.getElementById('messages-thread');
+    const b=document.createElement('div');
+    b.className='msg-bubble from-me';
+    b.innerHTML=`<div style="font-family:'Jost',sans-serif;font-size:0.85rem;">${body}</div><div class="msg-time">Just now</div>`;
+    mt.appendChild(b);
+    mt.scrollTop=mt.scrollHeight;
+  } catch (_) {}
+}
+
+async function saveProfile() {
+  if (!authToken) return;
+  try {
+    await fetch('/api/member-profile', {
+      method:'PUT', headers:{'Content-Type':'application/json','Authorization':'Bearer '+authToken},
+      body: JSON.stringify({ preferences:{
+        shape: document.getElementById('pref-shape').value,
+        length: document.getElementById('pref-length').value,
+        allergies: document.getElementById('pref-allergies').value,
+        sensitivities: document.getElementById('pref-sens').value,
+        notes: document.getElementById('pref-notes').value,
+      }})
+    });
+    const m=document.getElementById('profile-save-msg');
+    m.style.display='block';
+    setTimeout(()=>m.style.display='none',3000);
+  } catch (_) {}
+}
+
+function copyReferralLink() {
+  const link = profileData._referralLink || document.getElementById('referral-link-display').textContent;
+  if (link && link!=='—') { navigator.clipboard.writeText(link); alert('Referral link copied!'); }
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+  const saved = localStorage.getItem('zlux_token');
+  if (saved) {
+    authToken = saved;
+    try {
+      const r = await fetch('/api/member-profile', { headers:{'Authorization':'Bearer '+saved} });
+      if (r.ok) {
+        const d = await r.json();
+        loadDashboard(d.member);
+        populatePortal(d);
+      } else { localStorage.removeItem('zlux_token'); }
+    } catch (_) {}
+  }
+});
+
+window.addEventListener('scroll',()=>{ const n=document.getElementById('nav'); if(n)n.classList.toggle('scrolled',window.scrollY>60); });
+document.getElementById('hamburger')?.addEventListener('click',()=>document.getElementById('nav-mobile').classList.toggle('open'));
 </script>
 </body>
 </html>
