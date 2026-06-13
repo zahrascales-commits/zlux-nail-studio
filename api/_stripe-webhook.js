@@ -1,4 +1,4 @@
-const { queryOne, execute } = require('./db');
+const { queryOne, execute } = require('./_db');
 const Stripe = require('stripe');
 
 module.exports = async (req, res) => {

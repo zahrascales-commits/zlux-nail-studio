@@ -1,4 +1,4 @@
-const { queryOne, query, execute } = require('./db');
+const { queryOne, query, execute } = require('./_db');
 
 async function authAdmin(req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();

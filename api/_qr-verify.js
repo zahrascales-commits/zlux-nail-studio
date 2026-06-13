@@ -1,4 +1,4 @@
-const { queryOne, execute } = require('./db');
+const { queryOne, execute } = require('./_db');
 const crypto = require('crypto');
 
 function verifyToken(secret, memberId, tier, token) {

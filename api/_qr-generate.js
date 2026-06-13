@@ -1,4 +1,4 @@
-const { queryOne } = require('./db');
+const { queryOne } = require('./_db');
 const crypto = require('crypto');
 
 async function getSession(token) {

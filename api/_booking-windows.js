@@ -1,4 +1,4 @@
-const { queryOne, queryOne: getSession } = require('./db');
+const { queryOne, queryOne: getSession } = require('./_db');
 
 async function getSessionFromReq(req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();

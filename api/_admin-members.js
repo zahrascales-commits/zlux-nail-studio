@@ -1,4 +1,4 @@
-const { queryOne, query, execute } = require('./db');
+const { queryOne, query, execute } = require('./_db');
 const bcrypt = require('bcryptjs');
 
 async function authAdmin(req) {
