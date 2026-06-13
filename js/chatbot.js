@@ -75,10 +75,10 @@ function askZFallback(msg) {
     return "Luxe Club is $199/month. Up to 2 services per month, a complimentary Russian manicure, 30% off all add-ons, one free scrub or lotion massage monthly, all organic products, Russian technique at every visit, and second priority booking. Nail health is prioritized at every appointment.";
 
   if (m.includes('black card') || m.includes('blackcard'))
-    return "Black Card is $349/month — founding rate, locked forever. Up to 3 services, all add-ons complimentary every visit, monthly nail art, quarterly nail assessments from Zahra personally, a personal client profile, and a direct text line to Zahra that no other tier has access to. First in line for everything.";
+    return "Black Card is $299/month founding rate — locked forever. Up to 3 services, choose your specific nail artist for every appointment, all add-ons complimentary, monthly nail art, quarterly nail assessments, personal client profile, and first access to everything. Most exclusive tier available.";
 
   if (m.includes('member') || m.includes('membership') || m.includes('join') || m.includes('tier'))
-    return "Three tiers: Signature ($99/mo, 1 service), Luxe ($199/mo, 2 services + Russian manicure + 30% off add-ons + organic products), Black Card ($349/mo founding rate, 3 services + free add-ons + quarterly assessments + direct line to Zahra). Spots are limited and filling.";
+    return "Three tiers: Signature ($99/mo, 1 service, 10% off add-ons), Luxe ($199/mo, 2 services + Russian manicure + 30% off add-ons + organic products + nail health focus), Black Card ($299/mo founding rate, 3 services + free add-ons + choose your artist + quarterly assessments). Spots are limited.";
 
   if (m.includes('roll') || m.includes('unused') || (m.includes('miss') && m.includes('month')))
     return "Signature and Luxe services do not roll over — if you don't book before the month ends, the service drops. Black Card members can carry over one service. The membership renews regardless.";
@@ -90,10 +90,13 @@ function askZFallback(msg) {
     return "The founding rate on Black Card is locked in forever for original members. Your price will never increase as long as your membership is active. That guarantee does not apply to members who join later at a higher rate.";
 
   if (m.includes('quarterly') || m.includes('assessment') || m.includes('nail health check'))
-    return "Black Card members receive a quarterly nail assessment — Zahra personally reviews your growth, health, and progress and builds a custom plan. No other studio in this area offers this.";
+    return "Black Card members receive a quarterly nail assessment — a Z Lux artist personally reviews your nail growth, health, and length progress and builds a custom plan. No other studio in this area offers this.";
 
-  if ((m.includes('direct') && m.includes('zahra')) || (m.includes('text') && m.includes('zahra')) || m.includes('contact zahra'))
-    return "The direct line to Zahra is exclusive to Black Card members. It's a private number not available anywhere else and not sold separately. It's part of what makes Black Card what it is.";
+  if (m.includes('princess') || m.includes('kids') || m.includes('children') || m.includes('party') || m.includes('daughter'))
+    return "Z Lux offers princess parties for kids — mini manicures and custom nail art in a safe, elevated studio experience. $35 per child, minimum 6 children. Use the contact form to inquire about dates and availability.";
+
+  if (m.includes('choose') && m.includes('artist') || m.includes('pick') && m.includes('artist') || m.includes('specific artist') || m.includes('my artist'))
+    return "Choosing your specific nail artist for every appointment is exclusive to Black Card members. Signature and Luxe members are assigned based on availability. Black Card is the only tier where your artist is guaranteed every visit.";
 
   if (m.includes('profile') || m.includes('history') || m.includes('allerg') || m.includes('sensitiv'))
     return "Every Black Card member has a personal client profile — a full record of services, sensitivities, shape preferences, allergies, and nail progress. Every appointment is informed by what came before. Nothing starts from scratch.";
@@ -137,5 +140,5 @@ function askZFallback(msg) {
   if (m.includes('different') || m.includes('other salon') || m.includes('why z lux'))
     return "Most salons prioritize speed and volume. Z Lux prioritizes health, precision, and privacy. Organic products, Russian technique expertise, personal client tracking, quarterly assessments — none of that exists at a standard salon. Every visit here has context.";
 
-  return "That's a great one for Zahra directly — reach out through the contact form and she'll get back to you. Or DM @zluxnails on Instagram for the fastest response.";
+  return "That's a great one for the Z Lux team directly — reach out through the contact form and someone will get back to you. Or DM @zluxnails on Instagram for the fastest response.";
 }
