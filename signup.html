@@ -618,6 +618,18 @@
       signupData.nextBilling = data.nextBillingDate;
       signupData.referralCodeGenerated = data.referralCode;
 
+      // Auto-login so portal opens without re-entering credentials
+      try {
+        const loginRes = await fetch('/api/member-login', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ memberId: data.memberId, password: signupData.password })
+        });
+        const loginData = await loginRes.json();
+        if (loginRes.ok && loginData.token) {
+          localStorage.setItem('zlux_token', loginData.token);
+        }
+      } catch (_) {}
+
       // Step 3 — show member ID
       document.getElementById('display-member-id').textContent = data.memberId;
       document.getElementById('display-tier').textContent = TIER_LABEL[signupData.tier];

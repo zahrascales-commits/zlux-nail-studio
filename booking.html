@@ -526,7 +526,7 @@ const booking = {
 // ═══════════════════════════════════════════
 // STEP 1: MEMBER ID
 // ═══════════════════════════════════════════
-function validateMemberId() {
+async function validateMemberId() {
   const raw = document.getElementById('member-id-input').value.trim().toUpperCase();
   const errEl = document.getElementById('member-id-error');
   errEl.style.display = 'none';
@@ -534,11 +534,22 @@ function validateMemberId() {
   // Check demo IDs first
   let member = DEMO_MEMBERS[raw];
 
-  // Also accept any properly formatted ID
+  // Accept legacy prefix formats
   if (!member) {
     if (raw.startsWith('SIG')) member = { tier: 'SIGNATURE', name: 'Signature Member' };
     else if (raw.startsWith('LUX')) member = { tier: 'LUXE', name: 'Luxe Member' };
     else if (raw.startsWith('BLK') || raw.startsWith('BLACK')) member = { tier: 'BLACK_CARD', name: 'Black Card Member' };
+  }
+
+  // Live DB lookup for real ZL- IDs
+  if (!member && raw.startsWith('ZL-')) {
+    try {
+      const r = await fetch('/api/member-login?id=' + encodeURIComponent(raw));
+      if (r.ok) {
+        const d = await r.json();
+        member = { tier: d.tier, name: d.name };
+      }
+    } catch (_) {}
   }
 
   if (!member) {

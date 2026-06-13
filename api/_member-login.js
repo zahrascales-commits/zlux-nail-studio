@@ -4,9 +4,23 @@ const crypto = require('crypto');
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  // Public tier lookup — used by booking page to validate member ID
+  if (req.method === 'GET') {
+    const id = (req.query.id || '').toUpperCase().trim();
+    if (!id) return res.status(400).json({ error: 'Member ID required.' });
+    try {
+      const member = await queryOne('SELECT tier, full_name FROM members WHERE member_id = ?', [id]);
+      if (!member) return res.status(404).json({ error: 'Member not found.' });
+      return res.status(200).json({ valid: true, tier: member.tier, name: member.full_name });
+    } catch (err) {
+      return res.status(500).json({ error: 'Lookup failed.' });
+    }
+  }
+
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { memberId, password } = req.body;
