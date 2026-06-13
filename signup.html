@@ -547,7 +547,7 @@
 
   function initStripe() {
     if (stripe) return;
-    stripe = Stripe(document.querySelector('meta[name="stripe-pk"]')?.content || window.STRIPE_PK || 'pk_test_YOUR_KEY_HERE');
+    stripe = Stripe(document.querySelector('meta[name="stripe-pk"]')?.content || window.STRIPE_PK || 'pk_test_51ThhZRQ9pYWoKTNtWDpFLPKeTno3SbRe9MaWWqfw4TdHoYKmMMPcFwgoHMnDo9gp70XQemo1V7IMPT2bxYgUyqOB006z1OkhRZ');
     const elements = stripe.elements();
     cardElement = elements.create('card', {
       style: {
