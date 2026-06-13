@@ -1,9 +1,9 @@
-const { getDb } = require('../server/db/init');
+const { queryOne, queryOne: getSession } = require('./db');
 
-function getSession(db, req) {
+async function getSessionFromReq(req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
   if (!token) return null;
-  return db.prepare('SELECT * FROM sessions WHERE token = ? AND expires_at > datetime("now")').get(token) || null;
+  return queryOne('SELECT * FROM sessions WHERE token = ? AND expires_at > datetime("now")', [token]);
 }
 
 module.exports = async (req, res) => {
@@ -13,17 +13,16 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const db = getDb();
   try {
-    const config = db.prepare('SELECT * FROM schedule_config WHERE id = 1').get();
-    const session = getSession(db, req);
+    const config = await queryOne('SELECT * FROM schedule_config WHERE id = 1', []);
+    const session = await getSessionFromReq(req);
 
     let tier = 'PUBLIC';
     let daysAhead = config.public_days_ahead;
 
     if (session) {
       if (session.role === 'CLIENT') {
-        const member = db.prepare('SELECT tier FROM members WHERE member_id = ?').get(session.user_id);
+        const member = await queryOne('SELECT tier FROM members WHERE member_id = ?', [session.user_id]);
         if (member) {
           tier = member.tier;
           daysAhead = { SIGNATURE: config.signature_days_ahead, LUXE: config.luxe_days_ahead, BLACK_CARD: config.black_card_days_ahead }[tier] ?? config.public_days_ahead;
@@ -34,7 +33,6 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Generate available dates
     const availableDates = [];
     const now = new Date();
     const openDate = new Date(now);
@@ -45,17 +43,14 @@ module.exports = async (req, res) => {
       d.setDate(d.getDate() + i);
       const dateStr = d.toISOString().slice(0, 10);
 
-      // Skip if fully blocked
-      const blocked = db.prepare(`SELECT COUNT(*) as n FROM availability_blocks WHERE block_date = ? AND start_time IS NULL`).get(dateStr);
-      if (blocked.n > 0) continue;
+      const blocked = await queryOne('SELECT COUNT(*) as n FROM availability_blocks WHERE block_date = ? AND start_time IS NULL', [dateStr]);
+      if (blocked && blocked.n > 0) continue;
 
       availableDates.push(dateStr);
     }
 
-    // Countdown to window open (for Signature/Luxe who can see upcoming dates but can't book yet)
     let countdownMs = 0;
     if (tier !== 'PUBLIC' && tier !== 'ADMIN') {
-      // When does MY window open for tomorrow?
       const tomorrow = new Date(now);
       tomorrow.setDate(tomorrow.getDate() + 1);
       const tomorrowBookableAt = new Date(tomorrow);
@@ -75,12 +70,10 @@ module.exports = async (req, res) => {
       slots,
       countdownMs,
       windowOpensAt: openDate.toISOString(),
-      config: {
-        openTime:  config.studio_open_time,
-        closeTime: config.studio_close_time,
-      }
+      config: { openTime: config.studio_open_time, closeTime: config.studio_close_time }
     });
-  } finally {
-    db.close();
+  } catch (err) {
+    console.error('Booking windows error:', err);
+    return res.status(500).json({ error: 'Server error.' });
   }
 };

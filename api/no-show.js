@@ -1,9 +1,9 @@
-const { getDb } = require('../server/db/init');
+const { queryOne, query, execute } = require('./db');
 
-function authAdmin(db, req) {
+async function authAdmin(req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
   if (!token) return null;
-  return db.prepare('SELECT * FROM sessions WHERE token = ? AND role = ? AND expires_at > datetime("now")').get(token, 'ADMIN') || null;
+  return queryOne('SELECT * FROM sessions WHERE token = ? AND role = ? AND expires_at > datetime("now")', [token, 'ADMIN']);
 }
 
 module.exports = async (req, res) => {
@@ -12,18 +12,17 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const db = getDb();
   try {
-    const session = authAdmin(db, req);
+    const session = await authAdmin(req);
     if (!session) return res.status(401).json({ error: 'Admin login required.' });
 
     if (req.method === 'GET') {
-      const recent = db.prepare(`
+      const recent = await query(`
         SELECT ns.*, m.full_name, m.email, m.tier
         FROM no_shows ns
         LEFT JOIN members m ON ns.member_id = m.member_id
         ORDER BY ns.created_at DESC LIMIT 50
-      `).all();
+      `, []);
       return res.status(200).json({ noShows: recent });
     }
 
@@ -32,19 +31,17 @@ module.exports = async (req, res) => {
       if (!memberId) return res.status(400).json({ error: 'memberId required.' });
 
       const date = new Date().toISOString().slice(0, 10);
-      db.prepare('INSERT INTO no_shows (member_id, appointment_id, date, waived, waive_reason) VALUES (?,?,?,?,?)')
-        .run(memberId, appointmentId||null, date, waive?1:0, waiveReason||null);
+      await execute('INSERT INTO no_shows (member_id, appointment_id, date, waived, waive_reason) VALUES (?,?,?,?,?)',
+        [memberId, appointmentId||null, date, waive?1:0, waiveReason||null]);
 
       if (!waive) {
-        db.prepare('UPDATE members SET no_show_count = no_show_count + 1 WHERE member_id=?').run(memberId);
-        // Check if this member has hit 2 no-shows in 6 months
+        await execute('UPDATE members SET no_show_count = no_show_count + 1 WHERE member_id=?', [memberId]);
         const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-        const count = db.prepare('SELECT COUNT(*) as n FROM no_shows WHERE member_id=? AND date >= ? AND waived=0').get(memberId, sixMonthsAgo);
-        if (count.n >= 2) {
-          db.prepare('UPDATE members SET flagged=1, flag_reason=? WHERE member_id=?').run('2+ no-shows in 6 months — review required', memberId);
-          // Notify Zahra
+        const countRow = await queryOne('SELECT COUNT(*) as n FROM no_shows WHERE member_id=? AND date >= ? AND waived=0', [memberId, sixMonthsAgo]);
+        if (countRow && countRow.n >= 2) {
+          await execute("UPDATE members SET flagged=1, flag_reason=? WHERE member_id=?", ['2+ no-shows in 6 months — review required', memberId]);
           if (process.env.SENDGRID_API_KEY) {
-            const member = db.prepare('SELECT full_name, email FROM members WHERE member_id=?').get(memberId);
+            const member = await queryOne('SELECT full_name, email FROM members WHERE member_id=?', [memberId]);
             const sgMail = require('@sendgrid/mail');
             sgMail.setApiKey(process.env.SENDGRID_API_KEY);
             try {
@@ -63,7 +60,8 @@ module.exports = async (req, res) => {
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
-  } finally {
-    db.close();
+  } catch (err) {
+    console.error('No-show error:', err);
+    return res.status(500).json({ error: 'Server error.' });
   }
 };

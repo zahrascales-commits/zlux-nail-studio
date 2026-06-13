@@ -1,4 +1,4 @@
-const { getDb } = require('../server/db/init');
+const { queryOne, execute } = require('./db');
 const Stripe = require('stripe');
 
 module.exports = async (req, res) => {
@@ -9,34 +9,31 @@ module.exports = async (req, res) => {
   let event;
 
   try {
-    const rawBody = req.body; // Vercel provides raw body when content-type is application/json
-    event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     console.error('Webhook sig fail:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  const db = getDb();
   try {
     switch (event.type) {
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object;
         const customerId = invoice.customer;
-        const member = db.prepare('SELECT * FROM members WHERE stripe_customer_id = ?').get(customerId);
+        const member = await queryOne('SELECT * FROM members WHERE stripe_customer_id = ?', [customerId]);
         if (member) {
           const next = new Date(invoice.period_end * 1000).toISOString();
-          db.prepare('UPDATE members SET next_billing_at=? WHERE stripe_customer_id=?').run(next, customerId);
-          // Reset monthly service usage
+          await execute('UPDATE members SET next_billing_at=? WHERE stripe_customer_id=?', [next, customerId]);
           const monthYear = new Date().toISOString().slice(0, 7);
-          db.prepare(`INSERT INTO service_usage (member_id, month_year, services_used) VALUES (?,?,0) ON CONFLICT(member_id,month_year) DO UPDATE SET services_used=0, russian_mani_used=0, scrub_used=0`).run(member.member_id, monthYear);
+          await execute(`INSERT INTO service_usage (member_id, month_year, services_used) VALUES (?,?,0) ON CONFLICT(member_id,month_year) DO UPDATE SET services_used=0, russian_mani_used=0, scrub_used=0`,
+            [member.member_id, monthYear]);
         }
         break;
       }
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object;
-        const customerId = invoice.customer;
-        const member = db.prepare('SELECT * FROM members WHERE stripe_customer_id=?').get(customerId);
+        const member = await queryOne('SELECT * FROM members WHERE stripe_customer_id=?', [invoice.customer]);
         if (member && process.env.SENDGRID_API_KEY) {
           const sgMail = require('@sendgrid/mail');
           sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -54,8 +51,8 @@ module.exports = async (req, res) => {
 
       case 'customer.subscription.deleted': {
         const sub = event.data.object;
-        db.prepare('UPDATE members SET stripe_subscription_id=NULL, flagged=1, flag_reason=? WHERE stripe_subscription_id=?')
-          .run('Subscription cancelled via Stripe', sub.id);
+        await execute("UPDATE members SET stripe_subscription_id=NULL, flagged=1, flag_reason=? WHERE stripe_subscription_id=?",
+          ['Subscription cancelled via Stripe', sub.id]);
         break;
       }
 
@@ -64,7 +61,8 @@ module.exports = async (req, res) => {
     }
 
     return res.status(200).json({ received: true });
-  } finally {
-    db.close();
+  } catch (err) {
+    console.error('Webhook handler error:', err);
+    return res.status(500).json({ error: 'Webhook processing failed.' });
   }
 };

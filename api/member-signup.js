@@ -1,4 +1,4 @@
-const { getDb } = require('../server/db/init');
+const { queryOne, execute } = require('./db');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const Stripe = require('stripe');
@@ -7,12 +7,6 @@ const TIER_PRICES = {
   SIGNATURE:  'price_signature_monthly',
   LUXE:       'price_luxe_monthly',
   BLACK_CARD: 'price_black_card_monthly',
-};
-
-const TIER_AMOUNT = {
-  SIGNATURE:  9900,
-  LUXE:       19900,
-  BLACK_CARD: 29900,
 };
 
 function generateMemberId(fullName) {
@@ -48,15 +42,12 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'Invalid tier.' });
   }
 
-  const db = getDb();
-
   try {
-    const existing = db.prepare('SELECT id FROM members WHERE email = ?').get(email.toLowerCase().trim());
+    const existing = await queryOne('SELECT id FROM members WHERE email = ?', [email.toLowerCase().trim()]);
     if (existing) {
       return res.status(409).json({ error: 'An account with this email already exists.' });
     }
 
-    // Stripe setup
     const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
     const customer = await stripe.customers.create({
       name: fullName,
@@ -83,32 +74,29 @@ module.exports = async (req, res) => {
 
     const now = new Date().toISOString();
     const nextBilling = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
     const referredByCode = referralCode || null;
 
-    db.prepare(`
+    await execute(`
       INSERT INTO members
         (full_name, email, phone, date_of_birth, heard_about, tier, member_id, password_hash, qr_secret,
          stripe_customer_id, stripe_subscription_id, referral_code, referred_by_code,
          membership_started_at, next_billing_at, services_reset_month)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    `).run(
+    `, [
       fullName, email.toLowerCase().trim(), phone || null, dateOfBirth || null,
       heardAbout || null, tier, memberId, passwordHash, qrSecret,
       customer.id, subscription.id, referral, referredByCode,
       now, nextBilling, new Date().toISOString().slice(0, 7)
-    );
+    ]);
 
-    // Track referral if code was used
     if (referredByCode) {
-      const referrer = db.prepare('SELECT member_id FROM members WHERE referral_code = ?').get(referredByCode);
+      const referrer = await queryOne('SELECT member_id FROM members WHERE referral_code = ?', [referredByCode]);
       if (referrer) {
-        db.prepare(`INSERT INTO referrals (referrer_member_id, referee_email, referee_member_id, status) VALUES (?,?,?,?)`)
-          .run(referrer.member_id, email.toLowerCase().trim(), memberId, 'COMPLETED');
+        await execute('INSERT INTO referrals (referrer_member_id, referee_email, referee_member_id, status) VALUES (?,?,?,?)',
+          [referrer.member_id, email.toLowerCase().trim(), memberId, 'COMPLETED']);
       }
     }
 
-    // Send welcome email + SMS (Twilio/SendGrid)
     try { await sendWelcome({ fullName, email, phone, memberId, tier }); } catch (_) {}
 
     return res.status(201).json({
@@ -123,8 +111,6 @@ module.exports = async (req, res) => {
   } catch (err) {
     console.error('Signup error:', err);
     return res.status(500).json({ error: err.message || 'Signup failed.' });
-  } finally {
-    db.close();
   }
 };
 

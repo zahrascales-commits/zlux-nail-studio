@@ -6,7 +6,7 @@
     "start": "node server/server.js"
   },
   "dependencies": {
-    "better-sqlite3": "^9.4.3",
+    "@libsql/client": "^0.6.2",
     "bcryptjs": "^2.4.3",
     "stripe": "^14.25.0",
     "@sendgrid/mail": "^8.1.3",

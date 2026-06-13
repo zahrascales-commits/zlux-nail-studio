@@ -1,9 +1,9 @@
-const { getDb } = require('../server/db/init');
+const { queryOne, query } = require('./db');
 
-function authMember(db, req) {
+async function authMember(req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
   if (!token) return null;
-  return db.prepare('SELECT * FROM sessions WHERE token=? AND role=? AND expires_at > datetime("now")').get(token, 'CLIENT') || null;
+  return queryOne('SELECT * FROM sessions WHERE token=? AND role=? AND expires_at > datetime("now")', [token, 'CLIENT']);
 }
 
 module.exports = async (req, res) => {
@@ -12,13 +12,12 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const db = getDb();
   try {
     if (req.method === 'GET') {
-      const session = authMember(db, req);
+      const session = await authMember(req);
       if (!session) return res.status(401).json({ error: 'Login required.' });
-      const member = db.prepare('SELECT referral_code FROM members WHERE member_id=?').get(session.user_id);
-      const referrals = db.prepare('SELECT * FROM referrals WHERE referrer_member_id=? ORDER BY created_at DESC').all(session.user_id);
+      const member   = await queryOne('SELECT referral_code FROM members WHERE member_id=?', [session.user_id]);
+      const referrals = await query('SELECT * FROM referrals WHERE referrer_member_id=? ORDER BY created_at DESC', [session.user_id]);
       const completed = referrals.filter(r => r.status === 'COMPLETED').length;
       return res.status(200).json({
         referralCode: member?.referral_code,
@@ -29,7 +28,8 @@ module.exports = async (req, res) => {
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
-  } finally {
-    db.close();
+  } catch (err) {
+    console.error('Referral error:', err);
+    return res.status(500).json({ error: 'Server error.' });
   }
 };

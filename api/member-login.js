@@ -1,4 +1,4 @@
-const { getDb } = require('../server/db/init');
+const { queryOne, execute } = require('./db');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
@@ -12,12 +12,11 @@ module.exports = async (req, res) => {
   const { memberId, password } = req.body;
   if (!memberId || !password) return res.status(400).json({ error: 'Member ID and password required.' });
 
-  const db = getDb();
   try {
-    const member = db.prepare('SELECT * FROM members WHERE member_id = ?').get(memberId.toUpperCase().trim());
+    const member = await queryOne('SELECT * FROM members WHERE member_id = ?', [memberId.toUpperCase().trim()]);
 
     if (!member || !bcrypt.compareSync(password, member.password_hash)) {
-      db.prepare(`INSERT INTO security_log (event, details) VALUES (?,?)`).run('FAILED_MEMBER_LOGIN', JSON.stringify({ memberId }));
+      await execute('INSERT INTO security_log (event, details) VALUES (?,?)', ['FAILED_MEMBER_LOGIN', JSON.stringify({ memberId })]);
       return res.status(401).json({ error: 'Invalid Member ID or password.' });
     }
 
@@ -27,23 +26,23 @@ module.exports = async (req, res) => {
 
     const token = crypto.randomBytes(32).toString('hex');
     const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-    db.prepare('INSERT INTO sessions (token, role, user_id, expires_at) VALUES (?,?,?,?)').run(token, 'CLIENT', member.member_id, expires);
-
-    db.prepare('INSERT INTO security_log (event, details) VALUES (?,?)').run('MEMBER_LOGIN', JSON.stringify({ memberId: member.member_id }));
+    await execute('INSERT INTO sessions (token, role, user_id, expires_at) VALUES (?,?,?,?)', [token, 'CLIENT', member.member_id, expires]);
+    await execute('INSERT INTO security_log (event, details) VALUES (?,?)', ['MEMBER_LOGIN', JSON.stringify({ memberId: member.member_id })]);
 
     return res.status(200).json({
       token,
       member: {
-        memberId:   member.member_id,
-        fullName:   member.full_name,
-        email:      member.email,
-        tier:       member.tier,
+        memberId:    member.member_id,
+        fullName:    member.full_name,
+        email:       member.email,
+        tier:        member.tier,
         memberSince: member.membership_started_at,
         nextBilling: member.next_billing_at,
         referralCode: member.referral_code,
       }
     });
-  } finally {
-    db.close();
+  } catch (err) {
+    console.error('Login error:', err);
+    return res.status(500).json({ error: 'Login failed.' });
   }
 };

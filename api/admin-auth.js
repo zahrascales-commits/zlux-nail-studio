@@ -1,4 +1,4 @@
-const { getDb } = require('../server/db/init');
+const { queryOne, execute } = require('./db');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
@@ -12,21 +12,21 @@ module.exports = async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required.' });
 
-  const db = getDb();
   try {
-    const admin = db.prepare('SELECT * FROM admin WHERE email = ?').get(email.toLowerCase().trim());
+    const admin = await queryOne('SELECT * FROM admin WHERE email = ?', [email.toLowerCase().trim()]);
     if (!admin || !bcrypt.compareSync(password, admin.password_hash)) {
-      db.prepare('INSERT INTO security_log (event, details) VALUES (?,?)').run('FAILED_ADMIN_LOGIN', JSON.stringify({ email, ip: req.headers['x-forwarded-for'] }));
+      await execute('INSERT INTO security_log (event, details) VALUES (?,?)', ['FAILED_ADMIN_LOGIN', JSON.stringify({ email, ip: req.headers['x-forwarded-for'] })]);
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
 
     const token = crypto.randomBytes(32).toString('hex');
-    const expires = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(); // 8 hours
-    db.prepare('INSERT INTO sessions (token, role, user_id, expires_at) VALUES (?,?,?,?)').run(token, 'ADMIN', String(admin.id), expires);
-    db.prepare('UPDATE admin SET last_login = datetime("now") WHERE id = ?').run(admin.id);
+    const expires = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
+    await execute('INSERT INTO sessions (token, role, user_id, expires_at) VALUES (?,?,?,?)', [token, 'ADMIN', String(admin.id), expires]);
+    await execute('UPDATE admin SET last_login = datetime("now") WHERE id = ?', [admin.id]);
 
     return res.status(200).json({ token, email: admin.email });
-  } finally {
-    db.close();
+  } catch (err) {
+    console.error('Admin auth error:', err);
+    return res.status(500).json({ error: 'Login failed.' });
   }
 };
