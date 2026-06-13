@@ -1,14 +1,8 @@
-const { createClient } = require('@libsql/client');
+const { createClient } = require('@libsql/client/http');
 
-let _client;
 function getClient() {
-  if (!_client) {
-    _client = createClient({
-      url: process.env.TURSO_DATABASE_URL,
-      authToken: process.env.TURSO_AUTH_TOKEN,
-    });
-  }
-  return _client;
+  const url = (process.env.TURSO_DATABASE_URL || '').replace('libsql://', 'https://');
+  return createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
 }
 
 function toPlain(columns, row) {
