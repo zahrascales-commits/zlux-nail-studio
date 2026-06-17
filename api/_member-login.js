@@ -23,15 +23,15 @@ module.exports = async (req, res) => {
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { memberId, password } = req.body;
-  if (!memberId || !password) return res.status(400).json({ error: 'Member ID and password required.' });
+  const { memberId } = req.body;
+  if (!memberId) return res.status(400).json({ error: 'Member ID required.' });
 
   try {
     const member = await queryOne('SELECT * FROM members WHERE member_id = ?', [memberId.toUpperCase().trim()]);
 
-    if (!member || !bcrypt.compareSync(password, member.password_hash)) {
+    if (!member) {
       await execute('INSERT INTO security_log (event, details) VALUES (?,?)', ['FAILED_MEMBER_LOGIN', JSON.stringify({ memberId })]);
-      return res.status(401).json({ error: 'Invalid Member ID or password.' });
+      return res.status(401).json({ error: 'Member ID not found. Check your welcome email and try again.' });
     }
 
     if (member.flagged) {

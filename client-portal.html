@@ -87,10 +87,9 @@
   <div class="login-wrap">
     <div class="login-card">
       <h1 class="portal-heading">Client Portal</h1>
-      <p class="portal-sub">Sign in with your Member ID and password.</p>
+      <p class="portal-sub">Enter your Member ID to access your account.</p>
       <div class="login-err" id="login-err"></div>
-      <div class="pf"><label>Member ID</label><input type="text" id="login-id" placeholder="ZL-XXXXXX" style="text-transform:uppercase;" /></div>
-      <div class="pf"><label>Password</label><input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" /></div>
+      <div class="pf"><label>Member ID</label><input type="text" id="login-id" placeholder="ZL-XXXXXX" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')doLogin()" /></div>
       <button class="btn-login" onclick="doLogin()">Sign In</button>
       <div style="margin-top:1.25rem;text-align:center;">
         <span style="font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);">Not a member yet?</span>
@@ -245,15 +244,14 @@ function showError(msg) {
 async function doLogin() {
   showError('');
   const id = document.getElementById('login-id').value.trim().toUpperCase();
-  const pass = document.getElementById('login-pass').value;
-  if (!id || !pass) return showError('Member ID and password are required.');
+  if (!id) return showError('Please enter your Member ID.');
   try {
     const res = await fetch('/api/member-login', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ memberId: id, password: pass }),
+      body: JSON.stringify({ memberId: id }),
     });
     const data = await res.json();
-    if (!res.ok) return showError(data.error || 'Login failed.');
+    if (!res.ok) return showError(data.error || 'Member ID not found.');
     authToken = data.token;
     localStorage.setItem('zlux_token', authToken);
     loadDashboard(data.member);
