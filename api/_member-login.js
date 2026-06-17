@@ -34,7 +34,7 @@ module.exports = async (req, res) => {
       return res.status(401).json({ error: 'Member ID not found. Check your welcome email and try again.' });
     }
 
-    if (member.flagged) {
+    if (Number(member.flagged) === 1) {
       return res.status(403).json({ error: 'Your account has been flagged. Contact the studio directly.' });
     }
 

@@ -476,11 +476,11 @@ const TIER_RULES = {
     freeManicures: 2,
     freePedicures: 1,
     freeServiceCount: null,
-    freeAddonNames: ['Soak Off Removal', 'Russian Manicure Technique', 'Scrub Massage'],
-    freeAddonCount: 2,
-    addonDiscountPct: 0,
+    freeAddonNames: [],
+    freeAddonCount: 0,
+    addonDiscountPct: 30,
     hasBirthdayUpgrade: true,
-    reminderText: 'Luxe: Up to 2 manicures + 1 pedicure + 2 complimentary add-ons included this month.',
+    reminderText: 'Luxe: Up to 2 manicures + 1 pedicure included this month. All add-ons at 30% off.',
     priorityText: '✦  Luxe members have priority access — most slots reserved for you.'
   },
   BLACK_CARD: {
@@ -700,21 +700,12 @@ function selectWorker(name, btn) {
 }
 
 function toggleAddon(name, basePrice, checkbox) {
-  // Remove any existing entry for this addon
   booking.selectedAddons = booking.selectedAddons.filter(a => a.name !== name);
   if (checkbox.checked) {
     let chargedPrice = basePrice;
     if (booking.memberTier) {
-      const rules = TIER_RULES[booking.memberTier];
-      // Count how many free addons already claimed
-      const freeUsed = booking.selectedAddons.filter(a => a.charged === 0 && rules.freeAddonNames.includes(a.name)).length;
-      if (rules.freeAddonNames.includes(name) && freeUsed < rules.freeAddonCount) {
-        chargedPrice = 0;
-      } else if (rules.addonDiscountPct === 75) {
-        chargedPrice = Math.ceil(basePrice * 0.25);
-      } else if (rules.addonDiscountPct === 10) {
-        chargedPrice = Math.ceil(basePrice * 0.9);
-      }
+      const pct = TIER_RULES[booking.memberTier].addonDiscountPct || 0;
+      chargedPrice = pct >= 100 ? 0 : Math.ceil(basePrice * (1 - pct / 100));
     }
     booking.selectedAddons.push({ name, basePrice, charged: chargedPrice });
   }
@@ -808,9 +799,9 @@ function loadSummary() {
   booking.selectedAddons.forEach(a => {
     total += a.charged;
     let note = '';
-    if (a.charged === 0) note = 'Complimentary add-on';
-    else if (rules && rules.addonDiscountPct === 75) note = '75% Black Card discount';
-    else if (rules && rules.addonDiscountPct === 10) note = '10% member discount';
+    if (rules && rules.addonDiscountPct > 0) {
+      note = rules.addonDiscountPct + '% ' + rules.label + ' discount';
+    }
     lineItemsEl.innerHTML += buildLine(a.name, a.basePrice, a.charged, note);
   });
 

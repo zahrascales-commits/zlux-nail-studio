@@ -140,7 +140,7 @@ module.exports = async (req, res) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
 
     // Apply server-side addon discount validation based on tier
-    const ADDON_DISCOUNT = { SIGNATURE: 0.10, LUXE: 0.30, BLACK_CARD: 1.0 };
+    const ADDON_DISCOUNT = { SIGNATURE: 0.10, LUXE: 0.30, BLACK_CARD: 0.75 };
     const discountPct = member_tier ? (ADDON_DISCOUNT[member_tier] || 0) : 0;
 
     const addonTotal = addon_charged.reduce((sum, cents) => sum + Number(cents), 0);
