@@ -441,7 +441,8 @@
         <button class="btn-gold" onclick="submitBooking()" style="animation:none;flex:1;text-align:center;">Pay Deposit & Confirm</button>
       </div>
       <div id="booking-success" style="display:none;text-align:center;padding:2rem 0;">
-        <div style="font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--espresso);margin-bottom:0.75rem;">You're Confirmed ✦</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--espresso);margin-bottom:0.5rem;">You're Confirmed ✦</div>
+        <div id="booking-conf-num" style="font-family:'Jost',sans-serif;font-size:0.72rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--champagne);margin-bottom:0.75rem;"></div>
         <p style="font-family:'Jost',sans-serif;font-size:0.88rem;color:var(--latte);line-height:1.8;">A confirmation text and email is on its way. We can't wait to see you.<br>Questions? DM us <strong>@zluxnails</strong> or text us directly.</p>
         <a href="index.html" class="btn-gold" style="margin-top:1.5rem;display:inline-block;animation:none;">Back to Home</a>
       </div>
@@ -864,7 +865,7 @@ function goStep(n) {
   window.scrollTo(0, 0);
 }
 
-function submitBooking() {
+async function submitBooking() {
   if (!document.getElementById('policy-agree').checked) {
     alert('Please agree to the cancellation policy before proceeding.');
     return;
@@ -876,9 +877,50 @@ function submitBooking() {
     alert('Please fill in your name, phone, and email.');
     return;
   }
-  document.getElementById('step-4').querySelector('.step-nav').style.display = 'none';
-  document.getElementById('booking-success').style.display = 'block';
-  document.getElementById('booking-success').scrollIntoView({ behavior: 'smooth' });
+
+  const btn = document.querySelector('#step-4 .btn-gold');
+  if (btn) { btn.disabled = true; btn.textContent = 'Confirming…'; }
+
+  // Build addon list with already-calculated member discounts
+  const addonNames = booking.selectedAddons.map(a => a.name);
+  const addonCharged = booking.selectedAddons.map(a => a.charged);
+
+  try {
+    const res = await fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer_name:  name,
+        customer_email: email,
+        customer_phone: phone,
+        service_name:   booking.service,
+        service_price:  booking.servicePrice,
+        addon_names:    addonNames,
+        addon_charged:  addonCharged,
+        member_id:      document.getElementById('member-id-input').value.trim().toUpperCase() || null,
+        member_tier:    booking.memberTier || null,
+        date:           booking.date,
+        time_slot:      booking.time,
+        worker:         booking.worker || null,
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Pay Deposit & Confirm'; }
+      alert(data.error || 'Booking failed. Please try again.');
+      return;
+    }
+
+    document.getElementById('step-4').querySelector('.step-nav').style.display = 'none';
+    document.getElementById('booking-conf-num').textContent = 'Confirmation: ' + data.confirmation;
+    document.getElementById('booking-success').style.display = 'block';
+    document.getElementById('booking-success').scrollIntoView({ behavior: 'smooth' });
+
+  } catch {
+    if (btn) { btn.disabled = false; btn.textContent = 'Pay Deposit & Confirm'; }
+    alert('Network error. Please try again.');
+  }
 }
 
 window.addEventListener('scroll', () => {

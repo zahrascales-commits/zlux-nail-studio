@@ -67,9 +67,13 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const existing = await queryOne('SELECT id FROM members WHERE email = ?', [email.toLowerCase().trim()]);
+    const existing = await queryOne('SELECT id, stripe_subscription_id FROM members WHERE email = ?', [email.toLowerCase().trim()]);
     if (existing) {
-      return res.status(409).json({ error: 'An account with this email already exists.' });
+      // Cancel old Stripe subscription if still active, then remove old record so they can re-subscribe
+      if (existing.stripe_subscription_id) {
+        try { await stripe.subscriptions.cancel(existing.stripe_subscription_id); } catch (_) {}
+      }
+      await execute('DELETE FROM members WHERE email = ?', [email.toLowerCase().trim()]);
     }
 
     const stripe = Stripe(process.env.STRIPE_SECRET_KEY);

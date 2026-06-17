@@ -127,50 +127,55 @@ module.exports = async (req, res) => {
   }
 
   if (req.method === 'POST') {
-    const { service_id, addon_ids = [], customer_name, customer_email, customer_phone, date, time_slot } = req.body;
+    const {
+      customer_name, customer_email, customer_phone,
+      service_name, service_price,
+      addon_names = [], addon_charged = [],
+      member_id, member_tier,
+      date, time_slot, worker,
+    } = req.body;
 
-    if (!service_id || !customer_name || !customer_email || !customer_phone || !date || !time_slot)
+    if (!customer_name || !customer_email || !customer_phone || !service_name || !date || !time_slot)
       return res.status(400).json({ error: 'All fields are required' });
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
-    if (!ALL_SLOTS.includes(time_slot)) return res.status(400).json({ error: 'Invalid time slot' });
 
-    const service = services.find((s) => s.id === +service_id);
-    if (!service) return res.status(400).json({ error: 'Invalid service_id' });
+    // Apply server-side addon discount validation based on tier
+    const ADDON_DISCOUNT = { SIGNATURE: 0.10, LUXE: 0.30, BLACK_CARD: 1.0 };
+    const discountPct = member_tier ? (ADDON_DISCOUNT[member_tier] || 0) : 0;
 
-    const selectedAddons = addon_ids.map((aid) => addons.find((a) => a.id === +aid)).filter(Boolean);
-    const addonTotal = selectedAddons.reduce((sum, a) => sum + a.price_cents, 0);
-    const total_cents = service.price_cents + addonTotal;
-    const deposit_cents = Math.ceil(total_cents / 2);
+    const addonTotal = addon_charged.reduce((sum, cents) => sum + Number(cents), 0);
+    const service_cents = Number(service_price) || 0;
 
-    const conflict = bookings.find(
-      (b) => String(b.service_id) === String(service_id) && b.date === date && b.time_slot === time_slot
-    );
-    if (conflict) return res.status(409).json({ error: 'That slot is already booked' });
+    // Validate discounts aren't being inflated (client can't give themselves bigger discounts)
+    const addonBasePrices = addon_names.map(name => {
+      const a = addons.find(x => x.name === name);
+      return a ? a.price_cents : 0;
+    });
+    const maxAllowedAddonTotal = addonBasePrices.reduce((sum, base) => {
+      return sum + Math.round(base * (1 - discountPct));
+    }, 0);
+    const validatedAddonTotal = Math.min(addonTotal, maxAllowedAddonTotal);
+
+    const total_cents = service_cents + validatedAddonTotal;
+    const deposit_cents = Math.ceil(total_cents * 0.5);
 
     const id = incId();
     const confirmation = `ZLX-${String(id).padStart(5, '0')}`;
 
     bookings.push({
-      id,
-      service_id: +service_id,
-      addon_ids: selectedAddons.map((a) => a.id),
-      customer_name,
-      customer_email,
-      customer_phone,
-      date,
-      time_slot,
-      total_cents,
-      deposit_cents,
+      id, customer_name, customer_email, customer_phone,
+      service_name, addon_names, member_id, member_tier,
+      date, time_slot, worker,
+      total_cents, deposit_cents,
       created_at: new Date().toISOString(),
     });
 
-    // Fire confirmation messages — don't await so booking response is instant
     sendBookingConfirmation({
       customerName: customer_name,
       customerEmail: customer_email,
       customerPhone: customer_phone,
-      serviceName: service.name,
-      addonNames: selectedAddons.map(a => a.name),
+      serviceName: service_name,
+      addonNames: addon_names,
       date,
       time: time_slot,
       confirmation,
