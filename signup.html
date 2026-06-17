@@ -505,18 +505,6 @@
     if (el) { el.textContent = msg; el.style.display = msg ? 'block' : 'none'; }
   }
 
-  function goToStep(n) {
-    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
-    document.getElementById('step-' + n).classList.add('active');
-    for (let i = 1; i <= 4; i++) {
-      const c = document.getElementById('circ-' + i);
-      c.classList.remove('active','done');
-      if (i < n) c.classList.add('done');
-      else if (i === n) c.classList.add('active');
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
   function goToStep2() {
     showError('err-1', '');
     if (!selectedTier) return showError('err-1', 'Please select a membership tier.');
@@ -614,6 +602,25 @@
         return;
       }
 
+      // Confirm the payment — this is what actually charges the card
+      if (data.clientSecret) {
+        const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(data.clientSecret, {
+          payment_method: paymentMethod.id
+        });
+        if (confirmError) {
+          showError('err-2', confirmError.message);
+          btn.disabled = false;
+          btn.textContent = 'Pay & Join Z Lux →';
+          return;
+        }
+        if (paymentIntent && paymentIntent.status !== 'succeeded') {
+          showError('err-2', 'Payment could not be completed. Please try a different card.');
+          btn.disabled = false;
+          btn.textContent = 'Pay & Join Z Lux →';
+          return;
+        }
+      }
+
       signupData.memberId = data.memberId;
       signupData.nextBilling = data.nextBillingDate;
       signupData.referralCodeGenerated = data.referralCode;
@@ -666,8 +673,6 @@
     alert('Your Member ID has been sent to ' + signupData.email);
   }
 
-  // Override goToStep(4) to populate confirmation
-  const _origGoToStep = goToStep;
   function goToStep(n) {
     if (n === 4 && signupData.memberId) {
       document.getElementById('conf-name').textContent = signupData.fullName;

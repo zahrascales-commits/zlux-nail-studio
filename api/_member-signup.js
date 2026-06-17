@@ -31,7 +31,19 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { fullName, email, phone, dateOfBirth, heardAbout, tier, password, referralCode, stripePaymentMethodId } = req.body;
+  const { fullName, email, phone, dateOfBirth, heardAbout, tier, password, referralCode, stripePaymentMethodId, action } = req.body;
+
+  // Re-send member ID via SMS
+  if (action === 'resend_sms') {
+    const { memberId, phone: smsPhone } = req.body;
+    try {
+      const member = await queryOne('SELECT full_name, tier FROM members WHERE member_id = ?', [(memberId || '').toUpperCase()]);
+      if (member && smsPhone) {
+        await sendWelcome({ fullName: member.full_name, email: '', phone: smsPhone, memberId, tier: member.tier });
+      }
+    } catch (_) {}
+    return res.status(200).json({ success: true });
+  }
 
   if (!fullName || !email || !tier || !password) {
     return res.status(400).json({ error: 'Missing required fields.' });
@@ -73,7 +85,9 @@ module.exports = async (req, res) => {
     const qrSecret = generateQrSecret();
 
     const now = new Date().toISOString();
-    const nextBilling = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const nextBilling = subscription.current_period_end
+      ? new Date(subscription.current_period_end * 1000).toISOString()
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     const referredByCode = referralCode || null;
 
     await execute(`
