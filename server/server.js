@@ -21,5 +21,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`ZLUX Nail Studio server running at http://localhost:${PORT}`);
+  console.log(`ZOLA Nail Studio server running at http://localhost:${PORT}`);
 });

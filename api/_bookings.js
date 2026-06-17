@@ -57,38 +57,38 @@ async function sendBookingConfirmation({ customerName, customerEmail, customerPh
       await sgMail.send({
         to: customerEmail,
         from: 'studio@zluxnails.com',
-        subject: `Your Z Lux appointment is confirmed — ${formattedDate}`,
+        subject: `Your Zola appointment is confirmed — ${formattedDate}`,
         html: `
-          <div style="font-family:Georgia,serif;max-width:540px;margin:0 auto;color:#2C1A0E;background:#FDFAF7;">
-            <div style="background:#2C1A0E;padding:2.5rem 2rem;text-align:center;">
-              <h1 style="color:#C9A55A;font-size:2.25rem;margin:0;letter-spacing:0.12em;font-weight:400;">ZLUX</h1>
-              <p style="color:#A67C52;font-size:0.75rem;letter-spacing:0.2em;text-transform:uppercase;margin:0.5rem 0 0;">Nail Studio · Porterville, CA</p>
+          <div style="font-family:Georgia,serif;max-width:540px;margin:0 auto;color:#0D0D0D;background:#FAFAF8;">
+            <div style="background:#0D0D0D;padding:2.5rem 2rem;text-align:center;">
+              <h1 style="color:#C4A882;font-size:2.25rem;margin:0;letter-spacing:0.08em;font-weight:400;">ZOLA</h1>
+              <p style="color:#8B6A3E;font-size:0.75rem;letter-spacing:0.2em;text-transform:uppercase;margin:0.5rem 0 0;">Nail Studio · Porterville, CA</p>
             </div>
             <div style="padding:2.5rem 2rem;">
-              <p style="font-size:1.15rem;font-style:italic;color:#A67C52;margin:0 0 0.5rem;">${greeting}</p>
+              <p style="font-size:1.15rem;font-style:italic;color:#8B6A3E;margin:0 0 0.5rem;">${greeting}</p>
               <p>Hi ${firstName}, you're all set. Here are your appointment details:</p>
 
-              <div style="background:#F5EFE6;border-left:3px solid #C9A55A;padding:1.5rem;margin:1.5rem 0;">
+              <div style="background:#F5EEE8;border-left:3px solid #C4A882;padding:1.5rem;margin:1.5rem 0;">
                 <table style="width:100%;border-collapse:collapse;font-size:0.92rem;">
-                  <tr><td style="padding:0.4rem 0;color:#A67C52;width:40%;">Confirmation</td><td style="font-weight:bold;">${confirmation}</td></tr>
-                  <tr><td style="padding:0.4rem 0;color:#A67C52;">Service</td><td>${serviceName}${addonsLine ? `<br><span style="color:#A67C52;font-size:0.85rem;">+ ${addonsLine}</span>` : ''}</td></tr>
-                  <tr><td style="padding:0.4rem 0;color:#A67C52;">Date</td><td>${formattedDate}</td></tr>
-                  <tr><td style="padding:0.4rem 0;color:#A67C52;">Time</td><td>${formattedTime}</td></tr>
-                  <tr><td style="padding:0.4rem 0;color:#A67C52;">Total</td><td>${total}</td></tr>
-                  <tr><td style="padding:0.4rem 0;color:#A67C52;">Deposit Due</td><td style="color:#2C1A0E;font-weight:bold;">${deposit}</td></tr>
+                  <tr><td style="padding:0.4rem 0;color:#8B6A3E;width:40%;">Confirmation</td><td style="font-weight:bold;">${confirmation}</td></tr>
+                  <tr><td style="padding:0.4rem 0;color:#8B6A3E;">Service</td><td>${serviceName}${addonsLine ? `<br><span style="color:#8B6A3E;font-size:0.85rem;">+ ${addonsLine}</span>` : ''}</td></tr>
+                  <tr><td style="padding:0.4rem 0;color:#8B6A3E;">Date</td><td>${formattedDate}</td></tr>
+                  <tr><td style="padding:0.4rem 0;color:#8B6A3E;">Time</td><td>${formattedTime}</td></tr>
+                  <tr><td style="padding:0.4rem 0;color:#8B6A3E;">Total</td><td>${total}</td></tr>
+                  <tr><td style="padding:0.4rem 0;color:#8B6A3E;">Deposit Due</td><td style="color:#0D0D0D;font-weight:bold;">${deposit}</td></tr>
                 </table>
               </div>
 
-              <div style="margin:2rem 0;padding:1.25rem 1.5rem;border:1px solid rgba(201,165,90,0.25);">
-                <p style="font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;color:#A67C52;margin:0 0 0.75rem;">Before You Come In</p>
+              <div style="margin:2rem 0;padding:1.25rem 1.5rem;border:1px solid rgba(196,168,130,0.25);">
+                <p style="font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;color:#8B6A3E;margin:0 0 0.75rem;">Before You Come In</p>
                 <p style="margin:0;line-height:1.7;font-size:0.9rem;">💅 ${fact}</p>
               </div>
 
-              <p style="font-size:0.88rem;line-height:1.7;color:#5a3e2b;">Need to reschedule or have questions? Reply to this email or call us directly. We're flexible — just give us at least 24 hours' notice so we can fill your spot.</p>
+              <p style="font-size:0.88rem;line-height:1.7;color:#3a2a1a;">Need to reschedule or have questions? Reply to this email or call us directly. We're flexible — just give us at least 24 hours' notice so we can fill your spot.</p>
 
-              <p style="color:#A67C52;font-size:0.82rem;border-top:1px solid rgba(201,165,90,0.2);padding-top:1.25rem;margin-top:2rem;">
-                Z Lux Nail Studio &middot; Porterville, CA<br>
-                <a href="https://zlux-github.vercel.app" style="color:#C9A55A;">zlux-github.vercel.app</a>
+              <p style="color:#8B6A3E;font-size:0.82rem;border-top:1px solid rgba(196,168,130,0.2);padding-top:1.25rem;margin-top:2rem;">
+                Zola Nail Studio &middot; Porterville, CA<br>
+                <a href="https://zlux-github.vercel.app" style="color:#C4A882;">zlux-github.vercel.app</a>
               </p>
             </div>
           </div>
@@ -102,7 +102,7 @@ async function sendBookingConfirmation({ customerName, customerEmail, customerPh
     try {
       const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
       await twilio.messages.create({
-        body: `Z Lux confirmed! ✨ Hi ${firstName}, your ${serviceName} is booked for ${formattedDate} at ${formattedTime}. Confirmation: ${confirmation}. Deposit: ${deposit}. See you soon! — Z Lux Studio`,
+        body: `Zola confirmed! ✨ Hi ${firstName}, your ${serviceName} is booked for ${formattedDate} at ${formattedTime}. Confirmation: ${confirmation}. Deposit: ${deposit}. See you soon! — Zola Studio`,
         from: process.env.TWILIO_PHONE_NUMBER,
         to: e164,
       });
@@ -160,7 +160,7 @@ module.exports = async (req, res) => {
     const deposit_cents = Math.ceil(total_cents * 0.5);
 
     const id = incId();
-    const confirmation = `ZLX-${String(id).padStart(5, '0')}`;
+    const confirmation = `ZOLA-${String(id).padStart(5, '0')}`;
 
     bookings.push({
       id, customer_name, customer_email, customer_phone,

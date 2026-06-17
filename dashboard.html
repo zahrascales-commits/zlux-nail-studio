@@ -3,80 +3,80 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Dashboard — ZLUX Nail Studio</title>
+  <title>Admin Dashboard — ZOLA Nail Studio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css" />
   <style>
     body { background:var(--soft-white); }
     .login-wrap { max-width:400px; margin:0 auto; padding:7rem 1.5rem 3rem; }
-    .login-card { background:#fff; border:1px solid rgba(201,165,90,0.18); padding:2.5rem 2rem; }
-    .ph { font-family:'Cormorant Garamond',serif; font-size:2rem; color:var(--espresso); margin-bottom:0.25rem; font-weight:400; }
-    .ps { font-family:'Jost',sans-serif; font-size:0.84rem; color:var(--latte); margin-bottom:1.75rem; }
-    .pf label { display:block; font-family:'Jost',sans-serif; font-size:0.65rem; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--latte); margin-bottom:0.35rem; }
-    .pf input { width:100%; border:1px solid rgba(201,165,90,0.22); background:var(--soft-white); font-family:'Jost',sans-serif; font-size:0.88rem; color:var(--espresso); padding:0.6rem 0.875rem; outline:none; box-sizing:border-box; margin-bottom:1.1rem; }
+    .login-card { background:#fff; border:1px solid rgba(196,168,130,0.18); padding:2.5rem 2rem; }
+    .ph { font-family:'Syne',serif; font-size:2rem; color:var(--espresso); margin-bottom:0.25rem; font-weight:400; }
+    .ps { font-family:'Josefin Sans',sans-serif; font-size:0.84rem; color:var(--latte); margin-bottom:1.75rem; }
+    .pf label { display:block; font-family:'Josefin Sans',sans-serif; font-size:0.65rem; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--latte); margin-bottom:0.35rem; }
+    .pf input { width:100%; border:1px solid rgba(196,168,130,0.22); background:var(--soft-white); font-family:'Josefin Sans',sans-serif; font-size:0.88rem; color:var(--espresso); padding:0.6rem 0.875rem; outline:none; box-sizing:border-box; margin-bottom:1.1rem; }
     .pf input:focus { border-color:var(--champagne); }
-    .btn-l { width:100%; background:var(--champagne); color:var(--espresso); border:none; padding:0.85rem; font-family:'Jost',sans-serif; font-size:0.75rem; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; cursor:pointer; }
+    .btn-l { width:100%; background:var(--champagne); color:var(--espresso); border:none; padding:0.85rem; font-family:'Josefin Sans',sans-serif; font-size:0.75rem; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; cursor:pointer; }
     .btn-l:hover { background:#b8924a; }
-    .lerr { background:rgba(180,50,50,0.07); border:1px solid rgba(180,50,50,0.2); color:#b43232; font-family:'Jost',sans-serif; font-size:0.8rem; padding:0.6rem 0.875rem; margin-bottom:1rem; display:none; }
+    .lerr { background:rgba(180,50,50,0.07); border:1px solid rgba(180,50,50,0.2); color:#b43232; font-family:'Josefin Sans',sans-serif; font-size:0.8rem; padding:0.6rem 0.875rem; margin-bottom:1rem; display:none; }
     #admin-portal { display:none; }
     .a-nav { background:var(--espresso); padding:0.75rem 0; position:sticky; top:0; z-index:50; }
     .a-nav-inner { max-width:1200px; margin:0 auto; padding:0 1.5rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
-    .a-nav-logo { font-family:'Cormorant Garamond',serif; font-size:1.2rem; color:var(--champagne); text-decoration:none; }
+    .a-nav-logo { font-family:'Syne',serif; font-size:1.2rem; color:var(--champagne); text-decoration:none; }
     .a-nav-links { display:flex; gap:1rem; flex-wrap:wrap; }
-    .a-nav-links button { background:none; border:none; font-family:'Jost',sans-serif; font-size:0.68rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--latte); cursor:pointer; padding:0.2rem 0; }
+    .a-nav-links button { background:none; border:none; font-family:'Josefin Sans',sans-serif; font-size:0.68rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--latte); cursor:pointer; padding:0.2rem 0; }
     .a-nav-links button.active { color:var(--champagne); }
     .a-content { max-width:1200px; margin:0 auto; padding:2rem 1.5rem 4rem; }
     .a-tab { display:none; }
     .a-tab.active { display:block; }
-    .a-card { background:#fff; border:1px solid rgba(201,165,90,0.15); padding:1.5rem; margin-bottom:1rem; }
-    .a-card-title { font-family:'Jost',sans-serif; font-size:0.62rem; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--latte); margin-bottom:1rem; }
+    .a-card { background:#fff; border:1px solid rgba(196,168,130,0.15); padding:1.5rem; margin-bottom:1rem; }
+    .a-card-title { font-family:'Josefin Sans',sans-serif; font-size:0.62rem; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--latte); margin-bottom:1rem; }
     .stat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:1rem; margin-bottom:1.5rem; }
-    .stat-box { background:var(--soft-white); border:1px solid rgba(201,165,90,0.12); padding:1.25rem; text-align:center; }
-    .stat-num { font-family:'Cormorant Garamond',serif; font-size:2.5rem; color:var(--champagne); line-height:1; }
-    .stat-label { font-family:'Jost',sans-serif; font-size:0.62rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--latte); margin-top:0.25rem; }
+    .stat-box { background:var(--soft-white); border:1px solid rgba(196,168,130,0.12); padding:1.25rem; text-align:center; }
+    .stat-num { font-family:'Syne',serif; font-size:2.5rem; color:var(--champagne); line-height:1; }
+    .stat-label { font-family:'Josefin Sans',sans-serif; font-size:0.62rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--latte); margin-top:0.25rem; }
     .stat-box.alert { border-color:rgba(180,50,50,0.3); }
     .stat-box.alert .stat-num { color:#b43232; }
-    .member-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem; padding:0.875rem 0; border-bottom:1px solid rgba(201,165,90,0.08); }
+    .member-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem; padding:0.875rem 0; border-bottom:1px solid rgba(196,168,130,0.08); }
     .member-row:last-child { border-bottom:none; }
-    .m-name { font-family:'Jost',sans-serif; font-size:0.88rem; font-weight:600; color:var(--espresso); }
-    .m-sub { font-family:'Jost',sans-serif; font-size:0.75rem; color:var(--latte); }
-    .tier-pill { display:inline-block; font-family:'Jost',sans-serif; font-size:0.58rem; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; padding:0.15rem 0.5rem; }
-    .tier-pill.SIGNATURE { background:rgba(166,124,82,0.12); color:var(--latte); }
-    .tier-pill.LUXE { background:rgba(201,165,90,0.12); color:var(--champagne); }
+    .m-name { font-family:'Josefin Sans',sans-serif; font-size:0.88rem; font-weight:600; color:var(--espresso); }
+    .m-sub { font-family:'Josefin Sans',sans-serif; font-size:0.75rem; color:var(--latte); }
+    .tier-pill { display:inline-block; font-family:'Josefin Sans',sans-serif; font-size:0.58rem; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; padding:0.15rem 0.5rem; }
+    .tier-pill.SIGNATURE { background:rgba(139,106,62,0.12); color:var(--latte); }
+    .tier-pill.LUXE { background:rgba(196,168,130,0.12); color:var(--champagne); }
     .tier-pill.BLACK_CARD { background:var(--espresso); color:var(--champagne); }
     .tier-pill.flagged { background:rgba(180,50,50,0.12); color:#b43232; }
-    .action-btn { background:none; border:1px solid rgba(201,165,90,0.22); padding:0.3rem 0.6rem; font-family:'Jost',sans-serif; font-size:0.65rem; cursor:pointer; color:var(--espresso); margin-right:0.35rem; }
+    .action-btn { background:none; border:1px solid rgba(196,168,130,0.22); padding:0.3rem 0.6rem; font-family:'Josefin Sans',sans-serif; font-size:0.65rem; cursor:pointer; color:var(--espresso); margin-right:0.35rem; }
     .action-btn:hover { border-color:var(--champagne); }
     .action-btn.danger { border-color:rgba(180,50,50,0.3); color:#b43232; }
     .action-btn.danger:hover { background:rgba(180,50,50,0.08); }
-    .appt-row-a { padding:0.875rem 0; border-bottom:1px solid rgba(201,165,90,0.08); }
+    .appt-row-a { padding:0.875rem 0; border-bottom:1px solid rgba(196,168,130,0.08); }
     .appt-row-a:last-child { border-bottom:none; }
     .search-bar { display:flex; gap:0.5rem; margin-bottom:1rem; }
-    .search-bar input, .search-bar select { border:1px solid rgba(201,165,90,0.22); padding:0.6rem 0.875rem; font-family:'Jost',sans-serif; font-size:0.85rem; outline:none; background:var(--soft-white); color:var(--espresso); }
+    .search-bar input, .search-bar select { border:1px solid rgba(196,168,130,0.22); padding:0.6rem 0.875rem; font-family:'Josefin Sans',sans-serif; font-size:0.85rem; outline:none; background:var(--soft-white); color:var(--espresso); }
     .search-bar input { flex:1; }
-    .search-bar button { background:var(--champagne); border:none; color:var(--espresso); padding:0.6rem 1rem; font-family:'Jost',sans-serif; font-size:0.72rem; font-weight:700; cursor:pointer; }
+    .search-bar button { background:var(--champagne); border:none; color:var(--espresso); padding:0.6rem 1rem; font-family:'Josefin Sans',sans-serif; font-size:0.72rem; font-weight:700; cursor:pointer; }
     .week-bar { display:grid; grid-template-columns:repeat(7,1fr); gap:0.5rem; margin-bottom:1.5rem; }
-    .week-bar-item { text-align:center; padding:0.75rem 0.25rem; background:var(--soft-white); border:1px solid rgba(201,165,90,0.12); }
+    .week-bar-item { text-align:center; padding:0.75rem 0.25rem; background:var(--soft-white); border:1px solid rgba(196,168,130,0.12); }
     .week-bar-item.today { border-color:var(--champagne); }
-    .inv-row { display:flex; align-items:center; justify-content:space-between; padding:0.75rem 0; border-bottom:1px solid rgba(201,165,90,0.08); gap:0.75rem; }
-    .inv-name { font-family:'Jost',sans-serif; font-size:0.88rem; color:var(--espresso); }
-    .inv-qty { font-family:'Cormorant Garamond',serif; font-size:1.3rem; }
+    .inv-row { display:flex; align-items:center; justify-content:space-between; padding:0.75rem 0; border-bottom:1px solid rgba(196,168,130,0.08); gap:0.75rem; }
+    .inv-name { font-family:'Josefin Sans',sans-serif; font-size:0.88rem; color:var(--espresso); }
+    .inv-qty { font-family:'Syne',serif; font-size:1.3rem; }
     .inv-qty.low { color:#b43232; }
     .inv-qty.ok { color:var(--champagne); }
     .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:200; align-items:center; justify-content:center; }
     .modal.open { display:flex; }
-    .modal-box { background:#fff; border:1px solid rgba(201,165,90,0.2); padding:2rem; width:100%; max-width:480px; margin:1rem; max-height:90vh; overflow-y:auto; }
-    .modal-title { font-family:'Cormorant Garamond',serif; font-size:1.5rem; color:var(--espresso); margin-bottom:1rem; }
+    .modal-box { background:#fff; border:1px solid rgba(196,168,130,0.2); padding:2rem; width:100%; max-width:480px; margin:1rem; max-height:90vh; overflow-y:auto; }
+    .modal-title { font-family:'Syne',serif; font-size:1.5rem; color:var(--espresso); margin-bottom:1rem; }
     .modal-pf { margin-bottom:0.875rem; }
-    .modal-pf label { display:block; font-family:'Jost',sans-serif; font-size:0.62rem; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--latte); margin-bottom:0.3rem; }
-    .modal-pf input, .modal-pf select, .modal-pf textarea { width:100%; border:1px solid rgba(201,165,90,0.22); padding:0.55rem 0.75rem; font-family:'Jost',sans-serif; font-size:0.85rem; color:var(--espresso); outline:none; box-sizing:border-box; background:var(--soft-white); }
+    .modal-pf label { display:block; font-family:'Josefin Sans',sans-serif; font-size:0.62rem; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--latte); margin-bottom:0.3rem; }
+    .modal-pf input, .modal-pf select, .modal-pf textarea { width:100%; border:1px solid rgba(196,168,130,0.22); padding:0.55rem 0.75rem; font-family:'Josefin Sans',sans-serif; font-size:0.85rem; color:var(--espresso); outline:none; box-sizing:border-box; background:var(--soft-white); }
     .modal-pf textarea { min-height:100px; resize:vertical; }
     .modal-actions { display:flex; gap:0.5rem; margin-top:1.25rem; }
-    .modal-btn { flex:1; padding:0.7rem; font-family:'Jost',sans-serif; font-size:0.72rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; cursor:pointer; border:none; }
+    .modal-btn { flex:1; padding:0.7rem; font-family:'Josefin Sans',sans-serif; font-size:0.72rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; cursor:pointer; border:none; }
     .modal-btn.primary { background:var(--champagne); color:var(--espresso); }
-    .modal-btn.secondary { background:var(--soft-white); color:var(--latte); border:1px solid rgba(201,165,90,0.22); }
-    .announce-row { padding:0.875rem 0; border-bottom:1px solid rgba(201,165,90,0.08); }
+    .modal-btn.secondary { background:var(--soft-white); color:var(--latte); border:1px solid rgba(196,168,130,0.22); }
+    .announce-row { padding:0.875rem 0; border-bottom:1px solid rgba(196,168,130,0.08); }
     @media (max-width:600px) { .stat-grid { grid-template-columns:1fr 1fr; } .week-bar { grid-template-columns:repeat(4,1fr); } }
   </style>
 </head>
@@ -84,7 +84,7 @@
 
 <div id="admin-login">
   <nav class="nav" id="nav">
-    <a href="index.html" class="nav-logo">ZLUX</a>
+    <a href="index.html" class="nav-logo"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span></a>
     <div class="nav-links"><a href="index.html">Home</a><a href="dashboard.html" style="color:var(--champagne)">Admin</a></div>
     <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
   </nav>
@@ -92,7 +92,7 @@
   <div class="login-wrap">
     <div class="login-card">
       <h1 class="ph">Admin Portal</h1>
-      <p class="ps">Z Lux studio management. Authorized access only.</p>
+      <p class="ps">Zola studio management. Authorized access only.</p>
       <div class="lerr" id="lerr"></div>
       <div class="pf"><label>Email</label><input type="email" id="a-email" placeholder="zahrascales@gmail.com" /></div>
       <div class="pf"><label>Password</label><input type="password" id="a-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAdminLogin()" /></div>
@@ -104,7 +104,7 @@
 <div id="admin-portal">
   <nav class="a-nav">
     <div class="a-nav-inner">
-      <a href="index.html" class="a-nav-logo">ZLUX Admin</a>
+      <a href="index.html" class="a-nav-logo">ZOLA Admin</a>
       <div class="a-nav-links">
         <button onclick="showATab('a-overview')" class="active" id="an-overview">Overview</button>
         <button onclick="showATab('a-members');loadMembers()" id="an-members">Members</button>
@@ -113,7 +113,7 @@
         <button onclick="showATab('a-inventory');loadInventory()" id="an-inventory">Inventory</button>
         <button onclick="showATab('a-waitlist');loadWaitlist()" id="an-waitlist">Waitlist</button>
         <button onclick="showATab('a-security')" id="an-security">Security</button>
-        <button onclick="adminLogout()" style="color:rgba(166,124,82,0.4);">Sign Out</button>
+        <button onclick="adminLogout()" style="color:rgba(139,106,62,0.4);">Sign Out</button>
       </div>
     </div>
   </nav>
@@ -122,7 +122,7 @@
 
     <!-- OVERVIEW -->
     <div class="a-tab active" id="a-overview">
-      <h2 style="font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--espresso);margin-bottom:1.5rem;">Studio Overview</h2>
+      <h2 style="font-family:'Syne',serif;font-size:2rem;color:var(--espresso);margin-bottom:1.5rem;">Studio Overview</h2>
       <div class="stat-grid" id="stat-grid">
         <div class="stat-box"><div class="stat-num" id="stat-mrr">—</div><div class="stat-label">MRR</div></div>
         <div class="stat-box"><div class="stat-num" id="stat-total-members">—</div><div class="stat-label">Total Members</div></div>
@@ -155,7 +155,7 @@
 
     <!-- MEMBERS -->
     <div class="a-tab" id="a-members">
-      <h2 style="font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--espresso);margin-bottom:1.25rem;">Members</h2>
+      <h2 style="font-family:'Syne',serif;font-size:2rem;color:var(--espresso);margin-bottom:1.25rem;">Members</h2>
       <div class="search-bar">
         <input type="text" id="member-search" placeholder="Search name, email, or Member ID…" onkeydown="if(event.key==='Enter')loadMembers()" />
         <select id="member-tier-filter">
@@ -171,20 +171,20 @@
 
     <!-- SCHEDULE -->
     <div class="a-tab" id="a-schedule">
-      <h2 style="font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--espresso);margin-bottom:1.25rem;">Schedule</h2>
+      <h2 style="font-family:'Syne',serif;font-size:2rem;color:var(--espresso);margin-bottom:1.25rem;">Schedule</h2>
       <div class="a-card">
         <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap;">
-          <input type="date" id="sched-date" style="border:1px solid rgba(201,165,90,0.22);padding:0.5rem;font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--espresso);background:var(--soft-white);" />
-          <button onclick="loadSchedule()" style="background:var(--champagne);border:none;color:var(--espresso);padding:0.5rem 1rem;font-family:'Jost',sans-serif;font-size:0.72rem;font-weight:700;cursor:pointer;">Load</button>
-          <button onclick="openBlockModal()" style="background:none;border:1px solid rgba(201,165,90,0.3);padding:0.5rem 1rem;font-family:'Jost',sans-serif;font-size:0.72rem;cursor:pointer;color:var(--espresso);">Block Time Slot</button>
+          <input type="date" id="sched-date" style="border:1px solid rgba(196,168,130,0.22);padding:0.5rem;font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--espresso);background:var(--soft-white);" />
+          <button onclick="loadSchedule()" style="background:var(--champagne);border:none;color:var(--espresso);padding:0.5rem 1rem;font-family:'Josefin Sans',sans-serif;font-size:0.72rem;font-weight:700;cursor:pointer;">Load</button>
+          <button onclick="openBlockModal()" style="background:none;border:1px solid rgba(196,168,130,0.3);padding:0.5rem 1rem;font-family:'Josefin Sans',sans-serif;font-size:0.72rem;cursor:pointer;color:var(--espresso);">Block Time Slot</button>
         </div>
-        <div id="schedule-list"><div style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--latte);">Select a date to view the schedule.</div></div>
+        <div id="schedule-list"><div style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);">Select a date to view the schedule.</div></div>
       </div>
     </div>
 
     <!-- MESSAGES -->
     <div class="a-tab" id="a-messages">
-      <h2 style="font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--espresso);margin-bottom:1.25rem;">Messages</h2>
+      <h2 style="font-family:'Syne',serif;font-size:2rem;color:var(--espresso);margin-bottom:1.25rem;">Messages</h2>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
         <div class="a-card">
           <div class="a-card-title">Inbox</div>
@@ -198,14 +198,14 @@
           <div class="modal-pf"><label>Subject</label><input id="announce-subject" placeholder="Subject line…" /></div>
           <div class="modal-pf"><label>Message</label><textarea id="announce-body" placeholder="Studio announcement text…"></textarea></div>
           <button class="btn-l" style="margin-top:0.5rem;" onclick="sendAnnouncement()">Send Announcement</button>
-          <div id="announce-sent" style="display:none;font-family:'Jost',sans-serif;font-size:0.8rem;color:#3c8c50;margin-top:0.5rem;">Announcement sent.</div>
+          <div id="announce-sent" style="display:none;font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:#3c8c50;margin-top:0.5rem;">Announcement sent.</div>
         </div>
       </div>
     </div>
 
     <!-- INVENTORY -->
     <div class="a-tab" id="a-inventory">
-      <h2 style="font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--espresso);margin-bottom:1.25rem;">Inventory</h2>
+      <h2 style="font-family:'Syne',serif;font-size:2rem;color:var(--espresso);margin-bottom:1.25rem;">Inventory</h2>
       <div style="display:flex;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap;">
         <button class="action-btn" onclick="openAddInventory()">+ Add Product</button>
       </div>
@@ -214,15 +214,15 @@
 
     <!-- WAITLIST -->
     <div class="a-tab" id="a-waitlist">
-      <h2 style="font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--espresso);margin-bottom:1.25rem;">Waitlist</h2>
+      <h2 style="font-family:'Syne',serif;font-size:2rem;color:var(--espresso);margin-bottom:1.25rem;">Waitlist</h2>
       <div class="a-card" id="waitlist-list"></div>
     </div>
 
     <!-- SECURITY -->
     <div class="a-tab" id="a-security">
-      <h2 style="font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--espresso);margin-bottom:1.25rem;">Security Log</h2>
+      <h2 style="font-family:'Syne',serif;font-size:2rem;color:var(--espresso);margin-bottom:1.25rem;">Security Log</h2>
       <div class="a-card">
-        <div id="security-info" style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--latte);">Failed login attempts in last 24h: <strong id="failed-logins">—</strong></div>
+        <div id="security-info" style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);">Failed login attempts in last 24h: <strong id="failed-logins">—</strong></div>
       </div>
     </div>
 
@@ -335,9 +335,9 @@ async function loadOverview() {
     const today=new Date().toISOString().slice(0,10);
     document.getElementById('upcoming-week').innerHTML=d.upcoming.map(u=>`
       <div class="week-bar-item ${u.date===today?'today':''}">
-        <div style="font-family:'Jost',sans-serif;font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--latte);">${new Date(u.date+'T00:00:00').toLocaleDateString('en-US',{weekday:'short'})}</div>
-        <div style="font-family:'Cormorant Garamond',serif;font-size:1.75rem;color:var(--champagne);">${u.count}</div>
-        <div style="font-family:'Jost',sans-serif;font-size:0.62rem;color:var(--latte);">${new Date(u.date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
+        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--latte);">${new Date(u.date+'T00:00:00').toLocaleDateString('en-US',{weekday:'short'})}</div>
+        <div style="font-family:'Syne',serif;font-size:1.75rem;color:var(--champagne);">${u.count}</div>
+        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.62rem;color:var(--latte);">${new Date(u.date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
       </div>`).join('');
 
     document.getElementById('recent-signups').innerHTML=d.recentMembers.map(m=>`
@@ -373,7 +373,7 @@ async function loadMembers() {
             ${m.flagged?'<span class="tier-pill flagged">FLAGGED</span>':''}
           </div>
           <div class="m-sub">${m.member_id} &middot; ${m.email}</div>
-          ${m.allergies?`<div style="font-family:'Jost',sans-serif;font-size:0.72rem;color:#b43232;margin-top:0.2rem;">Allergies: ${m.allergies}</div>`:''}
+          ${m.allergies?`<div style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:#b43232;margin-top:0.2rem;">Allergies: ${m.allergies}</div>`:''}
         </div>
         <span class="tier-pill ${m.tier}">${m.tier.replace('_',' ')}</span>
         <div>
@@ -390,8 +390,8 @@ async function loadMembers() {
 function openMemberModal(member) {
   document.getElementById('modal-member-name').textContent=member.full_name;
   document.getElementById('modal-member-content').innerHTML=`
-    <div style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--latte);line-height:2.1;">
-      <div><strong>Member ID:</strong> <span style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:var(--champagne);">${member.member_id}</span></div>
+    <div style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--latte);line-height:2.1;">
+      <div><strong>Member ID:</strong> <span style="font-family:'Syne',serif;font-size:1.1rem;color:var(--champagne);">${member.member_id}</span></div>
       <div><strong>Email:</strong> ${member.email}</div>
       <div><strong>Phone:</strong> ${member.phone||'—'}</div>
       <div><strong>Tier:</strong> <span class="tier-pill ${member.tier}">${member.tier.replace('_',' ')}</span></div>
@@ -440,9 +440,9 @@ async function loadSchedule() {
       <div class="appt-row-a">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;">
           <div>
-            <div style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--espresso);">${a.appointment_time} &mdash; ${a.client_name||a.guest_name||'Guest'}</div>
-            <div style="font-family:'Jost',sans-serif;font-size:0.8rem;color:var(--latte);">${a.service} &middot; Artist: ${a.staff_name||'Unassigned'} &middot; <span class="tier-pill ${a.tier||''}">${a.tier?.replace('_',' ')||''}</span></div>
-            ${a.allergies?`<div style="font-family:'Jost',sans-serif;font-size:0.75rem;color:#b43232;">Allergies: ${a.allergies}</div>`:''}
+            <div style="font-family:'Syne',serif;font-size:1.2rem;color:var(--espresso);">${a.appointment_time} &mdash; ${a.client_name||a.guest_name||'Guest'}</div>
+            <div style="font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:var(--latte);">${a.service} &middot; Artist: ${a.staff_name||'Unassigned'} &middot; <span class="tier-pill ${a.tier||''}">${a.tier?.replace('_',' ')||''}</span></div>
+            ${a.allergies?`<div style="font-family:'Josefin Sans',sans-serif;font-size:0.75rem;color:#b43232;">Allergies: ${a.allergies}</div>`:''}
           </div>
           <div>
             <button class="action-btn" onclick="completeAppt(${a.id})">Complete</button>
@@ -482,10 +482,10 @@ async function loadMessages() {
     el.innerHTML=d.messages.map(m=>`
       <div class="announce-row">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
-          <div style="font-family:'Jost',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--latte);">From: ${m.from_role} ${m.from_id}</div>
-          <div style="font-family:'Jost',sans-serif;font-size:0.65rem;color:rgba(166,124,82,0.5);">${new Date(m.created_at).toLocaleString()}</div>
+          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--latte);">From: ${m.from_role} ${m.from_id}</div>
+          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.65rem;color:rgba(139,106,62,0.5);">${new Date(m.created_at).toLocaleString()}</div>
         </div>
-        <div style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--espresso);">${m.body}</div>
+        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--espresso);">${m.body}</div>
       </div>`).join('');
   } catch (_) {}
 }
@@ -515,7 +515,7 @@ async function loadInventory() {
       <div class="inv-row">
         <div>
           <div class="inv-name">${i.product_name} <span style="font-size:0.72rem;color:var(--latte);">${i.category||''}</span></div>
-          <div style="font-family:'Jost',sans-serif;font-size:0.72rem;color:var(--latte);">Alert at ${i.low_stock_threshold} ${i.unit}</div>
+          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:var(--latte);">Alert at ${i.low_stock_threshold} ${i.unit}</div>
         </div>
         <div style="display:flex;align-items:center;gap:0.75rem;">
           <span class="inv-qty ${i.quantity<=i.low_stock_threshold?'low':'ok'}">${i.quantity} ${i.unit}</span>

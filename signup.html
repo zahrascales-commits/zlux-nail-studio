@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Join Z Lux — Membership Sign-Up</title>
+  <title>Join Zola — Membership Sign-Up</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
   <script src="https://js.stripe.com/v3/"></script>
   <link rel="stylesheet" href="css/styles.css" />
   <style>
@@ -28,7 +28,7 @@
       left:10%;
       right:10%;
       height:1px;
-      background:rgba(201,165,90,0.18);
+      background:rgba(196,168,130,0.18);
     }
     .step-dot {
       display: flex;
@@ -42,12 +42,12 @@
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      border: 1px solid rgba(201,165,90,0.25);
+      border: 1px solid rgba(196,168,130,0.25);
       background: var(--soft-white);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: 'Cormorant Garamond', serif;
+      font-family: 'Syne', serif;
       font-size: 1rem;
       color: var(--latte);
       transition: all 0.3s;
@@ -64,7 +64,7 @@
       border-color: var(--espresso);
     }
     .step-label {
-      font-family: 'Jost', sans-serif;
+      font-family: 'Josefin Sans', sans-serif;
       font-size: 0.6rem;
       font-weight: 600;
       letter-spacing: 0.12em;
@@ -75,18 +75,18 @@
     .step-panel.active { display: block; }
     .signup-card {
       background: #fff;
-      border: 1px solid rgba(201,165,90,0.15);
+      border: 1px solid rgba(196,168,130,0.15);
       padding: 2.5rem 2rem;
     }
     .signup-heading {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: 'Syne', serif;
       font-size: 1.9rem;
       color: var(--espresso);
       margin-bottom: 0.25rem;
       font-weight: 400;
     }
     .signup-sub {
-      font-family: 'Jost', sans-serif;
+      font-family: 'Josefin Sans', sans-serif;
       font-size: 0.84rem;
       color: var(--latte);
       margin-bottom: 2rem;
@@ -97,7 +97,7 @@
     }
     .form-field label {
       display: block;
-      font-family: 'Jost', sans-serif;
+      font-family: 'Josefin Sans', sans-serif;
       font-size: 0.68rem;
       font-weight: 600;
       letter-spacing: 0.14em;
@@ -108,9 +108,9 @@
     .form-field input,
     .form-field select {
       width: 100%;
-      border: 1px solid rgba(201,165,90,0.22);
+      border: 1px solid rgba(196,168,130,0.22);
       background: var(--soft-white);
-      font-family: 'Jost', sans-serif;
+      font-family: 'Josefin Sans', sans-serif;
       font-size: 0.88rem;
       color: var(--espresso);
       padding: 0.65rem 0.875rem;
@@ -121,7 +121,7 @@
     .form-field input:focus,
     .form-field select:focus { border-color: var(--champagne); }
     .form-field .hint {
-      font-family: 'Jost', sans-serif;
+      font-family: 'Josefin Sans', sans-serif;
       font-size: 0.72rem;
       color: var(--latte);
       margin-top: 0.25rem;
@@ -133,17 +133,17 @@
       margin-bottom: 1.5rem;
     }
     .tier-opt {
-      border: 1px solid rgba(201,165,90,0.2);
+      border: 1px solid rgba(196,168,130,0.2);
       padding: 1rem 0.75rem;
       text-align: center;
       cursor: pointer;
       transition: all 0.2s;
-      font-family: 'Jost', sans-serif;
+      font-family: 'Josefin Sans', sans-serif;
     }
     .tier-opt:hover { border-color: var(--champagne); }
-    .tier-opt.selected { border-color: var(--champagne); background: rgba(201,165,90,0.07); }
+    .tier-opt.selected { border-color: var(--champagne); background: rgba(196,168,130,0.07); }
     .tier-opt-name { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--espresso); }
-    .tier-opt-price { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; color: var(--champagne); margin: 0.25rem 0; }
+    .tier-opt-price { font-family: 'Syne', serif; font-size: 1.5rem; color: var(--champagne); margin: 0.25rem 0; }
     .tier-opt-desc { font-size: 0.65rem; color: var(--latte); line-height: 1.4; }
     .btn-signup {
       width: 100%;
@@ -151,7 +151,7 @@
       color: var(--espresso);
       border: none;
       padding: 0.9rem 1.5rem;
-      font-family: 'Jost', sans-serif;
+      font-family: 'Josefin Sans', sans-serif;
       font-size: 0.78rem;
       font-weight: 700;
       letter-spacing: 0.18em;
@@ -166,17 +166,17 @@
       background: rgba(180,50,50,0.08);
       border: 1px solid rgba(180,50,50,0.25);
       color: #b43232;
-      font-family: 'Jost', sans-serif;
+      font-family: 'Josefin Sans', sans-serif;
       font-size: 0.82rem;
       padding: 0.75rem 1rem;
       margin-bottom: 1rem;
       display: none;
     }
     .policy-note {
-      background: rgba(201,165,90,0.06);
+      background: rgba(196,168,130,0.06);
       border-left: 3px solid var(--champagne);
       padding: 0.875rem 1rem;
-      font-family: 'Jost', sans-serif;
+      font-family: 'Josefin Sans', sans-serif;
       font-size: 0.78rem;
       color: var(--latte);
       line-height: 1.7;
@@ -190,7 +190,7 @@
       margin: 1.5rem 0;
     }
     .member-id-code {
-      font-family: 'Cormorant Garamond', serif;
+      font-family: 'Syne', serif;
       font-size: 2.5rem;
       color: var(--champagne);
       letter-spacing: 0.18em;
@@ -205,7 +205,7 @@
       margin-top: 1rem;
     }
     .copy-btn {
-      font-family: 'Jost', sans-serif;
+      font-family: 'Josefin Sans', sans-serif;
       font-size: 0.68rem;
       font-weight: 600;
       letter-spacing: 0.12em;
@@ -219,13 +219,13 @@
     }
     .copy-btn:hover { background: var(--champagne); color: var(--espresso); }
     #stripe-card-element {
-      border: 1px solid rgba(201,165,90,0.22);
+      border: 1px solid rgba(196,168,130,0.22);
       background: var(--soft-white);
       padding: 0.75rem 0.875rem;
       margin-bottom: 0.25rem;
     }
     #stripe-card-errors {
-      font-family: 'Jost', sans-serif;
+      font-family: 'Josefin Sans', sans-serif;
       font-size: 0.78rem;
       color: #b43232;
       min-height: 1.2em;
@@ -240,8 +240,8 @@
       justify-content: space-between;
       align-items: center;
       padding: 0.65rem 0;
-      border-bottom: 1px solid rgba(201,165,90,0.1);
-      font-family: 'Jost', sans-serif;
+      border-bottom: 1px solid rgba(196,168,130,0.1);
+      font-family: 'Josefin Sans', sans-serif;
       font-size: 0.85rem;
     }
     .confirmation-detail:last-child { border-bottom: none; }
@@ -256,7 +256,7 @@
 <body>
 
 <nav class="nav" id="nav">
-  <a href="index.html" class="nav-logo">ZLUX</a>
+  <a href="index.html" class="nav-logo"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span></a>
   <div class="nav-links">
     <a href="index.html">Home</a>
     <a href="services.html">Services</a>
@@ -297,7 +297,7 @@
   <!-- ─── STEP 1: Personal Info ─── -->
   <div class="step-panel active" id="step-1">
     <div class="signup-card">
-      <h1 class="signup-heading">Join Z Lux</h1>
+      <h1 class="signup-heading">Join Zola</h1>
       <p class="signup-sub">Choose your tier and fill in your details. You'll set up payment on the next screen.</p>
 
       <div class="error-msg" id="err-1"></div>
@@ -383,9 +383,9 @@
       </div>
 
       <div id="signup-price-display" style="text-align:center;margin-bottom:1.5rem;">
-        <div style="font-family:'Jost',sans-serif;font-size:0.68rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--latte);margin-bottom:0.25rem;">Today's Charge</div>
-        <div id="price-display" style="font-family:'Cormorant Garamond',serif;font-size:3rem;color:var(--champagne);"></div>
-        <div style="font-family:'Jost',sans-serif;font-size:0.75rem;color:var(--latte);">then monthly — cancel after 6 months</div>
+        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.68rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--latte);margin-bottom:0.25rem;">Today's Charge</div>
+        <div id="price-display" style="font-family:'Syne',serif;font-size:3rem;color:var(--champagne);"></div>
+        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.75rem;color:var(--latte);">then monthly — cancel after 6 months</div>
       </div>
 
       <div class="form-field">
@@ -394,9 +394,9 @@
         <div id="stripe-card-errors"></div>
       </div>
 
-      <button class="btn-signup" id="pay-btn" onclick="submitPayment()">Pay &amp; Join Z Lux →</button>
+      <button class="btn-signup" id="pay-btn" onclick="submitPayment()">Pay &amp; Join Zola →</button>
       <div style="text-align:center;margin-top:1rem;">
-        <button onclick="goToStep(1)" style="background:none;border:none;font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);cursor:pointer;text-decoration:underline;">← Back</button>
+        <button onclick="goToStep(1)" style="background:none;border:none;font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);cursor:pointer;text-decoration:underline;">← Back</button>
       </div>
     </div>
   </div>
@@ -405,12 +405,12 @@
   <div class="step-panel" id="step-3">
     <div class="signup-card" style="text-align:center;">
       <h1 class="signup-heading" style="text-align:center;">Your Member ID</h1>
-      <p class="signup-sub" style="text-align:center;">This is your permanent identifier at Z Lux. Screenshot it, write it down, or we'll text it to you.</p>
+      <p class="signup-sub" style="text-align:center;">This is your permanent identifier at Zola. Screenshot it, write it down, or we'll text it to you.</p>
 
       <div class="member-id-display">
-        <div style="font-family:'Jost',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--latte);margin-bottom:0.5rem;">Your Member ID</div>
+        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--latte);margin-bottom:0.5rem;">Your Member ID</div>
         <span class="member-id-code" id="display-member-id">—</span>
-        <div id="display-tier" style="font-family:'Jost',sans-serif;font-size:0.72rem;color:var(--latte);text-transform:uppercase;letter-spacing:0.12em;"></div>
+        <div id="display-tier" style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:var(--latte);text-transform:uppercase;letter-spacing:0.12em;"></div>
       </div>
 
       <div class="copy-row">
@@ -419,7 +419,7 @@
         <button class="copy-btn" onclick="emailMemberId()">Email It</button>
       </div>
 
-      <p style="font-family:'Jost',sans-serif;font-size:0.8rem;color:var(--latte);margin-top:1.5rem;line-height:1.7;">
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:var(--latte);margin-top:1.5rem;line-height:1.7;">
         A copy has been sent to <strong id="display-email"></strong>. Please save your Member ID somewhere safe — you will need it every time you access your portal or check in at the studio.
       </p>
 
@@ -432,7 +432,7 @@
     <div class="signup-card">
       <div class="confirmation-check">✦</div>
       <h1 class="signup-heading" style="text-align:center;">You're In.</h1>
-      <p class="signup-sub" style="text-align:center;">Welcome to Z Lux. Here's a summary of your membership.</p>
+      <p class="signup-sub" style="text-align:center;">Welcome to Zola. Here's a summary of your membership.</p>
 
       <div style="margin:1.5rem 0;">
         <div class="confirmation-detail">
@@ -441,7 +441,7 @@
         </div>
         <div class="confirmation-detail">
           <span class="label">Member ID</span>
-          <span class="value" id="conf-id" style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--champagne);">—</span>
+          <span class="value" id="conf-id" style="font-family:'Syne',serif;font-size:1.2rem;color:var(--champagne);">—</span>
         </div>
         <div class="confirmation-detail">
           <span class="label">Membership Tier</span>
@@ -541,8 +541,8 @@
         base: {
           fontFamily: 'Jost, sans-serif',
           fontSize: '15px',
-          color: '#2C1A0E',
-          '::placeholder': { color: '#A67C52', fontWeight: '300' },
+          color: '#0D0D0D',
+          '::placeholder': { color: '#8B6A3E', fontWeight: '300' },
         },
         invalid: { color: '#b43232' },
       }
@@ -573,7 +573,7 @@
       if (error) {
         showError('err-2', error.message);
         btn.disabled = false;
-        btn.textContent = 'Pay & Join Z Lux →';
+        btn.textContent = 'Pay & Join Zola →';
         return;
       }
 
@@ -597,7 +597,7 @@
       if (!res.ok) {
         showError('err-2', data.error || 'Sign-up failed. Please try again.');
         btn.disabled = false;
-        btn.textContent = 'Pay & Join Z Lux →';
+        btn.textContent = 'Pay & Join Zola →';
         return;
       }
 
@@ -609,13 +609,13 @@
         if (confirmError) {
           showError('err-2', confirmError.message);
           btn.disabled = false;
-          btn.textContent = 'Pay & Join Z Lux →';
+          btn.textContent = 'Pay & Join Zola →';
           return;
         }
         if (paymentIntent && paymentIntent.status !== 'succeeded') {
           showError('err-2', 'Payment could not be completed. Please try a different card.');
           btn.disabled = false;
-          btn.textContent = 'Pay & Join Z Lux →';
+          btn.textContent = 'Pay & Join Zola →';
           return;
         }
       }
@@ -645,7 +645,7 @@
     } catch (err) {
       showError('err-2', 'Network error. Please check your connection and try again.');
       btn.disabled = false;
-      btn.textContent = 'Pay & Join Z Lux →';
+      btn.textContent = 'Pay & Join Zola →';
     }
   }
 

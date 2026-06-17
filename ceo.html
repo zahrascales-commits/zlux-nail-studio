@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZOLA — CEO Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;600&display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0D0D0D;--surface:#161412;--card:#1E1A16;--border:rgba(196,168,130,0.12);
+      --gold:#C4A882;--gold-dim:rgba(196,168,130,0.55);--gold-faint:rgba(196,168,130,0.08);
+      --cream:#F5EEE8;--latte:#8B6A3E;--blush:#F0EAD8;
+      --text:#F5EEE8;--muted:#8B6A3E;--danger:#c0392b;--success:#27ae60;
+      --sidebar:220px;
+    }
+    body{background:var(--bg);color:var(--text);font-family:'Josefin Sans',sans-serif;font-size:0.9rem;line-height:1.6;min-height:100vh;display:flex;}
+    a{color:inherit;text-decoration:none;}
+    input,select,textarea,button{font-family:inherit;font-size:inherit;}
+
+    /* ── LOGIN OVERLAY ── */
+    #login-overlay{position:fixed;inset:0;background:#0D0D0D;z-index:9999;display:flex;align-items:center;justify-content:center;}
+    .login-box{width:360px;padding:3rem 2.5rem;border:1px solid var(--border);background:var(--surface);}
+    .login-logo{font-family:'Syne',sans-serif;font-size:2rem;letter-spacing:0.08em;color:var(--gold);text-align:center;margin-bottom:0.3rem;}
+    .login-sub{font-size:0.68rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--muted);text-align:center;margin-bottom:2.5rem;}
+    .login-label{display:block;font-size:0.62rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;}
+    .login-input{width:100%;background:var(--card);border:1px solid var(--border);color:var(--text);padding:0.8rem 1rem;outline:none;transition:border-color 0.2s;}
+    .login-input:focus{border-color:var(--gold);}
+    .login-btn{width:100%;margin-top:1.5rem;background:var(--gold);color:#0D0D0D;border:none;padding:0.85rem;font-size:0.72rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;transition:opacity 0.2s;}
+    .login-btn:hover{opacity:0.85;}
+    .login-err{color:var(--danger);font-size:0.75rem;margin-top:0.75rem;text-align:center;min-height:1.2em;}
+
+    /* ── SIDEBAR ── */
+    .sidebar{width:var(--sidebar);min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:50;}
+    .sidebar-logo{padding:1.75rem 1.5rem 1.25rem;border-bottom:1px solid var(--border);}
+    .sidebar-logo-text{font-family:'Syne',sans-serif;font-size:1.5rem;letter-spacing:0.08em;color:var(--gold);}
+    .sidebar-logo-sub{font-size:0.58rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-top:0.15rem;}
+    .sidebar-nav{flex:1;padding:1rem 0;}
+    .nav-item{display:flex;align-items:center;gap:0.75rem;padding:0.7rem 1.5rem;cursor:pointer;color:var(--muted);transition:all 0.2s;font-size:0.78rem;letter-spacing:0.06em;border-left:2px solid transparent;}
+    .nav-item:hover{color:var(--gold);background:var(--gold-faint);}
+    .nav-item.active{color:var(--gold);background:var(--gold-faint);border-left-color:var(--gold);}
+    .nav-icon{font-size:1rem;width:20px;text-align:center;}
+    .sidebar-footer{padding:1rem 1.5rem;border-top:1px solid var(--border);font-size:0.65rem;color:var(--muted);}
+
+    /* ── MAIN ── */
+    .main{margin-left:var(--sidebar);flex:1;min-height:100vh;display:flex;flex-direction:column;}
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:40;}
+    .topbar-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:600;color:var(--text);}
+    .topbar-meta{font-size:0.72rem;color:var(--muted);}
+    .topbar-right{display:flex;align-items:center;gap:1rem;}
+    .alert-badge{background:var(--danger);color:#fff;font-size:0.6rem;font-weight:700;padding:0.2rem 0.45rem;border-radius:10px;}
+    .content{padding:2rem;flex:1;}
+
+    /* ── SECTIONS ── */
+    .section{display:none;}
+    .section.active{display:block;}
+
+    /* ── CARDS ── */
+    .metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:2rem;}
+    .metric-card{background:var(--card);border:1px solid var(--border);padding:1.5rem;position:relative;overflow:hidden;}
+    .metric-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold);opacity:0.4;}
+    .metric-label{font-size:0.62rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;}
+    .metric-value{font-family:'Syne',sans-serif;font-size:2rem;font-weight:600;color:var(--gold);line-height:1;}
+    .metric-sub{font-size:0.7rem;color:var(--muted);margin-top:0.35rem;}
+
+    .card{background:var(--card);border:1px solid var(--border);padding:1.5rem;margin-bottom:1.25rem;}
+    .card-title{font-family:'Syne',sans-serif;font-size:0.78rem;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;}
+    .card-title .card-action{font-size:0.65rem;letter-spacing:0.1em;background:var(--gold-faint);border:1px solid var(--border);color:var(--gold);padding:0.25rem 0.65rem;cursor:pointer;transition:all 0.2s;}
+    .card-title .card-action:hover{background:var(--gold);color:#0D0D0D;}
+
+    /* ── TWO-COL ── */
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;}
+    .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem;}
+
+    /* ── TABLE ── */
+    .data-table{width:100%;border-collapse:collapse;}
+    .data-table th{font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);padding:0.6rem 0.75rem;text-align:left;border-bottom:1px solid var(--border);}
+    .data-table td{padding:0.65rem 0.75rem;border-bottom:1px solid rgba(196,168,130,0.06);font-size:0.83rem;}
+    .data-table tr:hover td{background:var(--gold-faint);}
+    .data-table .badge{display:inline-block;font-size:0.58rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;padding:0.18rem 0.55rem;}
+    .badge-sig{background:rgba(196,168,130,0.12);color:var(--gold);}
+    .badge-luxe{background:rgba(196,168,130,0.2);color:#e0c49a;}
+    .badge-black{background:#1a1410;color:var(--gold);border:1px solid var(--border);}
+    .badge-ok{background:rgba(39,174,96,0.15);color:#27ae60;}
+    .badge-warn{background:rgba(192,57,43,0.15);color:#e74c3c;}
+
+    /* ── SEARCH BAR ── */
+    .search-bar{display:flex;gap:0.75rem;margin-bottom:1.25rem;align-items:center;}
+    .search-input{flex:1;background:var(--card);border:1px solid var(--border);color:var(--text);padding:0.65rem 1rem;outline:none;}
+    .search-input:focus{border-color:var(--gold);}
+    .search-select{background:var(--card);border:1px solid var(--border);color:var(--muted);padding:0.65rem 0.9rem;outline:none;cursor:pointer;}
+
+    /* ── BUTTONS ── */
+    .btn{display:inline-block;padding:0.55rem 1.1rem;font-size:0.68rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;border:none;transition:all 0.2s;}
+    .btn-primary{background:var(--gold);color:#0D0D0D;}
+    .btn-primary:hover{opacity:0.85;}
+    .btn-outline{background:transparent;color:var(--gold);border:1px solid var(--gold-dim);}
+    .btn-outline:hover{background:var(--gold-faint);}
+    .btn-danger{background:rgba(192,57,43,0.15);color:#e74c3c;border:1px solid rgba(192,57,43,0.3);}
+    .btn-danger:hover{background:rgba(192,57,43,0.25);}
+    .btn-sm{padding:0.3rem 0.65rem;font-size:0.62rem;}
+    .btn-icon{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:0.2rem 0.4rem;transition:color 0.2s;}
+    .btn-icon:hover{color:var(--gold);}
+
+    /* ── CALENDAR ── */
+    .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+    .cal-month-label{font-family:'Syne',sans-serif;font-size:1rem;color:var(--gold);}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+    .cal-dow{text-align:center;font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);padding:0.5rem 0;}
+    .cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-size:0.82rem;position:relative;border:1px solid transparent;transition:all 0.15s;background:var(--card);}
+    .cal-day:hover{border-color:var(--gold-dim);}
+    .cal-day.today{border-color:var(--gold);color:var(--gold);}
+    .cal-day.has-bookings::after{content:'';position:absolute;bottom:4px;width:4px;height:4px;background:var(--gold);border-radius:50%;}
+    .cal-day.blocked{background:rgba(192,57,43,0.08);color:#e74c3c;position:relative;}
+    .cal-day.blocked::before{content:'●';position:absolute;top:3px;right:4px;font-size:0.5rem;color:#e74c3c;}
+    .cal-day.past{opacity:0.3;cursor:default;}
+    .cal-day.empty{background:transparent;border-color:transparent;cursor:default;}
+    .slot-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:0.5rem;margin-top:1rem;}
+    .slot-btn{padding:0.5rem;text-align:center;font-size:0.72rem;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text);transition:all 0.2s;}
+    .slot-btn:hover{border-color:var(--gold-dim);}
+    .slot-btn.blocked{background:rgba(192,57,43,0.1);border-color:rgba(192,57,43,0.3);color:#e74c3c;}
+    .slot-btn.booked{background:rgba(196,168,130,0.1);border-color:var(--gold-dim);color:var(--gold);cursor:default;}
+    .slot-btn.available{background:rgba(39,174,96,0.06);border-color:rgba(39,174,96,0.2);color:#27ae60;}
+
+    /* ── FUNNEL CHART ── */
+    .funnel-row{display:flex;align-items:center;gap:0.75rem;margin-bottom:0.65rem;}
+    .funnel-label{width:90px;font-size:0.72rem;color:var(--muted);flex-shrink:0;}
+    .funnel-bar-wrap{flex:1;height:22px;background:var(--bg);position:relative;border-radius:2px;overflow:hidden;}
+    .funnel-bar{height:100%;background:var(--gold);transition:width 0.8s ease;border-radius:2px;}
+    .funnel-bar.dropped{background:#c0392b;}
+    .funnel-count{font-size:0.72rem;color:var(--muted);width:35px;text-align:right;flex-shrink:0;}
+
+    /* ── PROGRESS BARS (Goals) ── */
+    .goal-card{background:var(--card);border:1px solid var(--border);padding:1.25rem;margin-bottom:1rem;}
+    .goal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;}
+    .goal-title{font-size:0.85rem;color:var(--text);}
+    .goal-pct{font-family:'Syne',sans-serif;font-size:1.1rem;color:var(--gold);}
+    .goal-bar-wrap{height:6px;background:var(--bg);border-radius:3px;overflow:hidden;margin-bottom:0.5rem;}
+    .goal-bar{height:100%;background:var(--gold);border-radius:3px;transition:width 1s ease;}
+    .goal-meta{display:flex;justify-content:space-between;font-size:0.68rem;color:var(--muted);}
+
+    /* ── INVENTORY ── */
+    .inv-item{display:flex;align-items:center;gap:1rem;padding:0.7rem 0;border-bottom:1px solid rgba(196,168,130,0.06);}
+    .inv-name{flex:1;font-size:0.85rem;}
+    .inv-qty-wrap{display:flex;align-items:center;gap:0.4rem;}
+    .inv-qty-btn{background:none;border:1px solid var(--border);color:var(--muted);width:26px;height:26px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
+    .inv-qty-btn:hover{border-color:var(--gold);color:var(--gold);}
+    .inv-qty-val{min-width:32px;text-align:center;font-size:0.85rem;color:var(--text);}
+    .inv-low{color:#e74c3c!important;}
+
+    /* ── AI INSIGHT BOX ── */
+    .ai-insight{background:rgba(196,168,130,0.05);border:1px solid rgba(196,168,130,0.15);padding:1.25rem;margin-bottom:0.75rem;position:relative;}
+    .ai-insight::before{content:'✦ AI';font-size:0.58rem;letter-spacing:0.2em;color:var(--gold);display:block;margin-bottom:0.4rem;}
+    .ai-insight p{font-size:0.84rem;line-height:1.7;color:var(--blush);}
+
+    /* ── MODAL ── */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;display:none;align-items:center;justify-content:center;}
+    .modal-overlay.open{display:flex;}
+    .modal{background:var(--surface);border:1px solid var(--border);padding:2rem;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto;}
+    .modal-title{font-family:'Syne',sans-serif;font-size:1rem;color:var(--gold);margin-bottom:1.5rem;}
+    .form-row{margin-bottom:1rem;}
+    .form-label{display:block;font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;}
+    .form-input{width:100%;background:var(--card);border:1px solid var(--border);color:var(--text);padding:0.7rem 0.9rem;outline:none;}
+    .form-input:focus{border-color:var(--gold);}
+    .form-actions{display:flex;gap:0.75rem;margin-top:1.5rem;justify-content:flex-end;}
+
+    /* ── TOAST ── */
+    #toast{position:fixed;bottom:2rem;right:2rem;z-index:9000;background:var(--gold);color:#0D0D0D;padding:0.75rem 1.5rem;font-size:0.78rem;font-weight:600;letter-spacing:0.08em;display:none;animation:slideInRight 0.3s ease;}
+    @keyframes slideInRight{from{opacity:0;transform:translateX(80px)}to{opacity:1;transform:translateX(0)}}
+
+    /* ── MASS TEXT ── */
+    .tier-filter-row{display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;}
+    .tier-chip{padding:0.3rem 0.75rem;font-size:0.65rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;border:1px solid var(--border);color:var(--muted);background:transparent;transition:all 0.2s;}
+    .tier-chip.active{border-color:var(--gold);color:var(--gold);background:var(--gold-faint);}
+
+    /* ── RESPONSIVE ── */
+    @media(max-width:900px){
+      .sidebar{width:60px;}
+      .sidebar-logo-text,.sidebar-logo-sub,.nav-item span{display:none;}
+      .nav-item{padding:0.8rem;justify-content:center;}
+      .main{margin-left:60px;}
+      .metric-grid{grid-template-columns:repeat(2,1fr);}
+      .two-col,.three-col{grid-template-columns:1fr;}
+      .content{padding:1rem;}
+    }
+    @media(max-width:600px){
+      .metric-grid{grid-template-columns:1fr 1fr;}
+      .slot-grid{grid-template-columns:repeat(3,1fr);}
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN OVERLAY -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span></div>
+    <div class="login-sub">CEO Studio</div>
+    <label class="login-label">Password</label>
+    <input class="login-input" type="password" id="login-pwd" placeholder="Enter your studio password" onkeydown="if(event.key==='Enter')doLogin()" />
+    <button class="login-btn" onclick="doLogin()">Enter Studio</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-text"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span></div>
+    <div class="sidebar-logo-sub">CEO Studio</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-item active" onclick="showSection('overview')"><span class="nav-icon">📊</span><span>Overview</span></div>
+    <div class="nav-item" onclick="showSection('calendar')"><span class="nav-icon">📅</span><span>Calendar</span></div>
+    <div class="nav-item" onclick="showSection('clients')"><span class="nav-icon">👥</span><span>Clients</span></div>
+    <div class="nav-item" onclick="showSection('bookings')"><span class="nav-icon">📋</span><span>Bookings</span></div>
+    <div class="nav-item" onclick="showSection('reports')"><span class="nav-icon">📈</span><span>Reports</span></div>
+    <div class="nav-item" onclick="showSection('services')"><span class="nav-icon">💅</span><span>Services</span></div>
+    <div class="nav-item" onclick="showSection('faq')"><span class="nav-icon">💬</span><span>Ask Zola FAQ</span></div>
+    <div class="nav-item" onclick="showSection('payouts')"><span class="nav-icon">💳</span><span>Payouts</span></div>
+    <div class="nav-item" onclick="showSection('giftcards')"><span class="nav-icon">🎁</span><span>Gift Cards</span></div>
+    <div class="nav-item" onclick="showSection('inventory')"><span class="nav-icon">📦</span><span>Inventory</span></div>
+    <div class="nav-item" onclick="showSection('goals')"><span class="nav-icon">🎯</span><span>Goals</span></div>
+  </nav>
+  <div class="sidebar-footer">ZOLA Nail Studio · Porterville</div>
+</aside>
+
+<!-- MAIN CONTENT -->
+<main class="main" id="main-app" style="display:none">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="section-title">Overview</div>
+      <div class="topbar-meta" id="today-date"></div>
+    </div>
+    <div class="topbar-right">
+      <span id="alert-count"></span>
+      <a href="index.html" target="_blank" class="btn btn-outline btn-sm">View Site ↗</a>
+    </div>
+  </div>
+  <div class="content">
+
+    <!-- ══ OVERVIEW ══ -->
+    <div id="sec-overview" class="section active">
+      <div class="metric-grid" id="metric-grid">
+        <div class="metric-card"><div class="metric-label">Monthly Revenue</div><div class="metric-value" id="mrr-val">—</div><div class="metric-sub">MRR all tiers</div></div>
+        <div class="metric-card"><div class="metric-label">Total Members</div><div class="metric-value" id="members-val">—</div><div class="metric-sub" id="tier-breakdown">Sig / Luxe / Black</div></div>
+        <div class="metric-card"><div class="metric-label">Today's Bookings</div><div class="metric-value" id="today-bk-val">—</div><div class="metric-sub" id="today-rev-val">—</div></div>
+        <div class="metric-card"><div class="metric-label">All-Time Bookings</div><div class="metric-value" id="total-bk-val">—</div><div class="metric-sub">since launch</div></div>
+      </div>
+      <div class="two-col">
+        <div>
+          <div class="card">
+            <div class="card-title">AI Growth Analyst <span class="card-action" onclick="refreshAI()">Refresh</span></div>
+            <div id="ai-insights-wrap"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Low Inventory Alerts</div>
+            <div id="low-inv-wrap"><div style="color:var(--muted);font-size:0.82rem;">All stocked ✓</div></div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="card-title">Upcoming Appointments</div>
+            <table class="data-table" id="upcoming-table">
+              <thead><tr><th>Date</th><th>Time</th><th>Client</th><th>Service</th></tr></thead>
+              <tbody id="upcoming-body"><tr><td colspan="4" style="color:var(--muted);text-align:center;padding:1.5rem;">No upcoming bookings</td></tr></tbody>
+            </table>
+          </div>
+          <div class="card">
+            <div class="card-title">Booking Funnel Summary</div>
+            <div id="overview-funnel"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CALENDAR ══ -->
+    <div id="sec-calendar" class="section">
+      <div class="two-col">
+        <div class="card">
+          <div class="cal-header">
+            <button class="btn-icon" onclick="calPrev()">◀</button>
+            <span class="cal-month-label" id="cal-month-label"></span>
+            <button class="btn-icon" onclick="calNext()">▶</button>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+          <div style="display:flex;gap:1rem;margin-top:1rem;font-size:0.65rem;color:var(--muted);">
+            <span>● Booked</span>
+            <span style="color:#e74c3c;">● Blocked</span>
+            <span style="color:#27ae60;">● Today</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title" id="slot-panel-title">Select a Day</div>
+          <div id="slot-panel"><p style="color:var(--muted);font-size:0.82rem;">Click any date on the calendar to manage its slots.</p></div>
+          <div id="block-actions" style="display:none;margin-top:1.25rem;display:none;">
+            <button class="btn btn-danger btn-sm" onclick="blockDay()">Block Entire Day</button>
+            <button class="btn btn-outline btn-sm" onclick="unblockDay()" style="margin-left:0.5rem;">Unblock All</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CLIENTS ══ -->
+    <div id="sec-clients" class="section">
+      <div class="card">
+        <div class="card-title">Client List <span class="card-action" onclick="openMassText()">📱 Mass Text</span></div>
+        <div class="search-bar">
+          <input class="search-input" id="client-search" placeholder="Search name, email, phone…" oninput="filterClients()" />
+          <select class="search-select" id="client-tier-filter" onchange="filterClients()">
+            <option value="">All Tiers</option>
+            <option value="SIGNATURE">Signature</option>
+            <option value="LUXE">Luxe</option>
+            <option value="BLACK_CARD">Black Card</option>
+          </select>
+        </div>
+        <table class="data-table" id="clients-table">
+          <thead><tr><th>Name</th><th>Tier</th><th>Phone</th><th>Email</th><th>Member Since</th><th>Actions</th></tr></thead>
+          <tbody id="clients-body"><tr><td colspan="6" style="color:var(--muted);text-align:center;padding:2rem;">Loading clients…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ BOOKINGS ══ -->
+    <div id="sec-bookings" class="section">
+      <div class="card">
+        <div class="card-title">All Bookings</div>
+        <div class="search-bar">
+          <input class="search-input" id="bk-date-filter" type="date" oninput="filterBookings()" style="max-width:160px;" />
+          <input class="search-input" id="bk-search" placeholder="Search client name…" oninput="filterBookings()" />
+        </div>
+        <table class="data-table" id="bookings-table">
+          <thead><tr><th>#</th><th>Date</th><th>Time</th><th>Client</th><th>Service</th><th>Total</th><th>Deposit</th><th>Member</th></tr></thead>
+          <tbody id="bookings-body"><tr><td colspan="8" style="color:var(--muted);text-align:center;padding:2rem;">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ REPORTS ══ -->
+    <div id="sec-reports" class="section">
+      <div class="metric-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="metric-card"><div class="metric-label">This Week</div><div class="metric-value" id="wk-bk">—</div><div class="metric-sub">bookings</div></div>
+        <div class="metric-card"><div class="metric-label">Weekly Revenue</div><div class="metric-value" id="wk-rev">—</div><div class="metric-sub">deposits collected</div></div>
+        <div class="metric-card"><div class="metric-label">This Month</div><div class="metric-value" id="mo-bk">—</div><div class="metric-sub">bookings</div></div>
+        <div class="metric-card"><div class="metric-label">Monthly Revenue</div><div class="metric-value" id="mo-rev">—</div><div class="metric-sub">deposits collected</div></div>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title">Booking Funnel — Where Clients Drop Off</div>
+          <div id="funnel-chart"></div>
+          <p style="font-size:0.72rem;color:var(--muted);margin-top:1rem;">Gold = reached step. Red = dropped at that step. Check which step has the highest drop rate.</p>
+        </div>
+        <div class="card">
+          <div class="card-title">Top Services Booked</div>
+          <div id="svc-popularity"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Top Ask Zola Questions <span style="font-size:0.65rem;color:var(--muted);font-weight:400;">(what clients ask most)</span></div>
+        <div id="top-questions-list"></div>
+      </div>
+      <div style="text-align:right;margin-top:0.75rem;">
+        <button class="btn btn-outline btn-sm" onclick="downloadReport()">⬇ Download Report (CSV)</button>
+      </div>
+    </div>
+
+    <!-- ══ SERVICES ══ -->
+    <div id="sec-services" class="section">
+      <div class="card">
+        <div class="card-title">Services Menu <span class="card-action" onclick="openAddService()">+ Add Service</span></div>
+        <table class="data-table" id="services-table">
+          <thead><tr><th>Service</th><th>Duration</th><th>Price</th><th>Actions</th></tr></thead>
+          <tbody id="services-body"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">Add-Ons</div>
+        <table class="data-table" id="addons-table">
+          <thead><tr><th>Add-On</th><th>Price</th><th>Actions</th></tr></thead>
+          <tbody id="addons-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ ASK ZOLA FAQ ══ -->
+    <div id="sec-faq" class="section">
+      <div class="card">
+        <div class="card-title">Ask Zola — Top Questions <span style="font-size:0.65rem;color:var(--muted);font-weight:400;">from actual client chats</span></div>
+        <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1.25rem;">These are the most-asked questions from the website chatbot. Review weekly to make sure answers are still accurate and to spot what clients are confused about.</p>
+        <div id="faq-questions-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Quick-Reply Chips (what clients tap)</div>
+        <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;">These chips appear when someone opens Ask Zola. They cover the most common questions so clients get instant answers without typing.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;" id="chip-preview"></div>
+        <p style="font-size:0.72rem;color:var(--muted);margin-top:1rem;">To update these chips, edit <code style="background:var(--card);padding:0.1rem 0.35rem;">js/chatbot.js</code> → the <code style="background:var(--card);padding:0.1rem 0.35rem;">FAQ_CHIPS</code> array at the top.</p>
+      </div>
+    </div>
+
+    <!-- ══ PAYOUTS ══ -->
+    <div id="sec-payouts" class="section">
+      <div class="card">
+        <div class="card-title">Payout Setup</div>
+        <div class="ai-insight"><p>Stripe handles all your membership billing. To connect your bank account for payouts, go to your Stripe dashboard → Payouts → Add bank account. Payouts arrive next business day automatically after the first payout is configured.</p></div>
+        <div style="display:flex;gap:1rem;margin-top:1.5rem;">
+          <a href="https://dashboard.stripe.com/payouts" target="_blank" class="btn btn-primary">Open Stripe Payouts ↗</a>
+          <a href="https://dashboard.stripe.com/balance" target="_blank" class="btn btn-outline">View Balance ↗</a>
+        </div>
+      </div>
+      <div class="three-col">
+        <div class="metric-card"><div class="metric-label">Est. MRR</div><div class="metric-value" id="payout-mrr">—</div><div class="metric-sub">from memberships</div></div>
+        <div class="metric-card"><div class="metric-label">Worker Payout Rate</div><div class="metric-value">40%</div><div class="metric-sub">commission per booking</div></div>
+        <div class="metric-card"><div class="metric-label">Net to Owner</div><div class="metric-value" id="payout-net">—</div><div class="metric-sub">after 40% commission</div></div>
+      </div>
+      <div class="card" style="margin-top:1.25rem;">
+        <div class="card-title">Worker Commission Calculator</div>
+        <div class="two-col">
+          <div>
+            <div class="form-row">
+              <label class="form-label">Total Service Revenue ($)</label>
+              <input class="form-input" type="number" id="comm-revenue" placeholder="e.g. 2500" oninput="calcComm()" />
+            </div>
+            <div class="form-row">
+              <label class="form-label">Commission Rate (%)</label>
+              <input class="form-input" type="number" id="comm-rate" value="40" oninput="calcComm()" />
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.75rem;justify-content:center;">
+            <div><div class="metric-label">Worker Earns</div><div class="metric-value" id="comm-worker" style="font-size:1.5rem;">—</div></div>
+            <div><div class="metric-label">You Keep</div><div class="metric-value" id="comm-owner" style="font-size:1.5rem;color:#27ae60;">—</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ GIFT CARDS ══ -->
+    <div id="sec-giftcards" class="section">
+      <div class="card">
+        <div class="card-title">Gift Cards <span class="card-action" onclick="openIssueGiftCard()">+ Issue Gift Card</span></div>
+        <table class="data-table" id="gc-table">
+          <thead><tr><th>Code</th><th>Recipient</th><th>Amount</th><th>Balance</th><th>Issued</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="gc-body"><tr><td colspan="7" style="color:var(--muted);text-align:center;padding:2rem;">No gift cards yet</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ INVENTORY ══ -->
+    <div id="sec-inventory" class="section">
+      <div class="card">
+        <div class="card-title">Inventory <span class="card-action" onclick="openAddInventory()">+ Add Item</span></div>
+        <div id="inventory-list"></div>
+      </div>
+    </div>
+
+    <!-- ══ GOALS ══ -->
+    <div id="sec-goals" class="section">
+      <div class="two-col">
+        <div>
+          <div class="card">
+            <div class="card-title">Your Goals</div>
+            <div id="goals-list"></div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="card-title">AI Growth Analyst</div>
+            <div id="ai-goals-insights"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-service">
+  <div class="modal">
+    <div class="modal-title" id="svc-modal-title">Edit Service</div>
+    <input type="hidden" id="svc-edit-id" />
+    <div class="form-row"><label class="form-label">Service Name</label><input class="form-input" id="svc-name" /></div>
+    <div class="form-row"><label class="form-label">Description</label><textarea class="form-input" id="svc-desc" rows="2"></textarea></div>
+    <div class="form-row"><label class="form-label">Price (dollars)</label><input class="form-input" type="number" id="svc-price" /></div>
+    <div class="form-row"><label class="form-label">Duration (minutes)</label><input class="form-input" type="number" id="svc-duration" /></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-service')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveService()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-giftcard">
+  <div class="modal">
+    <div class="modal-title">Issue Gift Card</div>
+    <div class="form-row"><label class="form-label">Recipient Name</label><input class="form-input" id="gc-recipient" /></div>
+    <div class="form-row"><label class="form-label">Recipient Email (optional)</label><input class="form-input" id="gc-email" type="email" /></div>
+    <div class="form-row"><label class="form-label">Amount ($)</label><input class="form-input" id="gc-amount" type="number" min="10" /></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-giftcard')">Cancel</button>
+      <button class="btn btn-primary" onclick="issueGiftCard()">Issue Card</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-inventory">
+  <div class="modal">
+    <div class="modal-title" id="inv-modal-title">Add Inventory Item</div>
+    <input type="hidden" id="inv-edit-id" />
+    <div class="form-row"><label class="form-label">Item Name</label><input class="form-input" id="inv-name" /></div>
+    <div class="form-row"><label class="form-label">Unit (e.g. bottle, pack, oz)</label><input class="form-input" id="inv-unit" /></div>
+    <div class="form-row"><label class="form-label">Current Qty</label><input class="form-input" type="number" id="inv-qty" /></div>
+    <div class="form-row"><label class="form-label">Low Stock Alert At</label><input class="form-input" type="number" id="inv-low" /></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-inventory')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveInventory()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-masstext">
+  <div class="modal">
+    <div class="modal-title">Send Mass Text</div>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;">Use <code style="background:var(--card);padding:0.1rem 0.35rem;">{name}</code> to insert client's first name.</p>
+    <div class="form-row">
+      <label class="form-label">Filter by Tier (optional)</label>
+      <div class="tier-filter-row">
+        <button class="tier-chip active" data-tier="" onclick="selectTierFilter(this)">All Members</button>
+        <button class="tier-chip" data-tier="SIGNATURE" onclick="selectTierFilter(this)">Signature</button>
+        <button class="tier-chip" data-tier="LUXE" onclick="selectTierFilter(this)">Luxe</button>
+        <button class="tier-chip" data-tier="BLACK_CARD" onclick="selectTierFilter(this)">Black Card</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Message</label>
+      <textarea class="form-input" id="mass-text-msg" rows="4" placeholder="Hi {name}, just a reminder…"></textarea>
+    </div>
+    <div id="mass-text-result" style="font-size:0.78rem;color:var(--muted);margin-bottom:0.5rem;"></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-masstext')">Cancel</button>
+      <button class="btn btn-primary" onclick="sendMassText()">Send Text</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── State ──
+let CEO_PWD = '';
+let currentSection = 'overview';
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+let selectedDate = null;
+let calBlocks = [];
+let calBooked = [];
+let allClients = [];
+let allBookings = [];
+let selectedTierFilter = '';
+
+// ── Auth ──
+function doLogin() {
+  const pwd = document.getElementById('login-pwd').value.trim();
+  if (!pwd) return;
+  fetch('/api/ceo-data?section=overview', { headers: { 'X-CEO-Password': pwd } })
+    .then(r => {
+      if (r.status === 401) { document.getElementById('login-err').textContent = 'Wrong password.'; return; }
+      CEO_PWD = pwd;
+      document.getElementById('login-overlay').style.display = 'none';
+      document.getElementById('main-app').style.display = 'flex';
+      document.getElementById('main-app').style.flexDirection = 'column';
+      initDashboard();
+    }).catch(() => { document.getElementById('login-err').textContent = 'Connection error.'; });
+}
+
+// ── Init ──
+function initDashboard() {
+  const now = new Date();
+  document.getElementById('today-date').textContent = now.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+  loadSection('overview');
+}
+
+function api(path, opts = {}) {
+  return fetch(path, { ...opts, headers: { 'Content-Type': 'application/json', 'X-CEO-Password': CEO_PWD, ...(opts.headers||{}) } });
+}
+
+// ── Navigation ──
+function showSection(name) {
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById('sec-' + name).classList.add('active');
+  currentSection = name;
+  const titles = { overview:'Overview', calendar:'Calendar & Scheduling', clients:'Clients', bookings:'All Bookings', reports:'Reports & Analytics', services:'Services Menu', faq:'Ask Zola FAQ', payouts:'Payouts', giftcards:'Gift Cards', inventory:'Inventory', goals:'Goals' };
+  document.getElementById('section-title').textContent = titles[name] || name;
+  loadSection(name);
+}
+
+function loadSection(name) {
+  if (name === 'overview') loadOverview();
+  else if (name === 'calendar') renderCalendar();
+  else if (name === 'clients') loadClients();
+  else if (name === 'bookings') loadBookings();
+  else if (name === 'reports') loadReports();
+  else if (name === 'services') loadServices();
+  else if (name === 'faq') loadFAQ();
+  else if (name === 'payouts') loadPayouts();
+  else if (name === 'giftcards') loadGiftCards();
+  else if (name === 'inventory') loadInventory();
+  else if (name === 'goals') loadGoals();
+}
+
+// ── OVERVIEW ──
+function loadOverview() {
+  api('/api/ceo-data?section=overview').then(r => r.json()).then(d => {
+    document.getElementById('mrr-val').textContent = '$' + (d.mrr / 100).toFixed(0);
+    document.getElementById('members-val').textContent = d.totalMembers;
+    document.getElementById('tier-breakdown').textContent = `${d.byTier.SIGNATURE} Sig · ${d.byTier.LUXE} Luxe · ${d.byTier.BLACK_CARD} Black`;
+    document.getElementById('today-bk-val').textContent = d.todayBookings;
+    document.getElementById('today-rev-val').textContent = '$' + (d.todayRevenue / 100).toFixed(0) + ' revenue today';
+    document.getElementById('total-bk-val').textContent = d.totalBookings;
+
+    // Low inventory alerts
+    const lowWrap = document.getElementById('low-inv-wrap');
+    if (d.lowInventory?.length) {
+      lowWrap.innerHTML = d.lowInventory.map(i =>
+        `<div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid rgba(196,168,130,0.06);font-size:0.82rem;"><span>${i.name}</span><span style="color:#e74c3c;">Only ${i.qty} ${i.unit} left</span></div>`
+      ).join('') + `<div style="margin-top:0.75rem;"><button class="btn btn-outline btn-sm" onclick="showSection('inventory')">Manage Inventory</button></div>`;
+      const badge = `<span class="alert-badge">${d.lowInventory.length} alert${d.lowInventory.length>1?'s':''}</span>`;
+      document.getElementById('alert-count').innerHTML = badge;
+    } else {
+      lowWrap.innerHTML = '<div style="color:var(--muted);font-size:0.82rem;">All stock levels OK ✓</div>';
+    }
+
+    // Upcoming bookings
+    const tbody = document.getElementById('upcoming-body');
+    if (d.upcomingBookings?.length) {
+      tbody.innerHTML = d.upcomingBookings.map(b => `
+        <tr>
+          <td>${b.date}</td>
+          <td>${fmtTime(b.time_slot)}</td>
+          <td>${b.customer_name}</td>
+          <td style="color:var(--gold)">${b.service_name}</td>
+        </tr>`).join('');
+    }
+
+    // Funnel summary
+    renderFunnelMini(d.funnelSummary, 'overview-funnel');
+
+    // AI Insights
+    renderAIInsights(d);
+  });
+}
+
+function renderAIInsights(d) {
+  const insights = [];
+  const TIER_MAX = { SIGNATURE: 20, LUXE: 10, BLACK_CARD: 5 };
+  const sig = d.byTier?.SIGNATURE || 0, luxe = d.byTier?.LUXE || 0, black = d.byTier?.BLACK_CARD || 0;
+  const sigLeft = TIER_MAX.SIGNATURE - sig, luxeLeft = TIER_MAX.LUXE - luxe, blackLeft = TIER_MAX.BLACK_CARD - black;
+  if (blackLeft > 0) insights.push(`🎯 You have ${blackLeft} Black Card spot${blackLeft>1?'s':''} still available. At $299/mo each, filling them adds $${(blackLeft*299).toLocaleString()}/mo to your MRR. Consider a targeted DM campaign to your top Luxe members.`);
+  if (sig === 0 && luxe === 0 && black === 0) insights.push('🌱 No members yet — your first priority is getting your first 3 Signature members. Offer a free first-month trial to 3 loyal clients to get testimonials and momentum.');
+  else if (sig + luxe + black < 5) insights.push(`📈 Early stage (${sig+luxe+black} members). Focus on getting to 10 total members before worrying about optimizing tiers. Referrals from your existing ${sig+luxe+black} members are your cheapest acquisition channel.`);
+  const mrr = d.mrr || 0;
+  if (mrr > 0) insights.push(`💰 Your MRR is $${(mrr/100).toFixed(0)}/mo. At this rate you'll earn ~$${((mrr/100)*12).toFixed(0)} this year from memberships alone — before booking revenue.`);
+  if ((d.funnelSummary?.[3]?.dropped || 0) > 2) insights.push('⚠️ Clients are dropping at Step 3 (date/time selection). Consider expanding your available slots or reducing the deposit percentage. Every drop-off is lost revenue.');
+  if ((d.funnelSummary?.[4]?.dropped || 0) > 1) insights.push('💳 Clients are abandoning at the payment step. This often means the deposit feels too high or payment feels risky. Consider adding a guarantee message at checkout.');
+  if (d.todayBookings === 0) insights.push('📅 No bookings today. A quick Instagram story or text to past clients ("2 spots opened up today — first come first served") can fill same-day gaps.');
+  if (!insights.length) insights.push('✨ Studio is running smoothly. Keep your booking slots fresh and reach out to any members who haven\'t booked this month.');
+  const wrap = document.getElementById('ai-insights-wrap');
+  if (wrap) wrap.innerHTML = insights.map(i => `<div class="ai-insight"><p>${i}</p></div>`).join('');
+}
+
+function refreshAI() { loadOverview(); toast('AI insights refreshed'); }
+
+function renderFunnelMini(funnel, containerId) {
+  if (!funnel) return;
+  const labels = ['', 'Viewed Booking', 'Picked Service', 'Picked Date', 'Payment'];
+  const max = Math.max(1, ...Object.values(funnel).map(f => (f.reached||0) + (f.dropped||0)));
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = [1,2,3,4].map(i => {
+    const reached = funnel[i]?.reached || 0;
+    const dropped = funnel[i]?.dropped || 0;
+    const pct = Math.round(reached / max * 100);
+    const dropPct = Math.round(dropped / max * 100);
+    return `<div class="funnel-row">
+      <span class="funnel-label">${labels[i]}</span>
+      <div class="funnel-bar-wrap">
+        <div class="funnel-bar" style="width:${pct}%;display:inline-block;"></div><div class="funnel-bar dropped" style="width:${dropPct}%;display:inline-block;"></div>
+      </div>
+      <span class="funnel-count">${reached}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── CALENDAR ──
+function renderCalendar() {
+  const label = new Date(calYear, calMonth, 1).toLocaleDateString('en-US', { month:'long', year:'numeric' });
+  document.getElementById('cal-month-label').textContent = label;
+  const grid = document.getElementById('cal-grid');
+  const dows = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const first = new Date(calYear, calMonth, 1).getDay();
+  const days = new Date(calYear, calMonth+1, 0).getDate();
+  const today = new Date().toISOString().slice(0,10);
+
+  let html = dows.map(d => `<div class="cal-dow">${d}</div>`).join('');
+  for (let i = 0; i < first; i++) html += '<div class="cal-day empty"></div>';
+  for (let d = 1; d <= days; d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = dateStr === today;
+    const isPast = dateStr < today;
+    const blockEntry = calBlocks.find(b => b.date === dateStr && b.slot === 'ALL');
+    const hasBlock = !!blockEntry;
+    const hasBooking = allBookings.some(b => b.date === dateStr);
+    let cls = 'cal-day';
+    if (isToday) cls += ' today';
+    if (isPast) cls += ' past';
+    if (hasBlock) cls += ' blocked';
+    if (hasBooking) cls += ' has-bookings';
+    html += `<div class="${cls}" onclick="selectCalDay('${dateStr}')">${d}</div>`;
+  }
+  grid.innerHTML = html;
+
+  // Load all blocks (for the calendar month)
+  api('/api/calendar-blocks').then(r=>r.json()).then(d => {
+    calBlocks = d.blocks || [];
+    renderCalendar();
+  }).catch(()=>{});
+}
+
+function calPrev() { calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); }
+function calNext() { calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); }
+
+function selectCalDay(dateStr) {
+  selectedDate = dateStr;
+  const panel = document.getElementById('slot-panel');
+  const title = document.getElementById('slot-panel-title');
+  const actions = document.getElementById('block-actions');
+  title.textContent = new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+
+  api(`/api/calendar-blocks?date=${dateStr}`).then(r=>r.json()).then(d => {
+    const slots = d.all_slots || [];
+    const blocks = d.blocks || [];
+    const booked = d.booked || [];
+    const isAllBlocked = blocks.some(b => b.slot === 'ALL');
+
+    panel.innerHTML = `<p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.75rem;">Click a slot to block/unblock it. Blocked slots show as <b style="color:#e74c3c;">Fully Booked</b> to clients.</p><div class="slot-grid">` +
+      slots.map(slot => {
+        const isBlocked = isAllBlocked || blocks.some(b => b.slot === slot);
+        const isBooked = booked.includes(slot);
+        let cls = 'slot-btn';
+        let label = fmtTime(slot);
+        if (isBooked) { cls += ' booked'; label += ' ✦'; }
+        else if (isBlocked) { cls += ' blocked'; label += ' ✕'; }
+        else cls += ' available';
+        return `<div class="${cls}" onclick="${isBooked?'':'toggleSlotBlock(\''+slot+'\','+isBlocked+')'}">${label}</div>`;
+      }).join('') + '</div>';
+    actions.style.display = 'flex';
+    actions.style.gap = '0.5rem';
+    actions.style.marginTop = '1.25rem';
+  });
+}
+
+function toggleSlotBlock(slot, currentlyBlocked) {
+  if (!selectedDate) return;
+  if (currentlyBlocked) {
+    api('/api/calendar-blocks', { method:'DELETE', body: JSON.stringify({ date: selectedDate, slot }) })
+      .then(() => { toast('Slot unblocked'); selectCalDay(selectedDate); renderCalendar(); });
+  } else {
+    api('/api/calendar-blocks', { method:'POST', body: JSON.stringify({ date: selectedDate, slot, note: 'Blocked by CEO' }) })
+      .then(() => { toast('Slot blocked — shows as Fully Booked'); selectCalDay(selectedDate); renderCalendar(); });
+  }
+}
+
+function blockDay() {
+  if (!selectedDate) return;
+  api('/api/calendar-blocks', { method:'POST', body: JSON.stringify({ date: selectedDate, slot: 'ALL', note: 'Full day blocked' }) })
+    .then(() => { toast('Full day blocked'); selectCalDay(selectedDate); renderCalendar(); });
+}
+
+function unblockDay() {
+  if (!selectedDate) return;
+  api('/api/calendar-blocks', { method:'DELETE', body: JSON.stringify({ date: selectedDate }) })
+    .then(r=>r.json()).then(d => { toast(`Unblocked ${d.removed} slot(s)`); selectCalDay(selectedDate); renderCalendar(); });
+}
+
+// ── CLIENTS ──
+function loadClients() {
+  api('/api/ceo-data?section=clients').then(r=>r.json()).then(d => {
+    allClients = d.members || [];
+    renderClients(allClients);
+  });
+}
+function filterClients() {
+  const q = document.getElementById('client-search').value.toLowerCase();
+  const tier = document.getElementById('client-tier-filter').value;
+  const filtered = allClients.filter(m =>
+    (!tier || m.tier === tier) &&
+    (!q || m.full_name?.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q) || m.phone?.includes(q))
+  );
+  renderClients(filtered);
+}
+function renderClients(members) {
+  const tbody = document.getElementById('clients-body');
+  if (!members.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:2rem;">No clients found</td></tr>'; return; }
+  const BADGE = { SIGNATURE:'badge-sig', LUXE:'badge-luxe', BLACK_CARD:'badge-black' };
+  const LABEL = { SIGNATURE:'Signature', LUXE:'Luxe', BLACK_CARD:'Black Card' };
+  tbody.innerHTML = members.map(m => `
+    <tr>
+      <td><strong>${m.full_name}</strong><br><span style="font-size:0.7rem;color:var(--muted);">${m.member_id}</span></td>
+      <td><span class="badge ${BADGE[m.tier]||''}">${LABEL[m.tier]||m.tier}</span></td>
+      <td>${m.phone || '—'}</td>
+      <td style="font-size:0.8rem;">${m.email}</td>
+      <td style="font-size:0.75rem;color:var(--muted);">${m.membership_started_at?.slice(0,10)||'—'}</td>
+      <td>
+        <button class="btn-icon" title="Send text" onclick="openSingleText('${m.phone||''}','${m.full_name}')">📱</button>
+        <button class="btn-icon" title="${Number(m.flagged)?'Unflag':'Flag'} account" onclick="toggleFlag('${m.member_id}',${Number(m.flagged)||0})">${Number(m.flagged)?'🚩':'⚑'}</button>
+      </td>
+    </tr>`).join('');
+}
+function toggleFlag(memberId, currentlyFlagged) {
+  api('/api/ceo-data', { method:'PUT', body: JSON.stringify({ section:'flag_member', data:{ memberId, flagged: !currentlyFlagged } }) })
+    .then(() => { toast(currentlyFlagged ? 'Account unflagged' : 'Account flagged'); loadClients(); });
+}
+function openSingleText(phone, name) {
+  if (!phone) { toast('No phone number on file'); return; }
+  document.getElementById('mass-text-msg').value = `Hi ${name.split(' ')[0]}, `;
+  openMassText();
+}
+function openMassText() { document.getElementById('modal-masstext').classList.add('open'); }
+function selectTierFilter(el) {
+  document.querySelectorAll('.tier-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  selectedTierFilter = el.dataset.tier;
+}
+function sendMassText() {
+  const msg = document.getElementById('mass-text-msg').value.trim();
+  if (!msg) { toast('Enter a message first'); return; }
+  const resultEl = document.getElementById('mass-text-result');
+  resultEl.textContent = 'Sending…';
+  api('/api/ceo-data', { method:'POST', body: JSON.stringify({ section:'mass_sms', data:{ message: msg, tier_filter: selectedTierFilter||undefined } }) })
+    .then(r=>r.json()).then(d => {
+      resultEl.textContent = `✓ Sent to ${d.sent} of ${d.total} clients`;
+      toast(`Texts sent to ${d.sent} clients`);
+    }).catch(() => { resultEl.textContent = 'Send failed — check Twilio settings'; });
+}
+
+// ── BOOKINGS ──
+function loadBookings() {
+  api('/api/ceo-data?section=bookings').then(r=>r.json()).then(d => {
+    allBookings = d.bookings || [];
+    renderBookings(allBookings);
+  });
+}
+function filterBookings() {
+  const date = document.getElementById('bk-date-filter').value;
+  const q = document.getElementById('bk-search').value.toLowerCase();
+  const filtered = allBookings.filter(b => (!date || b.date === date) && (!q || b.customer_name?.toLowerCase().includes(q)));
+  renderBookings(filtered);
+}
+function renderBookings(bookings) {
+  const tbody = document.getElementById('bookings-body');
+  if (!bookings.length) { tbody.innerHTML = '<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:2rem;">No bookings found</td></tr>'; return; }
+  tbody.innerHTML = bookings.map(b => `
+    <tr>
+      <td style="font-size:0.72rem;color:var(--muted);">${b.id}</td>
+      <td>${b.date}</td>
+      <td>${fmtTime(b.time_slot)}</td>
+      <td><strong>${b.customer_name}</strong></td>
+      <td style="color:var(--gold)">${b.service_name}</td>
+      <td>$${((b.total_cents||0)/100).toFixed(2)}</td>
+      <td>$${((b.deposit_cents||0)/100).toFixed(2)}</td>
+      <td style="font-size:0.72rem;">${b.member_id||'Guest'}</td>
+    </tr>`).join('');
+}
+
+// ── REPORTS ──
+function loadReports() {
+  api('/api/ceo-data?section=reports').then(r=>r.json()).then(d => {
+    document.getElementById('wk-bk').textContent = d.weeklyBookings;
+    document.getElementById('wk-rev').textContent = '$'+(d.weeklyRevenue/100).toFixed(0);
+    document.getElementById('mo-bk').textContent = d.monthlyBookings;
+    document.getElementById('mo-rev').textContent = '$'+(d.monthlyRevenue/100).toFixed(0);
+    renderFunnelMini(d.funnelByStep, 'funnel-chart');
+    // Service popularity
+    const svcEl = document.getElementById('svc-popularity');
+    if (d.servicePopularity?.length) {
+      const max = d.servicePopularity[0][1];
+      svcEl.innerHTML = d.servicePopularity.map(([name, count]) => `
+        <div class="funnel-row">
+          <span class="funnel-label" style="width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${name}">${name}</span>
+          <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${Math.round(count/max*100)}%"></div></div>
+          <span class="funnel-count">${count}</span>
+        </div>`).join('');
+    } else {
+      svcEl.innerHTML = '<p style="color:var(--muted);font-size:0.82rem;">No bookings yet</p>';
+    }
+    // Top questions
+    const qEl = document.getElementById('top-questions-list');
+    if (d.topQuestions?.length) {
+      qEl.innerHTML = d.topQuestions.map((q, i) => `
+        <div style="display:flex;align-items:center;gap:1rem;padding:0.55rem 0;border-bottom:1px solid rgba(196,168,130,0.06);">
+          <span style="font-family:'Syne',sans-serif;color:var(--gold);font-size:0.82rem;width:24px;flex-shrink:0;">${i+1}</span>
+          <span style="flex:1;font-size:0.83rem;">${q.q}</span>
+          <span style="font-size:0.72rem;color:var(--muted);">${q.count}×</span>
+        </div>`).join('');
+    } else {
+      qEl.innerHTML = '<p style="color:var(--muted);font-size:0.82rem;">No questions tracked yet. Questions are logged as clients chat with Ask Zola.</p>';
+    }
+  });
+}
+
+function downloadReport() {
+  api('/api/ceo-data?section=reports').then(r=>r.json()).then(d => {
+    const rows = [['Metric','Value'],['Weekly Bookings',d.weeklyBookings],['Weekly Revenue ($)',(d.weeklyRevenue/100).toFixed(2)],['Monthly Bookings',d.monthlyBookings],['Monthly Revenue ($)',(d.monthlyRevenue/100).toFixed(2)],['Total Bookings',d.totalBookings]];
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const a = document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download='zola-report-'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  });
+}
+
+// ── SERVICES ──
+function loadServices() {
+  api('/api/ceo-data?section=services').then(r=>r.json()).then(d => {
+    renderServicesTable(d.services||[], d.addons||[]);
+  });
+}
+function renderServicesTable(svcs, addons) {
+  const tbody = document.getElementById('services-body');
+  tbody.innerHTML = svcs.map(s => `
+    <tr>
+      <td><strong>${s.name}</strong><br><span style="font-size:0.75rem;color:var(--muted);">${s.description||''}</span></td>
+      <td>${s.duration_min} min</td>
+      <td style="color:var(--gold);">$${(s.price_cents/100).toFixed(0)}</td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick='editService(${JSON.stringify(s).replace(/'/g,"&#39;")})'>Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteService(${s.id})" style="margin-left:0.3rem;">Delete</button>
+      </td>
+    </tr>`).join('');
+  const abody = document.getElementById('addons-body');
+  abody.innerHTML = addons.map(a => `
+    <tr>
+      <td>${a.name}</td>
+      <td style="color:var(--gold);">$${(a.price_cents/100).toFixed(0)}</td>
+      <td><button class="btn btn-outline btn-sm" onclick='editAddon(${JSON.stringify(a).replace(/'/g,"&#39;")})'>Edit</button></td>
+    </tr>`).join('');
+}
+function openAddService() {
+  document.getElementById('svc-modal-title').textContent = 'Add New Service';
+  document.getElementById('svc-edit-id').value = '';
+  document.getElementById('svc-name').value = '';
+  document.getElementById('svc-desc').value = '';
+  document.getElementById('svc-price').value = '';
+  document.getElementById('svc-duration').value = '60';
+  document.getElementById('modal-service').classList.add('open');
+}
+function editService(s) {
+  document.getElementById('svc-modal-title').textContent = 'Edit Service';
+  document.getElementById('svc-edit-id').value = s.id;
+  document.getElementById('svc-name').value = s.name;
+  document.getElementById('svc-desc').value = s.description||'';
+  document.getElementById('svc-price').value = (s.price_cents/100).toFixed(0);
+  document.getElementById('svc-duration').value = s.duration_min;
+  document.getElementById('modal-service').classList.add('open');
+}
+function editAddon(a) {
+  document.getElementById('svc-modal-title').textContent = 'Edit Add-On';
+  document.getElementById('svc-edit-id').value = 'addon-' + a.id;
+  document.getElementById('svc-name').value = a.name;
+  document.getElementById('svc-desc').value = '';
+  document.getElementById('svc-price').value = (a.price_cents/100).toFixed(0);
+  document.getElementById('svc-duration').value = '';
+  document.getElementById('modal-service').classList.add('open');
+}
+function saveService() {
+  const id = document.getElementById('svc-edit-id').value;
+  const isAddon = String(id).startsWith('addon-');
+  const data = {
+    id: isAddon ? Number(id.replace('addon-','')) : (Number(id)||undefined),
+    name: document.getElementById('svc-name').value.trim(),
+    description: document.getElementById('svc-desc').value.trim(),
+    price_cents: Math.round(parseFloat(document.getElementById('svc-price').value||0) * 100),
+    duration_min: Number(document.getElementById('svc-duration').value)||60,
+  };
+  if (id && !isAddon) {
+    api('/api/ceo-data', { method:'PUT', body: JSON.stringify({ section:'service', data }) }).then(() => { closeModal('modal-service'); loadServices(); toast('Service updated'); });
+  } else if (isAddon) {
+    api('/api/ceo-data', { method:'PUT', body: JSON.stringify({ section:'addon', data }) }).then(() => { closeModal('modal-service'); loadServices(); toast('Add-on updated'); });
+  } else {
+    api('/api/ceo-data', { method:'POST', body: JSON.stringify({ section:'service', data }) }).then(() => { closeModal('modal-service'); loadServices(); toast('Service added'); });
+  }
+}
+function deleteService(id) {
+  if (!confirm('Delete this service?')) return;
+  api('/api/ceo-data?section=service&id='+id, { method:'DELETE' }).then(() => { loadServices(); toast('Service deleted'); });
+}
+
+// ── FAQ ──
+function loadFAQ() {
+  api('/api/ceo-data?section=reports').then(r=>r.json()).then(d => {
+    const el = document.getElementById('faq-questions-list');
+    if (d.topQuestions?.length) {
+      el.innerHTML = d.topQuestions.map((q, i) => `
+        <div style="display:flex;gap:1rem;align-items:flex-start;padding:0.65rem 0;border-bottom:1px solid rgba(196,168,130,0.06);">
+          <span style="font-family:'Syne',sans-serif;color:var(--gold);width:22px;flex-shrink:0;">${i+1}</span>
+          <div style="flex:1;"><p style="font-size:0.84rem;margin-bottom:0.2rem;">${q.q}</p><span style="font-size:0.68rem;color:var(--muted);">Asked ${q.count} time${q.count!==1?'s':''}</span></div>
+        </div>`).join('');
+    } else {
+      el.innerHTML = '<p style="color:var(--muted);font-size:0.82rem;padding:1rem 0;">Ask Zola hasn\'t logged any questions yet. Questions are tracked as clients use the chatbot on the website.</p>';
+    }
+    // Chip preview
+    const FAQ_CHIPS = ['How does membership work?','How do I book?','What tier is right for me?','How much does it cost?','Do services roll over?','Can I pick my artist?','What is a structure mani?','What is the Black Card?','Cancellation & deposits','Kids / princess parties'];
+    document.getElementById('chip-preview').innerHTML = FAQ_CHIPS.map(c =>
+      `<span style="border:1px solid rgba(196,168,130,0.35);color:var(--muted);padding:0.3rem 0.65rem;font-size:0.7rem;letter-spacing:0.04em;">${c}</span>`
+    ).join('');
+  });
+}
+
+// ── PAYOUTS ──
+function loadPayouts() {
+  api('/api/ceo-data?section=overview').then(r=>r.json()).then(d => {
+    document.getElementById('payout-mrr').textContent = '$'+(d.mrr/100).toFixed(0);
+    document.getElementById('payout-net').textContent = '$'+(d.mrr/100*0.6).toFixed(0)+'/mo';
+  });
+  calcComm();
+}
+function calcComm() {
+  const rev = parseFloat(document.getElementById('comm-revenue')?.value||0);
+  const rate = parseFloat(document.getElementById('comm-rate')?.value||40)/100;
+  const worker = rev * rate;
+  const owner = rev - worker;
+  document.getElementById('comm-worker').textContent = '$'+worker.toFixed(2);
+  document.getElementById('comm-owner').textContent = '$'+owner.toFixed(2);
+}
+
+// ── GIFT CARDS ──
+function loadGiftCards() {
+  api('/api/ceo-data?section=giftcards').then(r=>r.json()).then(d => {
+    const tbody = document.getElementById('gc-body');
+    const cards = d.giftCards||[];
+    if (!cards.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:2rem;">No gift cards issued yet</td></tr>'; return; }
+    tbody.innerHTML = cards.map(c => `
+      <tr>
+        <td style="font-family:monospace;color:var(--gold);">${c.code}</td>
+        <td>${c.recipient_name}</td>
+        <td>$${(c.amount_cents/100).toFixed(0)}</td>
+        <td style="${c.redeemed?'color:var(--muted)':'color:#27ae60;'}">$${(c.balance_cents/100).toFixed(0)}</td>
+        <td style="font-size:0.75rem;color:var(--muted);">${c.issued_at?.slice(0,10)}</td>
+        <td><span class="badge ${c.redeemed?'badge-warn':'badge-ok'}">${c.redeemed?'Redeemed':'Active'}</span></td>
+        <td>${!c.redeemed?`<button class="btn btn-outline btn-sm" onclick="redeemCard(${c.id})">Redeem</button>`:''}</td>
+      </tr>`).join('');
+  });
+}
+function openIssueGiftCard() { document.getElementById('modal-giftcard').classList.add('open'); }
+function issueGiftCard() {
+  const data = {
+    recipient_name: document.getElementById('gc-recipient').value.trim(),
+    recipient_email: document.getElementById('gc-email').value.trim(),
+    amount_cents: Math.round(parseFloat(document.getElementById('gc-amount').value||0)*100),
+  };
+  if (!data.recipient_name || !data.amount_cents) { toast('Fill in name and amount'); return; }
+  api('/api/ceo-data', { method:'POST', body: JSON.stringify({ section:'giftcard', data }) }).then(r=>r.json()).then(d => {
+    closeModal('modal-giftcard');
+    loadGiftCards();
+    toast('Gift card issued: ' + d.card?.code);
+  });
+}
+function redeemCard(id) {
+  if (!confirm('Mark this gift card as redeemed?')) return;
+  api('/api/ceo-data', { method:'PUT', body: JSON.stringify({ section:'redeem_giftcard', data:{ id } }) }).then(() => { loadGiftCards(); toast('Gift card redeemed'); });
+}
+
+// ── INVENTORY ──
+function loadInventory() {
+  api('/api/ceo-data?section=inventory').then(r=>r.json()).then(d => {
+    const list = document.getElementById('inventory-list');
+    const items = d.inventory||[];
+    if (!items.length) { list.innerHTML = '<p style="color:var(--muted);">No items yet.</p>'; return; }
+    list.innerHTML = items.map(i => {
+      const low = i.qty <= i.low_at;
+      return `<div class="inv-item">
+        <span class="inv-name">${i.name}<span style="font-size:0.72rem;color:var(--muted);margin-left:0.5rem;">(${i.unit})</span></span>
+        ${low ? '<span class="badge badge-warn">Low Stock</span>' : ''}
+        <div class="inv-qty-wrap">
+          <button class="inv-qty-btn" onclick="adjInv(${i.id},-1)">−</button>
+          <span class="inv-qty-val ${low?'inv-low':''}">${i.qty}</span>
+          <button class="inv-qty-btn" onclick="adjInv(${i.id},1)">+</button>
+        </div>
+        <button class="btn-icon" title="Edit" onclick='editInventory(${JSON.stringify(i).replace(/'/g,"&#39;")})'>✏️</button>
+        <button class="btn-icon" title="Delete" onclick="deleteInv(${i.id})">🗑</button>
+      </div>`;
+    }).join('');
+  });
+}
+function adjInv(id, delta) {
+  api('/api/ceo-data?section=inventory').then(r=>r.json()).then(d => {
+    const item = d.inventory.find(i => i.id === id);
+    if (!item) return;
+    const newQty = Math.max(0, item.qty + delta);
+    api('/api/ceo-data', { method:'PUT', body: JSON.stringify({ section:'inventory', data:{ ...item, qty: newQty } }) }).then(() => loadInventory());
+  });
+}
+function openAddInventory() {
+  document.getElementById('inv-modal-title').textContent = 'Add Inventory Item';
+  document.getElementById('inv-edit-id').value = '';
+  ['inv-name','inv-unit'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('inv-qty').value = '0';
+  document.getElementById('inv-low').value = '2';
+  document.getElementById('modal-inventory').classList.add('open');
+}
+function editInventory(i) {
+  document.getElementById('inv-modal-title').textContent = 'Edit Item';
+  document.getElementById('inv-edit-id').value = i.id;
+  document.getElementById('inv-name').value = i.name;
+  document.getElementById('inv-unit').value = i.unit;
+  document.getElementById('inv-qty').value = i.qty;
+  document.getElementById('inv-low').value = i.low_at;
+  document.getElementById('modal-inventory').classList.add('open');
+}
+function saveInventory() {
+  const id = document.getElementById('inv-edit-id').value;
+  const data = { name: document.getElementById('inv-name').value.trim(), unit: document.getElementById('inv-unit').value.trim(), qty: Number(document.getElementById('inv-qty').value), low_at: Number(document.getElementById('inv-low').value) };
+  if (id) {
+    api('/api/ceo-data', { method:'PUT', body: JSON.stringify({ section:'inventory', data:{ ...data, id:Number(id) } }) }).then(() => { closeModal('modal-inventory'); loadInventory(); toast('Item updated'); });
+  } else {
+    api('/api/ceo-data', { method:'POST', body: JSON.stringify({ section:'inventory', data }) }).then(() => { closeModal('modal-inventory'); loadInventory(); toast('Item added'); });
+  }
+}
+function deleteInv(id) {
+  if (!confirm('Remove this item?')) return;
+  api('/api/ceo-data?section=inventory&id='+id, { method:'DELETE' }).then(() => { loadInventory(); toast('Item removed'); });
+}
+
+// ── GOALS ──
+function loadGoals() {
+  api('/api/ceo-data?section=goals').then(r=>r.json()).then(d => {
+    const el = document.getElementById('goals-list');
+    el.innerHTML = (d.goals||[]).map(g => {
+      const pct = Math.min(100, Math.round(g.current / g.target * 100));
+      const display = g.unit === 'cents' ? `$${(g.current/100).toFixed(0)} / $${(g.target/100).toFixed(0)}` : `${g.current} / ${g.target}`;
+      return `<div class="goal-card">
+        <div class="goal-header"><span class="goal-title">${g.title}</span><span class="goal-pct">${pct}%</span></div>
+        <div class="goal-bar-wrap"><div class="goal-bar" style="width:${pct}%"></div></div>
+        <div class="goal-meta"><span>${display} ${g.unit !== 'cents' ? g.unit : ''}</span><span>by ${g.deadline}</span></div>
+      </div>`;
+    }).join('');
+
+    // AI Goals Insights
+    const insights = document.getElementById('ai-goals-insights');
+    const goals = d.goals||[];
+    const aiMsgs = [];
+    goals.forEach(g => {
+      const pct = Math.min(100, Math.round(g.current / g.target * 100));
+      if (pct >= 100) aiMsgs.push(`🏆 Goal complete: <strong>${g.title}</strong> — you hit 100%! Set a new, bigger target to keep growing.`);
+      else if (pct >= 75) aiMsgs.push(`🔥 Almost there on <strong>${g.title}</strong> (${pct}%). You're in the final stretch — one strong push will close this.`);
+      else if (pct < 20 && g.current === 0) aiMsgs.push(`🌱 <strong>${g.title}</strong> hasn't started yet. First step: tell 3 existing clients about this tier today. Personal messages convert 3× better than posts.`);
+      else if (pct < 50) aiMsgs.push(`📈 <strong>${g.title}</strong> is at ${pct}%. At this pace you'll hit the deadline — stay consistent and consider a referral incentive to accelerate.`);
+    });
+    if (!aiMsgs.length) aiMsgs.push('Set your first goal above and come back here for AI guidance on hitting it.');
+    insights.innerHTML = aiMsgs.map(m => `<div class="ai-insight"><p>${m}</p></div>`).join('');
+  });
+}
+
+// ── HELPERS ──
+function fmtTime(slot) {
+  if (!slot) return '';
+  const [h, m] = slot.split(':');
+  const hour = Number(h);
+  return `${hour>12?hour-12:hour||12}:${m} ${hour>=12?'PM':'AM'}`;
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => { el.style.display='none'; }, 3000);
+}
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if(e.target === overlay) overlay.classList.remove('open'); });
+});
+</script>
+</body>
+</html>

@@ -3,66 +3,66 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Portal — ZLUX Nail Studio</title>
+  <title>My Portal — ZOLA Nail Studio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <style>
     body { background: var(--soft-white); }
     .login-wrap { max-width:400px; margin:0 auto; padding:7rem 1.5rem 3rem; }
-    .login-card { background:#fff; border:1px solid rgba(201,165,90,0.18); padding:2.5rem 2rem; }
-    .portal-heading { font-family:'Cormorant Garamond',serif; font-size:2rem; color:var(--espresso); margin-bottom:0.25rem; font-weight:400; }
-    .portal-sub { font-family:'Jost',sans-serif; font-size:0.84rem; color:var(--latte); margin-bottom:1.75rem; }
+    .login-card { background:#fff; border:1px solid rgba(196,168,130,0.18); padding:2.5rem 2rem; }
+    .portal-heading { font-family:'Syne',serif; font-size:2rem; color:var(--espresso); margin-bottom:0.25rem; font-weight:400; }
+    .portal-sub { font-family:'Josefin Sans',sans-serif; font-size:0.84rem; color:var(--latte); margin-bottom:1.75rem; }
     .pf { margin-bottom:1.1rem; }
-    .pf label { display:block; font-family:'Jost',sans-serif; font-size:0.65rem; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--latte); margin-bottom:0.35rem; }
-    .pf input { width:100%; border:1px solid rgba(201,165,90,0.22); background:var(--soft-white); font-family:'Jost',sans-serif; font-size:0.88rem; color:var(--espresso); padding:0.6rem 0.875rem; outline:none; box-sizing:border-box; }
+    .pf label { display:block; font-family:'Josefin Sans',sans-serif; font-size:0.65rem; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--latte); margin-bottom:0.35rem; }
+    .pf input { width:100%; border:1px solid rgba(196,168,130,0.22); background:var(--soft-white); font-family:'Josefin Sans',sans-serif; font-size:0.88rem; color:var(--espresso); padding:0.6rem 0.875rem; outline:none; box-sizing:border-box; }
     .pf input:focus { border-color:var(--champagne); }
-    .btn-login { width:100%; background:var(--champagne); color:var(--espresso); border:none; padding:0.85rem; font-family:'Jost',sans-serif; font-size:0.75rem; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; cursor:pointer; }
+    .btn-login { width:100%; background:var(--champagne); color:var(--espresso); border:none; padding:0.85rem; font-family:'Josefin Sans',sans-serif; font-size:0.75rem; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; cursor:pointer; }
     .btn-login:hover { background:#b8924a; }
-    .login-err { background:rgba(180,50,50,0.07); border:1px solid rgba(180,50,50,0.2); color:#b43232; font-family:'Jost',sans-serif; font-size:0.8rem; padding:0.6rem 0.875rem; margin-bottom:1rem; display:none; }
+    .login-err { background:rgba(180,50,50,0.07); border:1px solid rgba(180,50,50,0.2); color:#b43232; font-family:'Josefin Sans',sans-serif; font-size:0.8rem; padding:0.6rem 0.875rem; margin-bottom:1rem; display:none; }
     #portal-dashboard { display:none; }
     .portal-nav { background:var(--espresso); padding:0.75rem 0; position:sticky; top:0; z-index:50; }
     .portal-nav-inner { max-width:1100px; margin:0 auto; padding:0 1.5rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
-    .portal-nav-logo { font-family:'Cormorant Garamond',serif; font-size:1.35rem; color:var(--champagne); text-decoration:none; }
+    .portal-nav-logo { font-family:'Syne',serif; font-size:1.35rem; color:var(--champagne); text-decoration:none; }
     .portal-nav-links { display:flex; gap:1.5rem; }
-    .portal-nav-links button { background:none; border:none; font-family:'Jost',sans-serif; font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--latte); cursor:pointer; }
+    .portal-nav-links button { background:none; border:none; font-family:'Josefin Sans',sans-serif; font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--latte); cursor:pointer; }
     .portal-nav-links button:hover, .portal-nav-links button.active { color:var(--champagne); }
     .portal-content { max-width:1100px; margin:0 auto; padding:2rem 1.5rem 4rem; }
     .portal-tab { display:none; }
     .portal-tab.active { display:block; }
-    .tier-badge { display:inline-block; font-family:'Jost',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; padding:0.22rem 0.7rem; }
-    .tier-badge.SIGNATURE { background:rgba(166,124,82,0.12); color:var(--latte); }
-    .tier-badge.LUXE { background:rgba(201,165,90,0.12); color:var(--champagne); }
+    .tier-badge { display:inline-block; font-family:'Josefin Sans',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; padding:0.22rem 0.7rem; }
+    .tier-badge.SIGNATURE { background:rgba(139,106,62,0.12); color:var(--latte); }
+    .tier-badge.LUXE { background:rgba(196,168,130,0.12); color:var(--champagne); }
     .tier-badge.BLACK_CARD { background:var(--espresso); color:var(--champagne); }
-    .p-card { background:#fff; border:1px solid rgba(201,165,90,0.15); padding:1.75rem; margin-bottom:1.25rem; }
-    .p-card-title { font-family:'Jost',sans-serif; font-size:0.65rem; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--latte); margin-bottom:1rem; }
+    .p-card { background:#fff; border:1px solid rgba(196,168,130,0.15); padding:1.75rem; margin-bottom:1.25rem; }
+    .p-card-title { font-family:'Josefin Sans',sans-serif; font-size:0.65rem; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--latte); margin-bottom:1rem; }
     .stat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:1rem; margin-bottom:1.5rem; }
-    .stat-box { background:var(--soft-white); border:1px solid rgba(201,165,90,0.12); padding:1.25rem; text-align:center; }
-    .stat-num { font-family:'Cormorant Garamond',serif; font-size:2.5rem; color:var(--champagne); line-height:1; }
-    .stat-label { font-family:'Jost',sans-serif; font-size:0.65rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--latte); margin-top:0.25rem; }
+    .stat-box { background:var(--soft-white); border:1px solid rgba(196,168,130,0.12); padding:1.25rem; text-align:center; }
+    .stat-num { font-family:'Syne',serif; font-size:2.5rem; color:var(--champagne); line-height:1; }
+    .stat-label { font-family:'Josefin Sans',sans-serif; font-size:0.65rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--latte); margin-top:0.25rem; }
     .qr-wrap { text-align:center; }
-    .qr-canvas-wrap { display:inline-block; position:relative; padding:1.5rem; background:#fff; border:1px solid rgba(201,165,90,0.2); margin:1rem 0; }
-    .qr-expire { font-family:'Jost',sans-serif; font-size:0.7rem; color:var(--latte); margin-top:0.25rem; }
-    .qr-warning { font-family:'Jost',sans-serif; font-size:0.72rem; color:rgba(180,50,50,0.7); margin-top:0.5rem; }
-    .appt-row { border-bottom:1px solid rgba(201,165,90,0.1); padding:0.9rem 0; }
+    .qr-canvas-wrap { display:inline-block; position:relative; padding:1.5rem; background:#fff; border:1px solid rgba(196,168,130,0.2); margin:1rem 0; }
+    .qr-expire { font-family:'Josefin Sans',sans-serif; font-size:0.7rem; color:var(--latte); margin-top:0.25rem; }
+    .qr-warning { font-family:'Josefin Sans',sans-serif; font-size:0.72rem; color:rgba(180,50,50,0.7); margin-top:0.5rem; }
+    .appt-row { border-bottom:1px solid rgba(196,168,130,0.1); padding:0.9rem 0; }
     .appt-row:last-child { border-bottom:none; }
-    .appt-date { font-family:'Cormorant Garamond',serif; font-size:1.15rem; color:var(--espresso); }
-    .appt-detail { font-family:'Jost',sans-serif; font-size:0.8rem; color:var(--latte); }
-    .appt-status { display:inline-block; font-family:'Jost',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; padding:0.15rem 0.5rem; }
+    .appt-date { font-family:'Syne',serif; font-size:1.15rem; color:var(--espresso); }
+    .appt-detail { font-family:'Josefin Sans',sans-serif; font-size:0.8rem; color:var(--latte); }
+    .appt-status { display:inline-block; font-family:'Josefin Sans',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; padding:0.15rem 0.5rem; }
     .appt-status.SCHEDULED { background:rgba(60,140,80,0.1); color:#3c8c50; }
-    .appt-status.COMPLETED { background:rgba(201,165,90,0.1); color:var(--champagne); }
+    .appt-status.COMPLETED { background:rgba(196,168,130,0.1); color:var(--champagne); }
     .appt-status.CANCELLED { background:rgba(180,50,50,0.1); color:#b43232; }
     .msg-bubble { padding:0.875rem 1rem; margin-bottom:0.75rem; max-width:80%; }
     .msg-bubble.from-admin { background:var(--espresso); color:var(--cream); margin-right:auto; }
-    .msg-bubble.from-me { background:rgba(201,165,90,0.1); color:var(--espresso); margin-left:auto; text-align:right; }
-    .msg-time { font-family:'Jost',sans-serif; font-size:0.65rem; opacity:0.6; margin-top:0.25rem; }
+    .msg-bubble.from-me { background:rgba(196,168,130,0.1); color:var(--espresso); margin-left:auto; text-align:right; }
+    .msg-time { font-family:'Josefin Sans',sans-serif; font-size:0.65rem; opacity:0.6; margin-top:0.25rem; }
     .msg-input-row { display:flex; gap:0.5rem; margin-top:1rem; }
-    .msg-input-row input { flex:1; border:1px solid rgba(201,165,90,0.22); padding:0.6rem 0.875rem; font-family:'Jost',sans-serif; font-size:0.85rem; outline:none; }
+    .msg-input-row input { flex:1; border:1px solid rgba(196,168,130,0.22); padding:0.6rem 0.875rem; font-family:'Josefin Sans',sans-serif; font-size:0.85rem; outline:none; }
     .msg-send-btn { background:var(--champagne); border:none; color:var(--espresso); padding:0 1.25rem; cursor:pointer; font-weight:700; font-size:1.1rem; }
-    .countdown-strip { background:rgba(201,165,90,0.08); border:1px solid rgba(201,165,90,0.18); padding:1rem 1.25rem; margin-bottom:1.25rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
-    .countdown-label { font-family:'Jost',sans-serif; font-size:0.72rem; color:var(--latte); }
-    .countdown-clock { font-family:'Cormorant Garamond',serif; font-size:1.75rem; color:var(--champagne); }
+    .countdown-strip { background:rgba(196,168,130,0.08); border:1px solid rgba(196,168,130,0.18); padding:1rem 1.25rem; margin-bottom:1.25rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+    .countdown-label { font-family:'Josefin Sans',sans-serif; font-size:0.72rem; color:var(--latte); }
+    .countdown-clock { font-family:'Syne',serif; font-size:1.75rem; color:var(--champagne); }
     @media (max-width:600px) { .portal-nav-links { gap:0.75rem; } .stat-grid { grid-template-columns:1fr 1fr; } }
   </style>
 </head>
@@ -70,7 +70,7 @@
 
 <div id="portal-login">
   <nav class="nav" id="nav">
-    <a href="index.html" class="nav-logo">ZLUX</a>
+    <a href="index.html" class="nav-logo"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span></a>
     <div class="nav-links">
       <a href="index.html">Home</a>
       <a href="services.html">Services</a>
@@ -92,8 +92,8 @@
       <div class="pf"><label>Member ID</label><input type="text" id="login-id" placeholder="ZL-XXXXXX" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')doLogin()" /></div>
       <button class="btn-login" onclick="doLogin()">Sign In</button>
       <div style="margin-top:1.25rem;text-align:center;">
-        <span style="font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);">Not a member yet?</span>
-        <a href="memberships.html" style="font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--champagne);margin-left:0.4rem;">View Memberships</a>
+        <span style="font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);">Not a member yet?</span>
+        <a href="memberships.html" style="font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--champagne);margin-left:0.4rem;">View Memberships</a>
       </div>
     </div>
   </div>
@@ -102,7 +102,7 @@
 <div id="portal-dashboard">
   <nav class="portal-nav">
     <div class="portal-nav-inner">
-      <a href="index.html" class="portal-nav-logo">ZLUX</a>
+      <a href="index.html" class="portal-nav-logo">ZOLA</a>
       <div class="portal-nav-links">
         <button onclick="showTab('tab-home')" class="active" id="nav-home">Home</button>
         <button onclick="showTab('tab-book')" id="nav-book">Book</button>
@@ -110,7 +110,7 @@
         <button onclick="showTab('tab-history')" id="nav-history">History</button>
         <button onclick="showTab('tab-messages')" id="nav-messages">Messages</button>
         <button onclick="showTab('tab-profile')" id="nav-profile">Profile</button>
-        <button onclick="doLogout()" style="color:rgba(166,124,82,0.5);">Sign Out</button>
+        <button onclick="doLogout()" style="color:rgba(139,106,62,0.5);">Sign Out</button>
       </div>
     </div>
   </nav>
@@ -120,20 +120,20 @@
     <div class="portal-tab active" id="tab-home">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:2rem;">
         <div>
-          <div style="font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--espresso);">Welcome back, <span id="member-first-name">—</span>.</div>
+          <div style="font-family:'Syne',serif;font-size:2rem;color:var(--espresso);">Welcome back, <span id="member-first-name">—</span>.</div>
           <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.35rem;">
-            <span id="member-id-badge" style="font-family:'Jost',sans-serif;font-size:0.72rem;color:var(--latte);"></span>
+            <span id="member-id-badge" style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:var(--latte);"></span>
             <span id="tier-badge" class="tier-badge"></span>
           </div>
         </div>
-        <a href="booking.html" style="background:var(--champagne);color:var(--espresso);font-family:'Jost',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;padding:0.7rem 1.25rem;text-decoration:none;">Book Appointment</a>
+        <a href="booking.html" style="background:var(--champagne);color:var(--espresso);font-family:'Josefin Sans',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;padding:0.7rem 1.25rem;text-decoration:none;">Book Appointment</a>
       </div>
       <div class="countdown-strip" id="countdown-strip" style="display:none;">
         <div>
           <div class="countdown-label">Your Booking Window Opens In</div>
           <div class="countdown-clock" id="countdown-display">—</div>
         </div>
-        <div style="font-family:'Jost',sans-serif;font-size:0.78rem;color:var(--latte);line-height:1.7;">
+        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);line-height:1.7;">
           <a href="memberships.html" style="color:var(--champagne);">Upgrade your tier</a> for earlier access.
         </div>
       </div>
@@ -145,7 +145,7 @@
       </div>
       <div class="p-card">
         <div class="p-card-title">Upcoming Appointments</div>
-        <div id="upcoming-list"><div style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--latte);">No upcoming appointments. <a href="booking.html" style="color:var(--champagne);">Book now.</a></div></div>
+        <div id="upcoming-list"><div style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);">No upcoming appointments. <a href="booking.html" style="color:var(--champagne);">Book now.</a></div></div>
       </div>
       <div class="p-card" id="announcements-card" style="display:none;">
         <div class="p-card-title">Studio Announcements</div>
@@ -154,44 +154,44 @@
     </div>
 
     <div class="portal-tab" id="tab-book">
-      <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:1.5rem;">Book an Appointment</h2>
+      <h2 style="font-family:'Syne',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:1.5rem;">Book an Appointment</h2>
       <div class="countdown-strip" id="book-countdown-strip" style="display:none;">
         <div><div class="countdown-label">Your Window Opens In</div><div class="countdown-clock" id="book-countdown-display">—</div></div>
       </div>
       <div class="p-card">
-        <p style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--latte);line-height:1.8;margin-bottom:1.25rem;">Members book before the public calendar opens. Your tier determines how far ahead you can schedule.</p>
-        <div id="booking-window-info" style="margin-bottom:1.5rem;font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--latte);"></div>
-        <a href="booking.html" style="display:inline-block;background:var(--champagne);color:var(--espresso);font-family:'Jost',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;padding:0.85rem 2rem;text-decoration:none;">Open Booking Calendar</a>
+        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);line-height:1.8;margin-bottom:1.25rem;">Members book before the public calendar opens. Your tier determines how far ahead you can schedule.</p>
+        <div id="booking-window-info" style="margin-bottom:1.5rem;font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--latte);"></div>
+        <a href="booking.html" style="display:inline-block;background:var(--champagne);color:var(--espresso);font-family:'Josefin Sans',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;padding:0.85rem 2rem;text-decoration:none;">Open Booking Calendar</a>
       </div>
     </div>
 
     <div class="portal-tab" id="tab-qr">
-      <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:0.5rem;">Your Member QR</h2>
-      <p style="font-family:'Jost',sans-serif;font-size:0.82rem;color:var(--latte);margin-bottom:1.5rem;">Show this at the studio. Refreshes every 5 minutes — do not screenshot.</p>
+      <h2 style="font-family:'Syne',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:0.5rem;">Your Member QR</h2>
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--latte);margin-bottom:1.5rem;">Show this at the studio. Refreshes every 5 minutes — do not screenshot.</p>
       <div class="qr-wrap p-card">
         <div class="qr-canvas-wrap">
           <canvas id="qr-canvas" width="220" height="220"></canvas>
-          <div id="qr-name-watermark" style="font-family:'Jost',sans-serif;font-size:0.68rem;color:var(--latte);margin-top:0.35rem;"></div>
+          <div id="qr-name-watermark" style="font-family:'Josefin Sans',sans-serif;font-size:0.68rem;color:var(--latte);margin-top:0.35rem;"></div>
         </div>
         <div class="qr-expire">Refreshes in <strong id="qr-countdown">5:00</strong></div>
         <div class="qr-warning">Screenshots will not be accepted at the studio. This QR is tied to your live session.</div>
         <div style="margin-top:1.25rem;">
-          <div id="qr-member-id-show" style="font-family:'Cormorant Garamond',serif;font-size:1.5rem;color:var(--champagne);text-align:center;letter-spacing:0.1em;"></div>
-          <div id="qr-tier-show" style="font-family:'Jost',sans-serif;font-size:0.65rem;text-align:center;text-transform:uppercase;letter-spacing:0.15em;color:var(--latte);margin-top:0.2rem;"></div>
+          <div id="qr-member-id-show" style="font-family:'Syne',serif;font-size:1.5rem;color:var(--champagne);text-align:center;letter-spacing:0.1em;"></div>
+          <div id="qr-tier-show" style="font-family:'Josefin Sans',sans-serif;font-size:0.65rem;text-align:center;text-transform:uppercase;letter-spacing:0.15em;color:var(--latte);margin-top:0.2rem;"></div>
         </div>
       </div>
     </div>
 
     <div class="portal-tab" id="tab-history">
-      <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:1.5rem;">Nail History</h2>
+      <h2 style="font-family:'Syne',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:1.5rem;">Nail History</h2>
       <div class="p-card">
         <div class="p-card-title">All Appointments</div>
-        <div id="history-list"><div style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--latte);">No history yet.</div></div>
+        <div id="history-list"><div style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);">No history yet.</div></div>
       </div>
     </div>
 
     <div class="portal-tab" id="tab-messages">
-      <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:1.5rem;">Messages</h2>
+      <h2 style="font-family:'Syne',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:1.5rem;">Messages</h2>
       <div class="p-card">
         <div id="messages-thread" style="min-height:200px;max-height:400px;overflow-y:auto;"></div>
         <div class="msg-input-row">
@@ -202,7 +202,7 @@
     </div>
 
     <div class="portal-tab" id="tab-profile">
-      <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:1.5rem;">My Profile</h2>
+      <h2 style="font-family:'Syne',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:1.5rem;">My Profile</h2>
       <div class="p-card">
         <div class="p-card-title">Account Details</div>
         <div id="profile-details"></div>
@@ -214,14 +214,14 @@
           <div class="pf" style="grid-column:1/-1;"><label>Notes for your artist</label><input id="pref-notes" placeholder="anything else your artist should know" /></div>
         </div>
         <button class="btn-login" style="margin-top:0.5rem;" onclick="saveProfile()">Save Preferences</button>
-        <div id="profile-save-msg" style="display:none;font-family:'Jost',sans-serif;font-size:0.8rem;color:#3c8c50;margin-top:0.5rem;">Saved.</div>
+        <div id="profile-save-msg" style="display:none;font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:#3c8c50;margin-top:0.5rem;">Saved.</div>
       </div>
       <div class="p-card">
         <div class="p-card-title">Referral Program</div>
-        <p style="font-family:'Jost',sans-serif;font-size:0.84rem;color:var(--latte);margin-bottom:1rem;">Share your link. When someone joins Z Lux using it, you receive a credit on your account.</p>
-        <div style="background:var(--soft-white);border:1px solid rgba(201,165,90,0.15);padding:0.875rem 1rem;font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:var(--champagne);word-break:break-all;" id="referral-link-display">—</div>
+        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:var(--latte);margin-bottom:1rem;">Share your link. When someone joins Zola using it, you receive a credit on your account.</p>
+        <div style="background:var(--soft-white);border:1px solid rgba(196,168,130,0.15);padding:0.875rem 1rem;font-family:'Syne',serif;font-size:1.1rem;color:var(--champagne);word-break:break-all;" id="referral-link-display">—</div>
         <button class="btn-login" style="margin-top:0.75rem;width:auto;padding:0.6rem 1.5rem;" onclick="copyReferralLink()">Copy Link</button>
-        <div style="margin-top:1rem;font-family:'Jost',sans-serif;font-size:0.8rem;color:var(--latte);">Successful referrals: <strong id="referral-count">0</strong></div>
+        <div style="margin-top:1rem;font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:var(--latte);">Successful referrals: <strong id="referral-count">0</strong></div>
       </div>
     </div>
 
@@ -326,12 +326,12 @@ function populatePortal(d) {
 
   if (announcements.length) {
     document.getElementById('announcements-card').style.display = 'block';
-    document.getElementById('announcements-list').innerHTML = announcements.map(a=>`<div style="padding:0.75rem 0;border-bottom:1px solid rgba(201,165,90,0.1);"><div style="font-family:'Jost',sans-serif;font-size:0.82rem;font-weight:600;color:var(--espresso);margin-bottom:0.25rem;">${a.subject||'Studio Update'}</div><div style="font-family:'Jost',sans-serif;font-size:0.8rem;color:var(--latte);line-height:1.6;">${a.body}</div></div>`).join('');
+    document.getElementById('announcements-list').innerHTML = announcements.map(a=>`<div style="padding:0.75rem 0;border-bottom:1px solid rgba(196,168,130,0.1);"><div style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;font-weight:600;color:var(--espresso);margin-bottom:0.25rem;">${a.subject||'Studio Update'}</div><div style="font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:var(--latte);line-height:1.6;">${a.body}</div></div>`).join('');
   }
 
   const mt = document.getElementById('messages-thread');
   if (messages.length) {
-    mt.innerHTML = messages.slice().reverse().map(m=>`<div class="msg-bubble ${m.from_role==='ADMIN'?'from-admin':'from-me'}"><div style="font-family:'Jost',sans-serif;font-size:0.85rem;">${m.body}</div><div class="msg-time">${new Date(m.created_at).toLocaleString()}</div></div>`).join('');
+    mt.innerHTML = messages.slice().reverse().map(m=>`<div class="msg-bubble ${m.from_role==='ADMIN'?'from-admin':'from-me'}"><div style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;">${m.body}</div><div class="msg-time">${new Date(m.created_at).toLocaleString()}</div></div>`).join('');
     mt.scrollTop = mt.scrollHeight;
   }
 
@@ -344,10 +344,10 @@ function populatePortal(d) {
   }
 
   document.getElementById('profile-details').innerHTML = `<div style="display:grid;gap:0.5rem;margin-bottom:1.25rem;">
-    <div style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--espresso);"><strong style="color:var(--latte);font-size:0.65rem;display:block;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.1rem;">Name</strong>${member.fullName}</div>
-    <div style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--espresso);"><strong style="color:var(--latte);font-size:0.65rem;display:block;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.1rem;">Email</strong>${member.email}</div>
-    <div style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--espresso);"><strong style="color:var(--latte);font-size:0.65rem;display:block;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.1rem;">Member ID</strong><span style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--champagne);">${member.memberId}</span></div>
-    <div style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--espresso);"><strong style="color:var(--latte);font-size:0.65rem;display:block;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.1rem;">Member Since</strong>${member.memberSince ? new Date(member.memberSince).toLocaleDateString('en-US',{month:'long',year:'numeric'}) : '—'}</div>
+    <div style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--espresso);"><strong style="color:var(--latte);font-size:0.65rem;display:block;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.1rem;">Name</strong>${member.fullName}</div>
+    <div style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--espresso);"><strong style="color:var(--latte);font-size:0.65rem;display:block;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.1rem;">Email</strong>${member.email}</div>
+    <div style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--espresso);"><strong style="color:var(--latte);font-size:0.65rem;display:block;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.1rem;">Member ID</strong><span style="font-family:'Syne',serif;font-size:1.2rem;color:var(--champagne);">${member.memberId}</span></div>
+    <div style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--espresso);"><strong style="color:var(--latte);font-size:0.65rem;display:block;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.1rem;">Member Since</strong>${member.memberSince ? new Date(member.memberSince).toLocaleDateString('en-US',{month:'long',year:'numeric'}) : '—'}</div>
   </div>`;
 }
 
@@ -373,7 +373,7 @@ async function loadQr() {
     if (!r.ok) return;
     const d = await r.json();
     const canvas = document.getElementById('qr-canvas');
-    QRCode.toCanvas(canvas, d.qrPayload, { width:220, margin:2, color:{dark:'#2C1A0E',light:'#FFFFFF'} });
+    QRCode.toCanvas(canvas, d.qrPayload, { width:220, margin:2, color:{dark:'#0D0D0D',light:'#FFFFFF'} });
     document.getElementById('qr-name-watermark').textContent = d.fullName+' · '+d.memberId;
     document.getElementById('qr-member-id-show').textContent = d.memberId;
     document.getElementById('qr-tier-show').textContent = {SIGNATURE:'Signature Club',LUXE:'Luxe Club',BLACK_CARD:'Black Card'}[d.tier]||d.tier;
@@ -417,7 +417,7 @@ async function sendMessage() {
     const mt=document.getElementById('messages-thread');
     const b=document.createElement('div');
     b.className='msg-bubble from-me';
-    b.innerHTML=`<div style="font-family:'Jost',sans-serif;font-size:0.85rem;">${body}</div><div class="msg-time">Just now</div>`;
+    b.innerHTML=`<div style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;">${body}</div><div class="msg-time">Just now</div>`;
     mt.appendChild(b);
     mt.scrollTop=mt.scrollHeight;
   } catch (_) {}

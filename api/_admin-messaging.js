@@ -41,8 +41,8 @@ module.exports = async (req, res) => {
               await sgMail.send({
                 to: m.email,
                 from: 'studio@zluxnails.com',
-                subject: subject || 'A message from Z Lux',
-                html: `<div style="font-family:Georgia,serif;color:#2C1A0E;max-width:520px;margin:0 auto;padding:2rem;"><div style="background:#2C1A0E;padding:1.5rem;text-align:center;"><span style="color:#C9A55A;font-size:1.5rem;font-family:Georgia,serif;">ZLUX</span></div><div style="padding:2rem;"><p>Hello ${m.full_name.split(' ')[0]},</p><p>${body.replace(/\n/g,'<br>')}</p><p style="color:#A67C52;font-size:0.85rem;margin-top:2rem;">— The Z Lux Studio Team</p></div></div>`,
+                subject: subject || 'A message from Zola',
+                html: `<div style="font-family:Georgia,serif;color:#0D0D0D;max-width:520px;margin:0 auto;padding:2rem;"><div style="background:#0D0D0D;padding:1.5rem;text-align:center;"><span style="color:#C4A882;font-size:1.5rem;font-family:Georgia,serif;">ZOLA</span></div><div style="padding:2rem;"><p>Hello ${m.full_name.split(' ')[0]},</p><p>${body.replace(/\n/g,'<br>')}</p><p style="color:#8B6A3E;font-size:0.85rem;margin-top:2rem;">— The Zola Studio Team</p></div></div>`,
               });
             } catch (_) {}
           }

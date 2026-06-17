@@ -3,53 +3,53 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Team Portal — ZLUX Nail Studio</title>
+  <title>Team Portal — ZOLA Nail Studio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css" />
   <style>
     body { background:var(--soft-white); }
     .login-wrap { max-width:400px; margin:0 auto; padding:7rem 1.5rem 3rem; }
-    .login-card { background:#fff; border:1px solid rgba(201,165,90,0.18); padding:2.5rem 2rem; }
-    .ph { font-family:'Cormorant Garamond',serif; font-size:2rem; color:var(--espresso); margin-bottom:0.25rem; font-weight:400; }
-    .ps { font-family:'Jost',sans-serif; font-size:0.84rem; color:var(--latte); margin-bottom:1.75rem; }
-    .pf label { display:block; font-family:'Jost',sans-serif; font-size:0.65rem; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--latte); margin-bottom:0.35rem; }
-    .pf input { width:100%; border:1px solid rgba(201,165,90,0.22); background:var(--soft-white); font-family:'Jost',sans-serif; font-size:0.88rem; color:var(--espresso); padding:0.6rem 0.875rem; outline:none; box-sizing:border-box; margin-bottom:1.1rem; }
+    .login-card { background:#fff; border:1px solid rgba(196,168,130,0.18); padding:2.5rem 2rem; }
+    .ph { font-family:'Syne',serif; font-size:2rem; color:var(--espresso); margin-bottom:0.25rem; font-weight:400; }
+    .ps { font-family:'Josefin Sans',sans-serif; font-size:0.84rem; color:var(--latte); margin-bottom:1.75rem; }
+    .pf label { display:block; font-family:'Josefin Sans',sans-serif; font-size:0.65rem; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--latte); margin-bottom:0.35rem; }
+    .pf input { width:100%; border:1px solid rgba(196,168,130,0.22); background:var(--soft-white); font-family:'Josefin Sans',sans-serif; font-size:0.88rem; color:var(--espresso); padding:0.6rem 0.875rem; outline:none; box-sizing:border-box; margin-bottom:1.1rem; }
     .pf input:focus { border-color:var(--champagne); }
-    .btn-l { width:100%; background:var(--champagne); color:var(--espresso); border:none; padding:0.85rem; font-family:'Jost',sans-serif; font-size:0.75rem; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; cursor:pointer; }
+    .btn-l { width:100%; background:var(--champagne); color:var(--espresso); border:none; padding:0.85rem; font-family:'Josefin Sans',sans-serif; font-size:0.75rem; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; cursor:pointer; }
     .btn-l:hover { background:#b8924a; }
-    .lerr { background:rgba(180,50,50,0.07); border:1px solid rgba(180,50,50,0.2); color:#b43232; font-family:'Jost',sans-serif; font-size:0.8rem; padding:0.6rem 0.875rem; margin-bottom:1rem; display:none; }
+    .lerr { background:rgba(180,50,50,0.07); border:1px solid rgba(180,50,50,0.2); color:#b43232; font-family:'Josefin Sans',sans-serif; font-size:0.8rem; padding:0.6rem 0.875rem; margin-bottom:1rem; display:none; }
     #team-portal { display:none; }
     .t-nav { background:var(--espresso); padding:0.75rem 0; position:sticky; top:0; z-index:50; }
     .t-nav-inner { max-width:900px; margin:0 auto; padding:0 1.5rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
-    .t-nav-logo { font-family:'Cormorant Garamond',serif; font-size:1.2rem; color:var(--champagne); text-decoration:none; }
+    .t-nav-logo { font-family:'Syne',serif; font-size:1.2rem; color:var(--champagne); text-decoration:none; }
     .t-nav-links { display:flex; gap:1.25rem; }
-    .t-nav-links button { background:none; border:none; font-family:'Jost',sans-serif; font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--latte); cursor:pointer; }
+    .t-nav-links button { background:none; border:none; font-family:'Josefin Sans',sans-serif; font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--latte); cursor:pointer; }
     .t-nav-links button.active { color:var(--champagne); }
     .t-content { max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
     .t-tab { display:none; }
     .t-tab.active { display:block; }
-    .t-card { background:#fff; border:1px solid rgba(201,165,90,0.15); padding:1.5rem; margin-bottom:1rem; }
-    .t-card-title { font-family:'Jost',sans-serif; font-size:0.62rem; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--latte); margin-bottom:1rem; }
-    .appt-block { border-left:3px solid var(--champagne); padding:0.875rem 1.25rem; margin-bottom:0.75rem; background:rgba(201,165,90,0.04); }
-    .appt-time { font-family:'Cormorant Garamond',serif; font-size:1.35rem; color:var(--espresso); }
-    .appt-client { font-family:'Jost',sans-serif; font-size:0.88rem; font-weight:600; color:var(--espresso); margin-top:0.1rem; }
-    .appt-service { font-family:'Jost',sans-serif; font-size:0.8rem; color:var(--latte); }
-    .appt-flag { display:inline-block; background:rgba(201,165,90,0.1); color:var(--champagne); font-family:'Jost',sans-serif; font-size:0.62rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:0.15rem 0.5rem; margin-top:0.35rem; }
+    .t-card { background:#fff; border:1px solid rgba(196,168,130,0.15); padding:1.5rem; margin-bottom:1rem; }
+    .t-card-title { font-family:'Josefin Sans',sans-serif; font-size:0.62rem; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--latte); margin-bottom:1rem; }
+    .appt-block { border-left:3px solid var(--champagne); padding:0.875rem 1.25rem; margin-bottom:0.75rem; background:rgba(196,168,130,0.04); }
+    .appt-time { font-family:'Syne',serif; font-size:1.35rem; color:var(--espresso); }
+    .appt-client { font-family:'Josefin Sans',sans-serif; font-size:0.88rem; font-weight:600; color:var(--espresso); margin-top:0.1rem; }
+    .appt-service { font-family:'Josefin Sans',sans-serif; font-size:0.8rem; color:var(--latte); }
+    .appt-flag { display:inline-block; background:rgba(196,168,130,0.1); color:var(--champagne); font-family:'Josefin Sans',sans-serif; font-size:0.62rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; padding:0.15rem 0.5rem; margin-top:0.35rem; }
     .appt-flag.allergy { background:rgba(180,50,50,0.1); color:#b43232; }
     .week-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:0.5rem; }
-    .week-day { text-align:center; padding:0.75rem 0.25rem; background:var(--soft-white); border:1px solid rgba(201,165,90,0.12); }
-    .week-day-label { font-family:'Jost',sans-serif; font-size:0.6rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--latte); }
-    .week-day-count { font-family:'Cormorant Garamond',serif; font-size:1.75rem; color:var(--champagne); margin-top:0.1rem; }
-    .week-day.today { border-color:var(--champagne); background:rgba(201,165,90,0.06); }
-    .msg-row { border-bottom:1px solid rgba(201,165,90,0.1); padding:0.875rem 0; }
-    .msg-from { font-family:'Jost',sans-serif; font-size:0.65rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--latte); }
-    .msg-body { font-family:'Jost',sans-serif; font-size:0.85rem; color:var(--espresso); margin-top:0.25rem; }
-    .msg-time-s { font-family:'Jost',sans-serif; font-size:0.65rem; color:rgba(166,124,82,0.5); }
+    .week-day { text-align:center; padding:0.75rem 0.25rem; background:var(--soft-white); border:1px solid rgba(196,168,130,0.12); }
+    .week-day-label { font-family:'Josefin Sans',sans-serif; font-size:0.6rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--latte); }
+    .week-day-count { font-family:'Syne',serif; font-size:1.75rem; color:var(--champagne); margin-top:0.1rem; }
+    .week-day.today { border-color:var(--champagne); background:rgba(196,168,130,0.06); }
+    .msg-row { border-bottom:1px solid rgba(196,168,130,0.1); padding:0.875rem 0; }
+    .msg-from { font-family:'Josefin Sans',sans-serif; font-size:0.65rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--latte); }
+    .msg-body { font-family:'Josefin Sans',sans-serif; font-size:0.85rem; color:var(--espresso); margin-top:0.25rem; }
+    .msg-time-s { font-family:'Josefin Sans',sans-serif; font-size:0.65rem; color:rgba(139,106,62,0.5); }
     .date-nav { display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; }
-    .date-nav button { background:none; border:1px solid rgba(201,165,90,0.22); padding:0.4rem 0.75rem; font-family:'Jost',sans-serif; font-size:0.78rem; cursor:pointer; color:var(--espresso); }
+    .date-nav button { background:none; border:1px solid rgba(196,168,130,0.22); padding:0.4rem 0.75rem; font-family:'Josefin Sans',sans-serif; font-size:0.78rem; cursor:pointer; color:var(--espresso); }
     .date-nav button:hover { border-color:var(--champagne); }
-    .date-display { font-family:'Cormorant Garamond',serif; font-size:1.5rem; color:var(--espresso); }
+    .date-display { font-family:'Syne',serif; font-size:1.5rem; color:var(--espresso); }
     @media (max-width:550px) { .week-grid { grid-template-columns:repeat(4,1fr); } }
   </style>
 </head>
@@ -57,7 +57,7 @@
 
 <div id="team-login">
   <nav class="nav" id="nav">
-    <a href="index.html" class="nav-logo">ZLUX</a>
+    <a href="index.html" class="nav-logo"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span></a>
     <div class="nav-links">
       <a href="index.html">Home</a>
       <a href="team.html" style="color:var(--champagne)">Team Portal</a>
@@ -68,7 +68,7 @@
   <div class="login-wrap">
     <div class="login-card">
       <h1 class="ph">Team Portal</h1>
-      <p class="ps">Sign in with your Z Lux staff credentials.</p>
+      <p class="ps">Sign in with your Zola staff credentials.</p>
       <div class="lerr" id="lerr"></div>
       <div class="pf"><label>Email</label><input type="email" id="st-email" placeholder="you@zluxnails.com" /></div>
       <div class="pf"><label>Password</label><input type="password" id="st-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doStaffLogin()" /></div>
@@ -80,13 +80,13 @@
 <div id="team-portal">
   <nav class="t-nav">
     <div class="t-nav-inner">
-      <a href="index.html" class="t-nav-logo">ZLUX</a>
-      <div style="font-family:'Jost',sans-serif;font-size:0.75rem;color:var(--latte);">Team Portal — <span id="staff-name-display"></span></div>
+      <a href="index.html" class="t-nav-logo">ZOLA</a>
+      <div style="font-family:'Josefin Sans',sans-serif;font-size:0.75rem;color:var(--latte);">Team Portal — <span id="staff-name-display"></span></div>
       <div class="t-nav-links">
         <button onclick="showTTab('t-today')" class="active" id="tn-today">Today</button>
         <button onclick="showTTab('t-week')" id="tn-week">Week</button>
         <button onclick="showTTab('t-messages')" id="tn-messages">Messages</button>
-        <button onclick="staffLogout()" style="color:rgba(166,124,82,0.4);">Sign Out</button>
+        <button onclick="staffLogout()" style="color:rgba(139,106,62,0.4);">Sign Out</button>
       </div>
     </div>
   </nav>
@@ -102,19 +102,19 @@
         <button onclick="goToday()" style="font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;">Today</button>
       </div>
       <div id="today-schedule">
-        <div style="font-family:'Jost',sans-serif;font-size:0.85rem;color:var(--latte);">Loading schedule…</div>
+        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);">Loading schedule…</div>
       </div>
     </div>
 
     <!-- WEEK VIEW -->
     <div class="t-tab" id="t-week">
-      <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:1.5rem;">This Week</h2>
+      <h2 style="font-family:'Syne',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:1.5rem;">This Week</h2>
       <div class="week-grid" id="week-grid"></div>
     </div>
 
     <!-- MESSAGES -->
     <div class="t-tab" id="t-messages">
-      <h2 style="font-family:'Cormorant Garamond',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:1.5rem;">Messages</h2>
+      <h2 style="font-family:'Syne',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:1.5rem;">Messages</h2>
       <div class="t-card">
         <div id="staff-messages"></div>
       </div>
@@ -216,7 +216,7 @@ async function loadSchedule(date) {
         <div class="appt-client">${a.client_name || 'Guest'}</div>
         <div class="appt-service">${a.service}${a.notes ? ' · '+a.notes : ''}</div>
         <div style="margin-top:0.4rem;display:flex;gap:0.4rem;flex-wrap:wrap;">${tierBadge}${allergyFlag}${sensFlag}</div>
-        <div style="font-family:'Jost',sans-serif;font-size:0.68rem;color:rgba(166,124,82,0.5);margin-top:0.4rem;">Status: ${a.status}</div>
+        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.68rem;color:rgba(139,106,62,0.5);margin-top:0.4rem;">Status: ${a.status}</div>
       </div>`;
     }).join('');
   } catch { container.innerHTML = '<div style="color:#b43232;font-family:\'Jost\',sans-serif;font-size:0.85rem;">Error loading schedule.</div>'; }
@@ -241,9 +241,9 @@ function populateWeek(week) {
     const dateLabel = d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
     return `<div class="week-day ${w.date===today?'today':''}" onclick="currentDate='${w.date}';loadSchedule('${w.date}');showTTab('t-today');" style="cursor:pointer;">
       <div class="week-day-label">${dayLabel}</div>
-      <div style="font-family:'Jost',sans-serif;font-size:0.65rem;color:var(--latte);">${dateLabel}</div>
+      <div style="font-family:'Josefin Sans',sans-serif;font-size:0.65rem;color:var(--latte);">${dateLabel}</div>
       <div class="week-day-count">${w.count}</div>
-      <div style="font-family:'Jost',sans-serif;font-size:0.62rem;color:var(--latte);">appts</div>
+      <div style="font-family:'Josefin Sans',sans-serif;font-size:0.62rem;color:var(--latte);">appts</div>
     </div>`;
   }).join('');
 }

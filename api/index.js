@@ -36,4 +36,8 @@ app.all('/api/admin-schedule',   require('./_admin-schedule'));
 app.all('/api/waitlist',         require('./_waitlist'));
 app.all('/api/no-show',          require('./_no-show'));
 
+// CEO dashboard routes
+app.all('/api/ceo-data',         require('./_ceo-data'));
+app.all('/api/calendar-blocks',  require('./_calendar-blocks'));
+
 module.exports = app;

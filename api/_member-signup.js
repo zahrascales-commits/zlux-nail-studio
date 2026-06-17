@@ -161,25 +161,25 @@ async function sendWelcome({ fullName, email, phone, memberId, tier }) {
     await sgMail.send({
       to: email,
       from: 'studio@zluxnails.com',
-      subject: `Welcome to Z Lux — Your Member ID is ${memberId}`,
+      subject: `Welcome to Zola — Your Member ID is ${memberId}`,
       html: `
-        <div style="font-family:Georgia,serif;max-width:540px;margin:0 auto;color:#2C1A0E;background:#FDFAF7;">
-          <div style="background:#2C1A0E;padding:2.5rem 2rem;text-align:center;">
-            <h1 style="color:#C9A55A;font-size:2.25rem;margin:0;letter-spacing:0.12em;font-weight:400;">ZLUX</h1>
-            <p style="color:#A67C52;font-size:0.75rem;letter-spacing:0.2em;text-transform:uppercase;margin:0.5rem 0 0;">Nail Studio · Porterville, CA</p>
+        <div style="font-family:Georgia,serif;max-width:540px;margin:0 auto;color:#0D0D0D;background:#FAFAF8;">
+          <div style="background:#0D0D0D;padding:2.5rem 2rem;text-align:center;">
+            <h1 style="color:#C4A882;font-size:2.25rem;margin:0;letter-spacing:0.08em;font-weight:400;">ZOLA</h1>
+            <p style="color:#8B6A3E;font-size:0.75rem;letter-spacing:0.2em;text-transform:uppercase;margin:0.5rem 0 0;">Nail Studio · Porterville, CA</p>
           </div>
           <div style="padding:2.5rem 2rem;">
             <p style="font-size:1.05rem;">Hello ${firstName},</p>
             <p>You're officially in. Welcome to <strong>${tierLabel}</strong> — we're so glad you're here.</p>
-            <div style="background:#F5EFE6;border-left:3px solid #C9A55A;padding:1.25rem 1.5rem;margin:1.5rem 0;text-align:center;">
-              <p style="font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;color:#A67C52;margin:0 0 0.5rem;">Your Member ID</p>
-              <p style="font-size:1.6rem;letter-spacing:0.15em;font-weight:bold;color:#2C1A0E;margin:0;">${memberId}</p>
+            <div style="background:#F5EEE8;border-left:3px solid #C4A882;padding:1.25rem 1.5rem;margin:1.5rem 0;text-align:center;">
+              <p style="font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;color:#8B6A3E;margin:0 0 0.5rem;">Your Member ID</p>
+              <p style="font-size:1.6rem;letter-spacing:0.15em;font-weight:bold;color:#0D0D0D;margin:0;">${memberId}</p>
             </div>
-            <p>Keep this ID somewhere safe. You'll use it every time you book, check in at the studio, and access your member portal.</p>
+            <p>Keep this ID somewhere safe — copy it and put it somewhere you won't lose it. You'll use it every time you book, check in at the studio, and access your member portal.</p>
             <div style="text-align:center;margin:2rem 0;">
-              <a href="https://zlux-github.vercel.app/client-portal.html" style="background:#C9A55A;color:#2C1A0E;padding:0.875rem 2rem;text-decoration:none;font-size:0.78rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:700;font-family:Georgia,serif;">Go to My Portal</a>
+              <a href="https://zlux-github.vercel.app/client-portal.html" style="background:#C4A882;color:#0D0D0D;padding:0.875rem 2rem;text-decoration:none;font-size:0.78rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:700;font-family:Georgia,serif;">Go to My Portal</a>
             </div>
-            <p style="color:#A67C52;font-size:0.82rem;border-top:1px solid rgba(201,165,90,0.2);padding-top:1.25rem;margin-top:2rem;">Z Lux Nail Studio &middot; Porterville, CA &middot; <a href="https://zlux-github.vercel.app" style="color:#C9A55A;">zlux-github.vercel.app</a></p>
+            <p style="color:#8B6A3E;font-size:0.82rem;border-top:1px solid rgba(196,168,130,0.2);padding-top:1.25rem;margin-top:2rem;">Zola Nail Studio &middot; Porterville, CA &middot; <a href="https://zlux-github.vercel.app" style="color:#C4A882;">zlux-github.vercel.app</a></p>
           </div>
         </div>
       `,
@@ -190,7 +190,7 @@ async function sendWelcome({ fullName, email, phone, memberId, tier }) {
   if (e164 && process.env.TWILIO_ACCOUNT_SID) {
     const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
     await twilio.messages.create({
-      body: `Welcome to Z Lux, ${firstName}! 🌟 You're in. Your Member ID is ${memberId} — save it, you'll need it to book. See you soon. — Z Lux Studio`,
+      body: `Welcome to Zola, ${firstName}! 🌟 You're in. Your Member ID is ${memberId} — save it, you'll need it to book. See you soon. — Zola Studio`,
       from: process.env.TWILIO_PHONE_NUMBER,
       to: e164,
     });
