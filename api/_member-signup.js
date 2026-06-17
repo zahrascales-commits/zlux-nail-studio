@@ -45,6 +45,18 @@ module.exports = async (req, res) => {
     return res.status(200).json({ success: true });
   }
 
+  // Re-send welcome email
+  if (action === 'resend_email') {
+    const { memberId, email: resendEmail } = req.body;
+    try {
+      const member = await queryOne('SELECT full_name, tier, email FROM members WHERE member_id = ?', [(memberId || '').toUpperCase()]);
+      if (member) {
+        await sendWelcome({ fullName: member.full_name, email: resendEmail || member.email, phone: '', memberId, tier: member.tier });
+      }
+    } catch (_) {}
+    return res.status(200).json({ success: true });
+  }
+
   if (!fullName || !email || !tier || !password) {
     return res.status(400).json({ error: 'Missing required fields.' });
   }
@@ -128,38 +140,55 @@ module.exports = async (req, res) => {
   }
 };
 
+function formatPhone(raw) {
+  const digits = (raw || '').replace(/\D/g, '');
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  return null;
+}
+
 async function sendWelcome({ fullName, email, phone, memberId, tier }) {
-  const sgMail = require('@sendgrid/mail');
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
   const tierLabel = { SIGNATURE: 'Signature Club', LUXE: 'Luxe Club', BLACK_CARD: 'Black Card' }[tier];
+  const firstName = fullName.split(' ')[0];
 
-  await sgMail.send({
-    to: email,
-    from: 'studio@zluxnails.com',
-    subject: `Welcome to Z Lux — Your Member ID is ${memberId}`,
-    html: `
-      <div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;color:#2C1A0E;">
-        <div style="background:#2C1A0E;padding:2rem;text-align:center;">
-          <h1 style="color:#C9A55A;font-size:2rem;margin:0;">ZLUX</h1>
+  if (email) {
+    const sgMail = require('@sendgrid/mail');
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    await sgMail.send({
+      to: email,
+      from: 'studio@zluxnails.com',
+      subject: `Welcome to Z Lux — Your Member ID is ${memberId}`,
+      html: `
+        <div style="font-family:Georgia,serif;max-width:540px;margin:0 auto;color:#2C1A0E;background:#FDFAF7;">
+          <div style="background:#2C1A0E;padding:2.5rem 2rem;text-align:center;">
+            <h1 style="color:#C9A55A;font-size:2.25rem;margin:0;letter-spacing:0.12em;font-weight:400;">ZLUX</h1>
+            <p style="color:#A67C52;font-size:0.75rem;letter-spacing:0.2em;text-transform:uppercase;margin:0.5rem 0 0;">Nail Studio · Porterville, CA</p>
+          </div>
+          <div style="padding:2.5rem 2rem;">
+            <p style="font-size:1.05rem;">Hello ${firstName},</p>
+            <p>You're officially in. Welcome to <strong>${tierLabel}</strong> — we're so glad you're here.</p>
+            <div style="background:#F5EFE6;border-left:3px solid #C9A55A;padding:1.25rem 1.5rem;margin:1.5rem 0;text-align:center;">
+              <p style="font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;color:#A67C52;margin:0 0 0.5rem;">Your Member ID</p>
+              <p style="font-size:1.6rem;letter-spacing:0.15em;font-weight:bold;color:#2C1A0E;margin:0;">${memberId}</p>
+            </div>
+            <p>Keep this ID somewhere safe. You'll use it every time you book, check in at the studio, and access your member portal.</p>
+            <div style="text-align:center;margin:2rem 0;">
+              <a href="https://zlux-github.vercel.app/client-portal.html" style="background:#C9A55A;color:#2C1A0E;padding:0.875rem 2rem;text-decoration:none;font-size:0.78rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:700;font-family:Georgia,serif;">Go to My Portal</a>
+            </div>
+            <p style="color:#A67C52;font-size:0.82rem;border-top:1px solid rgba(201,165,90,0.2);padding-top:1.25rem;margin-top:2rem;">Z Lux Nail Studio &middot; Porterville, CA &middot; <a href="https://zlux-github.vercel.app" style="color:#C9A55A;">zlux-github.vercel.app</a></p>
+          </div>
         </div>
-        <div style="padding:2.5rem 2rem;">
-          <p>Hello ${fullName},</p>
-          <p>You're in. Welcome to <strong>${tierLabel}</strong>.</p>
-          <p style="font-size:1.4rem;background:#F5EFE6;padding:1rem;text-align:center;letter-spacing:0.1em;font-weight:bold;color:#2C1A0E;">${memberId}</p>
-          <p>This is your Member ID. Keep it safe — you'll use it to book appointments, access your portal, and identify yourself at the studio.</p>
-          <p>Book your first appointment at <a href="https://zluxnailstudio.vercel.app/booking.html">zluxnailstudio.vercel.app</a></p>
-          <p style="color:#A67C52;font-size:0.85rem;">Z Lux Nail Studio &middot; Porterville, CA</p>
-        </div>
-      </div>
-    `,
-  });
+      `,
+    });
+  }
 
-  if (phone && process.env.TWILIO_ACCOUNT_SID) {
+  const e164 = formatPhone(phone);
+  if (e164 && process.env.TWILIO_ACCOUNT_SID) {
     const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
     await twilio.messages.create({
-      body: `Welcome to Z Lux, ${fullName.split(' ')[0]}! Your Member ID is ${memberId}. Save it — you'll need it to book. Questions? Reply to this message. — Z Lux Studio`,
+      body: `Welcome to Z Lux, ${firstName}! 🌟 You're in. Your Member ID is ${memberId} — save it, you'll need it to book. See you soon. — Z Lux Studio`,
       from: process.env.TWILIO_PHONE_NUMBER,
-      to: phone,
+      to: e164,
     });
   }
 }

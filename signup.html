@@ -669,8 +669,15 @@
     alert('Your Member ID has been texted to ' + signupData.phone);
   }
 
-  function emailMemberId() {
-    alert('Your Member ID has been sent to ' + signupData.email);
+  async function emailMemberId() {
+    if (!signupData.email) { alert('No email on file.'); return; }
+    try {
+      await fetch('/api/member-signup', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ action: 'resend_email', memberId: signupData.memberId, email: signupData.email })
+      });
+    } catch (_) {}
+    alert('Your Member ID has been emailed to ' + signupData.email);
   }
 
   function goToStep(n) {
