@@ -88,7 +88,7 @@ async function sendBookingConfirmation({ customerName, customerEmail, customerPh
 
               <p style="color:#8B6A3E;font-size:0.82rem;border-top:1px solid rgba(196,168,130,0.2);padding-top:1.25rem;margin-top:2rem;">
                 Zola Nail Studio &middot; Porterville, CA<br>
-                <a href="https://zlux-github.vercel.app" style="color:#C4A882;">zlux-github.vercel.app</a>
+                <a href="https://zola-nail-studio.vercel.app" style="color:#C4A882;">zola-nail-studio.vercel.app</a>
               </p>
             </div>
           </div>

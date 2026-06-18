@@ -177,9 +177,9 @@ async function sendWelcome({ fullName, email, phone, memberId, tier }) {
             </div>
             <p>Keep this ID somewhere safe — copy it and put it somewhere you won't lose it. You'll use it every time you book, check in at the studio, and access your member portal.</p>
             <div style="text-align:center;margin:2rem 0;">
-              <a href="https://zlux-github.vercel.app/client-portal.html" style="background:#C4A882;color:#0D0D0D;padding:0.875rem 2rem;text-decoration:none;font-size:0.78rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:700;font-family:Georgia,serif;">Go to My Portal</a>
+              <a href="https://zola-nail-studio.vercel.app/client-portal.html" style="background:#C4A882;color:#0D0D0D;padding:0.875rem 2rem;text-decoration:none;font-size:0.78rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:700;font-family:Georgia,serif;">Go to My Portal</a>
             </div>
-            <p style="color:#8B6A3E;font-size:0.82rem;border-top:1px solid rgba(196,168,130,0.2);padding-top:1.25rem;margin-top:2rem;">Zola Nail Studio &middot; Porterville, CA &middot; <a href="https://zlux-github.vercel.app" style="color:#C4A882;">zlux-github.vercel.app</a></p>
+            <p style="color:#8B6A3E;font-size:0.82rem;border-top:1px solid rgba(196,168,130,0.2);padding-top:1.25rem;margin-top:2rem;">Zola Nail Studio &middot; Porterville, CA &middot; <a href="https://zola-nail-studio.vercel.app" style="color:#C4A882;">zola-nail-studio.vercel.app</a></p>
           </div>
         </div>
       `,

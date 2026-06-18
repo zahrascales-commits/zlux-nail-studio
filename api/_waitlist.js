@@ -67,7 +67,7 @@ module.exports = async (req, res) => {
             to: entry.email,
             from: 'studio@zluxnails.com',
             subject: `Your Zola spot is ready — ${entry.tier.replace('_',' ')}`,
-            html: `<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;color:#0D0D0D;"><div style="background:#0D0D0D;padding:1.5rem;text-align:center;"><span style="color:#C4A882;font-size:1.5rem;">ZOLA</span></div><div style="padding:2rem;"><p>Hello ${entry.name},</p><p>A <strong>${entry.tier.replace('_',' ')}</strong> spot is now available. You have 48 hours to claim it.</p><p><a href="https://zolanailstudio.vercel.app/signup.html" style="background:#C4A882;color:#0D0D0D;padding:0.75rem 1.5rem;display:inline-block;font-family:sans-serif;font-weight:600;text-decoration:none;">Claim Your Spot</a></p><p style="color:#8B6A3E;font-size:0.85rem;">If you no longer wish to join, simply ignore this email. — Zola</p></div></div>`,
+            html: `<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;color:#0D0D0D;"><div style="background:#0D0D0D;padding:1.5rem;text-align:center;"><span style="color:#C4A882;font-size:1.5rem;">ZOLA</span></div><div style="padding:2rem;"><p>Hello ${entry.name},</p><p>A <strong>${entry.tier.replace('_',' ')}</strong> spot is now available. You have 48 hours to claim it.</p><p><a href="https://zola-nail-studio.vercel.app/signup.html" style="background:#C4A882;color:#0D0D0D;padding:0.75rem 1.5rem;display:inline-block;font-family:sans-serif;font-weight:600;text-decoration:none;">Claim Your Spot</a></p><p style="color:#8B6A3E;font-size:0.85rem;">If you no longer wish to join, simply ignore this email. — Zola</p></div></div>`,
           });
         } catch (_) {}
       }

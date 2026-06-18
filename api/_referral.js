@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
       const completed = referrals.filter(r => r.status === 'COMPLETED').length;
       return res.status(200).json({
         referralCode: member?.referral_code,
-        referralLink: `https://zluxnailstudio.vercel.app/signup.html?ref=${member?.referral_code}`,
+        referralLink: `https://zola-nail-studio.vercel.app/signup.html?ref=${member?.referral_code}`,
         referrals,
         completed,
       });

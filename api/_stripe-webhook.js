@@ -42,7 +42,7 @@ module.exports = async (req, res) => {
               to: member.email,
               from: 'studio@zluxnails.com',
               subject: 'Zola — Payment failed',
-              html: `<p>Hello ${member.full_name.split(' ')[0]},</p><p>Your monthly membership payment failed. Please update your payment method at <a href="https://zolanailstudio.vercel.app/client-portal.html">your portal</a> within 3 days to avoid suspension.</p><p>— Zola</p>`,
+              html: `<p>Hello ${member.full_name.split(' ')[0]},</p><p>Your monthly membership payment failed. Please update your payment method at <a href="https://zola-nail-studio.vercel.app/client-portal.html">your portal</a> within 3 days to avoid suspension.</p><p>— Zola</p>`,
             });
           } catch (_) {}
         }
