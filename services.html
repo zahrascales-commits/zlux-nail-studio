@@ -1,10 +1,12 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Services — ZOLA Nail Studio</title>
-  <link rel="stylesheet" href="css/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@200;300;400;600;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" /><link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
 
@@ -16,13 +18,13 @@
     <a href="memberships.html">Memberships</a>
     <a href="about.html">About</a>
     <a href="contact.html">Contact</a>
-    <a href="client-portal.html">My Portal</a>
+    <a href="worker.html">Worker Portal</a>
     <a href="booking.html" class="btn-gold" style="animation:none;">Book Now</a>
   </div>
   <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
 </nav>
 <div class="nav-mobile" id="nav-mobile">
-  <a href="index.html">Home</a><a href="services.html">Services</a><a href="memberships.html">Memberships</a><a href="about.html">About</a><a href="contact.html">Contact</a><a href="client-portal.html">My Portal</a><a href="booking.html">Book Now</a>
+  <a href="index.html">Home</a><a href="services.html">Services</a><a href="memberships.html">Memberships</a><a href="about.html">About</a><a href="contact.html">Contact</a><a href="worker.html">Worker Portal</a><a href="booking.html">Book Now</a>
 </div>
 
 <div style="padding-top:8rem;background:var(--espresso);padding-bottom:4rem;text-align:center;">
@@ -117,7 +119,38 @@
       </div>
     </div>
 
-    <div style="background:rgba(196,168,130,0.06);border:1px solid rgba(196,168,130,0.18);padding:1.25rem 1.5rem;margin-top:2rem;text-align:center;">
+    <!-- Membership Savings Callout -->
+    <div style="background:var(--espresso);padding:2rem 2.5rem;margin-top:2.5rem;margin-bottom:0.5rem;">
+      <div style="text-align:center;margin-bottom:1.5rem;">
+        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.6rem;letter-spacing:0.22em;text-transform:uppercase;color:rgba(196,168,130,0.6);font-weight:700;margin-bottom:0.5rem;">Members Save More</div>
+        <div style="font-family:'Syne',serif;font-size:1.6rem;color:var(--cream);">Your membership works every appointment.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;max-width:700px;margin:0 auto;">
+        <div style="background:rgba(196,168,130,0.07);border:1px solid rgba(196,168,130,0.2);padding:1.25rem;text-align:center;">
+          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--champagne);font-weight:700;margin-bottom:0.4rem;">Signature — $99/mo</div>
+          <div style="font-family:'Syne',serif;font-size:1.8rem;color:var(--champagne);margin-bottom:0.3rem;">10% off</div>
+          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:rgba(245,238,232,0.55);line-height:1.6;">all add-ons<br>1 service/month included</div>
+        </div>
+        <div style="background:rgba(196,168,130,0.12);border:1px solid rgba(196,168,130,0.35);padding:1.25rem;text-align:center;">
+          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--champagne);font-weight:700;margin-bottom:0.4rem;">Luxe — $199/mo</div>
+          <div style="font-family:'Syne',serif;font-size:1.8rem;color:var(--champagne);margin-bottom:0.3rem;">30% off</div>
+          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:rgba(245,238,232,0.55);line-height:1.6;">all add-ons<br>2 services/month included</div>
+        </div>
+        <div style="background:rgba(196,168,130,0.07);border:1px solid rgba(196,168,130,0.2);padding:1.25rem;text-align:center;">
+          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--champagne);font-weight:700;margin-bottom:0.4rem;">Black Card — $299/mo</div>
+          <div style="font-family:'Syne',serif;font-size:1.8rem;color:var(--champagne);margin-bottom:0.3rem;">75% off</div>
+          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:rgba(245,238,232,0.55);line-height:1.6;">all add-ons<br>3 services/month included</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:1.25rem;">
+        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.7rem;color:rgba(196,168,130,0.5);font-style:italic;">Design not included in membership services. Nail art available as an add-on.</div>
+      </div>
+      <div style="text-align:center;margin-top:1.25rem;">
+        <a href="memberships.html" class="btn-gold" style="animation:none;font-size:0.72rem;">View All Membership Perks</a>
+      </div>
+    </div>
+
+    <div style="background:rgba(196,168,130,0.06);border:1px solid rgba(196,168,130,0.18);padding:1.25rem 1.5rem;margin-top:0.5rem;text-align:center;">
       <p style="font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:var(--espresso);line-height:1.7;">All services require a <strong>50% non-refundable deposit</strong> at the time of booking. Members receive add-on discounts based on their tier.</p>
     </div>
 
@@ -152,7 +185,8 @@
         <div style="text-align:center;min-width:180px;">
           <div style="background:var(--blush);border:1px solid rgba(196,168,130,0.2);padding:2rem 1.5rem;display:inline-block;">
             <div style="font-family:'Josefin Sans',sans-serif;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--champagne);font-weight:700;margin-bottom:0.5rem;">Price Per Child</div>
-            <div style="font-family:'Syne',serif;font-size:3.5rem;color:var(--espresso);line-height:1;">$35</div>
+            <div style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);text-decoration:line-through;margin-bottom:0.15rem;">$35</div>
+            <div style="font-family:'Syne',serif;font-size:3.5rem;color:var(--espresso);line-height:1;">$20</div>
             <div style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:var(--latte);margin-top:0.5rem;">Minimum 6 children</div>
           </div>
           <div style="margin-top:1rem;font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);line-height:1.7;">Booked through the<br>contact form. Party dates<br>subject to availability.</div>

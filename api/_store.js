@@ -67,12 +67,29 @@ const goals = [
 ];
 let nextGoalId = 5;
 
+// Workers
+const workers = [
+  { id: 1, name: 'Emma Magana',  pin: '1234', active: true, color: '#C4A882' },
+  { id: 2, name: 'Lily Byers',   pin: '5678', active: true, color: '#8B6A3E' },
+];
+
+// Inspo photos sent by CEO to workers
+const inspoPhotos = []; // { id, url, caption, ts, added_by }
+let nextInspoId = 1;
+
+// Worker messages to clients
+const workerMessages = []; // { id, worker_id, booking_id, client_name, message, ts }
+let nextMsgId = 1;
+
 module.exports = {
   services, addons, bookings, ALL_SLOTS,
   calendarBlocks, funnelEvents, chatQuestions,
   inventory, giftCards, goals,
+  workers, inspoPhotos, workerMessages,
   get nextId() { return nextId; }, incId() { return nextId++; },
   get nextInventoryId() { return nextInventoryId; }, incInventoryId() { return nextInventoryId++; },
   get nextGiftId() { return nextGiftId; }, incGiftId() { return nextGiftId++; },
   get nextGoalId() { return nextGoalId; }, incGoalId() { return nextGoalId++; },
+  get nextInspoId() { return nextInspoId; }, incInspoId() { return nextInspoId++; },
+  get nextMsgId() { return nextMsgId; }, incMsgId() { return nextMsgId++; },
 };

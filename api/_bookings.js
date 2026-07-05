@@ -1,4 +1,5 @@
 const { services, addons, bookings, ALL_SLOTS, incId } = require('./_store');
+const { queryOne, execute } = require('./_db');
 
 const NAIL_FACTS = [
   "Cuticle oil is your best friend before a visit — apply it daily leading up to your appointment for the smoothest results.",
@@ -139,6 +140,22 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'All fields are required' });
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
 
+    // Enforce monthly service limits for members
+    if (member_id && member_tier) {
+      const TIER_LIMIT = { SIGNATURE: 1, LUXE: 2, BLACK_CARD: 3 };
+      const limit = TIER_LIMIT[member_tier];
+      if (limit) {
+        const monthYear = new Date().toISOString().slice(0, 7);
+        try {
+          const usage = await queryOne('SELECT services_used FROM service_usage WHERE member_id = ? AND month_year = ?', [member_id, monthYear]);
+          const used = usage ? Number(usage.services_used) : 0;
+          if (used >= limit) {
+            return res.status(422).json({ error: `You've used all ${limit} service${limit > 1 ? 's' : ''} included in your ${member_tier.replace('_',' ')} membership this month. Additional services are available at full price without your member discount.` });
+          }
+        } catch (_) {}
+      }
+    }
+
     // Apply server-side addon discount validation based on tier
     const ADDON_DISCOUNT = { SIGNATURE: 0.10, LUXE: 0.30, BLACK_CARD: 0.75 };
     const discountPct = member_tier ? (ADDON_DISCOUNT[member_tier] || 0) : 0;
@@ -170,6 +187,42 @@ module.exports = async (req, res) => {
       created_at: new Date().toISOString(),
     });
 
+    // Increment monthly service usage for members
+    if (member_id && member_tier) {
+      const monthYear = new Date().toISOString().slice(0, 7);
+      try {
+        await execute(`INSERT INTO service_usage (member_id, month_year, services_used) VALUES (?,?,1)
+          ON CONFLICT(member_id,month_year) DO UPDATE SET services_used = services_used + 1`,
+          [member_id, monthYear]);
+      } catch (_) {}
+    }
+
+    // Also persist to DB so the member portal can read it
+    try {
+      let staffId = null;
+      if (worker) {
+        const staffRow = await queryOne('SELECT id FROM staff WHERE name = ?', [worker]).catch(() => null);
+        if (staffRow) staffId = staffRow.id;
+      }
+      const isMember = !!member_id;
+      await execute(
+        `INSERT INTO appointments (member_id, guest_name, guest_email, staff_id, service, addons, appointment_date, appointment_time, status, total_cents, deposit_cents)
+         VALUES (?,?,?,?,?,?,?,?,'SCHEDULED',?,?)`,
+        [
+          isMember ? member_id : null,
+          isMember ? null : customer_name,
+          isMember ? null : customer_email,
+          staffId,
+          service_name,
+          JSON.stringify(addon_names),
+          date,
+          time_slot,
+          total_cents,
+          deposit_cents,
+        ]
+      );
+    } catch (_) {}
+
     sendBookingConfirmation({
       customerName: customer_name,
       customerEmail: customer_email,
@@ -184,6 +237,90 @@ module.exports = async (req, res) => {
     }).catch(() => {});
 
     return res.status(201).json({ id, confirmation, total_cents, deposit_cents });
+  }
+
+  // Cancel booking (DELETE)
+  if (req.method === 'DELETE') {
+    const { booking_id, member_id: cancelMemberId, reason } = req.body || {};
+    if (!booking_id) return res.status(400).json({ error: 'booking_id required' });
+
+    // Find in in-memory store
+    const idx = bookings.findIndex(b => b.id === Number(booking_id));
+    if (idx < 0) return res.status(404).json({ error: 'Booking not found' });
+    const booking = bookings[idx];
+
+    // Security: member can only cancel their own booking
+    if (cancelMemberId && booking.member_id && booking.member_id !== cancelMemberId.toUpperCase()) {
+      return res.status(403).json({ error: 'You can only cancel your own bookings.' });
+    }
+
+    // Cutoff check: 24 hours before appointment
+    const apptTime = new Date(`${booking.date}T${booking.time_slot}:00`).getTime();
+    const hoursUntil = (apptTime - Date.now()) / 3600000;
+    const CUTOFF_HOURS = 24;
+    const lateCancellation = hoursUntil < CUTOFF_HOURS;
+
+    // Remove from in-memory
+    bookings.splice(idx, 1);
+
+    // Update DB
+    try {
+      await execute(`UPDATE appointments SET status='CANCELLED', cancelled_at=datetime('now'), cancel_reason=? WHERE appointment_date=? AND appointment_time=?`,
+        [reason || (lateCancellation ? 'Late cancellation' : 'Client cancelled'), booking.date, booking.time_slot]);
+    } catch (_) {}
+
+    // Decrement service usage for member
+    if (booking.member_id && booking.member_tier) {
+      const monthYear = booking.date.slice(0, 7);
+      try {
+        await execute('UPDATE service_usage SET services_used = MAX(0, services_used - 1) WHERE member_id = ? AND month_year = ?',
+          [booking.member_id, monthYear]);
+      } catch (_) {}
+    }
+
+    return res.json({
+      ok: true,
+      late_cancellation: lateCancellation,
+      message: lateCancellation
+        ? `Cancellation recorded. Because this is within ${CUTOFF_HOURS} hours of your appointment, your deposit is non-refundable per studio policy.`
+        : 'Your appointment has been cancelled. If you paid a deposit, please contact the studio regarding your refund.',
+    });
+  }
+
+  // Reschedule booking (PUT)
+  if (req.method === 'PUT') {
+    const { booking_id, member_id: rescheduleMemberId, new_date, new_time } = req.body || {};
+    if (!booking_id || !new_date || !new_time) return res.status(400).json({ error: 'booking_id, new_date, and new_time required' });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(new_date)) return res.status(400).json({ error: 'new_date must be YYYY-MM-DD' });
+
+    const booking = bookings.find(b => b.id === Number(booking_id));
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+    if (rescheduleMemberId && booking.member_id && booking.member_id !== rescheduleMemberId.toUpperCase()) {
+      return res.status(403).json({ error: 'You can only reschedule your own bookings.' });
+    }
+
+    const apptTime = new Date(`${booking.date}T${booking.time_slot}:00`).getTime();
+    const hoursUntil = (apptTime - Date.now()) / 3600000;
+    if (hoursUntil < 24) {
+      return res.status(422).json({ error: 'Reschedule requests must be made at least 24 hours before the appointment.' });
+    }
+
+    // Check the new slot isn't already taken
+    const conflict = bookings.find(b => b.id !== Number(booking_id) && b.date === new_date && b.time_slot === new_time);
+    if (conflict) return res.status(409).json({ error: 'That time slot is no longer available. Please choose another.' });
+
+    const oldDate = booking.date;
+    const oldTime = booking.time_slot;
+    booking.date = new_date;
+    booking.time_slot = new_time;
+
+    try {
+      await execute(`UPDATE appointments SET appointment_date=?, appointment_time=? WHERE appointment_date=? AND appointment_time=? AND status='SCHEDULED'`,
+        [new_date, new_time, oldDate, oldTime]);
+    } catch (_) {}
+
+    return res.json({ ok: true, new_date, new_time });
   }
 
   res.status(405).json({ error: 'Method not allowed' });

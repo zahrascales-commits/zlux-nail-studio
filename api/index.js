@@ -40,4 +40,10 @@ app.all('/api/no-show',          require('./_no-show'));
 app.all('/api/ceo-data',         require('./_ceo-data'));
 app.all('/api/calendar-blocks',  require('./_calendar-blocks'));
 
+// Worker portal routes
+app.all('/api/worker',           require('./_worker'));
+
+// Reminders (24h + 2h before appointment — call daily via cron)
+app.all('/api/reminders',        require('./_reminders'));
+
 module.exports = app;

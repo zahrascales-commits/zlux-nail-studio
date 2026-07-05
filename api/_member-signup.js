@@ -67,6 +67,8 @@ module.exports = async (req, res) => {
   }
 
   try {
+    const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+
     const existing = await queryOne('SELECT id, stripe_subscription_id FROM members WHERE email = ?', [email.toLowerCase().trim()]);
     if (existing) {
       // Cancel old Stripe subscription if still active, then remove old record so they can re-subscribe
@@ -75,8 +77,6 @@ module.exports = async (req, res) => {
       }
       await execute('DELETE FROM members WHERE email = ?', [email.toLowerCase().trim()]);
     }
-
-    const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
     const customer = await stripe.customers.create({
       name: fullName,
       email: email.toLowerCase().trim(),

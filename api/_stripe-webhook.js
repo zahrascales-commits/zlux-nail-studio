@@ -51,8 +51,16 @@ module.exports = async (req, res) => {
 
       case 'customer.subscription.deleted': {
         const sub = event.data.object;
-        await execute("UPDATE members SET stripe_subscription_id=NULL, flagged=1, flag_reason=? WHERE stripe_subscription_id=?",
-          ['Subscription cancelled via Stripe', sub.id]);
+        // Only flag if cancellation was due to non-payment (not a voluntary cancel)
+        const cancellationReason = sub.cancellation_details?.reason;
+        const isPaymentFailure = cancellationReason === 'payment_failed' || sub.status === 'unpaid';
+        if (isPaymentFailure) {
+          await execute("UPDATE members SET stripe_subscription_id=NULL, flagged=1, flag_reason=? WHERE stripe_subscription_id=?",
+            ['Subscription cancelled — payment failure', sub.id]);
+        } else {
+          // Voluntary cancel: clear sub ID but don't flag
+          await execute("UPDATE members SET stripe_subscription_id=NULL WHERE stripe_subscription_id=?", [sub.id]);
+        }
         break;
       }
 

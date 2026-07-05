@@ -1,11 +1,13 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ZOLA Nail Studio — Porterville, CA</title>
   <meta name="description" content="ZOLA — Porterville's luxury nail membership studio. Exclusive. Precise. Unforgettable." />
-  <link rel="stylesheet" href="css/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@200;300;400;600;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" /><link rel="stylesheet" href="css/styles.css" />
   <style>
     .comparison-old-home {
       font-family: 'Josefin Sans', sans-serif;
@@ -44,6 +46,9 @@
   </style>
 </head>
 <body>
+<div class="scroll-progress" id="scroll-progress"></div>
+<div class="cursor-dot" id="cursor-dot"></div>
+<div class="cursor-ring" id="cursor-ring"></div>
 
 <!-- NAV -->
 <nav class="nav" id="nav">
@@ -54,7 +59,7 @@
     <a href="memberships.html">Memberships</a>
     <a href="about.html">About</a>
     <a href="contact.html">Contact</a>
-    <a href="client-portal.html">My Portal</a>
+    <a href="worker.html">Worker Portal</a>
     <a href="memberships.html" class="btn-gold" style="animation:none;">Buy a Membership</a>
   </div>
   <button class="nav-hamburger" id="hamburger" aria-label="Menu">
@@ -67,12 +72,15 @@
   <a href="memberships.html">Memberships</a>
   <a href="about.html">About</a>
   <a href="contact.html">Contact</a>
-  <a href="client-portal.html">My Portal</a>
+  <a href="worker.html">Worker Portal</a>
   <a href="memberships.html">Buy a Membership</a>
 </div>
 
 <!-- HERO -->
 <section class="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-orb hero-orb-1"></div>
+  <div class="hero-orb hero-orb-2"></div>
   <div class="hero-glow"></div>
   <div class="hero-content animate-slide-up">
     <div class="section-label">Porterville, California</div>
@@ -94,12 +102,63 @@
   <p class="ticker-text" id="ticker-text">✦ &nbsp; Every set is custom-crafted. No templates, no rushing. &nbsp; ✦</p>
 </div>
 
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat-item">
+    <div class="stat-num">6+</div>
+    <div class="stat-lbl">Years of Experience</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">200+</div>
+    <div class="stat-lbl">Clients Served</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">3</div>
+    <div class="stat-lbl">Membership Tiers</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">50</div>
+    <div class="stat-lbl">Total Spots Available</div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="section section-soft" id="how-it-works">
+  <div class="container">
+    <div class="section-header reveal">
+      <div class="section-label">Simple Process</div>
+      <h2>How ZOLA Works</h2>
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:var(--latte);margin-top:0.75rem;">Three steps from here to your first appointment.</p>
+    </div>
+    <div class="how-steps">
+      <div class="how-step reveal" data-delay="0s">
+        <div class="how-step-num">Step 01</div>
+        <div class="how-step-icon">✦</div>
+        <div class="how-step-title">Choose Your Tier</div>
+        <div class="how-step-desc">Browse Signature, Luxe, or Black Card. Each tier has a different level of access, savings, and priority.</div>
+      </div>
+      <div class="how-step reveal" data-delay="0.13s">
+        <div class="how-step-num">Step 02</div>
+        <div class="how-step-icon">📅</div>
+        <div class="how-step-title">Book Your Session</div>
+        <div class="how-step-desc">Members book before everyone else. Your window opens first — you pick the exact time you want.</div>
+      </div>
+      <div class="how-step reveal" data-delay="0.26s">
+        <div class="how-step-num">Step 03</div>
+        <div class="how-step-icon">💅</div>
+        <div class="how-step-title">Experience ZOLA</div>
+        <div class="how-step-desc">Show up, relax, and leave with something extraordinary. No rushing, no shortcuts. Every single time.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ══════════════════════════════════════════════════
      MEMBERSHIPS — FIRST SECTION AFTER HERO
 ══════════════════════════════════════════════════ -->
 <section class="section section-cream" id="memberships">
   <div class="container">
-    <div class="section-header">
+    <div class="section-header reveal">
       <div class="section-label">Membership</div>
       <h2>Choose Your Club</h2>
       <p style="font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:var(--latte);margin-top:0.75rem;">Join a membership and save up to 45% compared to drop-in prices. Strictly limited spots.</p>
@@ -107,7 +166,7 @@
     <div class="membership-grid">
 
       <!-- ── SIGNATURE ── -->
-      <div class="membership-card">
+      <div class="membership-card reveal" data-delay="0.05s">
         <div class="section-label">Signature Club</div>
         <div>
           <span class="comparison-old-home">$215/mo without membership</span>
@@ -161,7 +220,7 @@
       </div>
 
       <!-- ── BLACK CARD ── -->
-      <div class="membership-card">
+      <div class="membership-card reveal" data-delay="0.2s">
         <div class="founding-badge">Founding Rate</div>
         <div class="section-label">Black Card</div>
         <div>
@@ -199,7 +258,7 @@
 <!-- BRAND STATEMENT -->
 <section class="section section-soft">
   <div class="container container-sm">
-    <div class="section-header">
+    <div class="section-header reveal">
       <div class="section-label">The ZOLA Standard</div>
       <h2>Quiet Luxury.<br>Loud Results.</h2>
     </div>
@@ -207,15 +266,15 @@
       ZOLA is not a nail salon. It's a private studio experience built for women who understand that excellence is in the details — from the products we use to the time we protect for you.
     </p>
     <div class="philosophy-pillars">
-      <div>
+      <div class="reveal" data-delay="0s">
         <div class="pillar-title">Precision</div>
         <div class="pillar-desc">Every nail shaped to your exact anatomy. No two sets identical.</div>
       </div>
-      <div>
+      <div class="reveal" data-delay="0.12s">
         <div class="pillar-title">Privacy</div>
         <div class="pillar-desc">No walk-ins, no crowds, no waiting. Your time is sacred here.</div>
       </div>
-      <div>
+      <div class="reveal" data-delay="0.24s">
         <div class="pillar-title">Priority</div>
         <div class="pillar-desc">Members always book first. Your spot is protected every month.</div>
       </div>
@@ -226,12 +285,12 @@
 <!-- MEET THE TEAM -->
 <section class="section section-cream">
   <div class="container">
-    <div class="section-header">
+    <div class="section-header reveal">
       <div class="section-label">Your Artists</div>
       <h2>Meet the Team</h2>
     </div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;max-width:900px;margin:0 auto;" id="home-team-grid">
-      <div class="team-card" style="text-align:center;">
+      <div class="team-card reveal" data-delay="0s" style="text-align:center;">
         <div class="team-avatar" style="margin:0 auto 1rem;">Z</div>
         <h3 style="font-size:1.3rem;margin-bottom:0.2rem;">Zahra</h3>
         <div class="section-label" style="font-size:0.58rem;margin-bottom:0.5rem;">Founder &amp; CEO</div>
@@ -240,7 +299,7 @@
         </p>
         <a href="about.html" class="btn-outline-dark" style="font-size:0.68rem;">About Zola</a>
       </div>
-      <div class="team-card" style="text-align:center;">
+      <div class="team-card reveal" data-delay="0.13s" style="text-align:center;">
         <div class="team-avatar" style="margin:0 auto 1rem;">E</div>
         <h3 style="font-size:1.3rem;margin-bottom:0.2rem;">Emma Magana</h3>
         <div class="section-label" style="font-size:0.58rem;margin-bottom:0.5rem;">Nail Artist</div>
@@ -250,7 +309,7 @@
         </p>
         <a href="memberships.html" class="btn-outline-dark" style="font-size:0.68rem;">Book a Membership</a>
       </div>
-      <div class="team-card" style="text-align:center;">
+      <div class="team-card reveal" data-delay="0.26s" style="text-align:center;">
         <div class="team-avatar" style="margin:0 auto 1rem;">L</div>
         <h3 style="font-size:1.3rem;margin-bottom:0.2rem;">Lily Byers</h3>
         <div class="section-label" style="font-size:0.58rem;margin-bottom:0.5rem;">Nail Artist</div>
@@ -371,6 +430,45 @@
   </div>
 </section>
 
+<!-- FAQ -->
+<section class="section section-cream" id="faq">
+  <div class="container container-sm">
+    <div class="section-header reveal">
+      <div class="section-label">Questions</div>
+      <h2>Common Questions</h2>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item reveal" data-delay="0s">
+        <div class="faq-question">What's included in a membership?<span class="faq-icon">+</span></div>
+        <div class="faq-answer"><p>Each tier includes a set number of free services per month — Signature gets 1, Luxe gets 2, Black Card gets 3. Add-ons, priority booking, and other perks vary by tier. All services count against your monthly allotment.</p></div>
+      </div>
+      <div class="faq-item reveal" data-delay="0.05s">
+        <div class="faq-question">How does priority booking work?<span class="faq-icon">+</span></div>
+        <div class="faq-answer"><p>Black Card members get first access to every calendar opening. Then Luxe, then Signature, then guests. Your tier determines exactly when your booking window opens — the higher the tier, the earlier you get in.</p></div>
+      </div>
+      <div class="faq-item reveal" data-delay="0.1s">
+        <div class="faq-question">Is there a contract?<span class="faq-icon">+</span></div>
+        <div class="faq-answer"><p>All memberships require a 6-month minimum commitment. After that, you're month-to-month with 30 days notice to cancel. The founding Black Card rate locks in forever at $299/mo the moment you join.</p></div>
+      </div>
+      <div class="faq-item reveal" data-delay="0.15s">
+        <div class="faq-question">Can I roll over unused services?<span class="faq-icon">+</span></div>
+        <div class="faq-answer"><p>Services do not roll over month-to-month. Your membership renews on the same date each billing cycle — use your services within your period or they reset. Plan accordingly.</p></div>
+      </div>
+      <div class="faq-item reveal" data-delay="0.2s">
+        <div class="faq-question">What's the cancellation policy?<span class="faq-icon">+</span></div>
+        <div class="faq-answer"><p>Cancellations made more than 24 hours in advance can be rescheduled at no cost. Late cancellations or no-shows forfeit the service for that billing period. The 50% deposit collected at booking is non-refundable.</p></div>
+      </div>
+      <div class="faq-item reveal" data-delay="0.25s">
+        <div class="faq-question">Do you take walk-ins?<span class="faq-icon">+</span></div>
+        <div class="faq-answer"><p>ZOLA does not take walk-ins. All services are by appointment only. Members always book before guests — if you want guaranteed access every month, a membership is the move.</p></div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:3rem;" class="reveal">
+      <a href="memberships.html" class="btn-gold" style="animation:none;">View All Membership Details</a>
+    </div>
+  </div>
+</section>
+
 <!-- INSTAGRAM STRIP -->
 <section class="instagram-strip">
   <div class="container">
@@ -459,6 +557,15 @@
     </div>
   </div>
   <button class="chat-toggle" onclick="toggleChat()">💅 &nbsp; Ask Zola</button>
+</div>
+
+<!-- BACK TO TOP -->
+<button class="back-to-top" id="back-to-top" aria-label="Back to top">↑</button>
+
+<!-- SOCIAL PROOF TOAST -->
+<div class="sp-toast" id="sp-toast">
+  <div class="sp-toast-title">Just viewed</div>
+  <div class="sp-toast-body">Black Card — 4 founding spots remaining</div>
 </div>
 
 <script src="js/main.js"></script>

@@ -221,6 +221,7 @@
     <div class="nav-item" onclick="showSection('payouts')"><span class="nav-icon">💳</span><span>Payouts</span></div>
     <div class="nav-item" onclick="showSection('giftcards')"><span class="nav-icon">🎁</span><span>Gift Cards</span></div>
     <div class="nav-item" onclick="showSection('inventory')"><span class="nav-icon">📦</span><span>Inventory</span></div>
+    <div class="nav-item" onclick="showSection('workers')"><span class="nav-icon">👥</span><span>Workers</span></div>
     <div class="nav-item" onclick="showSection('goals')"><span class="nav-icon">🎯</span><span>Goals</span></div>
   </nav>
   <div class="sidebar-footer">ZOLA Nail Studio · Porterville</div>
@@ -453,6 +454,32 @@
       </div>
     </div>
 
+    <!-- ══ WORKERS / INSPO ══ -->
+    <div id="sec-workers" class="section">
+      <div class="two-col">
+        <div>
+          <div class="card">
+            <div class="card-title">Worker Logins</div>
+            <p style="font-size:0.8rem;color:var(--latte);margin-bottom:1rem;line-height:1.6;">Workers log in to their portal with their PIN at <a href="worker.html" style="color:var(--champagne);">worker.html</a>.</p>
+            <div id="workers-list"></div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="card-title">Inspo Board — Send to Workers</div>
+            <p style="font-size:0.8rem;color:var(--latte);margin-bottom:1rem;line-height:1.6;">Add nail inspiration photos for your team. They appear in the worker portal instantly.</p>
+            <div class="form-row"><label class="form-label">Image URL</label><input class="form-input" id="inspo-url" placeholder="https://..." /></div>
+            <div class="form-row"><label class="form-label">Caption (optional)</label><input class="form-input" id="inspo-caption" placeholder="Style notes, technique, etc." /></div>
+            <button class="btn-primary" onclick="addInspoPhoto()">Add Photo</button>
+            <div style="margin-top:1.5rem;">
+              <div class="card-title" style="margin-bottom:0.75rem;">Posted Inspo</div>
+              <div id="inspo-list" style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ══ GOALS ══ -->
     <div id="sec-goals" class="section">
       <div class="two-col">
@@ -607,6 +634,7 @@ function loadSection(name) {
   else if (name === 'payouts') loadPayouts();
   else if (name === 'giftcards') loadGiftCards();
   else if (name === 'inventory') loadInventory();
+  else if (name === 'workers') loadWorkers();
   else if (name === 'goals') loadGoals();
 }
 
@@ -1158,6 +1186,68 @@ function loadGoals() {
     if (!aiMsgs.length) aiMsgs.push('Set your first goal above and come back here for AI guidance on hitting it.');
     insights.innerHTML = aiMsgs.map(m => `<div class="ai-insight"><p>${m}</p></div>`).join('');
   });
+}
+
+// ── WORKERS / INSPO ──
+function loadWorkers() {
+  // Fetch worker list
+  api('/api/worker?action=workers').then(r => r.json()).then(d => {
+    const el = document.getElementById('workers-list');
+    el.innerHTML = (d.workers || []).map(w =>
+      `<div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 0;border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-size:0.92rem;color:var(--text);">${w.name}</div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:0.15rem;">Worker #${w.id} · ${w.active ? 'Active' : 'Inactive'}</div>
+        </div>
+        <button onclick="changeWorkerPin(${w.id},'${w.name}')" style="font-size:0.62rem;letter-spacing:0.1em;background:none;border:1px solid var(--border);color:var(--muted);padding:0.3rem 0.65rem;cursor:pointer;">Change PIN</button>
+      </div>`
+    ).join('');
+  }).catch(() => {
+    document.getElementById('workers-list').innerHTML = '<p style="font-size:0.8rem;color:var(--muted);">Could not load workers.</p>';
+  });
+  // Load inspo board
+  api('/api/worker?action=inspo').then(r => r.json()).then(d => {
+    const el = document.getElementById('inspo-list');
+    const photos = d.photos || [];
+    if (!photos.length) { el.innerHTML = '<p style="font-size:0.78rem;color:var(--muted);grid-column:1/-1;">No inspo photos yet.</p>'; return; }
+    el.innerHTML = photos.map(p =>
+      `<div style="position:relative;">
+        <img src="${escHtml(p.url)}" style="width:100%;aspect-ratio:1;object-fit:cover;display:block;" onerror="this.style.display='none'" />
+        ${p.caption ? `<div style="font-size:0.7rem;color:var(--muted);padding:0.3rem 0;">${escHtml(p.caption)}</div>` : ''}
+        <button onclick="deleteInspo(${p.id})" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;border:none;width:20px;height:20px;font-size:0.75rem;cursor:pointer;line-height:1;">×</button>
+      </div>`
+    ).join('');
+  }).catch(() => {});
+}
+
+function addInspoPhoto() {
+  const url = document.getElementById('inspo-url').value.trim();
+  const caption = document.getElementById('inspo-caption').value.trim();
+  if (!url) { toast('Image URL required'); return; }
+  api('/api/worker?action=add_inspo', { method:'POST', body: JSON.stringify({ action:'add_inspo', url, caption }) })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) { document.getElementById('inspo-url').value=''; document.getElementById('inspo-caption').value=''; loadWorkers(); toast('Photo added'); }
+      else toast(d.error || 'Failed');
+    });
+}
+
+function deleteInspo(id) {
+  if (!confirm('Remove this photo?')) return;
+  api('/api/worker?action=inspo', { method:'DELETE', body: JSON.stringify({ action:'inspo', id }) })
+    .then(() => { loadWorkers(); toast('Removed'); });
+}
+
+function changeWorkerPin(workerId, name) {
+  const newPin = prompt(`New PIN for ${name}:`);
+  if (!newPin) return;
+  api('/api/worker?action=worker_pin', { method:'PUT', body: JSON.stringify({ action:'worker_pin', worker_id: workerId, pin: newPin }) })
+    .then(r => r.json())
+    .then(d => { if (d.ok) toast('PIN updated'); else toast(d.error || 'Failed'); });
+}
+
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ── HELPERS ──

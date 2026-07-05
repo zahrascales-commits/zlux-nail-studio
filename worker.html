@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Worker Portal — ZOLA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@200;300;400;600;800&family=Josefin+Sans:wght@300;400;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --espresso: #0D0D0D;
+      --champagne: #C4A882;
+      --cream: #F5EEE8;
+      --latte: #8B6A3E;
+      --blush: #F0EAD8;
+      --ivory: #FAFAF8;
+      --parchment: #F0EAD8;
+    }
+
+    body {
+      font-family: 'Josefin Sans', sans-serif;
+      background: var(--ivory);
+      color: var(--espresso);
+      min-height: 100vh;
+    }
+
+    /* LOGIN SCREEN */
+    #login-screen {
+      min-height: 100vh;
+      background: var(--espresso);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .login-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(196,168,130,0.2);
+      padding: 3rem 2.5rem;
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+    }
+
+    .login-logo {
+      font-family: 'Syne', sans-serif;
+      font-size: 2.2rem;
+      color: var(--cream);
+      letter-spacing: 0.08em;
+      margin-bottom: 0.25rem;
+    }
+
+    .login-sub {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(196,168,130,0.6);
+      margin-bottom: 2.5rem;
+    }
+
+    .login-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(196,168,130,0.7);
+      display: block;
+      text-align: left;
+      margin-bottom: 0.5rem;
+    }
+
+    .login-input {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(196,168,130,0.25);
+      color: var(--cream);
+      font-family: 'Josefin Sans', sans-serif;
+      font-size: 1rem;
+      padding: 0.85rem 1rem;
+      outline: none;
+      margin-bottom: 1.25rem;
+      letter-spacing: 0.08em;
+      text-align: center;
+    }
+
+    .login-input:focus { border-color: var(--champagne); }
+
+    .login-btn {
+      width: 100%;
+      background: var(--champagne);
+      color: var(--espresso);
+      border: none;
+      font-family: 'Josefin Sans', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 1rem;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .login-btn:hover { opacity: 0.88; }
+
+    .login-err {
+      color: #e07070;
+      font-size: 0.75rem;
+      margin-top: 0.75rem;
+      display: none;
+    }
+
+    /* PORTAL LAYOUT */
+    #portal-screen { display: none; min-height: 100vh; }
+
+    .portal-header {
+      background: var(--espresso);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid rgba(196,168,130,0.15);
+    }
+
+    .portal-logo {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.4rem;
+      color: var(--cream);
+      letter-spacing: 0.1em;
+    }
+
+    .portal-worker-name {
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--champagne);
+    }
+
+    .portal-logout {
+      background: none;
+      border: 1px solid rgba(196,168,130,0.3);
+      color: rgba(196,168,130,0.7);
+      font-family: 'Josefin Sans', sans-serif;
+      font-size: 0.6rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 0.4rem 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .portal-logout:hover { border-color: var(--champagne); color: var(--champagne); }
+
+    /* TAB NAV */
+    .portal-tabs {
+      background: var(--espresso);
+      display: flex;
+      border-bottom: 1px solid rgba(196,168,130,0.12);
+      overflow-x: auto;
+    }
+
+    .portal-tab {
+      font-size: 0.65rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(196,168,130,0.5);
+      padding: 0.9rem 1.5rem;
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-family: 'Josefin Sans', sans-serif;
+      white-space: nowrap;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .portal-tab:hover { color: var(--champagne); }
+    .portal-tab.active { color: var(--champagne); border-bottom-color: var(--champagne); }
+
+    /* PANEL */
+    .portal-body { padding: 2rem 1.5rem; max-width: 900px; margin: 0 auto; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* SCHEDULE */
+    .schedule-empty {
+      text-align: center;
+      padding: 3rem;
+      color: var(--latte);
+      font-size: 0.88rem;
+    }
+
+    .appt-card {
+      background: #fff;
+      border: 1px solid rgba(139,106,62,0.15);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .appt-time-block {
+      min-width: 80px;
+      text-align: center;
+      background: var(--blush);
+      padding: 0.75rem 0.5rem;
+    }
+
+    .appt-date {
+      font-size: 0.58rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--latte);
+      margin-bottom: 0.2rem;
+    }
+
+    .appt-time {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.3rem;
+      color: var(--espresso);
+      line-height: 1;
+    }
+
+    .appt-details { flex: 1; min-width: 200px; }
+
+    .appt-client {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem;
+      color: var(--espresso);
+      margin-bottom: 0.25rem;
+    }
+
+    .appt-service {
+      font-size: 0.8rem;
+      color: var(--latte);
+      margin-bottom: 0.4rem;
+    }
+
+    .appt-phone {
+      font-size: 0.75rem;
+      color: var(--champagne);
+    }
+
+    .msg-btn {
+      background: var(--espresso);
+      color: var(--champagne);
+      border: none;
+      font-family: 'Josefin Sans', sans-serif;
+      font-size: 0.62rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      margin-top: 0.5rem;
+    }
+
+    .msg-btn:hover { opacity: 0.8; }
+
+    .today-badge {
+      display: inline-block;
+      background: var(--champagne);
+      color: var(--espresso);
+      font-size: 0.55rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    /* MESSAGE MODAL */
+    .msg-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(13,13,13,0.75);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .msg-modal-overlay.open { display: flex; }
+
+    .msg-modal {
+      background: var(--ivory);
+      padding: 2rem;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .msg-modal-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.2rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .msg-modal-client {
+      font-size: 0.72rem;
+      color: var(--latte);
+      letter-spacing: 0.1em;
+      margin-bottom: 1.25rem;
+    }
+
+    .msg-textarea {
+      width: 100%;
+      min-height: 120px;
+      border: 1px solid rgba(139,106,62,0.3);
+      padding: 0.85rem 1rem;
+      font-family: 'Josefin Sans', sans-serif;
+      font-size: 0.88rem;
+      color: var(--espresso);
+      resize: vertical;
+      outline: none;
+      background: #fff;
+    }
+
+    .msg-textarea:focus { border-color: var(--champagne); }
+
+    .msg-modal-btns {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .btn-send {
+      background: var(--champagne);
+      color: var(--espresso);
+      border: none;
+      font-family: 'Josefin Sans', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      padding: 0.75rem 1.5rem;
+      cursor: pointer;
+      flex: 1;
+    }
+
+    .btn-cancel {
+      background: none;
+      border: 1px solid rgba(139,106,62,0.35);
+      color: var(--latte);
+      font-family: 'Josefin Sans', sans-serif;
+      font-size: 0.68rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      padding: 0.75rem 1.5rem;
+      cursor: pointer;
+    }
+
+    /* MESSAGES LOG */
+    .msg-log-item {
+      background: #fff;
+      border: 1px solid rgba(139,106,62,0.12);
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .msg-log-client {
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .msg-log-text {
+      font-size: 0.85rem;
+      color: var(--espresso);
+      line-height: 1.7;
+      margin-bottom: 0.4rem;
+    }
+
+    .msg-log-meta {
+      font-size: 0.68rem;
+      color: var(--latte);
+    }
+
+    /* INSPO BOARD */
+    .inspo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .inspo-card {
+      background: #fff;
+      border: 1px solid rgba(139,106,62,0.15);
+      overflow: hidden;
+    }
+
+    .inspo-img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      display: block;
+    }
+
+    .inspo-caption {
+      padding: 0.65rem 0.75rem;
+      font-size: 0.78rem;
+      color: var(--latte);
+      line-height: 1.5;
+    }
+
+    .inspo-ts {
+      padding: 0 0.75rem 0.6rem;
+      font-size: 0.62rem;
+      color: rgba(139,106,62,0.5);
+    }
+
+    .inspo-empty {
+      text-align: center;
+      padding: 3rem;
+      color: var(--latte);
+      font-size: 0.88rem;
+    }
+
+    /* SECTION LABEL */
+    .section-label-small {
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--champagne);
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    /* LOADING */
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: var(--latte);
+      font-size: 0.85rem;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: var(--espresso);
+      color: var(--champagne);
+      font-family: 'Josefin Sans', sans-serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      padding: 0.85rem 1.25rem;
+      z-index: 999;
+      transform: translateY(120%);
+      transition: transform 0.3s;
+    }
+
+    .toast.show { transform: translateY(0); }
+
+    @media (max-width: 600px) {
+      .portal-body { padding: 1rem; }
+      .appt-card { gap: 0.75rem; }
+      .inspo-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span></div>
+    <div class="login-sub">Worker Portal</div>
+
+    <label class="login-label" for="worker-pin">Enter Your PIN</label>
+    <input type="password" id="worker-pin" class="login-input" placeholder="· · · ·" maxlength="8"
+      onkeydown="if(event.key==='Enter')doLogin()" autocomplete="current-password" />
+
+    <button class="login-btn" onclick="doLogin()">Enter Portal</button>
+    <div class="login-err" id="login-err">Incorrect PIN. Try again.</div>
+  </div>
+</div>
+
+<!-- PORTAL SCREEN -->
+<div id="portal-screen">
+  <div class="portal-header">
+    <div class="portal-logo"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span></div>
+    <div class="portal-worker-name" id="header-worker-name">Worker</div>
+    <button class="portal-logout" onclick="doLogout()">Log Out</button>
+  </div>
+
+  <div class="portal-tabs">
+    <button class="portal-tab active" onclick="showTab('schedule', this)">My Schedule</button>
+    <button class="portal-tab" onclick="showTab('messages', this)">Messages</button>
+    <button class="portal-tab" onclick="showTab('inspo', this)">Inspo Board</button>
+  </div>
+
+  <div class="portal-body">
+
+    <!-- SCHEDULE PANEL -->
+    <div id="panel-schedule" class="panel active">
+      <div class="section-label-small">Upcoming Appointments</div>
+      <div id="schedule-content"><div class="loading">Loading schedule…</div></div>
+    </div>
+
+    <!-- MESSAGES PANEL -->
+    <div id="panel-messages" class="panel">
+      <div class="section-label-small">Sent Messages</div>
+      <div id="messages-content"><div class="loading">Loading messages…</div></div>
+    </div>
+
+    <!-- INSPO BOARD PANEL -->
+    <div id="panel-inspo" class="panel">
+      <div class="section-label-small">Inspo from Zahra</div>
+      <p style="font-size:0.8rem;color:var(--latte);margin-bottom:1rem;line-height:1.7;">Nail designs, styles, and references sent directly from Zahra. Use these as inspiration and guidance for your appointments.</p>
+      <div id="inspo-content"><div class="loading">Loading inspo board…</div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MESSAGE MODAL -->
+<div class="msg-modal-overlay" id="msg-modal-overlay">
+  <div class="msg-modal">
+    <div class="msg-modal-title">Message Client</div>
+    <div class="msg-modal-client" id="modal-client-name">—</div>
+    <textarea class="msg-textarea" id="modal-msg-text" placeholder="Type your message to the client…"></textarea>
+    <div class="msg-modal-btns">
+      <button class="btn-send" onclick="sendMessage()">Send Message</button>
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let _workerId = null;
+  let _workerPin = null;
+  let _workerName = null;
+  let _msgBookingId = null;
+
+  // ── AUTH ──────────────────────────────────────────────
+  async function doLogin() {
+    const pin = document.getElementById('worker-pin').value.trim();
+    const err = document.getElementById('login-err');
+    err.style.display = 'none';
+    if (!pin) return;
+
+    try {
+      const res = await fetch('/api/worker?action=login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'login', pin })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        err.style.display = 'block';
+        return;
+      }
+      _workerId = data.worker_id;
+      _workerPin = pin;
+      _workerName = data.name;
+      sessionStorage.setItem('zw_id', _workerId);
+      sessionStorage.setItem('zw_pin', _workerPin);
+      sessionStorage.setItem('zw_name', _workerName);
+      enterPortal();
+    } catch {
+      err.style.display = 'block';
+    }
+  }
+
+  function doLogout() {
+    sessionStorage.clear();
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('portal-screen').style.display = 'none';
+    document.getElementById('worker-pin').value = '';
+  }
+
+  function enterPortal() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('portal-screen').style.display = 'block';
+    document.getElementById('header-worker-name').textContent = _workerName || 'Worker';
+    loadSchedule();
+  }
+
+  // ── TABS ─────────────────────────────────────────────
+  function showTab(name, btn) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.portal-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    btn.classList.add('active');
+    if (name === 'schedule') loadSchedule();
+    if (name === 'messages') loadMessages();
+    if (name === 'inspo') loadInspo();
+  }
+
+  // ── SCHEDULE ─────────────────────────────────────────
+  async function loadSchedule() {
+    const el = document.getElementById('schedule-content');
+    el.innerHTML = '<div class="loading">Loading…</div>';
+    try {
+      const res = await fetch('/api/worker?action=schedule&worker_id=' + _workerId + '&pin=' + _workerPin);
+      const data = await res.json();
+      if (!res.ok) return el.innerHTML = '<div class="schedule-empty">Could not load schedule.</div>';
+      renderSchedule(el, data.schedule || []);
+    } catch {
+      el.innerHTML = '<div class="schedule-empty">Connection error. Try refreshing.</div>';
+    }
+  }
+
+  function renderSchedule(el, items) {
+    if (!items.length) {
+      el.innerHTML = '<div class="schedule-empty">No upcoming appointments scheduled.</div>';
+      return;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    el.innerHTML = items.map(a => {
+      const isToday = a.date === today;
+      const dateObj = new Date(a.date + 'T00:00:00');
+      const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const [hr, mn] = a.time.split(':').map(Number);
+      const ampm = hr >= 12 ? 'PM' : 'AM';
+      const h = hr > 12 ? hr - 12 : (hr === 0 ? 12 : hr);
+      const timeStr = h + ':' + String(mn).padStart(2, '0') + ' ' + ampm;
+      const addons = Array.isArray(a.addons) && a.addons.length ? a.addons.join(', ') : '';
+      return `
+        <div class="appt-card">
+          <div class="appt-time-block">
+            ${isToday ? '<div class="today-badge">Today</div>' : ''}
+            <div class="appt-date">${dateStr}</div>
+            <div class="appt-time">${timeStr}</div>
+          </div>
+          <div class="appt-details">
+            <div class="appt-client">${escHtml(a.client)}</div>
+            <div class="appt-service">${escHtml(a.service)}${addons ? ' <span style="color:var(--champagne)">+ ' + escHtml(addons) + '</span>' : ''}</div>
+            ${a.phone ? `<div class="appt-phone">${escHtml(a.phone)}</div>` : ''}
+            ${a.notes ? `<div style="font-size:0.75rem;color:var(--latte);margin-top:0.3rem;font-style:italic;">${escHtml(a.notes)}</div>` : ''}
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;">
+              <button class="msg-btn" onclick="openModal(${a.id}, '${escHtml(a.client).replace(/'/g, "\\'")}')">Message Client</button>
+              <button class="msg-btn" style="background:rgba(60,140,80,0.12);color:#3c8c50;border:1px solid rgba(60,140,80,0.3);" onclick="markStatus(${a.id}, 'complete')">Mark Complete</button>
+              <button class="msg-btn" style="background:rgba(180,50,50,0.08);color:#b43232;border:1px solid rgba(180,50,50,0.2);" onclick="markStatus(${a.id}, 'no_show')">No-Show</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ── MESSAGES ─────────────────────────────────────────
+  async function loadMessages() {
+    const el = document.getElementById('messages-content');
+    el.innerHTML = '<div class="loading">Loading…</div>';
+    try {
+      const res = await fetch('/api/worker?action=messages&worker_id=' + _workerId + '&pin=' + _workerPin);
+      const data = await res.json();
+      if (!res.ok) return el.innerHTML = '<div class="schedule-empty">Could not load messages.</div>';
+      const msgs = data.messages || [];
+      if (!msgs.length) {
+        el.innerHTML = '<div class="schedule-empty">No messages sent yet.</div>';
+        return;
+      }
+      el.innerHTML = msgs.map(m => {
+        const dt = new Date(m.ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        return `
+          <div class="msg-log-item">
+            <div class="msg-log-client">${escHtml(m.client_name)}</div>
+            <div class="msg-log-text">${escHtml(m.message)}</div>
+            <div class="msg-log-meta">${dt}</div>
+          </div>
+        `;
+      }).join('');
+    } catch {
+      el.innerHTML = '<div class="schedule-empty">Connection error.</div>';
+    }
+  }
+
+  // ── INSPO ─────────────────────────────────────────────
+  async function loadInspo() {
+    const el = document.getElementById('inspo-content');
+    el.innerHTML = '<div class="loading">Loading…</div>';
+    try {
+      const res = await fetch('/api/worker?action=inspo&worker_id=' + _workerId + '&pin=' + _workerPin);
+      const data = await res.json();
+      const photos = data.photos || [];
+      if (!photos.length) {
+        el.innerHTML = '<div class="inspo-empty">No inspo photos yet. Check back after Zahra adds some.</div>';
+        return;
+      }
+      el.innerHTML = '<div class="inspo-grid">' + photos.map(p => `
+        <div class="inspo-card">
+          <img class="inspo-img" src="${escHtml(p.url)}" alt="${escHtml(p.caption)}" loading="lazy" onerror="this.style.display='none'" />
+          ${p.caption ? `<div class="inspo-caption">${escHtml(p.caption)}</div>` : ''}
+          <div class="inspo-ts">${new Date(p.ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+        </div>
+      `).join('') + '</div>';
+    } catch {
+      el.innerHTML = '<div class="inspo-empty">Could not load inspo board.</div>';
+    }
+  }
+
+  // ── MESSAGE MODAL ─────────────────────────────────────
+  function openModal(bookingId, clientName) {
+    _msgBookingId = bookingId;
+    document.getElementById('modal-client-name').textContent = clientName;
+    document.getElementById('modal-msg-text').value = '';
+    document.getElementById('msg-modal-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('modal-msg-text').focus(), 50);
+  }
+
+  function closeModal() {
+    document.getElementById('msg-modal-overlay').classList.remove('open');
+    _msgBookingId = null;
+  }
+
+  async function sendMessage() {
+    const text = document.getElementById('modal-msg-text').value.trim();
+    if (!text) return;
+    try {
+      const res = await fetch('/api/worker?action=message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Worker-Id': String(_workerId),
+          'X-Worker-Pin': _workerPin,
+        },
+        body: JSON.stringify({ action: 'message', booking_id: _msgBookingId, message: text })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('Message sent');
+        closeModal();
+      } else {
+        showToast('Failed to send');
+      }
+    } catch {
+      showToast('Connection error');
+    }
+  }
+
+  // ── MARK STATUS ───────────────────────────────────────
+  async function markStatus(bookingId, type) {
+    const label = type === 'complete' ? 'Mark as Complete?' : 'Mark as No-Show?';
+    if (!confirm(label)) return;
+    try {
+      const res = await fetch('/api/worker?action=' + type, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Worker-Id': String(_workerId),
+          'X-Worker-Pin': _workerPin,
+        },
+        body: JSON.stringify({ action: type, booking_id: bookingId })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast(type === 'complete' ? 'Marked complete' : 'No-show recorded');
+        loadSchedule();
+      }
+    } catch {
+      showToast('Error updating status');
+    }
+  }
+
+  // ── UTILS ─────────────────────────────────────────────
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  // ── INIT ─────────────────────────────────────────────
+  (function init() {
+    const id = sessionStorage.getItem('zw_id');
+    const pin = sessionStorage.getItem('zw_pin');
+    const name = sessionStorage.getItem('zw_name');
+    if (id && pin && name) {
+      _workerId = Number(id);
+      _workerPin = pin;
+      _workerName = name;
+      enterPortal();
+    }
+
+    // Allow Enter key on PIN field
+    document.getElementById('worker-pin').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doLogin();
+    });
+  })();
+</script>
+</body>
+</html>

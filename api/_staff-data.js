@@ -33,14 +33,18 @@ module.exports = async (req, res) => {
       ORDER BY a.appointment_time ASC
     `, [staffId, targetDate]);
 
-    const week = [];
+    const weekDates = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date();
       d.setDate(d.getDate() + i);
-      const ds = d.toISOString().slice(0, 10);
-      const row = await queryOne('SELECT COUNT(*) as n FROM appointments WHERE staff_id = ? AND appointment_date = ? AND status = "SCHEDULED"', [staffId, ds]);
-      week.push({ date: ds, count: row ? row.n : 0 });
+      weekDates.push(d.toISOString().slice(0, 10));
     }
+    const weekCounts = await query(
+      `SELECT appointment_date, COUNT(*) as n FROM appointments WHERE staff_id = ? AND appointment_date IN (${weekDates.map(()=>'?').join(',')}) AND status = 'SCHEDULED' GROUP BY appointment_date`,
+      [staffId, ...weekDates]
+    ).catch(() => []);
+    const countMap = Object.fromEntries(weekCounts.map(r => [r.appointment_date, Number(r.n)]));
+    const week = weekDates.map(ds => ({ date: ds, count: countMap[ds] || 0 }));
 
     const messages = await query(`
       SELECT * FROM messages

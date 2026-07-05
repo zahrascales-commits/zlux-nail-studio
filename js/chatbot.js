@@ -149,7 +149,7 @@ function askZolaFallback(msg) {
     return "Black Card members receive a quarterly nail assessment — a Zola artist personally reviews your nail growth, health, and length progress and builds a custom plan. No other studio in this area offers this.";
 
   if (m.includes('princess') || m.includes('kids') || m.includes('children') || m.includes('party') || m.includes('daughter'))
-    return "Zola offers princess parties for kids — mini manicures and custom nail art in a safe, elevated studio experience. $35 per child, minimum 6 children. Use the contact form to inquire about dates and availability.";
+    return "Zola offers princess parties for kids — mini manicures and custom nail art in a safe, elevated studio experience. $20 per child, minimum 6 children. Use the contact form to inquire about dates and availability.";
 
   if ((m.includes('choose') && m.includes('artist')) || (m.includes('pick') && m.includes('artist')) || m.includes('specific artist') || m.includes('my artist'))
     return "Choosing your specific nail artist every appointment is exclusive to Black Card members. Signature and Luxe members are assigned based on availability. Black Card is the only tier where your artist is guaranteed every visit.";
