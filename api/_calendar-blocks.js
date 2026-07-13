@@ -17,10 +17,21 @@ module.exports = async (req, res) => {
     const blocks = date
       ? store.calendarBlocks.filter(b => b.date === date)
       : store.calendarBlocks;
-    // Also get booked slots for the date
+    // Also get booked slots for the date (in-memory bookings)
     const booked = date
       ? store.bookings.filter(b => b.date === date).map(b => b.time_slot)
       : [];
+    // Merge in appointments scheduled from the Studio Manager (Turso-backed),
+    // so owner-booked times also show as taken on the public calendar.
+    // Wrapped so a DB hiccup never breaks the public booking page.
+    if (date) {
+      try {
+        const { query, ensureTables } = require('./_team-db');
+        await ensureTables();
+        const rows = await query('SELECT time FROM team_appointments WHERE date=?', [date]);
+        for (const r of rows) if (r.time && !booked.includes(r.time)) booked.push(r.time);
+      } catch (_) { /* ignore — fall back to in-memory bookings only */ }
+    }
     return res.json({ blocks, booked, all_slots: store.ALL_SLOTS });
   }
 
