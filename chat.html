@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ZOLA — Your Appointment Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{--espresso:#0D0D0D;--gold:#C4A882;--cream:#F5EEE8;--latte:#8B6A3E;--muted:#9C8B73;
+    --card:#fff;--bg:#FAF7F2;--border:rgba(139,106,62,0.16);--border-hi:rgba(196,168,130,0.5)}
+  body{font-family:'Josefin Sans',sans-serif;background:var(--bg);color:var(--espresso);min-height:100vh;display:flex;flex-direction:column}
+  input,button{font-family:inherit;color:inherit}
+  @keyframes pop{0%{transform:scale(0.96);opacity:0}100%{transform:scale(1);opacity:1}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+  .head{background:var(--espresso);color:var(--cream);padding:1.1rem 1.4rem;text-align:center;position:sticky;top:0;z-index:10}
+  .head .logo{font-family:'Syne',sans-serif;font-size:1.5rem;letter-spacing:0.1em}
+  .head .sub{font-size:0.58rem;letter-spacing:0.28em;text-transform:uppercase;color:var(--gold);margin-top:2px}
+
+  .meta{max-width:620px;margin:1.25rem auto 0;padding:0 1.2rem;width:100%;animation:fadeUp 0.5s ease}
+  .meta-card{background:var(--card);border:1px solid var(--border);padding:1.1rem 1.3rem;border-left:3px solid var(--gold)}
+  .meta-title{font-family:'Syne',sans-serif;font-size:1.1rem;color:var(--espresso)}
+  .meta-sub{font-size:0.8rem;color:var(--latte);margin-top:0.2rem}
+
+  .chat{flex:1;max-width:620px;width:100%;margin:0 auto;padding:1.25rem 1.2rem 1rem;display:flex;flex-direction:column;gap:0.55rem}
+  .bubble{max-width:82%;padding:0.65rem 0.9rem;font-size:0.9rem;line-height:1.5;animation:pop 0.22s ease}
+  .bubble .who{font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--latte);margin-bottom:0.15rem}
+  .b-mine{align-self:flex-end;background:var(--espresso);color:var(--cream)}
+  .b-mine .who{color:var(--gold)}
+  .b-studio{align-self:flex-start;background:var(--card);border:1px solid var(--border)}
+  .empty{text-align:center;color:var(--latte);padding:2.5rem 1rem;font-size:0.9rem}
+
+  .bar{position:sticky;bottom:0;background:var(--bg);border-top:1px solid var(--border);padding:0.8rem 1.2rem}
+  .bar-inner{max-width:620px;margin:0 auto;display:flex;gap:0.5rem}
+  .bar input{flex:1;background:var(--card);border:1px solid var(--border);padding:0.8rem 1rem;outline:none;font-size:0.92rem;transition:border-color 0.2s}
+  .bar input:focus{border-color:var(--gold)}
+  .bar button{background:var(--gold);color:var(--espresso);border:none;padding:0 1.3rem;font-size:0.7rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;transition:opacity 0.2s}
+  .bar button:hover{opacity:0.85}
+  .load{text-align:center;color:var(--latte);padding:3rem 1rem}
+</style>
+</head>
+<body>
+  <div class="head">
+    <div class="logo"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span></div>
+    <div class="sub">Appointment Chat</div>
+  </div>
+
+  <div class="meta" id="meta"></div>
+  <div class="chat" id="chat"><div class="load">Loading your conversation…</div></div>
+
+  <div class="bar">
+    <div class="bar-inner">
+      <input id="msg" placeholder="Message the studio…" onkeydown="if(event.key==='Enter')send()" />
+      <button onclick="send()">Send</button>
+    </div>
+  </div>
+
+<script>
+const TOKEN=new URLSearchParams(location.search).get('t')||'';
+function fmtTime(t){const[h,m]=t.split(':').map(Number);const ap=h>=12?'PM':'AM';const hh=h>12?h-12:(h===0?12:h);return hh+':'+String(m).padStart(2,'0')+' '+ap;}
+function fmtDate(ds){return new Date(ds+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+async function load(){
+  if(!TOKEN){document.getElementById('chat').innerHTML='<div class="empty">This chat link is invalid.</div>';return;}
+  try{
+    const r=await fetch('/api/team?action=client_thread&token='+encodeURIComponent(TOKEN));
+    if(!r.ok){document.getElementById('chat').innerHTML='<div class="empty">This chat link is no longer active.</div>';return;}
+    const d=await r.json();
+    const a=d.appointment;
+    document.getElementById('meta').innerHTML=`<div class="meta-card">
+      <div class="meta-title">Hi ${esc(a.client_name||'there')} 👋</div>
+      <div class="meta-sub">${esc(a.service||'Your appointment')} · ${fmtDate(a.date)} at ${fmtTime(a.time)}${a.member_name?' · with '+esc(a.member_name):''}</div>
+    </div>`;
+    render(d.messages||[]);
+  }catch{document.getElementById('chat').innerHTML='<div class="empty">Connection error. Please refresh.</div>';}
+}
+function render(msgs){
+  const el=document.getElementById('chat');
+  if(!msgs.length){el.innerHTML='<div class="empty">No messages yet.<br>Send a message and the studio will reply here.</div>';return;}
+  el.innerHTML=msgs.map(m=>{
+    const mine=m.sender==='client';
+    const who=mine?'You':(m.sender==='owner'?'ZOLA Studio':esc(m.sender_name||'Your Artist'));
+    return `<div class="bubble ${mine?'b-mine':'b-studio'}"><div class="who">${who}</div>${esc(m.body)}</div>`;
+  }).join('');
+  window.scrollTo(0,document.body.scrollHeight);
+}
+async function send(){
+  const inp=document.getElementById('msg');const body=inp.value.trim();if(!body)return;inp.value='';
+  await fetch('/api/team?action=client_msg',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'client_msg',token:TOKEN,body})});
+  load();
+}
+load();
+setInterval(load,15000); // light polling so studio replies show up
+</script>
+</body>
+</html>

@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ZOLA — Studio Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0B0B0B;--surface:#141210;--card:#1C1815;--card-hi:#221D18;
+    --border:rgba(196,168,130,0.14);--border-hi:rgba(196,168,130,0.32);
+    --gold:#C4A882;--gold-light:#E8D4B0;--gold-faint:rgba(196,168,130,0.07);
+    --cream:#F5EEE8;--latte:#8B6A3E;--muted:#8B7355;
+    --text:#F5EEE8;--danger:#d66;--success:#6ab07a;
+  }
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:'Josefin Sans',sans-serif;font-size:0.92rem;line-height:1.6;min-height:100vh}
+  a{color:inherit;text-decoration:none}
+  input,select,textarea,button{font-family:inherit;font-size:inherit;color:inherit}
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  /* animated gold ambient background */
+  body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(600px 400px at 12% 8%,rgba(196,168,130,0.06),transparent 60%),
+               radial-gradient(500px 400px at 88% 92%,rgba(196,168,130,0.05),transparent 60%);
+    animation:ambient 14s ease-in-out infinite alternate}
+  @keyframes ambient{0%{opacity:0.7}100%{opacity:1;transform:scale(1.04)}}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes pop{0%{transform:scale(0.96);opacity:0}100%{transform:scale(1);opacity:1}}
+  @keyframes slideInR{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+
+  /* ── LOGIN ── */
+  #login{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:1.5rem;
+    background:radial-gradient(1200px 800px at 50% 30%,#161210,#0B0B0B)}
+  .login-card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--border);
+    padding:3rem 2.5rem;animation:fadeUp 0.6s ease;position:relative;overflow:hidden}
+  .login-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,transparent,var(--gold),transparent);background-size:200% 100%;animation:shimmer 3s linear infinite}
+  .login-logo{font-family:'Syne',sans-serif;font-size:2.2rem;letter-spacing:0.1em;text-align:center;color:var(--cream)}
+  .login-sub{font-size:0.62rem;letter-spacing:0.32em;text-transform:uppercase;color:var(--gold);text-align:center;margin:0.4rem 0 2.5rem}
+  .fld-label{display:block;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem}
+  .login-input{width:100%;background:var(--card);border:1px solid var(--border);padding:0.85rem 1rem;outline:none;transition:border-color 0.25s;letter-spacing:0.05em}
+  .login-input:focus{border-color:var(--gold)}
+  .login-btn{width:100%;margin-top:1.5rem;background:var(--gold);color:#0B0B0B;border:none;padding:0.95rem;
+    font-size:0.7rem;font-weight:600;letter-spacing:0.24em;text-transform:uppercase;cursor:pointer;transition:transform 0.2s,box-shadow 0.2s}
+  .login-btn:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(196,168,130,0.2)}
+  .login-err{color:var(--danger);font-size:0.75rem;margin-top:1rem;text-align:center;min-height:1.2em}
+
+  /* ── APP SHELL ── */
+  #app{display:none;position:relative;z-index:1;min-height:100vh}
+  .topbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 1.5rem;background:rgba(11,11,11,0.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+  .brand{font-family:'Syne',sans-serif;font-size:1.35rem;letter-spacing:0.08em;color:var(--cream)}
+  .brand small{display:block;font-family:'Josefin Sans';font-size:0.54rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--gold);margin-top:1px}
+  .top-actions{display:flex;gap:0.6rem;align-items:center}
+
+  .tabs{display:flex;gap:0.25rem;padding:0.75rem 1.5rem 0;background:transparent;position:sticky;top:61px;z-index:30;
+    background:rgba(11,11,11,0.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);flex-wrap:wrap}
+  .tab{padding:0.7rem 1.15rem;font-size:0.72rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);
+    cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all 0.22s;position:relative;top:1px}
+  .tab:hover{color:var(--gold)}
+  .tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+  .tab .dot{display:inline-block;min-width:16px;padding:0 4px;margin-left:6px;background:var(--gold);color:#0B0B0B;
+    font-size:0.6rem;font-weight:700;border-radius:8px;text-align:center;vertical-align:middle}
+
+  .wrap{max-width:1080px;margin:0 auto;padding:1.75rem 1.5rem 5rem}
+  .panel{display:none;animation:fadeUp 0.45s ease}
+  .panel.active{display:block}
+
+  .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap}
+  .page-title{font-family:'Syne',sans-serif;font-size:1.5rem;color:var(--cream)}
+  .page-desc{font-size:0.82rem;color:var(--muted);margin-top:0.2rem;max-width:520px}
+
+  /* ── BUTTONS ── */
+  .btn{display:inline-flex;align-items:center;gap:0.45rem;padding:0.65rem 1.2rem;font-size:0.68rem;font-weight:600;
+    letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;border:none;transition:all 0.2s;white-space:nowrap}
+  .btn-gold{background:var(--gold);color:#0B0B0B}
+  .btn-gold:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(196,168,130,0.22)}
+  .btn-ghost{background:transparent;color:var(--gold);border:1px solid var(--border-hi)}
+  .btn-ghost:hover{background:var(--gold-faint);border-color:var(--gold)}
+  .btn-danger{background:rgba(200,80,80,0.12);color:#e08a8a;border:1px solid rgba(200,80,80,0.25)}
+  .btn-danger:hover{background:rgba(200,80,80,0.2)}
+  .btn-sm{padding:0.4rem 0.7rem;font-size:0.6rem}
+  .icon-btn{background:none;border:1px solid var(--border);color:var(--muted);width:32px;height:32px;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;transition:all 0.2s;font-size:0.9rem}
+  .icon-btn:hover{border-color:var(--gold);color:var(--gold)}
+
+  /* ── CARD GRID ── */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}
+  .member-card{background:var(--card);border:1px solid var(--border);padding:1.4rem;position:relative;overflow:hidden;
+    transition:transform 0.25s,border-color 0.25s;animation:pop 0.4s ease both}
+  .member-card:hover{transform:translateY(-3px);border-color:var(--border-hi)}
+  .member-card::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--mc,#C4A882)}
+  .mc-top{display:flex;align-items:center;gap:0.9rem;margin-bottom:1rem}
+  .avatar{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-family:'Syne',sans-serif;font-size:1.2rem;color:#0B0B0B;font-weight:600}
+  .mc-name{font-family:'Syne',sans-serif;font-size:1.1rem;color:var(--cream);line-height:1.2}
+  .mc-role{font-size:0.66rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted)}
+  .pin-row{display:flex;align-items:center;gap:0.6rem;background:var(--bg);border:1px dashed var(--border-hi);padding:0.7rem 0.9rem;margin-bottom:0.9rem}
+  .pin-label{font-size:0.56rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted)}
+  .pin-val{font-family:'Syne',sans-serif;font-size:1.5rem;letter-spacing:0.28em;color:var(--gold)}
+  .mc-actions{display:flex;gap:0.4rem;flex-wrap:wrap}
+  .status-pill{display:inline-block;font-size:0.56rem;letter-spacing:0.14em;text-transform:uppercase;padding:0.2rem 0.6rem;margin-left:auto}
+  .status-on{background:rgba(106,176,122,0.14);color:var(--success)}
+  .status-off{background:rgba(200,80,80,0.12);color:#e08a8a}
+
+  /* ── SCHEDULE ── */
+  .date-bar{display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;flex-wrap:wrap}
+  .date-nav{display:flex;align-items:center;gap:0.5rem;background:var(--card);border:1px solid var(--border);padding:0.35rem}
+  .date-label{font-family:'Syne',sans-serif;font-size:0.95rem;color:var(--cream);min-width:210px;text-align:center}
+  .appt{display:flex;gap:1rem;background:var(--card);border:1px solid var(--border);padding:1.1rem 1.25rem;margin-bottom:0.7rem;
+    align-items:flex-start;transition:border-color 0.2s,transform 0.2s;animation:fadeUp 0.35s ease both}
+  .appt:hover{border-color:var(--border-hi)}
+  .appt-time{min-width:78px;text-align:center;padding:0.55rem 0.3rem;background:var(--bg);border-left:2px solid var(--at,#C4A882)}
+  .appt-time .t{font-family:'Syne',sans-serif;font-size:1.05rem;color:var(--cream)}
+  .appt-time .d{font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+  .appt-main{flex:1;min-width:0}
+  .appt-client{font-family:'Syne',sans-serif;font-size:1.05rem;color:var(--cream)}
+  .appt-svc{font-size:0.78rem;color:var(--muted);margin:0.15rem 0}
+  .appt-assign{display:inline-flex;align-items:center;gap:0.4rem;font-size:0.66rem;letter-spacing:0.08em;text-transform:uppercase;margin-top:0.35rem}
+  .assign-chip{display:inline-flex;align-items:center;gap:0.4rem;padding:0.2rem 0.6rem;background:var(--gold-faint);border:1px solid var(--border);color:var(--gold)}
+  .assign-chip .swatch{width:9px;height:9px;border-radius:50%}
+  .mini-select{background:var(--card);border:1px solid var(--border);color:var(--cream);padding:0.3rem 0.5rem;outline:none;font-size:0.72rem;cursor:pointer}
+  .appt-actions{display:flex;flex-direction:column;gap:0.35rem}
+  .status-tag{font-size:0.54rem;letter-spacing:0.12em;text-transform:uppercase;padding:0.15rem 0.5rem;align-self:flex-start}
+  .st-scheduled{background:var(--gold-faint);color:var(--gold)}
+  .st-completed{background:rgba(106,176,122,0.14);color:var(--success)}
+  .st-no_show{background:rgba(200,80,80,0.12);color:#e08a8a}
+
+  /* ── MESSAGES ── */
+  .msg-layout{display:grid;grid-template-columns:320px 1fr;gap:1rem;min-height:480px}
+  .thread-list{background:var(--card);border:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column}
+  .thread{padding:0.9rem 1rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.18s}
+  .thread:hover{background:var(--gold-faint)}
+  .thread.active{background:var(--gold-faint);border-left:2px solid var(--gold)}
+  .thread-name{font-family:'Syne',sans-serif;font-size:0.92rem;color:var(--cream);display:flex;justify-content:space-between;gap:0.5rem}
+  .thread-name .ct{font-family:'Josefin Sans';font-size:0.58rem;color:var(--gold);background:var(--gold-faint);padding:0.05rem 0.4rem;align-self:center}
+  .thread-meta{font-size:0.66rem;color:var(--muted);margin-top:0.15rem}
+  .thread-last{font-size:0.72rem;color:var(--muted);margin-top:0.3rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chat-pane{background:var(--card);border:1px solid var(--border);display:flex;flex-direction:column}
+  .chat-head{padding:0.9rem 1.1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap}
+  .chat-head-name{font-family:'Syne',sans-serif;font-size:1rem;color:var(--cream)}
+  .chat-head-sub{font-size:0.66rem;color:var(--muted)}
+  .chat-body{flex:1;padding:1.1rem;overflow-y:auto;display:flex;flex-direction:column;gap:0.6rem;max-height:52vh}
+  .bubble{max-width:78%;padding:0.6rem 0.85rem;font-size:0.84rem;line-height:1.5;animation:pop 0.25s ease;position:relative}
+  .bubble .who{font-size:0.56rem;letter-spacing:0.12em;text-transform:uppercase;opacity:0.7;margin-bottom:0.2rem}
+  .b-owner{align-self:flex-end;background:var(--gold);color:#0B0B0B}
+  .b-team{align-self:flex-end;background:var(--card-hi);border:1px solid var(--border-hi);color:var(--cream)}
+  .b-client{align-self:flex-start;background:var(--bg);border:1px solid var(--border);color:var(--cream)}
+  .chat-input-row{display:flex;gap:0.5rem;padding:0.75rem;border-top:1px solid var(--border)}
+  .chat-input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--cream);padding:0.7rem 0.9rem;outline:none;transition:border-color 0.2s}
+  .chat-input:focus{border-color:var(--gold)}
+  .chat-empty{margin:auto;text-align:center;color:var(--muted);font-size:0.85rem;padding:2rem}
+
+  .empty{text-align:center;padding:3.5rem 1rem;color:var(--muted);font-size:0.88rem}
+  .empty .big{font-size:2rem;margin-bottom:0.75rem;opacity:0.5}
+
+  /* ── MODAL ── */
+  .overlay{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,0.72);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:1rem}
+  .overlay.open{display:flex;animation:fadeIn 0.2s ease}
+  .modal{background:var(--surface);border:1px solid var(--border-hi);width:100%;max-width:460px;max-height:92vh;overflow-y:auto;padding:1.75rem;animation:pop 0.3s ease}
+  .modal-title{font-family:'Syne',sans-serif;font-size:1.15rem;color:var(--gold);margin-bottom:1.25rem}
+  .field{margin-bottom:0.9rem}
+  .field input,.field select,.field textarea{width:100%;background:var(--card);border:1px solid var(--border);padding:0.7rem 0.85rem;outline:none;transition:border-color 0.2s}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold)}
+  .field.two{display:grid;grid-template-columns:1fr 1fr;gap:0.7rem}
+  .modal-actions{display:flex;gap:0.6rem;justify-content:flex-end;margin-top:1.4rem}
+
+  /* ── TOAST ── */
+  #toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:200;background:var(--gold);color:#0B0B0B;
+    padding:0.8rem 1.4rem;font-size:0.76rem;font-weight:600;letter-spacing:0.08em;display:none;animation:slideInR 0.3s ease}
+
+  @media(max-width:760px){
+    .msg-layout{grid-template-columns:1fr}
+    .thread-list{max-height:220px}
+    .appt{flex-wrap:wrap}
+    .brand small{display:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="login-card">
+    <div class="login-logo"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span></div>
+    <div class="login-sub">Studio Manager</div>
+    <label class="fld-label">Owner Password</label>
+    <input class="login-input" type="password" id="pwd" placeholder="Enter your password" onkeydown="if(event.key==='Enter')login()" />
+    <button class="login-btn" onclick="login()">Enter Studio</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="brand"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span><small>Studio Manager</small></div>
+    <div class="top-actions">
+      <a class="btn btn-ghost btn-sm" href="index.html" target="_blank">View Site ↗</a>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Log Out</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="team" onclick="showTab('team')">Team</button>
+    <button class="tab" data-tab="schedule" onclick="showTab('schedule')">Schedule</button>
+    <button class="tab" data-tab="messages" onclick="showTab('messages')">Messages <span class="dot" id="msg-dot" style="display:none">0</span></button>
+  </div>
+
+  <div class="wrap">
+
+    <!-- TEAM -->
+    <section class="panel active" id="panel-team">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Your Team</div>
+          <div class="page-desc">Add a team member and a private 4-digit PIN is generated. Share the PIN + portal link so they can log in and see their schedule.</div>
+        </div>
+        <button class="btn btn-gold" onclick="openMemberModal()">+ Add Team Member</button>
+      </div>
+      <div class="cards" id="members-grid"></div>
+    </section>
+
+    <!-- SCHEDULE -->
+    <section class="panel" id="panel-schedule">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Schedule</div>
+          <div class="page-desc">Book appointments, assign them to a team member, drag times around, or reassign — everything syncs to their portal instantly.</div>
+        </div>
+        <button class="btn btn-gold" onclick="openApptModal()">+ New Appointment</button>
+      </div>
+      <div class="date-bar">
+        <div class="date-nav">
+          <button class="icon-btn" onclick="shiftDay(-1)">‹</button>
+          <div class="date-label" id="date-label">—</div>
+          <button class="icon-btn" onclick="shiftDay(1)">›</button>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="goToday()">Today</button>
+        <label class="btn btn-ghost btn-sm" style="position:relative;overflow:hidden">Jump to date
+          <input type="date" id="date-jump" onchange="jumpDate(this.value)" style="position:absolute;inset:0;opacity:0;cursor:pointer" />
+        </label>
+      </div>
+      <div id="schedule-list"></div>
+    </section>
+
+    <!-- MESSAGES -->
+    <section class="panel" id="panel-messages">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Client Conversations</div>
+          <div class="page-desc">Every chat between your team and clients, in one place. Jump in and reply as the studio anytime.</div>
+        </div>
+      </div>
+      <div class="msg-layout">
+        <div class="thread-list" id="thread-list"></div>
+        <div class="chat-pane">
+          <div class="chat-head" id="chat-head" style="display:none">
+            <div>
+              <div class="chat-head-name" id="chat-name">—</div>
+              <div class="chat-head-sub" id="chat-sub"></div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="copyClientLink()">Copy Client Link</button>
+          </div>
+          <div class="chat-body" id="chat-body"><div class="chat-empty">Select a conversation to view messages.</div></div>
+          <div class="chat-input-row" id="chat-input-row" style="display:none">
+            <input class="chat-input" id="chat-input" placeholder="Reply as the studio…" onkeydown="if(event.key==='Enter')sendOwnerMsg()" />
+            <button class="btn btn-gold" onclick="sendOwnerMsg()">Send</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- MEMBER MODAL -->
+<div class="overlay" id="modal-member">
+  <div class="modal">
+    <div class="modal-title" id="member-modal-title">Add Team Member</div>
+    <input type="hidden" id="m-id" />
+    <div class="field"><label class="fld-label">Full Name</label><input id="m-name" placeholder="e.g. Emma Magana" /></div>
+    <div class="field"><label class="fld-label">Role / Title</label><input id="m-role" placeholder="Nail Artist" value="Nail Artist" /></div>
+    <div class="field"><label class="fld-label">Accent Color</label>
+      <select id="m-color">
+        <option value="#C4A882">Champagne</option>
+        <option value="#8B6A3E">Latte</option>
+        <option value="#B5838D">Rose</option>
+        <option value="#6B8E9E">Slate Blue</option>
+        <option value="#8E9E6B">Sage</option>
+        <option value="#9E6B8E">Plum</option>
+      </select>
+    </div>
+    <div class="field" id="m-active-wrap" style="display:none">
+      <label class="fld-label">Status</label>
+      <select id="m-active"><option value="1">Active — can log in</option><option value="0">Inactive — access paused</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-member')">Cancel</button>
+      <button class="btn btn-gold" onclick="saveMember()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- APPT MODAL -->
+<div class="overlay" id="modal-appt">
+  <div class="modal">
+    <div class="modal-title" id="appt-modal-title">New Appointment</div>
+    <input type="hidden" id="a-id" />
+    <div class="field"><label class="fld-label">Assign To</label><select id="a-member"></select></div>
+    <div class="field two">
+      <div><label class="fld-label">Client Name</label><input id="a-client" placeholder="Client name" /></div>
+      <div><label class="fld-label">Client Phone</label><input id="a-phone" placeholder="(555) 000-0000" /></div>
+    </div>
+    <div class="field"><label class="fld-label">Service</label><select id="a-service"></select></div>
+    <div class="field two">
+      <div><label class="fld-label">Date</label><input type="date" id="a-date" /></div>
+      <div><label class="fld-label">Time</label><select id="a-time"></select></div>
+    </div>
+    <div class="field"><label class="fld-label">Notes (optional)</label><textarea id="a-notes" rows="2" placeholder="Inspo, allergies, prep…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="a-delete" style="margin-right:auto;display:none" onclick="deleteAppt()">Delete</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-appt')">Cancel</button>
+      <button class="btn btn-gold" onclick="saveAppt()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SERVICES = ['Organic Structured Manicure','Short Gel X','Medium Gel X','Long Gel X','Short Acrylic','Medium Acrylic','Long Acrylic','Hydro Free Pedicure','Classic Spa Pedicure','Royal Citrus Pedicure'];
+const SLOTS = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'];
+let PWD='';
+let members=[];
+let appts=[];
+let curDate=new Date().toISOString().slice(0,10);
+let activeThreadId=null;
+let activeThreadToken=null;
+
+/* ── AUTH ── */
+function api(path,opts={}){return fetch(path,{...opts,headers:{'Content-Type':'application/json','X-CEO-Password':PWD,...(opts.headers||{})}});}
+async function login(){
+  const pwd=document.getElementById('pwd').value.trim();
+  if(!pwd)return;
+  const err=document.getElementById('login-err');err.textContent='';
+  try{
+    const r=await fetch('/api/manager?action=bootstrap',{headers:{'X-CEO-Password':pwd}});
+    if(r.status===401){err.textContent='Wrong password.';return;}
+    if(!r.ok){err.textContent='Server error — try again.';return;}
+    PWD=pwd;
+    const d=await r.json();
+    members=d.members||[];appts=d.appointments||[];
+    sessionStorage.setItem('zm_pwd',pwd);
+    document.getElementById('login').style.display='none';
+    document.getElementById('app').style.display='block';
+    renderMembers();renderSchedule();refreshThreadDot();
+  }catch{err.textContent='Connection error.';}
+}
+function logout(){sessionStorage.removeItem('zm_pwd');location.reload();}
+
+/* ── TABS ── */
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  if(name==='schedule')renderSchedule();
+  if(name==='messages')loadThreads();
+  if(name==='team')renderMembers();
+}
+
+/* ── TEAM ── */
+function initials(n){return (n||'?').split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase();}
+function renderMembers(){
+  const g=document.getElementById('members-grid');
+  if(!members.length){g.innerHTML='<div class="empty"><div class="big">✦</div>No team members yet.<br>Add your first artist to generate their login PIN.</div>';return;}
+  g.innerHTML=members.map((m,i)=>`
+    <div class="member-card" style="--mc:${m.color};animation-delay:${i*0.05}s">
+      <div class="mc-top">
+        <div class="avatar" style="background:${m.color}">${initials(m.name)}</div>
+        <div style="flex:1">
+          <div class="mc-name">${esc(m.name)}</div>
+          <div class="mc-role">${esc(m.role||'Nail Artist')}</div>
+        </div>
+        <span class="status-pill ${Number(m.active)?'status-on':'status-off'}">${Number(m.active)?'Active':'Paused'}</span>
+      </div>
+      <div class="pin-row">
+        <div><div class="pin-label">Login PIN</div><div class="pin-val">${esc(m.pin)}</div></div>
+        <button class="icon-btn" style="margin-left:auto" title="Copy PIN" onclick="copy('${m.pin}','PIN copied')">⧉</button>
+      </div>
+      <div class="mc-actions">
+        <button class="btn btn-ghost btn-sm" onclick="copyPortal('${m.pin}')">Copy Login Link</button>
+        <button class="btn btn-ghost btn-sm" onclick="regenPin(${m.id})">New PIN</button>
+        <button class="btn btn-ghost btn-sm" onclick="editMember(${m.id})">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="delMember(${m.id},'${esc(m.name)}')">Remove</button>
+      </div>
+    </div>`).join('');
+}
+function openMemberModal(){
+  document.getElementById('member-modal-title').textContent='Add Team Member';
+  document.getElementById('m-id').value='';
+  document.getElementById('m-name').value='';
+  document.getElementById('m-role').value='Nail Artist';
+  document.getElementById('m-color').value='#C4A882';
+  document.getElementById('m-active-wrap').style.display='none';
+  openModal('modal-member');
+}
+function editMember(id){
+  const m=members.find(x=>x.id===id);if(!m)return;
+  document.getElementById('member-modal-title').textContent='Edit Team Member';
+  document.getElementById('m-id').value=m.id;
+  document.getElementById('m-name').value=m.name;
+  document.getElementById('m-role').value=m.role||'Nail Artist';
+  document.getElementById('m-color').value=m.color||'#C4A882';
+  document.getElementById('m-active-wrap').style.display='block';
+  document.getElementById('m-active').value=String(Number(m.active));
+  openModal('modal-member');
+}
+async function saveMember(){
+  const id=document.getElementById('m-id').value;
+  const name=document.getElementById('m-name').value.trim();
+  const role=document.getElementById('m-role').value.trim();
+  const color=document.getElementById('m-color').value;
+  if(!name){toast('Enter a name');return;}
+  if(id){
+    const active=document.getElementById('m-active').value;
+    await api('/api/manager',{method:'PUT',body:JSON.stringify({action:'update_member',id,name,role,color,active:Number(active)})});
+    toast('Team member updated');
+  }else{
+    const r=await api('/api/manager',{method:'POST',body:JSON.stringify({action:'add_member',name,role,color})});
+    const d=await r.json();
+    if(d.member)toast('Added — PIN '+d.member.pin);
+  }
+  closeModal('modal-member');await reloadMembers();
+}
+async function regenPin(id){
+  if(!confirm('Generate a new PIN? The old one stops working immediately.'))return;
+  const r=await api('/api/manager',{method:'POST',body:JSON.stringify({action:'regen_pin',id})});
+  const d=await r.json();if(d.pin)toast('New PIN: '+d.pin);
+  await reloadMembers();
+}
+async function delMember(id,name){
+  if(!confirm('Remove '+name+'? Their login stops working.'))return;
+  await api('/api/manager',{method:'DELETE',body:JSON.stringify({action:'member',id})});
+  toast('Removed');await reloadMembers();
+}
+async function reloadMembers(){
+  const r=await api('/api/manager?action=members');const d=await r.json();
+  members=d.members||[];renderMembers();
+}
+function copyPortal(pin){
+  const url=location.origin+'/team.html';
+  copy(url+'  (PIN: '+pin+')','Login link + PIN copied');
+}
+
+/* ── SCHEDULE ── */
+function fmtDateLabel(ds){const d=new Date(ds+'T12:00:00');return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});}
+function fmtTime(t){const[h,m]=t.split(':').map(Number);const ap=h>=12?'PM':'AM';const hh=h>12?h-12:(h===0?12:h);return hh+':'+String(m).padStart(2,'0')+' '+ap;}
+function shiftDay(n){const d=new Date(curDate+'T12:00:00');d.setDate(d.getDate()+n);curDate=d.toISOString().slice(0,10);renderSchedule();}
+function goToday(){curDate=new Date().toISOString().slice(0,10);renderSchedule();}
+function jumpDate(v){if(v){curDate=v;renderSchedule();}}
+function renderSchedule(){
+  document.getElementById('date-label').textContent=fmtDateLabel(curDate);
+  const list=document.getElementById('schedule-list');
+  const today=appts.filter(a=>a.date===curDate).sort((a,b)=>a.time.localeCompare(b.time));
+  if(!today.length){list.innerHTML='<div class="empty"><div class="big">📅</div>No appointments on this day.<br>Tap “New Appointment” to book one.</div>';return;}
+  list.innerHTML=today.map((a,i)=>{
+    const color=a.member_color||'#8B7355';
+    const opts=members.map(m=>`<option value="${m.id}" ${Number(a.team_member_id)===m.id?'selected':''}>${esc(m.name)}</option>`).join('');
+    return `<div class="appt" style="--at:${color};animation-delay:${i*0.04}s">
+      <div class="appt-time" style="--at:${color}"><div class="t">${fmtTime(a.time)}</div><div class="d">${a.status==='scheduled'?'Booked':a.status}</div></div>
+      <div class="appt-main">
+        <div class="appt-client">${esc(a.client_name||'Walk-in / Open')}</div>
+        <div class="appt-svc">${esc(a.service||'—')}${a.client_phone?' · '+esc(a.client_phone):''}</div>
+        ${a.notes?`<div style="font-size:0.74rem;color:var(--muted);font-style:italic;margin-top:0.2rem">${esc(a.notes)}</div>`:''}
+        <div class="appt-assign">
+          <span style="color:var(--muted)">Artist:</span>
+          <select class="mini-select" onchange="reassign(${a.id},this.value)"><option value="">Unassigned</option>${opts}</select>
+        </div>
+      </div>
+      <div class="appt-actions">
+        <span class="status-tag st-${a.status}">${a.status}</span>
+        <button class="btn btn-ghost btn-sm" onclick="editAppt(${a.id})">Edit</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function fillMemberSelect(sel,selected){
+  sel.innerHTML='<option value="">— Unassigned —</option>'+members.map(m=>`<option value="${m.id}" ${Number(selected)===m.id?'selected':''}>${esc(m.name)}</option>`).join('');
+}
+function fillServiceSelect(sel,selected){
+  sel.innerHTML=SERVICES.map(s=>`<option ${s===selected?'selected':''}>${s}</option>`).join('');
+}
+function fillTimeSelect(sel,selected){
+  sel.innerHTML=SLOTS.map(t=>`<option value="${t}" ${t===selected?'selected':''}>${fmtTime(t)}</option>`).join('');
+}
+function openApptModal(){
+  document.getElementById('appt-modal-title').textContent='New Appointment';
+  document.getElementById('a-id').value='';
+  document.getElementById('a-client').value='';
+  document.getElementById('a-phone').value='';
+  document.getElementById('a-notes').value='';
+  document.getElementById('a-date').value=curDate;
+  fillMemberSelect(document.getElementById('a-member'),'');
+  fillServiceSelect(document.getElementById('a-service'),SERVICES[0]);
+  fillTimeSelect(document.getElementById('a-time'),'10:00');
+  document.getElementById('a-delete').style.display='none';
+  openModal('modal-appt');
+}
+function editAppt(id){
+  const a=appts.find(x=>x.id===id);if(!a)return;
+  document.getElementById('appt-modal-title').textContent='Edit Appointment';
+  document.getElementById('a-id').value=a.id;
+  document.getElementById('a-client').value=a.client_name||'';
+  document.getElementById('a-phone').value=a.client_phone||'';
+  document.getElementById('a-notes').value=a.notes||'';
+  document.getElementById('a-date').value=a.date;
+  fillMemberSelect(document.getElementById('a-member'),a.team_member_id);
+  fillServiceSelect(document.getElementById('a-service'),a.service);
+  fillTimeSelect(document.getElementById('a-time'),a.time);
+  document.getElementById('a-delete').style.display='inline-flex';
+  openModal('modal-appt');
+}
+async function saveAppt(){
+  const id=document.getElementById('a-id').value;
+  const payload={
+    team_member_id:document.getElementById('a-member').value||null,
+    client_name:document.getElementById('a-client').value.trim(),
+    client_phone:document.getElementById('a-phone').value.trim(),
+    service:document.getElementById('a-service').value,
+    date:document.getElementById('a-date').value,
+    time:document.getElementById('a-time').value,
+    notes:document.getElementById('a-notes').value.trim(),
+  };
+  if(!payload.date||!payload.time){toast('Pick a date & time');return;}
+  if(id){
+    payload.status=appts.find(x=>x.id===Number(id))?.status||'scheduled';
+    await api('/api/manager',{method:'PUT',body:JSON.stringify({action:'update_appt',id,...payload})});
+    toast('Appointment updated');
+  }else{
+    await api('/api/manager',{method:'POST',body:JSON.stringify({action:'add_appt',...payload})});
+    toast('Appointment booked');
+    curDate=payload.date;
+  }
+  closeModal('modal-appt');await reloadAppts();
+}
+async function deleteAppt(){
+  const id=document.getElementById('a-id').value;if(!id)return;
+  if(!confirm('Delete this appointment?'))return;
+  await api('/api/manager',{method:'DELETE',body:JSON.stringify({action:'appt',id})});
+  closeModal('modal-appt');toast('Deleted');await reloadAppts();
+}
+async function reassign(id,memberId){
+  await api('/api/manager',{method:'PUT',body:JSON.stringify({action:'reassign',id,team_member_id:memberId||null})});
+  toast('Reassigned');await reloadAppts();
+}
+async function reloadAppts(){
+  const r=await api('/api/manager?action=appointments');const d=await r.json();
+  appts=d.appointments||[];renderSchedule();
+}
+
+/* ── MESSAGES ── */
+async function loadThreads(){
+  const r=await api('/api/manager?action=threads');const d=await r.json();
+  const list=document.getElementById('thread-list');
+  const threads=(d.threads||[]).filter(t=>t.msg_count>0);
+  if(!threads.length){list.innerHTML='<div class="empty" style="padding:2rem 1rem">No conversations yet.<br><span style="font-size:0.75rem">Chats appear when a team member or client sends a message.</span></div>';return;}
+  list.innerHTML=threads.map(t=>`
+    <div class="thread" data-id="${t.id}" data-token="${t.chat_token||''}" onclick="openThread(${t.id},this)">
+      <div class="thread-name">${esc(t.client_name||'Client')}<span class="ct">${t.msg_count}</span></div>
+      <div class="thread-meta">${esc(t.member_name||'Unassigned')} · ${esc(t.service||'')} · ${t.date}</div>
+      <div class="thread-last">${esc(t.last_msg||'')}</div>
+    </div>`).join('');
+}
+async function openThread(id,el){
+  activeThreadId=id;
+  document.querySelectorAll('.thread').forEach(t=>t.classList.remove('active'));
+  if(el){el.classList.add('active');activeThreadToken=el.dataset.token;}
+  const a=appts.find(x=>x.id===id);
+  document.getElementById('chat-head').style.display='flex';
+  document.getElementById('chat-input-row').style.display='flex';
+  document.getElementById('chat-name').textContent=(a?a.client_name:el?.querySelector('.thread-name')?.childNodes[0].textContent)||'Client';
+  document.getElementById('chat-sub').textContent=a?`${a.member_name||'Unassigned'} · ${a.service||''} · ${a.date} ${fmtTime(a.time)}`:'';
+  await loadChat();
+}
+async function loadChat(){
+  if(!activeThreadId)return;
+  const r=await api('/api/manager?action=chat&appointment_id='+activeThreadId);
+  const d=await r.json();renderChat(d.messages||[]);
+}
+function renderChat(msgs){
+  const body=document.getElementById('chat-body');
+  if(!msgs.length){body.innerHTML='<div class="chat-empty">No messages yet. Say hello 👋</div>';return;}
+  body.innerHTML=msgs.map(m=>{
+    const cls=m.sender==='owner'?'b-owner':m.sender==='team'?'b-team':'b-client';
+    const who=m.sender==='owner'?'You (Studio)':m.sender==='team'?esc(m.sender_name):esc(m.sender_name||'Client');
+    return `<div class="bubble ${cls}"><div class="who">${who}</div>${esc(m.body)}</div>`;
+  }).join('');
+  body.scrollTop=body.scrollHeight;
+}
+async function sendOwnerMsg(){
+  const inp=document.getElementById('chat-input');const body=inp.value.trim();
+  if(!body||!activeThreadId)return;inp.value='';
+  await api('/api/manager',{method:'POST',body:JSON.stringify({action:'chat',appointment_id:activeThreadId,body})});
+  await loadChat();
+}
+function copyClientLink(){
+  if(!activeThreadToken){toast('No client link for this thread');return;}
+  copy(location.origin+'/chat.html?t='+activeThreadToken,'Client chat link copied');
+}
+async function refreshThreadDot(){
+  try{const r=await api('/api/manager?action=threads');const d=await r.json();
+    const n=(d.threads||[]).filter(t=>t.msg_count>0).length;
+    const dot=document.getElementById('msg-dot');
+    if(n){dot.style.display='inline-block';dot.textContent=n;}else dot.style.display='none';
+  }catch{}
+}
+
+/* ── UTIL ── */
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2600);}
+async function copy(text,msg){try{await navigator.clipboard.writeText(text);toast(msg||'Copied');}catch{toast('Copy failed');}}
+
+/* ── INIT ── */
+(function(){const saved=sessionStorage.getItem('zm_pwd');if(saved){document.getElementById('pwd').value=saved;login();}})();
+</script>
+</body>
+</html>

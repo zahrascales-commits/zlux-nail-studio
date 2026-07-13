@@ -1,7 +1,7 @@
 const store = require('./_store');
 const { queryOne, execute } = require('./_db');
 
-module.exports = function(req, res) {
+module.exports = async function(req, res) {
   const method = req.method.toUpperCase();
   const action = req.query.action || (req.body && req.body.action);
 

@@ -40,8 +40,12 @@ app.all('/api/no-show',          require('./_no-show'));
 app.all('/api/ceo-data',         require('./_ceo-data'));
 app.all('/api/calendar-blocks',  require('./_calendar-blocks'));
 
-// Worker portal routes
+// Worker portal routes (legacy — kept for backwards compatibility)
 app.all('/api/worker',           require('./_worker'));
+
+// Team Member system (owner manager + team portal + client chat) — Turso-backed
+app.all('/api/manager',          require('./_manager'));
+app.all('/api/team',             require('./_team'));
 
 // Reminders (24h + 2h before appointment — call daily via cron)
 app.all('/api/reminders',        require('./_reminders'));
