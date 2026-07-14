@@ -47,6 +47,12 @@ app.all('/api/worker',           require('./_worker'));
 app.all('/api/manager',          require('./_manager'));
 app.all('/api/team',             require('./_team'));
 
+// AI (Ask Zola chat + owner reply drafts), inquiries inbox, editable site settings
+app.all('/api/chat',             require('./_ai'));
+app.all('/api/ai',               require('./_ai'));
+app.all('/api/inquiries',        require('./_inquiries'));
+app.all('/api/site-settings',    require('./_site-settings'));
+
 // Reminders (24h + 2h before appointment — call daily via cron)
 app.all('/api/reminders',        require('./_reminders'));
 

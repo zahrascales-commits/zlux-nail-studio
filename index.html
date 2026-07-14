@@ -606,6 +606,26 @@
     document.getElementById('urgency-banner').classList.add('visible');
   }, 8000);
 
+  // Owner-editable site settings (from the Studio Manager "Site" tab)
+  fetch('/api/site-settings').then(r => r.json()).then(d => {
+    const s = d.settings || {};
+    if (s.ticker_facts && s.ticker_facts.trim()) {
+      const lines = s.ticker_facts.split('\n').map(x => x.trim()).filter(Boolean);
+      if (lines.length) { facts.length = 0; facts.push(...lines); }
+    }
+    if (s.spots_sig !== undefined && s.spots_sig !== '') document.getElementById('sig-remaining').textContent = s.spots_sig + ' left';
+    if (s.spots_luxe !== undefined && s.spots_luxe !== '') document.getElementById('luxe-remaining').textContent = s.spots_luxe + ' left';
+    if (s.spots_black !== undefined && s.spots_black !== '') document.getElementById('black-remaining').textContent = s.spots_black + ' left';
+    if (s.banner_title) document.querySelector('#urgency-banner .banner-title').textContent = s.banner_title;
+    if (s.banner_text) document.querySelector('#urgency-banner p').textContent = s.banner_text;
+    if (s.announcement && s.announcement.trim()) {
+      const bar = document.createElement('div');
+      bar.style.cssText = 'background:#0D0D0D;color:#C4A882;text-align:center;padding:0.55rem 1rem;font-family:"Josefin Sans",sans-serif;font-size:0.72rem;letter-spacing:0.14em;text-transform:uppercase;position:relative;z-index:101;';
+      bar.textContent = s.announcement;
+      document.body.insertBefore(bar, document.body.firstChild);
+    }
+  }).catch(() => {});
+
   // Nav scroll
   window.addEventListener('scroll', () => {
     document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60);

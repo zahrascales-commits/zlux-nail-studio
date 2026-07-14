@@ -84,13 +84,17 @@ async function sendChat() {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: msg })
+      body: JSON.stringify({ message: msg, history: window._zolaChatHistory || [] })
     });
     const data = await res.json();
     reply = data.reply || askZolaFallback(msg);
   } catch {
     reply = askZolaFallback(msg);
   }
+  // Keep a short rolling history so the AI remembers the conversation
+  window._zolaChatHistory = (window._zolaChatHistory || []).concat(
+    [{ role: 'user', text: msg }, { role: 'assistant', text: reply }]
+  ).slice(-10);
 
   document.getElementById('chat-thinking')?.remove();
   const botMsg = document.createElement('div');

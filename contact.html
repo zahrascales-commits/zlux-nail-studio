@@ -122,11 +122,18 @@
 <script src="js/main.js"></script>
 <script src="js/chatbot.js"></script>
 <script>
-  function submitContact() {
+  async function submitContact() {
     const name = document.getElementById('c-name').value.trim();
     const contact = document.getElementById('c-contact').value.trim();
     const msg = document.getElementById('c-msg').value.trim();
     if (!name || !contact || !msg) { alert('Please fill in all fields.'); return; }
+    try {
+      await fetch('/api/inquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, contact, message: msg, source: 'contact' })
+      });
+    } catch (_) { /* still show success — inquiry may retry via email/IG */ }
     document.getElementById('contact-form').style.display = 'none';
     document.getElementById('contact-success').style.display = 'block';
   }

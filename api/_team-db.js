@@ -38,6 +38,19 @@ async function ensureTables() {
     body TEXT,
     ts INTEGER
   )`);
+  await execute(`CREATE TABLE IF NOT EXISTS inquiries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    contact TEXT,
+    message TEXT,
+    source TEXT DEFAULT 'contact',
+    status TEXT DEFAULT 'new',
+    ts INTEGER
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS site_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+  )`);
   _ready = true;
 }
 

@@ -178,6 +178,67 @@
   #toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:200;background:var(--gold);color:#0B0B0B;
     padding:0.8rem 1.4rem;font-size:0.76rem;font-weight:600;letter-spacing:0.08em;display:none;animation:slideInR 0.3s ease}
 
+  /* ── FULL CALENDAR (GlossGenius-style) ── */
+  .cal-toolbar{display:flex;align-items:center;gap:0.6rem;margin-bottom:1.1rem;flex-wrap:wrap}
+  .view-switch{display:flex;border:1px solid var(--border);overflow:hidden}
+  .view-switch button{background:transparent;border:none;color:var(--muted);padding:0.5rem 1rem;font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;transition:all 0.2s}
+  .view-switch button.on{background:var(--gold);color:#0B0B0B;font-weight:700}
+  .cal-month{background:var(--card);border:1px solid var(--border);animation:fadeUp 0.35s ease}
+  .cal-dows{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border)}
+  .cal-dows div{padding:0.6rem 0.4rem;text-align:center;font-size:0.56rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted)}
+  .cal-cells{display:grid;grid-template-columns:repeat(7,1fr)}
+  .cal-cell{min-height:96px;border-right:1px solid rgba(196,168,130,0.07);border-bottom:1px solid rgba(196,168,130,0.07);padding:0.35rem;cursor:pointer;transition:background 0.15s;position:relative}
+  .cal-cell:hover{background:var(--gold-faint)}
+  .cal-cell.off{opacity:0.32}
+  .cal-cell.today .cal-num{background:var(--gold);color:#0B0B0B;font-weight:700}
+  .cal-cell.sel{outline:1px solid var(--gold);outline-offset:-1px}
+  .cal-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:0.7rem;color:var(--cream);margin-bottom:0.25rem}
+  .cal-chip{display:block;font-size:0.6rem;line-height:1.35;padding:0.12rem 0.35rem;margin-bottom:2px;color:#0B0B0B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:2px;font-weight:600}
+  .cal-more{font-size:0.56rem;color:var(--gold)}
+  .cal-week{display:grid;grid-template-columns:52px repeat(7,1fr);background:var(--card);border:1px solid var(--border);animation:fadeUp 0.35s ease;overflow-x:auto}
+  .wk-hour{font-size:0.56rem;color:var(--muted);padding:0.3rem 0.4rem;border-bottom:1px solid rgba(196,168,130,0.05);height:34px}
+  .wk-head{padding:0.5rem 0.3rem;text-align:center;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);border-left:1px solid rgba(196,168,130,0.07)}
+  .wk-head.today{color:var(--gold);font-weight:700}
+  .wk-cell{height:34px;border-bottom:1px solid rgba(196,168,130,0.05);border-left:1px solid rgba(196,168,130,0.07);cursor:pointer;padding:1px 2px;overflow:hidden}
+  .wk-cell:hover{background:var(--gold-faint)}
+  .wk-chip{font-size:0.56rem;line-height:1.25;padding:0.08rem 0.3rem;color:#0B0B0B;border-radius:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;display:block}
+  .legend{display:flex;gap:0.9rem;flex-wrap:wrap;margin-top:0.8rem}
+  .legend span{display:inline-flex;align-items:center;gap:0.35rem;font-size:0.62rem;color:var(--muted)}
+  .legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+
+  /* ── INBOX ── */
+  .inbox-layout{display:grid;grid-template-columns:340px 1fr;gap:1rem;min-height:460px}
+  .inq{padding:0.9rem 1rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.18s}
+  .inq:hover{background:var(--gold-faint)}
+  .inq.active{background:var(--gold-faint);border-left:2px solid var(--gold)}
+  .inq-top{display:flex;justify-content:space-between;gap:0.5rem;align-items:center}
+  .inq-name{font-family:'Syne',sans-serif;font-size:0.92rem;color:var(--cream)}
+  .inq-badge{font-size:0.52rem;letter-spacing:0.14em;text-transform:uppercase;padding:0.14rem 0.5rem}
+  .bg-new{background:var(--gold);color:#0B0B0B;font-weight:700}
+  .bg-replied{background:rgba(106,176,122,0.14);color:var(--success)}
+  .inq-preview{font-size:0.72rem;color:var(--muted);margin-top:0.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .inq-meta{font-size:0.6rem;color:var(--muted);margin-top:0.2rem}
+  .inq-detail{background:var(--card);border:1px solid var(--border);padding:1.4rem;display:flex;flex-direction:column;gap:1rem}
+  .inq-msg{background:var(--bg);border:1px solid var(--border);border-left:3px solid var(--gold);padding:1rem 1.2rem;font-size:0.9rem;line-height:1.7;color:var(--cream)}
+  .draft-box{width:100%;min-height:180px;background:var(--bg);border:1px solid var(--border-hi);color:var(--cream);padding:0.9rem 1rem;font-size:0.88rem;line-height:1.7;outline:none;resize:vertical;font-family:inherit}
+  .draft-box:focus{border-color:var(--gold)}
+  .ai-tag{display:inline-flex;align-items:center;gap:0.4rem;font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold)}
+  .ai-tag::before{content:'✦';animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+  /* ── SITE EDITOR ── */
+  .site-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  .site-card{background:var(--card);border:1px solid var(--border);padding:1.4rem}
+  .site-card h3{font-family:'Syne',sans-serif;font-size:0.95rem;color:var(--gold);margin-bottom:0.4rem}
+  .site-card p{font-size:0.74rem;color:var(--muted);margin-bottom:0.9rem;line-height:1.6}
+  .site-card textarea,.site-card input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--cream);padding:0.7rem 0.85rem;outline:none;font-family:inherit;font-size:0.85rem}
+  .site-card textarea:focus,.site-card input:focus{border-color:var(--gold)}
+
+  @media(max-width:760px){
+    .inbox-layout,.site-grid{grid-template-columns:1fr}
+    .cal-cell{min-height:64px}
+  }
+
   @media(max-width:760px){
     .msg-layout{grid-template-columns:1fr}
     .thread-list{max-height:220px}
@@ -211,15 +272,17 @@
   </div>
 
   <div class="tabs">
-    <button class="tab active" data-tab="team" onclick="showTab('team')">Team</button>
-    <button class="tab" data-tab="schedule" onclick="showTab('schedule')">Schedule</button>
+    <button class="tab active" data-tab="schedule" onclick="showTab('schedule')">Calendar</button>
+    <button class="tab" data-tab="inbox" onclick="showTab('inbox')">Inbox <span class="dot" id="inq-dot" style="display:none">0</span></button>
     <button class="tab" data-tab="messages" onclick="showTab('messages')">Messages <span class="dot" id="msg-dot" style="display:none">0</span></button>
+    <button class="tab" data-tab="team" onclick="showTab('team')">Team</button>
+    <button class="tab" data-tab="site" onclick="showTab('site')">Site</button>
   </div>
 
   <div class="wrap">
 
     <!-- TEAM -->
-    <section class="panel active" id="panel-team">
+    <section class="panel" id="panel-team">
       <div class="page-head">
         <div>
           <div class="page-title">Your Team</div>
@@ -230,27 +293,100 @@
       <div class="cards" id="members-grid"></div>
     </section>
 
-    <!-- SCHEDULE -->
-    <section class="panel" id="panel-schedule">
+    <!-- CALENDAR / SCHEDULE -->
+    <section class="panel active" id="panel-schedule">
       <div class="page-head">
         <div>
-          <div class="page-title">Schedule</div>
-          <div class="page-desc">Book appointments, assign them to a team member, drag times around, or reassign — everything syncs to their portal instantly.</div>
+          <div class="page-title">Calendar</div>
+          <div class="page-desc">Month, week, or day — color-coded by artist. Tap any day to zoom in, tap any appointment to edit or reassign. Everything syncs to your team's portals instantly.</div>
         </div>
         <button class="btn btn-gold" onclick="openApptModal()">+ New Appointment</button>
       </div>
-      <div class="date-bar">
+      <div class="cal-toolbar">
+        <div class="view-switch">
+          <button id="vw-month" class="on" onclick="setView('month')">Month</button>
+          <button id="vw-week" onclick="setView('week')">Week</button>
+          <button id="vw-day" onclick="setView('day')">Day</button>
+        </div>
         <div class="date-nav">
-          <button class="icon-btn" onclick="shiftDay(-1)">‹</button>
+          <button class="icon-btn" onclick="calNav(-1)">‹</button>
           <div class="date-label" id="date-label">—</div>
-          <button class="icon-btn" onclick="shiftDay(1)">›</button>
+          <button class="icon-btn" onclick="calNav(1)">›</button>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="goToday()">Today</button>
+        <select class="mini-select" id="cal-member-filter" onchange="renderCal()" style="padding:0.5rem 0.7rem">
+          <option value="">All artists</option>
+        </select>
         <label class="btn btn-ghost btn-sm" style="position:relative;overflow:hidden">Jump to date
           <input type="date" id="date-jump" onchange="jumpDate(this.value)" style="position:absolute;inset:0;opacity:0;cursor:pointer" />
         </label>
       </div>
-      <div id="schedule-list"></div>
+      <div id="cal-month-wrap"></div>
+      <div id="cal-week-wrap" style="display:none"></div>
+      <div id="schedule-list" style="display:none"></div>
+      <div class="legend" id="cal-legend"></div>
+    </section>
+
+    <!-- INBOX -->
+    <section class="panel" id="panel-inbox">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Inbox</div>
+          <div class="page-desc">Every inquiry from your website's contact form lands here. Tap one, let AI draft the reply in your voice, tweak it if you want, and send.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadInquiries()">↻ Refresh</button>
+      </div>
+      <div class="inbox-layout">
+        <div class="thread-list" id="inq-list"><div class="empty" style="padding:2rem 1rem">Loading…</div></div>
+        <div class="inq-detail" id="inq-detail">
+          <div class="empty" style="padding:2rem 1rem">Select an inquiry to read it and draft a reply.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SITE EDITOR -->
+    <section class="panel" id="panel-site">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Edit Your Site</div>
+          <div class="page-desc">Change the live website's day-to-day content right here — no code, updates in seconds. For bigger changes (new sections, pages, redesigns), just tell Claude what you want.</div>
+        </div>
+        <button class="btn btn-gold" onclick="saveSite()">Save &amp; Publish</button>
+      </div>
+      <div class="site-grid">
+        <div class="site-card">
+          <h3>Rotating Ticker Facts</h3>
+          <p>The gold rotating lines under the homepage hero. One per line.</p>
+          <textarea id="site-ticker" rows="7" placeholder="Membership spots are strictly limited — once they're gone, they're gone."></textarea>
+        </div>
+        <div class="site-card">
+          <h3>Spots Remaining</h3>
+          <p>Shown on the membership cards ("3 left") — your scarcity numbers.</p>
+          <label class="fld-label">Signature — spots left</label>
+          <input id="site-sig" type="number" min="0" style="margin-bottom:0.7rem" />
+          <label class="fld-label">Luxe — spots left</label>
+          <input id="site-luxe" type="number" min="0" style="margin-bottom:0.7rem" />
+          <label class="fld-label">Black Card — spots left</label>
+          <input id="site-black" type="number" min="0" />
+        </div>
+        <div class="site-card">
+          <h3>Urgency Banner</h3>
+          <p>The slide-in banner on the homepage (appears after 8 seconds).</p>
+          <label class="fld-label">Banner Title</label>
+          <input id="site-banner-title" placeholder="Black Card: 4 Founding Spots Left" style="margin-bottom:0.7rem" />
+          <label class="fld-label">Banner Text</label>
+          <textarea id="site-banner-text" rows="3" placeholder="The founding rate locks in at $299/mo forever…"></textarea>
+        </div>
+        <div class="site-card">
+          <h3>Announcement (optional)</h3>
+          <p>A one-line notice pinned at the top of the homepage — sales, closures, holidays. Leave empty for none.</p>
+          <input id="site-announcement" placeholder="e.g. Closed July 24–26 · Booking reopens Monday ✦" />
+          <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--border)">
+            <div class="ai-tag">Bigger changes</div>
+            <p style="margin:0.5rem 0 0">New pages, sections, prices, photos, or redesigns — open Claude Code and describe what you want. It edits the code and publishes for you.</p>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- MESSAGES -->
@@ -363,7 +499,7 @@ async function login(){
     sessionStorage.setItem('zm_pwd',pwd);
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='block';
-    renderMembers();renderSchedule();refreshThreadDot();
+    renderMembers();renderCal();refreshThreadDot();loadInquiries();
   }catch{err.textContent='Connection error.';}
 }
 function logout(){sessionStorage.removeItem('zm_pwd');location.reload();}
@@ -373,9 +509,99 @@ function showTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
-  if(name==='schedule')renderSchedule();
+  if(name==='schedule')renderCal();
   if(name==='messages')loadThreads();
   if(name==='team')renderMembers();
+  if(name==='inbox')loadInquiries();
+  if(name==='site')loadSite();
+}
+
+/* ── CALENDAR ENGINE (Month / Week / Day) ── */
+let calView='month';
+function setView(v){
+  calView=v;
+  ['month','week','day'].forEach(x=>document.getElementById('vw-'+x).classList.toggle('on',x===v));
+  renderCal();
+}
+function calNav(n){
+  const d=new Date(curDate+'T12:00:00');
+  if(calView==='month')d.setMonth(d.getMonth()+n);
+  else if(calView==='week')d.setDate(d.getDate()+7*n);
+  else d.setDate(d.getDate()+n);
+  curDate=d.toISOString().slice(0,10);
+  renderCal();
+}
+function filteredAppts(){
+  const f=document.getElementById('cal-member-filter').value;
+  return f?appts.filter(a=>String(a.team_member_id)===f):appts;
+}
+function renderCal(){
+  document.getElementById('cal-month-wrap').style.display=calView==='month'?'block':'none';
+  document.getElementById('cal-week-wrap').style.display=calView==='week'?'block':'none';
+  document.getElementById('schedule-list').style.display=calView==='day'?'block':'none';
+  renderLegend();
+  if(calView==='month')renderMonth();
+  else if(calView==='week')renderWeek();
+  else renderSchedule();
+}
+function renderLegend(){
+  const el=document.getElementById('cal-legend');
+  el.innerHTML=members.map(m=>`<span><i style="background:${m.color}"></i>${esc(m.name)}</span>`).join('')
+    +(members.length?'':'<span>Add team members to color-code the calendar.</span>');
+  const sel=document.getElementById('cal-member-filter');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">All artists</option>'+members.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
+  sel.value=cur;
+}
+function renderMonth(){
+  const d=new Date(curDate+'T12:00:00');
+  const y=d.getFullYear(),mo=d.getMonth();
+  document.getElementById('date-label').textContent=d.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const first=new Date(y,mo,1).getDay();
+  const days=new Date(y,mo+1,0).getDate();
+  const today=new Date().toISOString().slice(0,10);
+  const list=filteredAppts();
+  let cells='';
+  for(let i=0;i<first;i++)cells+='<div class="cal-cell off"></div>';
+  for(let day=1;day<=days;day++){
+    const ds=`${y}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const dayAppts=list.filter(a=>a.date===ds).sort((a,b)=>a.time.localeCompare(b.time));
+    const chips=dayAppts.slice(0,3).map(a=>`<span class="cal-chip" style="background:${a.member_color||'#8B7355'}">${fmtTime(a.time).replace(':00','')} ${esc((a.client_name||'Open').split(' ')[0])}</span>`).join('');
+    const more=dayAppts.length>3?`<span class="cal-more">+${dayAppts.length-3} more</span>`:'';
+    cells+=`<div class="cal-cell ${ds===today?'today':''} ${ds===curDate?'sel':''}" onclick="openDay('${ds}')"><span class="cal-num">${day}</span>${chips}${more}</div>`;
+  }
+  document.getElementById('cal-month-wrap').innerHTML=
+    `<div class="cal-month"><div class="cal-dows"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div><div class="cal-cells">${cells}</div></div>`;
+}
+function renderWeek(){
+  const d=new Date(curDate+'T12:00:00');
+  d.setDate(d.getDate()-d.getDay()); // start Sunday
+  const days=[];
+  for(let i=0;i<7;i++){const x=new Date(d);x.setDate(d.getDate()+i);days.push(x.toISOString().slice(0,10));}
+  const end=new Date(d);end.setDate(d.getDate()+6);
+  document.getElementById('date-label').textContent=
+    d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' – '+end.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  const today=new Date().toISOString().slice(0,10);
+  const list=filteredAppts();
+  let html='<div class="wk-head"></div>'+days.map(ds=>{
+    const dd=new Date(ds+'T12:00:00');
+    return `<div class="wk-head ${ds===today?'today':''}">${dd.toLocaleDateString('en-US',{weekday:'short'})} ${dd.getDate()}</div>`;
+  }).join('');
+  for(const slot of SLOTS){
+    html+=`<div class="wk-hour">${fmtTime(slot).replace(':00','')}</div>`;
+    for(const ds of days){
+      const cell=list.filter(a=>a.date===ds&&a.time===slot);
+      const chips=cell.map(a=>`<span class="wk-chip" style="background:${a.member_color||'#8B7355'}" onclick="event.stopPropagation();editAppt(${a.id})">${esc((a.client_name||'Open').split(' ')[0])}</span>`).join('');
+      html+=`<div class="wk-cell" onclick="quickAdd('${ds}','${slot}')">${chips}</div>`;
+    }
+  }
+  document.getElementById('cal-week-wrap').innerHTML=`<div class="cal-week">${html}</div>`;
+}
+function openDay(ds){curDate=ds;setView('day');}
+function quickAdd(ds,slot){
+  openApptModal();
+  document.getElementById('a-date').value=ds;
+  fillTimeSelect(document.getElementById('a-time'),slot);
 }
 
 /* ── TEAM ── */
@@ -465,9 +691,8 @@ function copyPortal(pin){
 /* ── SCHEDULE ── */
 function fmtDateLabel(ds){const d=new Date(ds+'T12:00:00');return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});}
 function fmtTime(t){const[h,m]=t.split(':').map(Number);const ap=h>=12?'PM':'AM';const hh=h>12?h-12:(h===0?12:h);return hh+':'+String(m).padStart(2,'0')+' '+ap;}
-function shiftDay(n){const d=new Date(curDate+'T12:00:00');d.setDate(d.getDate()+n);curDate=d.toISOString().slice(0,10);renderSchedule();}
-function goToday(){curDate=new Date().toISOString().slice(0,10);renderSchedule();}
-function jumpDate(v){if(v){curDate=v;renderSchedule();}}
+function goToday(){curDate=new Date().toISOString().slice(0,10);renderCal();}
+function jumpDate(v){if(v){curDate=v;renderCal();}}
 function renderSchedule(){
   document.getElementById('date-label').textContent=fmtDateLabel(curDate);
   const list=document.getElementById('schedule-list');
@@ -565,7 +790,115 @@ async function reassign(id,memberId){
 }
 async function reloadAppts(){
   const r=await api('/api/manager?action=appointments');const d=await r.json();
-  appts=d.appointments||[];renderSchedule();
+  appts=d.appointments||[];renderCal();
+}
+
+/* ── INBOX (inquiries + AI reply drafts) ── */
+let inquiries=[];let activeInq=null;
+async function loadInquiries(){
+  const list=document.getElementById('inq-list');
+  try{
+    const r=await api('/api/inquiries');const d=await r.json();
+    inquiries=d.inquiries||[];
+    const dot=document.getElementById('inq-dot');
+    const fresh=inquiries.filter(i=>i.status==='new').length;
+    if(fresh){dot.style.display='inline-block';dot.textContent=fresh;}else dot.style.display='none';
+    if(!inquiries.length){list.innerHTML='<div class="empty" style="padding:2rem 1rem"><div class="big">📥</div>No inquiries yet.<br><span style="font-size:0.72rem">Messages from your contact form appear here.</span></div>';return;}
+    list.innerHTML=inquiries.map(q=>`
+      <div class="inq ${activeInq&&activeInq.id===q.id?'active':''}" onclick="openInquiry(${q.id})">
+        <div class="inq-top"><span class="inq-name">${esc(q.name||'Anonymous')}</span><span class="inq-badge ${q.status==='new'?'bg-new':'bg-replied'}">${q.status}</span></div>
+        <div class="inq-preview">${esc(q.message)}</div>
+        <div class="inq-meta">${esc(q.contact||'no contact')} · ${new Date(Number(q.ts)).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>
+      </div>`).join('');
+  }catch{list.innerHTML='<div class="empty">Could not load inquiries.</div>';}
+}
+function openInquiry(id){
+  activeInq=inquiries.find(q=>q.id===Number(id)||String(q.id)===String(id));
+  if(!activeInq)return;
+  loadInquiries();
+  const isEmail=/@/.test(activeInq.contact||'');
+  document.getElementById('inq-detail').innerHTML=`
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap">
+        <div><div class="chat-head-name">${esc(activeInq.name||'Anonymous')}</div>
+        <div class="chat-head-sub">${esc(activeInq.contact||'no contact given')} · via ${esc(activeInq.source)}</div></div>
+        <div style="display:flex;gap:0.4rem">
+          <button class="btn btn-ghost btn-sm" onclick="markInq('replied')">✓ Mark Replied</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteInq()">Delete</button>
+        </div>
+      </div>
+    </div>
+    <div class="inq-msg">${esc(activeInq.message)}</div>
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem">
+        <span class="ai-tag">AI Reply Draft</span>
+        <button class="btn btn-gold btn-sm" onclick="draftReply()">✦ Draft with AI</button>
+      </div>
+      <textarea class="draft-box" id="draft-box" placeholder="Tap “Draft with AI” and a reply written in your voice appears here — edit anything, then send."></textarea>
+      <div style="display:flex;gap:0.5rem;margin-top:0.7rem;flex-wrap:wrap">
+        ${isEmail?`<button class="btn btn-gold btn-sm" onclick="sendDraftEmail()">Open in Email →</button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="copyDraft()">Copy Reply</button>
+      </div>
+    </div>`;
+}
+async function draftReply(){
+  if(!activeInq)return;
+  const box=document.getElementById('draft-box');
+  box.value='✦ Writing your reply…';
+  try{
+    const r=await api('/api/ai?action=draft',{method:'POST',body:JSON.stringify({action:'draft',name:activeInq.name,contact:activeInq.contact,message:activeInq.message})});
+    const d=await r.json();
+    box.value=d.draft||'Could not generate a draft — try again.';
+    if(d.draft&&!d.ai)toast('Draft ready (template mode — add ANTHROPIC_API_KEY for full AI)');
+    else if(d.draft)toast('AI draft ready — edit & send');
+  }catch{box.value='Connection error — try again.';}
+}
+function sendDraftEmail(){
+  if(!activeInq)return;
+  const body=document.getElementById('draft-box').value;
+  const url='mailto:'+encodeURIComponent(activeInq.contact)+'?subject='+encodeURIComponent('Re: your message to ZOLA Nail Studio ✦')+'&body='+encodeURIComponent(body);
+  window.open(url,'_blank');
+  markInq('replied');
+}
+async function copyDraft(){await copy(document.getElementById('draft-box').value,'Reply copied — paste it anywhere');markInq('replied');}
+async function markInq(status){
+  if(!activeInq)return;
+  await api('/api/inquiries',{method:'PUT',body:JSON.stringify({id:activeInq.id,status})});
+  activeInq.status=status;loadInquiries();
+}
+async function deleteInq(){
+  if(!activeInq||!confirm('Delete this inquiry?'))return;
+  await api('/api/inquiries',{method:'DELETE',body:JSON.stringify({id:activeInq.id})});
+  activeInq=null;
+  document.getElementById('inq-detail').innerHTML='<div class="empty" style="padding:2rem 1rem">Select an inquiry to read it and draft a reply.</div>';
+  loadInquiries();
+}
+
+/* ── SITE EDITOR ── */
+async function loadSite(){
+  try{
+    const r=await fetch('/api/site-settings');const d=await r.json();const s=d.settings||{};
+    document.getElementById('site-ticker').value=s.ticker_facts||'';
+    document.getElementById('site-sig').value=s.spots_sig??'';
+    document.getElementById('site-luxe').value=s.spots_luxe??'';
+    document.getElementById('site-black').value=s.spots_black??'';
+    document.getElementById('site-banner-title').value=s.banner_title||'';
+    document.getElementById('site-banner-text').value=s.banner_text||'';
+    document.getElementById('site-announcement').value=s.announcement||'';
+  }catch{toast('Could not load settings');}
+}
+async function saveSite(){
+  const settings={
+    ticker_facts:document.getElementById('site-ticker').value,
+    spots_sig:document.getElementById('site-sig').value,
+    spots_luxe:document.getElementById('site-luxe').value,
+    spots_black:document.getElementById('site-black').value,
+    banner_title:document.getElementById('site-banner-title').value,
+    banner_text:document.getElementById('site-banner-text').value,
+    announcement:document.getElementById('site-announcement').value,
+  };
+  const r=await api('/api/site-settings',{method:'PUT',body:JSON.stringify({settings})});
+  if(r.ok)toast('Published — live on the site now ✦');else toast('Save failed');
 }
 
 /* ── MESSAGES ── */
