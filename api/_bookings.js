@@ -168,25 +168,21 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Apply server-side addon discount validation based on tier
-    const ADDON_DISCOUNT = { SIGNATURE: 0.10, LUXE: 0.30, BLACK_CARD: 0.75 };
-    const discountPct = member_tier ? (ADDON_DISCOUNT[member_tier] || 0) : 0;
-
-    const addonTotal = addon_charged.reduce((sum, cents) => sum + Number(cents), 0);
-    const service_cents = Number(service_price) || 0;
-
-    // Validate discounts aren't being inflated (client can't give themselves bigger discounts)
-    const addonBasePrices = addon_names.map(name => {
-      const a = addons.find(x => x.name === name);
-      return a ? a.price_cents : 0;
-    });
-    const maxAllowedAddonTotal = addonBasePrices.reduce((sum, base) => {
-      return sum + Math.round(base * (1 - discountPct));
-    }, 0);
-    const validatedAddonTotal = Math.min(addonTotal, maxAllowedAddonTotal);
-
-    const total_cents = service_cents + validatedAddonTotal;
-    const deposit_cents = Math.ceil(total_cents * 0.5);
+    // Price everything SERVER-side from the menu — the client's numbers are
+    // never trusted. This also fixes a long-standing units bug where the
+    // booking page sent dollars and the server recorded them as cents.
+    let total_cents, deposit_cents;
+    const calc = require('./_pay').computeDeposit({ service_name, addon_names, member_tier });
+    if (calc) {
+      total_cents = calc.total_cents;
+      deposit_cents = calc.deposit_cents;
+    } else {
+      // unknown service — fall back to client value, normalizing dollars→cents
+      let sp = Number(service_price) || 0;
+      if (sp > 0 && sp < 500) sp = sp * 100;
+      total_cents = sp;
+      deposit_cents = Math.ceil(total_cents * 0.5);
+    }
 
     const id = incId();
     const confirmation = `ZOLA-${String(id).padStart(5, '0')}`;

@@ -315,6 +315,11 @@
             <div class="tier-opt-price">$199</div>
             <div class="tier-opt-desc">2 services/mo<br>30% off add-ons</div>
           </div>
+          <div class="tier-opt" data-tier="TEST" onclick="selectTier('TEST')" id="test-tier-opt" style="display:none;border-style:dashed;">
+            <div class="tier-opt-name">🧪 Test</div>
+            <div class="tier-opt-price">$1.58</div>
+            <div class="tier-opt-desc">Owner test run<br>real card charge</div>
+          </div>
           <div class="tier-opt" data-tier="BLACK_CARD" onclick="selectTier('BLACK_CARD')">
             <div class="tier-opt-name">Black Card</div>
             <div class="tier-opt-price">$299</div>
@@ -477,13 +482,15 @@
   let signupData = {};
   let stripe, cardElement;
 
-  const TIER_PRICE = { SIGNATURE: '$99/mo', LUXE: '$199/mo', BLACK_CARD: '$299/mo' };
-  const TIER_LABEL = { SIGNATURE: 'Signature Club', LUXE: 'Luxe Club', BLACK_CARD: 'Black Card' };
-  const TIER_AMOUNT = { SIGNATURE: '$99', LUXE: '$199', BLACK_CARD: '$299' };
+  const TIER_PRICE = { SIGNATURE: '$99/mo', LUXE: '$199/mo', BLACK_CARD: '$299/mo', TEST: '$1.58/mo' };
+  const TIER_LABEL = { SIGNATURE: 'Signature Club', LUXE: 'Luxe Club', BLACK_CARD: 'Black Card', TEST: 'Test Membership' };
+  const TIER_AMOUNT = { SIGNATURE: '$99', LUXE: '$199', BLACK_CARD: '$299', TEST: '$1.58' };
 
   // Read tier from URL param
-  const urlTier = new URLSearchParams(window.location.search).get('tier') || '';
-  if (['SIGNATURE','LUXE','BLACK_CARD'].includes(urlTier)) { selectTier(urlTier); }
+  const urlTier = (new URLSearchParams(window.location.search).get('tier') || '').toUpperCase();
+  if (['SIGNATURE','LUXE','BLACK_CARD','TEST'].includes(urlTier)) { selectTier(urlTier); }
+  // The $1.58 test tier only appears with ?tier=TEST (owner test runs)
+  if (urlTier === 'TEST') { const t = document.getElementById('test-tier-opt'); if (t) t.style.display = 'block'; }
 
   // Read referral from URL param
   const urlRef = new URLSearchParams(window.location.search).get('ref') || '';

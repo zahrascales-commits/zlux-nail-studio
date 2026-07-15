@@ -23,16 +23,30 @@ async function stripeApi(path, params) {
 
 const ADDON_DISCOUNT = { SIGNATURE: 0.10, LUXE: 0.30, BLACK_CARD: 0.75 };
 
+// The booking page says "Short Acrylic Set", the menu says "Short Acrylic",
+// add-ons vary too — normalize so every spelling finds its price.
+function norm(s) { return String(s || '').toLowerCase().replace(/\bset\b|\btechnique\b|\bsoak off\b/g, '').replace(/[^a-z]/g, ''); }
+function findService(name) {
+  const n = norm(name);
+  return services.find(s => norm(s.name) === n)
+    || services.find(s => n.includes(norm(s.name)) || norm(s.name).includes(n));
+}
+function findAddon(name) {
+  const n = norm(name);
+  return addons.find(a => norm(a.name) === n)
+    || addons.find(a => n.includes(norm(a.name)) || norm(a.name).includes(n));
+}
+
 function computeDeposit({ service_name, addon_names = [], member_tier }) {
-  const svc = services.find(s => s.name === service_name);
+  const svc = findService(service_name);
   if (!svc) return null;
   const pct = member_tier ? (ADDON_DISCOUNT[member_tier] || 0) : 0;
   let total = svc.price_cents;
   for (const name of addon_names) {
-    const a = addons.find(x => x.name === name);
+    const a = findAddon(name);
     if (a) total += Math.round(a.price_cents * (1 - pct));
   }
-  return { total_cents: total, deposit_cents: Math.ceil(total * 0.5) };
+  return { total_cents: total, deposit_cents: Math.max(50, Math.ceil(total * 0.5)) };
 }
 
 module.exports = async function (req, res) {
@@ -72,6 +86,7 @@ module.exports = async function (req, res) {
   }
 };
 
+module.exports.computeDeposit = computeDeposit;
 module.exports.verifyPaymentIntent = async function (payment_intent_id) {
   if (!stripeKey() || !payment_intent_id) return { paid: false, why: 'not configured' };
   try {

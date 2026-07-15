@@ -75,6 +75,31 @@ module.exports = async function (req, res) {
       return res.status(400).json({ error: msg });
     }
 
+    // ── SET UP $1.58 TEST MEMBERSHIP PRICE IN STRIPE (one-time) ──
+    if (method === 'POST' && action === 'setup_test_tier') {
+      const sk = process.env.STRIPE_SECRET_KEY;
+      if (!sk) return res.status(400).json({ error: 'Stripe not configured' });
+      const existing = await queryOne("SELECT value FROM site_settings WHERE key='stripe_price_test'");
+      if (existing && existing.value) return res.json({ ok: true, price_id: existing.value, existed: true });
+      const call = async (path, params) => {
+        const r = await fetch('https://api.stripe.com/v1/' + path, {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + sk, 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams(params).toString(),
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error && d.error.message || ('stripe ' + r.status));
+        return d;
+      };
+      const product = await call('products', { name: 'ZOLA Test Membership (owner testing)' });
+      const price = await call('prices', {
+        product: product.id, currency: 'usd', unit_amount: '158', 'recurring[interval]': 'month',
+      });
+      await execute('INSERT INTO site_settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+        ['stripe_price_test', price.id]);
+      return res.json({ ok: true, price_id: price.id });
+    }
+
     // ── TEST DELIVERY (send a real test to Zahra) ──
     if (method === 'POST' && action === 'test_notify') {
       const { phone, email } = req.body || {};

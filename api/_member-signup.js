@@ -61,7 +61,7 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'Missing required fields.' });
   }
 
-  const validTiers = ['SIGNATURE', 'LUXE', 'BLACK_CARD'];
+  const validTiers = ['SIGNATURE', 'LUXE', 'BLACK_CARD', 'TEST'];
   if (!validTiers.includes(tier)) {
     return res.status(400).json({ error: 'Invalid tier.' });
   }
@@ -87,9 +87,19 @@ module.exports = async (req, res) => {
     await stripe.paymentMethods.attach(stripePaymentMethodId, { customer: customer.id });
     await stripe.customers.update(customer.id, { invoice_settings: { default_payment_method: stripePaymentMethodId } });
 
+    // Resolve the Stripe price: env var, else owner-created test price in settings
+    let priceId = process.env[`STRIPE_PRICE_${tier}`] || null;
+    if (!priceId && tier === 'TEST') {
+      try {
+        const row = await require('./_team-db').queryOne("SELECT value FROM site_settings WHERE key='stripe_price_test'");
+        priceId = row && row.value;
+      } catch (_) {}
+    }
+    if (!priceId) priceId = TIER_PRICES[tier];
+
     const subscription = await stripe.subscriptions.create({
       customer: customer.id,
-      items: [{ price: process.env[`STRIPE_PRICE_${tier}`] || TIER_PRICES[tier] }],
+      items: [{ price: priceId }],
       payment_behavior: 'default_incomplete',
       expand: ['latest_invoice.payment_intent'],
       metadata: { tier, memberEmail: email },

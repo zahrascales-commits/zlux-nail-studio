@@ -10,6 +10,7 @@ const services = [
   { id: 8,  name: 'Hydro Free Pedicure',         description: 'A waterless pedicure using advanced dry techniques for a hygienic treatment.',   duration_min: 60, price_cents: 8500  },
   { id: 9,  name: 'Classic Spa Pedicure',        description: 'A luxurious spa pedicure with soak, scrub, mask, and polish.',                   duration_min: 75, price_cents: 9500  },
   { id: 10, name: 'Royal Citrus Pedicure',       description: 'Our signature pedicure featuring citrus-infused treatments and extended massage.', duration_min: 90, price_cents: 10500 },
+  { id: 11, name: 'Test Run',                    description: 'Owner testing only — $1 end-to-end checkout test.', duration_min: 15, price_cents: 100, hidden: true },
 ];
 
 const addons = [

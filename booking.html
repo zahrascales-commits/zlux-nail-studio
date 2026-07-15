@@ -229,6 +229,11 @@
         <div id="step2-reminder-text" style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--espresso);"></div>
       </div>
 
+      <button class="option-btn" id="test-service-btn" onclick="selectService('Test Run',1,'manicure',this)" style="display:none;border-style:dashed;border-color:var(--champagne);">
+        <div><span class="option-name">🧪 Test Run — owner testing</span><span class="option-sub">Real $1 charge to test the full checkout</span></div>
+        <div style="text-align:right;"><span class="option-price">$1</span></div>
+      </button>
+
       <div class="section-label" style="margin-bottom:0.75rem;">Manicure</div>
       <button class="option-btn" id="svc-btn-0" onclick="selectService('Organic Structured Manicure',90,'manicure',this)">
         <div><span class="option-name">Organic Structured Manicure</span><span class="option-sub">Healthiest option — recommended for nail growth</span></div>
@@ -361,10 +366,11 @@
       <label class="luxury-label" style="margin-top:0.5rem;">Select Date</label>
       <input type="date" class="luxury-input" id="booking-date" style="margin-bottom:1.25rem;" />
       <label class="luxury-label">Available Times</label>
-      <div class="timeslot-grid" id="timeslots"></div>
+      <div class="timeslot-grid" id="timeslots"><p style="color:var(--latte);font-size:0.82rem;grid-column:1/-1;">Pick a date above to see open times ✦</p></div>
+      <div id="step3-error" style="display:none;background:rgba(192,82,74,0.08);border:1px solid rgba(192,82,74,0.3);padding:0.8rem 1rem;margin-top:1rem;font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:#a04038;"></div>
       <div class="step-nav">
         <button class="btn-outline-dark" onclick="goStep(2)">← Back</button>
-        <button class="btn-gold" onclick="goStep(4)" style="animation:none;">Continue →</button>
+        <button class="btn-gold" onclick="continueToCheckout()" style="animation:none;">Continue →</button>
       </div>
     </div>
 
@@ -755,6 +761,8 @@ function loadTimeslots() {
   dateEl.min = tomorrow.toISOString().split('T')[0];
   dateEl.onchange = e => {
     booking.date = e.target.value;
+    booking.time = null; // a new date means the old time no longer applies
+    document.getElementById('step3-error').style.display = 'none';
     if (booking.date) renderTimeslots(booking.date);
   };
 
@@ -984,9 +992,20 @@ function showSubmitError(msg) {
   box.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
+function continueToCheckout() {
+  const err = document.getElementById('step3-error');
+  err.style.display = 'none';
+  if (!booking.date) { err.textContent = 'Pick a date first — tap the date box above ✦'; err.style.display = 'block'; return; }
+  if (!booking.time) { err.textContent = 'Now tap one of the open times below the date — then you can continue ✦'; err.style.display = 'block'; return; }
+  goStep(4);
+}
+
 async function submitBooking() {
   const errBox = document.getElementById('submit-error');
   errBox.style.display = 'none';
+  // safety net: never let a missing date/time/service reach the server
+  if (!booking.service) { showSubmitError('Something got skipped — go back and choose your service.'); return; }
+  if (!booking.date || !booking.time) { showSubmitError('Your date or time didn\'t get selected — tap Back and pick an open time, then come right back.'); return; }
   if (!document.getElementById('policy-agree').checked) {
     showSubmitError('One more thing — please check the box agreeing to the cancellation policy just above.');
     return;
@@ -1097,6 +1116,12 @@ window.addEventListener('scroll', () => {
 document.getElementById('hamburger').addEventListener('click', () => {
   document.getElementById('nav-mobile').classList.toggle('open');
 });
+
+// Owner test mode: booking.html?test=1 reveals the $1 test service
+if (new URLSearchParams(location.search).get('test') === '1') {
+  const t = document.getElementById('test-service-btn');
+  if (t) t.style.display = 'flex';
+}
 
 // ── Returning client: prefill saved details so rebooking takes seconds ──
 function applySavedClient(c) {
