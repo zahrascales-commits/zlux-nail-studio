@@ -53,15 +53,16 @@ module.exports = async function (req, res) {
       const { service_name, addon_names, member_tier, customer_name, customer_email } = req.body || {};
       const calc = computeDeposit({ service_name, addon_names, member_tier });
       if (!calc) return res.status(400).json({ error: 'Unknown service' });
-      const pi = await stripeApi('payment_intents', {
+      const params = {
         amount: String(calc.deposit_cents),
         currency: 'usd',
         'automatic_payment_methods[enabled]': 'true',
         description: `ZOLA deposit — ${service_name} (${customer_name || 'client'})`,
-        receipt_email: customer_email || '',
         'metadata[service]': service_name || '',
         'metadata[client]': customer_name || '',
-      });
+      };
+      if (customer_email && /@/.test(customer_email)) params.receipt_email = customer_email;
+      const pi = await stripeApi('payment_intents', params);
       return res.json({ client_secret: pi.client_secret, payment_intent_id: pi.id, deposit_cents: calc.deposit_cents, total_cents: calc.total_cents });
     }
 
