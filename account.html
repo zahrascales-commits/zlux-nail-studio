@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My ZOLA — Your Account</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{--espresso:#0D0D0D;--gold:#C4A882;--gold-light:#E8D4B0;--cream:#F5EEE8;--latte:#8B6A3E;
+    --bg:#FAF7F2;--card:#fff;--border:rgba(139,106,62,0.15);--muted:#9C8B73}
+  body{font-family:'Josefin Sans',sans-serif;background:var(--bg);color:var(--espresso);min-height:100vh;line-height:1.6}
+  input,button,textarea{font-family:inherit;color:inherit;font-size:inherit}
+  a{text-decoration:none;color:inherit}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes pop{0%{transform:scale(0.97);opacity:0}100%{transform:scale(1);opacity:1}}
+  @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+
+  .head{background:var(--espresso);color:var(--cream);padding:1rem 1.4rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}
+  .logo{font-family:'Syne',sans-serif;font-size:1.4rem;letter-spacing:0.1em}
+  .head-right{display:flex;gap:0.6rem;align-items:center}
+  .head-btn{background:none;border:1px solid rgba(196,168,130,0.35);color:var(--gold);font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;padding:0.45rem 0.85rem;cursor:pointer;transition:all 0.2s}
+  .head-btn:hover{background:rgba(196,168,130,0.12)}
+
+  /* AUTH */
+  #auth{max-width:400px;margin:0 auto;padding:4rem 1.4rem}
+  .auth-card{background:var(--card);border:1px solid var(--border);padding:2.5rem 2rem;animation:fadeUp 0.5s ease;position:relative;overflow:hidden}
+  .auth-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);background-size:200% 100%;animation:shimmer 3s linear infinite}
+  .auth-title{font-family:'Syne',sans-serif;font-size:1.6rem;text-align:center}
+  .auth-sub{font-size:0.8rem;color:var(--latte);text-align:center;margin:0.4rem 0 1.8rem}
+  .lbl{display:block;font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--latte);margin-bottom:0.4rem}
+  .inp{width:100%;background:var(--bg);border:1px solid var(--border);padding:0.8rem 1rem;outline:none;margin-bottom:0.9rem;transition:border-color 0.2s}
+  .inp:focus{border-color:var(--gold)}
+  .gold-btn{width:100%;background:var(--gold);color:var(--espresso);border:none;padding:0.95rem;font-size:0.7rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;transition:all 0.2s}
+  .gold-btn:hover{opacity:0.88;transform:translateY(-1px)}
+  .auth-switch{text-align:center;font-size:0.78rem;color:var(--latte);margin-top:1.1rem}
+  .auth-switch a{color:var(--gold);cursor:pointer;font-weight:600}
+  .auth-err{color:#c0524a;font-size:0.78rem;text-align:center;margin-top:0.8rem;min-height:1.1em}
+
+  /* DASHBOARD */
+  #dash{display:none;max-width:720px;margin:0 auto;padding:1.6rem 1.4rem 5rem}
+  .hello{margin-bottom:1.5rem;animation:fadeUp 0.4s ease}
+  .hello h1{font-family:'Syne',sans-serif;font-size:1.7rem}
+  .hello p{font-size:0.85rem;color:var(--latte)}
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:0.7rem;margin-bottom:1.5rem}
+  .stat{background:var(--card);border:1px solid var(--border);padding:1rem;text-align:center;animation:pop 0.4s ease both}
+  .stat .n{font-family:'Syne',sans-serif;font-size:1.5rem;color:var(--gold)}
+  .stat .l{font-size:0.56rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted)}
+  .sect{font-size:0.6rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--gold);margin:1.6rem 0 0.8rem;font-weight:600}
+  .appt{background:var(--card);border:1px solid var(--border);padding:1.1rem 1.25rem;margin-bottom:0.6rem;display:flex;gap:1rem;align-items:center;animation:fadeUp 0.35s ease both}
+  .appt-when{min-width:74px;text-align:center;background:var(--bg);padding:0.5rem 0.3rem;border-left:2px solid var(--ac,#C4A882)}
+  .appt-when .d{font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)}
+  .appt-when .t{font-family:'Syne',sans-serif;font-size:1rem}
+  .appt-mid{flex:1;min-width:0}
+  .appt-svc{font-family:'Syne',sans-serif;font-size:1rem}
+  .appt-artist{font-size:0.74rem;color:var(--latte)}
+  .chip{display:inline-block;font-size:0.54rem;letter-spacing:0.12em;text-transform:uppercase;padding:0.15rem 0.5rem;margin-top:0.25rem}
+  .c-sch{background:rgba(196,168,130,0.14);color:var(--latte)}
+  .c-done{background:rgba(106,176,122,0.15);color:#4e8e5e}
+  .msg-btn{background:var(--espresso);color:var(--gold);border:none;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;padding:0.55rem 0.9rem;cursor:pointer;transition:opacity 0.2s}
+  .msg-btn:hover{opacity:0.85}
+  .empty{background:var(--card);border:1px dashed var(--border);padding:2rem;text-align:center;color:var(--muted);font-size:0.85rem}
+  .book-cta{display:block;text-align:center;background:var(--gold);color:var(--espresso);padding:1rem;font-size:0.72rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;margin-top:1rem;transition:all 0.2s}
+  .book-cta:hover{opacity:0.9;transform:translateY(-1px)}
+
+  .card{background:var(--card);border:1px solid var(--border);padding:1.4rem;margin-bottom:0.8rem}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:0.8rem}
+  textarea.inp{resize:vertical;min-height:60px}
+  .save-note{font-size:0.72rem;color:var(--muted);margin-top:0.4rem}
+  .optin-row{display:flex;align-items:center;gap:0.6rem;font-size:0.82rem;color:var(--latte);margin:0.6rem 0 1rem}
+
+  #toast{position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%) translateY(140%);background:var(--espresso);color:var(--gold);padding:0.8rem 1.4rem;font-size:0.75rem;letter-spacing:0.08em;z-index:99;transition:transform 0.3s}
+  #toast.show{transform:translateX(-50%) translateY(0)}
+  @media(max-width:560px){.two{grid-template-columns:1fr}.stat-row{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+
+<div class="head">
+  <a href="index.html" class="logo"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span></a>
+  <div class="head-right" id="head-right" style="display:none">
+    <a class="head-btn" href="booking.html">Book</a>
+    <button class="head-btn" onclick="logout()">Log Out</button>
+  </div>
+</div>
+
+<!-- AUTH -->
+<div id="auth">
+  <div class="auth-card">
+    <div class="auth-title" id="auth-title">Welcome Back ✦</div>
+    <div class="auth-sub" id="auth-sub">Log in to see your appointments, chat with your artist, and manage your account.</div>
+    <div id="f-name-wrap" style="display:none">
+      <label class="lbl">Your Name</label>
+      <input class="inp" id="f-name" placeholder="First & last name" />
+      <label class="lbl">Phone</label>
+      <input class="inp" id="f-phone" placeholder="(555) 000-0000" />
+    </div>
+    <label class="lbl">Email</label>
+    <input class="inp" id="f-email" type="email" placeholder="you@email.com" />
+    <label class="lbl">Password</label>
+    <input class="inp" id="f-pass" type="password" placeholder="your password" onkeydown="if(event.key==='Enter')go()" />
+    <button class="gold-btn" id="go-btn" onclick="go()">Log In</button>
+    <div class="auth-err" id="auth-err"></div>
+    <div class="auth-switch" id="switch-line">New here? <a onclick="setMode('register')">Create your account</a></div>
+    <div class="auth-switch" style="font-size:0.68rem;color:var(--muted)">Forgot your password? Just create the account again with the same email — all your history stays.</div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dash">
+  <div class="hello">
+    <h1 id="hello-name">✦</h1>
+    <p id="hello-sub">Your studio, your schedule.</p>
+  </div>
+  <div class="stat-row" id="stat-row"></div>
+
+  <div class="sect">Upcoming Appointments</div>
+  <div id="upcoming"></div>
+
+  <div class="sect">Past Visits</div>
+  <div id="past"></div>
+
+  <div class="sect">My Preferences — so every visit is perfect</div>
+  <div class="card">
+    <div class="two">
+      <div><label class="lbl">💛 I love (shapes, colors, styles)</label><textarea class="inp" id="p-likes" placeholder="almond shape, chrome, neutral tones…"></textarea></div>
+      <div><label class="lbl">🚫 Not for me</label><textarea class="inp" id="p-dislikes" placeholder="no square, no heavy glitter…"></textarea></div>
+    </div>
+    <p class="save-note">Your artist sees these before every appointment — you never have to repeat yourself.</p>
+  </div>
+
+  <div class="sect">Account Settings</div>
+  <div class="card">
+    <div class="two">
+      <div><label class="lbl">Name</label><input class="inp" id="p-name" /></div>
+      <div><label class="lbl">Phone</label><input class="inp" id="p-phone" /></div>
+    </div>
+    <label class="lbl">New Password (leave blank to keep current)</label>
+    <input class="inp" id="p-pass" type="password" placeholder="••••••" />
+    <label class="optin-row"><input type="checkbox" id="p-optin" /> Text/email me when spots open up & studio news</label>
+    <button class="gold-btn" onclick="saveProfile()">Save My Account</button>
+  </div>
+
+  <a class="book-cta" href="booking.html">Book My Next Appointment ✦</a>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let TOKEN=null,ME=null,mode='login';
+
+function setMode(m){
+  mode=m;
+  document.getElementById('f-name-wrap').style.display=m==='register'?'block':'none';
+  document.getElementById('auth-title').textContent=m==='register'?'Join ZOLA ✦':'Welcome Back ✦';
+  document.getElementById('auth-sub').textContent=m==='register'?'Create your account — book faster, chat with your artist, keep your preferences saved.':'Log in to see your appointments, chat with your artist, and manage your account.';
+  document.getElementById('go-btn').textContent=m==='register'?'Create My Account':'Log In';
+  document.getElementById('switch-line').innerHTML=m==='register'
+    ?'Already have an account? <a onclick="setMode(\'login\')">Log in</a>'
+    :'New here? <a onclick="setMode(\'register\')">Create your account</a>';
+}
+async function go(){
+  const err=document.getElementById('auth-err');err.textContent='';
+  const email=document.getElementById('f-email').value.trim();
+  const password=document.getElementById('f-pass').value;
+  if(!email||!password){err.textContent='Enter your email and password.';return;}
+  const body={action:mode,email,password};
+  if(mode==='register'){body.name=document.getElementById('f-name').value.trim();body.phone=document.getElementById('f-phone').value.trim();}
+  try{
+    const r=await fetch('/api/account?action='+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(!r.ok){err.textContent=d.error||'Something went wrong — try again.';return;}
+    TOKEN=d.token;
+    localStorage.setItem('zola_acct',JSON.stringify({token:d.token,name:d.name,email:d.email}));
+    enter();
+  }catch{err.textContent='Connection error — try again.';}
+}
+function logout(){localStorage.removeItem('zola_acct');location.reload();}
+
+function fmtTime(t){const[h,m]=t.split(':').map(Number);const ap=h>=12?'PM':'AM';const hh=h>12?h-12:(h===0?12:h);return hh+':'+String(m).padStart(2,'0')+' '+ap;}
+function fmtDate(ds){return new Date(ds+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600);}
+
+async function enter(){
+  try{
+    const r=await fetch('/api/account?action=me',{headers:{'X-Client-Token':TOKEN}});
+    if(!r.ok){localStorage.removeItem('zola_acct');return;}
+    ME=await r.json();
+  }catch{return;}
+  document.getElementById('auth').style.display='none';
+  document.getElementById('dash').style.display='block';
+  document.getElementById('head-right').style.display='flex';
+  const first=(ME.account.name||'').split(' ')[0]||'love';
+  document.getElementById('hello-name').textContent='Hi '+first+' ✦';
+
+  const today=new Date().toISOString().slice(0,10);
+  const appts=ME.appointments||[];
+  const up=appts.filter(a=>a.date>=today&&a.status==='scheduled').sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const past=appts.filter(a=>a.date<today||a.status!=='scheduled').slice(0,8);
+  const visits=(ME.profile&&Number(ME.profile.visits))||past.length;
+
+  document.getElementById('stat-row').innerHTML=
+    '<div class="stat"><div class="n">'+up.length+'</div><div class="l">Upcoming</div></div>'
+    +'<div class="stat" style="animation-delay:0.08s"><div class="n">'+visits+'</div><div class="l">Total Visits</div></div>'
+    +'<div class="stat" style="animation-delay:0.16s"><div class="n">'+(visits>=10?'💎':visits>=5?'🥇':'✦')+'</div><div class="l">'+(visits>=10?'VIP Client':visits>=5?'Regular':'Member')+'</div></div>';
+
+  const render=a=>`<div class="appt" style="--ac:${a.artist_color||'#C4A882'}">
+      <div class="appt-when"><div class="d">${fmtDate(a.date)}</div><div class="t">${fmtTime(a.time)}</div></div>
+      <div class="appt-mid">
+        <div class="appt-svc">${esc(a.service||'Appointment')}</div>
+        <div class="appt-artist">${a.artist?'with '+esc(a.artist):'with the studio'}</div>
+        <span class="chip ${a.status==='completed'?'c-done':'c-sch'}">${a.status==='no_show'?'missed':a.status}</span>
+      </div>
+      ${a.chat_token?`<a class="msg-btn" href="chat.html?t=${encodeURIComponent(a.chat_token)}">💬 Chat</a>`:''}
+    </div>`;
+  document.getElementById('upcoming').innerHTML=up.length?up.map(render).join(''):'<div class="empty">Nothing booked yet — your next great set is one tap away 💅</div>';
+  document.getElementById('past').innerHTML=past.length?past.map(render).join(''):'<div class="empty">Your visit history will appear here.</div>';
+
+  document.getElementById('p-name').value=ME.account.name||'';
+  document.getElementById('p-phone').value=ME.account.phone||'';
+  document.getElementById('p-likes').value=(ME.profile&&ME.profile.likes)||'';
+  document.getElementById('p-dislikes').value=(ME.profile&&ME.profile.dislikes)||'';
+  document.getElementById('p-optin').checked=!!(ME.profile&&Number(ME.profile.opt_in));
+}
+
+async function saveProfile(){
+  const body={action:'profile',
+    name:document.getElementById('p-name').value.trim(),
+    phone:document.getElementById('p-phone').value.trim(),
+    likes:document.getElementById('p-likes').value.trim(),
+    dislikes:document.getElementById('p-dislikes').value.trim(),
+    opt_in:document.getElementById('p-optin').checked,
+    new_password:document.getElementById('p-pass').value};
+  const r=await fetch('/api/account?action=profile',{method:'PUT',headers:{'Content-Type':'application/json','X-Client-Token':TOKEN},body:JSON.stringify(body)});
+  if(r.ok){toast('Saved ✦ your artist will see your preferences');document.getElementById('p-pass').value='';}
+  else toast('Save failed — try again');
+}
+
+(function(){
+  try{
+    const s=JSON.parse(localStorage.getItem('zola_acct')||'null');
+    if(s&&s.token){TOKEN=s.token;enter();}
+  }catch{}
+})();
+</script>
+</body>
+</html>

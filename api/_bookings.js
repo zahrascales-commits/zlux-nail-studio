@@ -137,7 +137,16 @@ module.exports = async (req, res) => {
       addon_names = [], addon_charged = [],
       member_id, member_tier,
       date, time_slot, worker,
+      payment_intent_id,
     } = req.body;
+
+    // If a card payment was made, verify it with Stripe before confirming
+    let depositPaid = false;
+    if (payment_intent_id) {
+      const v = await require('./_pay').verifyPaymentIntent(payment_intent_id);
+      if (!v.paid) return res.status(402).json({ error: 'Your card payment did not go through (' + (v.status || v.why) + '). Please try again — you have not been charged.' });
+      depositPaid = true;
+    }
 
     if (!customer_name || !customer_email || !customer_phone || !service_name || !date || !time_slot)
       return res.status(400).json({ error: 'All fields are required' });
@@ -187,6 +196,7 @@ module.exports = async (req, res) => {
       service_name, addon_names, member_id, member_tier,
       date, time_slot, worker,
       total_cents, deposit_cents,
+      deposit_paid: depositPaid, payment_intent_id: payment_intent_id || null,
       created_at: new Date().toISOString(),
     });
 

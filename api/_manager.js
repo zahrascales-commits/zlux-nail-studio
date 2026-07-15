@@ -45,6 +45,36 @@ module.exports = async function (req, res) {
       return res.json({ ok: true, providers });
     }
 
+    // ── EMAIL SELF-REPAIR: register the sender with SendGrid so 403s stop ──
+    // SendGrid rejects mail from unverified senders (the silent bug that ate
+    // every email). This asks SendGrid to email a verification link to the
+    // chosen address; after Zahra clicks it, that address can send.
+    if (method === 'POST' && action === 'verify_sender') {
+      const from = String((req.body || {}).from_email || '').trim().toLowerCase();
+      if (!/@/.test(from)) return res.status(400).json({ error: 'Valid email required' });
+      const sgKey = process.env.SENDGRID_API_KEY;
+      if (!sgKey) return res.status(400).json({ error: 'SendGrid key not configured' });
+      const r = await fetch('https://api.sendgrid.com/v3/verified_senders', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${sgKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nickname: 'ZOLA Studio', from_email: from, from_name: 'ZOLA Nail Studio',
+          reply_to: from, reply_to_name: 'ZOLA Nail Studio',
+          address: 'Porterville', city: 'Porterville', state: 'CA', zip: '93257', country: 'USA',
+        }),
+      });
+      const data = await r.json().catch(() => ({}));
+      // remember the sender either way — sends work as soon as she clicks the link
+      await execute('INSERT INTO site_settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+        ['notify_from_email', from]);
+      clearKeyCache();
+      if (r.ok || r.status === 201) return res.json({ ok: true, status: 'verification_email_sent', to: from });
+      // already verified or pending is fine too
+      const msg = JSON.stringify(data).slice(0, 300);
+      if (/already/i.test(msg)) return res.json({ ok: true, status: 'already_requested', detail: msg });
+      return res.status(400).json({ error: msg });
+    }
+
     // ── TEST DELIVERY (send a real test to Zahra) ──
     if (method === 'POST' && action === 'test_notify') {
       const { phone, email } = req.body || {};

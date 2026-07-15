@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@200;300;400;600;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" /><link rel="stylesheet" href="css/styles.css" />
+  <script src="https://js.stripe.com/v3/"></script>
   <style>
     .checkout-line {
       display: flex;
@@ -436,12 +437,33 @@
         <textarea class="luxury-input" id="client-notes" rows="2" placeholder="Nail shape, current nails on, inspiration photo link…" style="resize:vertical;"></textarea>
       </div>
 
+      <!-- Card payment (Stripe) -->
+      <div id="card-section" style="display:none;margin:1.25rem 0;">
+        <label class="luxury-label">Card — your deposit is charged automatically</label>
+        <div id="payment-element" style="background:#fff;border:1px solid rgba(139,106,62,0.22);padding:1rem;"></div>
+        <div id="card-errors" style="display:none;font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:#c0524a;margin-top:0.5rem;"></div>
+      </div>
+
+      <!-- Optional account creation -->
+      <div style="margin:1.25rem 0;background:rgba(196,168,130,0.06);border:1px solid rgba(196,168,130,0.2);padding:1rem 1.25rem;">
+        <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--espresso);">
+          <input type="checkbox" id="make-account" checked>
+          <span><strong>Create my ZOLA account</strong> — see your appointments, chat with your artist, and rebook in two taps</span>
+        </label>
+        <div id="account-pass-wrap" style="margin-top:0.75rem;">
+          <label class="luxury-label">Choose a Password</label>
+          <input class="luxury-input" type="password" id="account-pass" placeholder="at least 4 characters" autocomplete="new-password" />
+          <p style="font-family:'Josefin Sans',sans-serif;font-size:0.68rem;color:var(--latte);margin-top:0.35rem;">Forget it later? No problem — signing up again with the same email keeps all your history.</p>
+        </div>
+      </div>
+
       <label style="display:flex;align-items:flex-start;gap:0.75rem;margin-bottom:1.25rem;cursor:pointer;">
         <input type="checkbox" id="policy-agree" style="margin-top:3px;">
         <span style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--latte);line-height:1.6;">
           I understand the 50% deposit is non-refundable and agree to the <a href="memberships.html" style="color:var(--champagne);">cancellation policy</a>.
         </span>
       </label>
+      <div id="submit-error" style="display:none;background:rgba(192,82,74,0.08);border:1px solid rgba(192,82,74,0.3);padding:0.85rem 1.1rem;margin-bottom:1rem;font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:#a04038;"></div>
       <div class="step-nav">
         <button class="btn-outline-dark" onclick="goStep(3)">← Back</button>
         <button class="btn-gold" onclick="submitBooking()" style="animation:none;flex:1;text-align:center;">Pay Deposit & Confirm</button>
@@ -909,7 +931,7 @@ function goStep(n) {
   }
   if (n === 2 && booking.memberTier) updateServiceTags();
   if (n === 3) loadTimeslots();
-  if (n === 4) loadSummary();
+  if (n === 4) { loadSummary(); initPayment(); }
   _trackFunnel(n, false);
   window.scrollTo(0, 0);
 }
@@ -924,65 +946,149 @@ window.addEventListener('beforeunload', () => {
   }
 });
 
+// ═══════════════════════════════════════════
+// CARD PAYMENT (Stripe) — deposit charged automatically at confirm
+// ═══════════════════════════════════════════
+let _stripe = null, _elements = null, _payEnabled = false, _paymentIntentId = null;
+
+async function initPayment() {
+  try {
+    const cfg = await (await fetch('/api/pay?action=config')).json();
+    if (!cfg.enabled || typeof Stripe === 'undefined') return; // graceful: no card section
+    const intent = await (await fetch('/api/pay?action=deposit_intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'deposit_intent',
+        service_name: booking.service,
+        addon_names: booking.selectedAddons.map(a => a.name),
+        member_tier: booking.memberTier || null,
+        customer_name: document.getElementById('client-name').value.trim(),
+        customer_email: document.getElementById('client-email').value.trim(),
+      })
+    })).json();
+    if (!intent.client_secret) return;
+    _paymentIntentId = intent.payment_intent_id;
+    _stripe = Stripe(cfg.publishable_key);
+    _elements = _stripe.elements({ clientSecret: intent.client_secret, appearance: { theme: 'flat', variables: { colorPrimary: '#C4A882', fontFamily: 'Josefin Sans, sans-serif' } } });
+    _elements.create('payment').mount('#payment-element');
+    document.getElementById('card-section').style.display = 'block';
+    _payEnabled = true;
+  } catch (_) { /* payments unavailable — booking still works without card */ }
+}
+
+function showSubmitError(msg) {
+  const box = document.getElementById('submit-error');
+  box.textContent = msg;
+  box.style.display = 'block';
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 async function submitBooking() {
+  const errBox = document.getElementById('submit-error');
+  errBox.style.display = 'none';
   if (!document.getElementById('policy-agree').checked) {
-    alert('Please agree to the cancellation policy before proceeding.');
+    showSubmitError('One more thing — please check the box agreeing to the cancellation policy just above.');
     return;
   }
   const name  = document.getElementById('client-name').value.trim();
   const phone = document.getElementById('client-phone').value.trim();
   const email = document.getElementById('client-email').value.trim();
   if (!name || !phone || !email) {
-    alert('Please fill in your name, phone, and email.');
+    showSubmitError('Please fill in your name, phone, and email so we can confirm your appointment.');
     return;
   }
 
   const btn = document.querySelector('#step-4 .btn-gold');
   if (btn) { btn.disabled = true; btn.textContent = 'Confirming…'; }
+  const restore = () => { if (btn) { btn.disabled = false; btn.textContent = 'Pay Deposit & Confirm'; } };
 
-  // Build addon list with already-calculated member discounts
-  const addonNames = booking.selectedAddons.map(a => a.name);
-  const addonCharged = booking.selectedAddons.map(a => a.charged);
-
-  try {
-    const res = await fetch('/api/bookings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        customer_name:  name,
-        customer_email: email,
-        customer_phone: phone,
-        service_name:   booking.service,
-        service_price:  booking.servicePrice,
-        addon_names:    addonNames,
-        addon_charged:  addonCharged,
-        member_id:      document.getElementById('member-id-input').value.trim().toUpperCase() || null,
-        member_tier:    booking.memberTier || null,
-        date:           booking.date,
-        time_slot:      booking.time,
-        worker:         booking.worker || null,
-      })
+  // 1) Charge the deposit if card payments are on
+  let paymentIntentId = null;
+  if (_payEnabled && _stripe && _elements) {
+    if (btn) btn.textContent = 'Charging deposit…';
+    const { error, paymentIntent } = await _stripe.confirmPayment({
+      elements: _elements,
+      redirect: 'if_required',
+      confirmParams: { payment_method_data: { billing_details: { name, email, phone } } },
     });
-
-    const data = await res.json();
-    if (!res.ok) {
-      if (btn) { btn.disabled = false; btn.textContent = 'Pay Deposit & Confirm'; }
-      alert(data.error || 'Booking failed. Please try again.');
+    if (error) {
+      restore();
+      showSubmitError(error.message || 'Your card was declined. Please check the details and try again — you have not been charged.');
       return;
     }
-
-    // Remember this client on this device so next booking is 3 fields shorter
-    try { localStorage.setItem('zola_client', JSON.stringify({ name, phone, email })); } catch (_) {}
-
-    document.getElementById('step-4').querySelector('.step-nav').style.display = 'none';
-    document.getElementById('booking-conf-num').textContent = 'Confirmation: ' + data.confirmation;
-    document.getElementById('booking-success').style.display = 'block';
-    document.getElementById('booking-success').scrollIntoView({ behavior: 'smooth' });
-
-  } catch {
-    if (btn) { btn.disabled = false; btn.textContent = 'Pay Deposit & Confirm'; }
-    alert('Network error. Please try again.');
+    paymentIntentId = (paymentIntent && paymentIntent.id) || _paymentIntentId;
   }
+
+  // 2) Confirm the booking — with automatic retry so a slow connection can't kill it
+  const payload = {
+    customer_name:  name,
+    customer_email: email,
+    customer_phone: phone,
+    service_name:   booking.service,
+    service_price:  booking.servicePrice,
+    addon_names:    booking.selectedAddons.map(a => a.name),
+    addon_charged:  booking.selectedAddons.map(a => a.charged),
+    member_id:      document.getElementById('member-id-input').value.trim().toUpperCase() || null,
+    member_tier:    booking.memberTier || null,
+    date:           booking.date,
+    time_slot:      booking.time,
+    worker:         booking.worker || null,
+    payment_intent_id: paymentIntentId,
+  };
+  if (btn) btn.textContent = 'Confirming…';
+  let data = null, lastErr = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      data = await res.json();
+      if (res.ok) { lastErr = null; break; }
+      lastErr = data.error || ('Booking failed (' + res.status + ').');
+      if (res.status < 500) break; // real rejection — don't retry
+    } catch (e) {
+      lastErr = 'Connection hiccup — retrying…';
+      if (attempt < 3) { showSubmitError('Connection hiccup — retrying (' + attempt + '/2)…'); await new Promise(r => setTimeout(r, 1500 * attempt)); }
+    }
+  }
+  if (lastErr) {
+    restore();
+    showSubmitError(lastErr + (paymentIntentId ? ' Your deposit WAS charged — do not pay again. Screenshot this and message us, we will confirm your spot manually.' : ''));
+    return;
+  }
+
+  // Remember this client on this device so next booking is 3 fields shorter
+  try { localStorage.setItem('zola_client', JSON.stringify({ name, phone, email })); } catch (_) {}
+
+  // 3) Create their account (optional password box)
+  try {
+    if (document.getElementById('make-account').checked) {
+      const pass = document.getElementById('account-pass').value || (phone.replace(/\D/g, '').slice(-4) || 'zola');
+      const acc = await (await fetch('/api/account?action=register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'register', email, password: pass, name, phone })
+      })).json();
+      if (acc.token) localStorage.setItem('zola_acct', JSON.stringify({ token: acc.token, name, email }));
+    }
+  } catch (_) {}
+
+  document.getElementById('step-4').querySelector('.step-nav').style.display = 'none';
+  document.getElementById('booking-conf-num').textContent = 'Confirmation: ' + data.confirmation;
+  const succ = document.getElementById('booking-success');
+  if (document.getElementById('make-account').checked) {
+    const link = document.createElement('a');
+    link.href = 'account.html';
+    link.className = 'btn-outline-dark';
+    link.style.cssText = 'margin-top:0.75rem;display:inline-block;margin-left:0.5rem;';
+    link.textContent = 'Go to My Account →';
+    succ.appendChild(link);
+  }
+  succ.style.display = 'block';
+  succ.scrollIntoView({ behavior: 'smooth' });
 }
 
 window.addEventListener('scroll', () => {
