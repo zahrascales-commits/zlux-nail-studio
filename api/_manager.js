@@ -1,7 +1,7 @@
 // Owner-side (Zahra) API for the Studio Manager page.
 // Auth: X-CEO-Password header (same password as the CEO dashboard).
 const { query, queryOne, execute, ensureTables, token, uniquePin } = require('./_team-db');
-const { notifyNewAppointment } = require('./_notify');
+const { notifyNewAppointment, sendEmail, sendSMS, providerStatus, clearKeyCache } = require('./_notify');
 const { upsertClient } = require('./_clients');
 
 const CEO_PASSWORD = process.env.CEO_PASSWORD || 'ZOLA2026';
@@ -25,11 +25,35 @@ module.exports = async function (req, res) {
       const appts = await query(`SELECT a.*, m.name AS member_name, m.color AS member_color
         FROM team_appointments a LEFT JOIN team_members m ON m.id = a.team_member_id
         ORDER BY a.date, a.time`);
-      const providers = {
-        email: !!(process.env.RESEND_API_KEY || process.env.SENDGRID_API_KEY),
-        sms: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER),
-      };
+      const providers = await providerStatus();
       return res.json({ members, appointments: appts, providers });
+    }
+
+    // ── CONNECT PROVIDERS (paste keys in Settings tab; stored write-only) ──
+    if (method === 'POST' && action === 'save_keys') {
+      const { twilio_sid, twilio_token, twilio_from, resend_key } = req.body || {};
+      const pairs = { twilio_sid, twilio_token, twilio_from, resend_key };
+      for (const [k, v] of Object.entries(pairs)) {
+        if (v !== undefined && v !== null && String(v).trim() !== '') {
+          await execute(
+            'INSERT INTO site_settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+            [k, String(v).trim()]);
+        }
+      }
+      clearKeyCache();
+      const providers = await providerStatus();
+      return res.json({ ok: true, providers });
+    }
+
+    // ── TEST DELIVERY (send a real test to Zahra) ──
+    if (method === 'POST' && action === 'test_notify') {
+      const { phone, email } = req.body || {};
+      clearKeyCache();
+      const out = {};
+      if (phone) out.sms = await sendSMS(phone, 'ZOLA test ✦ Your texting is connected and working! — sent from your Studio Manager');
+      if (email) out.email = await sendEmail(email, 'ZOLA test ✦ Email is connected',
+        '<p>Your email delivery is connected and working ✦</p><p>— sent from your Studio Manager</p>');
+      return res.json({ ok: true, ...out });
     }
 
     // ── MEMBERS ──

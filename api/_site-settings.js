@@ -12,11 +12,16 @@ module.exports = async function (req, res) {
   try {
     await ensureTables();
 
-    // Public: read all settings (homepage applies them)
+    // Public: read all settings (homepage applies them).
+    // SECURITY: provider credentials (twilio_*, resend_*) are never
+    // returned here — they are write-only via the owner's Settings tab.
     if (req.method === 'GET') {
       const rows = await query('SELECT key, value FROM site_settings');
       const out = {};
-      for (const r of rows) out[r.key] = r.value;
+      for (const r of rows) {
+        if (/^(twilio_|resend_|secret_)/i.test(r.key)) continue;
+        out[r.key] = r.value;
+      }
       return res.json({ settings: out });
     }
 

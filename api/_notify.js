@@ -7,9 +7,9 @@
 // Without keys, sends are skipped silently but in-app notifications
 // (the bell in the Manager and Team Portal) always work.
 
-const { execute, ensureTables } = require('./_team-db');
+const { query, execute, ensureTables } = require('./_team-db');
 
-const FROM_EMAIL = process.env.NOTIFY_FROM_EMAIL || 'studio@zluxnails.com';
+const FROM_EMAIL = process.env.NOTIFY_FROM_EMAIL || 'onboarding@resend.dev';
 
 function e164(raw) {
   const d = String(raw || '').replace(/\D/g, '');
@@ -18,24 +18,59 @@ function e164(raw) {
   return null;
 }
 
+// Provider keys: Vercel env vars win; otherwise the keys Zahra pasted
+// into her Settings tab (stored in site_settings, never served publicly).
+let _keyCache = null, _keyCacheAt = 0;
+async function getKeys() {
+  const now = Date.now();
+  if (_keyCache && now - _keyCacheAt < 60000) return _keyCache;
+  let db = {};
+  try {
+    await ensureTables();
+    const rows = await query("SELECT key, value FROM site_settings WHERE key IN ('twilio_sid','twilio_token','twilio_from','resend_key','notify_from_email')");
+    for (const r of rows) db[r.key] = String(r.value || '').trim();
+  } catch (_) {}
+  _keyCache = {
+    resendKey: process.env.RESEND_API_KEY || db.resend_key || '',
+    sendgridKey: process.env.SENDGRID_API_KEY || '',
+    twilioSid: process.env.TWILIO_ACCOUNT_SID || db.twilio_sid || '',
+    twilioToken: process.env.TWILIO_AUTH_TOKEN || db.twilio_token || '',
+    twilioFrom: process.env.TWILIO_PHONE_NUMBER || db.twilio_from || '',
+    fromEmail: process.env.NOTIFY_FROM_EMAIL || db.notify_from_email || FROM_EMAIL,
+  };
+  _keyCacheAt = now;
+  return _keyCache;
+}
+function clearKeyCache() { _keyCache = null; }
+
+async function providerStatus() {
+  const k = await getKeys();
+  return {
+    email: !!(k.resendKey || k.sendgridKey),
+    sms: !!(k.twilioSid && k.twilioToken && k.twilioFrom),
+  };
+}
+
 async function sendEmail(to, subject, html) {
   if (!to || !/@/.test(to)) return { sent: false, why: 'no email' };
   try {
-    if (process.env.RESEND_API_KEY) {
+    const k = await getKeys();
+    if (k.resendKey) {
       const r = await fetch('https://api.resend.com/emails', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: `ZOLA Nail Studio <${FROM_EMAIL}>`, to: [to], subject, html }),
+        headers: { Authorization: `Bearer ${k.resendKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: `ZOLA Nail Studio <${k.fromEmail}>`, to: [to], subject, html }),
       });
-      return { sent: r.ok, why: r.ok ? 'resend' : 'resend ' + r.status };
+      const detail = r.ok ? 'resend' : 'resend ' + r.status + ' ' + (await r.text()).slice(0, 200);
+      return { sent: r.ok, why: detail };
     }
-    if (process.env.SENDGRID_API_KEY) {
+    if (k.sendgridKey) {
       const r = await fetch('https://api.sendgrid.com/v3/mail/send', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${process.env.SENDGRID_API_KEY}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${k.sendgridKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           personalizations: [{ to: [{ email: to }] }],
-          from: { email: FROM_EMAIL, name: 'ZOLA Nail Studio' },
+          from: { email: k.fromEmail, name: 'ZOLA Nail Studio' },
           subject,
           content: [{ type: 'text/html', value: html }],
         }),
@@ -49,18 +84,19 @@ async function sendEmail(to, subject, html) {
 async function sendSMS(to, body) {
   const phone = e164(to);
   if (!phone) return { sent: false, why: 'no valid phone' };
-  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN, from = process.env.TWILIO_PHONE_NUMBER;
-  if (!sid || !tok || !from) return { sent: false, why: 'no SMS provider key configured' };
+  const k = await getKeys();
+  if (!k.twilioSid || !k.twilioToken || !k.twilioFrom) return { sent: false, why: 'no SMS provider key configured' };
   try {
-    const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+    const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${k.twilioSid}/Messages.json`, {
       method: 'POST',
       headers: {
-        Authorization: 'Basic ' + Buffer.from(sid + ':' + tok).toString('base64'),
+        Authorization: 'Basic ' + Buffer.from(k.twilioSid + ':' + k.twilioToken).toString('base64'),
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({ To: phone, From: from, Body: body }).toString(),
+      body: new URLSearchParams({ To: phone, From: k.twilioFrom, Body: body }).toString(),
     });
-    return { sent: r.ok || r.status === 201, why: 'twilio ' + r.status };
+    const detail = (r.ok || r.status === 201) ? 'twilio' : 'twilio ' + r.status + ' ' + (await r.text()).slice(0, 200);
+    return { sent: r.ok || r.status === 201, why: detail };
   } catch (err) { return { sent: false, why: String(err.message || err) }; }
 }
 
@@ -121,4 +157,4 @@ async function notifyNewAppointment(a) {
   return results;
 }
 
-module.exports = { sendEmail, sendSMS, notifyInApp, notifyNewAppointment, e164 };
+module.exports = { sendEmail, sendSMS, notifyInApp, notifyNewAppointment, e164, providerStatus, clearKeyCache };

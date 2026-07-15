@@ -421,11 +421,33 @@
           <textarea id="set-policy-text" rows="3" placeholder="Deposits are non-refundable. With 48+ hours notice…"></textarea>
         </div>
         <div class="site-card">
-          <h3>Notifications</h3>
-          <p>What sends automatically, the instant something happens.</p>
-          <div class="key-status" id="key-email">✉️ Email delivery: checking…</div>
+          <h3>Connect Texting 📱</h3>
           <div class="key-status" id="key-sms">📱 Text delivery: checking…</div>
-          <p class="set-note">Booking confirmations to clients, new-appointment alerts to your team, and welcome messages to signups are all wired and fire instantly. Delivery switches on the moment the keys above are added in Vercel → Settings → Environment Variables. In-app bell notifications always work.</p>
+          <p>Paste the 3 values from your Twilio account (Console home page shows all three). Texting turns on the moment you save — no redeploy needed.</p>
+          <label class="fld-label">Account SID (starts with AC…)</label>
+          <input id="k-sid" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" style="margin-bottom:0.7rem" autocomplete="off" />
+          <label class="fld-label">Auth Token</label>
+          <input id="k-token" type="password" placeholder="paste auth token" style="margin-bottom:0.7rem" autocomplete="off" />
+          <label class="fld-label">Your Twilio Phone Number</label>
+          <input id="k-from" placeholder="+15551234567" style="margin-bottom:0.9rem" autocomplete="off" />
+          <button class="btn btn-gold btn-sm" onclick="saveKeys()">Connect Texting</button>
+        </div>
+        <div class="site-card">
+          <h3>Connect Email ✉️</h3>
+          <div class="key-status" id="key-email">✉️ Email delivery: checking…</div>
+          <p>Paste your Resend API key (free at resend.com → API Keys → Create). Email turns on the moment you save.</p>
+          <label class="fld-label">Resend API Key (starts with re_…)</label>
+          <input id="k-resend" type="password" placeholder="re_xxxxxxxxxxxx" style="margin-bottom:0.9rem" autocomplete="off" />
+          <button class="btn btn-gold btn-sm" onclick="saveKeys()">Connect Email</button>
+          <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--border)">
+            <label class="fld-label">Send a test to me</label>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+              <input id="test-phone" placeholder="your phone" style="flex:1;min-width:120px" />
+              <input id="test-email" placeholder="your email" style="flex:1;min-width:140px" />
+              <button class="btn btn-ghost btn-sm" onclick="testNotify()">Send Test</button>
+            </div>
+            <p class="set-note" id="test-result"></p>
+          </div>
         </div>
         <div class="site-card">
           <h3>Calendar Preferences</h3>
@@ -1185,10 +1207,38 @@ async function delClient(id){
 }
 
 /* ── SETTINGS ── */
+function renderProviderStatus(){
+  document.getElementById('key-email').innerHTML='✉️ Email delivery: '+(PROVIDERS.email?'<span class="key-on">ON — sending live ✦</span>':'<span class="key-off">OFF — paste your Resend key below</span>');
+  document.getElementById('key-sms').innerHTML='📱 Text delivery: '+(PROVIDERS.sms?'<span class="key-on">ON — sending live ✦</span>':'<span class="key-off">OFF — paste your Twilio values below</span>');
+}
+async function saveKeys(){
+  const body={action:'save_keys',
+    twilio_sid:document.getElementById('k-sid').value.trim(),
+    twilio_token:document.getElementById('k-token').value.trim(),
+    twilio_from:document.getElementById('k-from').value.trim(),
+    resend_key:document.getElementById('k-resend').value.trim()};
+  if(!body.twilio_sid&&!body.twilio_token&&!body.twilio_from&&!body.resend_key){toast('Paste at least one value first');return;}
+  const r=await api('/api/manager?action=save_keys',{method:'POST',body:JSON.stringify(body)});
+  const d=await r.json();
+  if(d.ok){PROVIDERS=d.providers||PROVIDERS;renderProviderStatus();
+    toast((PROVIDERS.sms?'Texting ON ✦ ':'')+(PROVIDERS.email?'Email ON ✦':'')||'Saved — check values');
+    ['k-sid','k-token','k-from','k-resend'].forEach(id=>document.getElementById(id).value='');
+  }else toast('Save failed');
+}
+async function testNotify(){
+  const phone=document.getElementById('test-phone').value.trim();
+  const email=document.getElementById('test-email').value.trim();
+  if(!phone&&!email){toast('Enter your phone or email first');return;}
+  const out=document.getElementById('test-result');out.textContent='Sending test…';
+  const r=await api('/api/manager?action=test_notify',{method:'POST',body:JSON.stringify({action:'test_notify',phone,email})});
+  const d=await r.json();
+  const bits=[];
+  if(d.sms)bits.push(d.sms.sent?'<span class="key-on">Text sent ✓ check your phone</span>':'<span class="key-off">Text failed: '+esc(d.sms.why)+'</span>');
+  if(d.email)bits.push(d.email.sent?'<span class="key-on">Email sent ✓ check your inbox</span>':'<span class="key-off">Email failed: '+esc(d.email.why)+'</span>');
+  out.innerHTML=bits.join(' · ')||'Nothing to send';
+}
 async function loadSettings(){
-  // provider status
-  document.getElementById('key-email').innerHTML='✉️ Email delivery: '+(PROVIDERS.email?'<span class="key-on">ON — sending live</span>':'<span class="key-off">OFF — add RESEND_API_KEY in Vercel</span>');
-  document.getElementById('key-sms').innerHTML='📱 Text delivery: '+(PROVIDERS.sms?'<span class="key-on">ON — sending live</span>':'<span class="key-off">OFF — add TWILIO keys in Vercel</span>');
+  renderProviderStatus();
   // color picker
   const wrap=document.getElementById('owner-color-opts');
   wrap.innerHTML=COLOR_CHOICES.map(c=>`<span class="color-opt ${c===OWNER_COLOR?'sel':''}" style="background:${c}" onclick="pickOwnerColor('${c}')"></span>`).join('');
