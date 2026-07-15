@@ -52,6 +52,8 @@ app.all('/api/chat',             require('./_ai'));
 app.all('/api/ai',               require('./_ai'));
 app.all('/api/inquiries',        require('./_inquiries'));
 app.all('/api/site-settings',    require('./_site-settings'));
+app.all('/api/clients',          require('./_clients'));
+app.all('/api/notifications',    require('./_notifications'));
 
 // Reminders (24h + 2h before appointment — call daily via cron)
 app.all('/api/reminders',        require('./_reminders'));

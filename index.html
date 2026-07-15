@@ -488,6 +488,31 @@
   </div>
 </section>
 
+<!-- JOIN THE LIST -->
+<section class="section section-soft" id="join-list">
+  <div class="container container-sm" style="text-align:center;">
+    <div class="section-label reveal">Stay in the Loop</div>
+    <h2 class="reveal" style="margin:0.75rem 0 1rem;">Join the ZOLA List</h2>
+    <p class="reveal" style="font-family:'Josefin Sans',sans-serif;font-size:0.92rem;color:var(--latte);max-width:460px;margin:0 auto 2rem;line-height:1.8;">
+      Be first to hear about open spots, new services, and studio news — straight to your phone. No subscription, no cost, just the inside track.
+    </p>
+    <div id="join-form" class="reveal" style="max-width:420px;margin:0 auto;text-align:left;">
+      <label class="luxury-label">Name</label>
+      <input class="luxury-input" id="j-name" placeholder="Your name" style="margin-bottom:0.75rem;" />
+      <label class="luxury-label">Phone</label>
+      <input class="luxury-input" id="j-phone" placeholder="(555) 000-0000" style="margin-bottom:0.75rem;" />
+      <label class="luxury-label">Email (optional)</label>
+      <input class="luxury-input" id="j-email" placeholder="you@email.com" style="margin-bottom:1.25rem;" />
+      <button class="btn-gold" onclick="joinList()" style="animation:none;width:100%;">Join the List ✦</button>
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.68rem;color:var(--latte);margin-top:0.75rem;text-align:center;">Text or email only when it matters. Leave anytime.</p>
+    </div>
+    <div id="join-success" style="display:none;padding:1.5rem 0;">
+      <div style="font-family:'Syne',serif;font-size:1.8rem;color:var(--espresso);margin-bottom:0.5rem;">You're In ✦</div>
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:var(--latte);">Welcome to the inner circle. Watch your phone — spots go fast.</p>
+    </div>
+  </div>
+</section>
+
 <!-- FOOTER -->
 <footer class="footer">
   <div class="container">
@@ -635,6 +660,24 @@
   document.getElementById('hamburger').addEventListener('click', () => {
     document.getElementById('nav-mobile').classList.toggle('open');
   });
+
+  // Join the list signup
+  async function joinList() {
+    const name = document.getElementById('j-name').value.trim();
+    const phone = document.getElementById('j-phone').value.trim();
+    const email = document.getElementById('j-email').value.trim();
+    if (!name || (!phone && !email)) { alert('Please add your name and a phone or email.'); return; }
+    try {
+      await fetch('/api/clients?action=signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'signup', name, phone, email })
+      });
+    } catch (_) {}
+    document.getElementById('join-form').style.display = 'none';
+    document.getElementById('join-success').style.display = 'block';
+  }
+  window.joinList = joinList;
 </script>
 </body>
 </html>

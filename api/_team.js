@@ -22,7 +22,7 @@ module.exports = async function (req, res) {
       if (!pin) return res.status(400).json({ error: 'PIN required' });
       const member = await queryOne('SELECT id, name, role, color FROM team_members WHERE pin=? AND active=1', [pin]);
       if (!member) return res.status(401).json({ error: 'Invalid PIN' });
-      return res.json({ ok: true, member_id: member.id, name: member.name, role: member.role });
+      return res.json({ ok: true, member_id: member.id, name: member.name, role: member.role, color: member.color });
     }
 
     // ── PUBLIC CLIENT CHAT (token, no login) ──

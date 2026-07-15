@@ -234,9 +234,48 @@
   .site-card textarea,.site-card input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--cream);padding:0.7rem 0.85rem;outline:none;font-family:inherit;font-size:0.85rem}
   .site-card textarea:focus,.site-card input:focus{border-color:var(--gold)}
 
+  /* ── NOTIFICATION BELL ── */
+  .bell-wrap{position:relative}
+  .bell{background:none;border:1px solid var(--border);color:var(--muted);width:34px;height:34px;cursor:pointer;font-size:0.95rem;display:inline-flex;align-items:center;justify-content:center;transition:all 0.2s;position:relative}
+  .bell:hover{border-color:var(--gold);color:var(--gold)}
+  .bell-badge{position:absolute;top:-6px;right:-6px;background:#d66;color:#fff;font-size:0.56rem;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+  .bell-drop{position:absolute;right:0;top:42px;width:330px;max-height:420px;overflow-y:auto;background:var(--surface);border:1px solid var(--border-hi);box-shadow:0 18px 50px rgba(0,0,0,0.5);display:none;z-index:90;animation:fadeUp 0.25s ease}
+  .bell-drop.open{display:block}
+  .notif{padding:0.8rem 1rem;border-bottom:1px solid var(--border)}
+  .notif.unread{background:var(--gold-faint);border-left:2px solid var(--gold)}
+  .notif-title{font-family:'Syne',sans-serif;font-size:0.82rem;color:var(--cream)}
+  .notif-body{font-size:0.72rem;color:var(--muted);margin-top:0.15rem}
+  .notif-ts{font-size:0.58rem;color:var(--muted);margin-top:0.2rem;opacity:0.7}
+
+  /* ── CALENDAR DOTS ── */
+  .dot-row{display:flex;gap:3px;flex-wrap:wrap;margin-top:2px}
+  .adot{width:9px;height:9px;border-radius:50%;display:inline-block;box-shadow:0 0 6px rgba(0,0,0,0.4)}
+  .cal-count{font-size:0.56rem;color:var(--muted);margin-top:2px;display:block}
+
+  /* ── UPCOMING LIST ── */
+  .up-group{font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);margin:1.2rem 0 0.5rem}
+
+  /* ── CLIENTS TAB ── */
+  .client-row{display:flex;align-items:center;gap:0.9rem;background:var(--card);border:1px solid var(--border);padding:0.9rem 1.1rem;margin-bottom:0.55rem;cursor:pointer;transition:border-color 0.2s;animation:fadeUp 0.3s ease both}
+  .client-row:hover{border-color:var(--border-hi)}
+  .client-name{font-family:'Syne',sans-serif;font-size:0.95rem;color:var(--cream)}
+  .client-sub{font-size:0.7rem;color:var(--muted)}
+  .client-stat{margin-left:auto;text-align:right;font-size:0.62rem;color:var(--muted)}
+  .optin-pill{font-size:0.52rem;letter-spacing:0.12em;text-transform:uppercase;padding:0.12rem 0.45rem;background:rgba(106,176,122,0.14);color:var(--success)}
+
+  /* ── SETTINGS ── */
+  .set-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  .set-note{font-size:0.7rem;color:var(--muted);line-height:1.6;margin-top:0.5rem}
+  .color-opts{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem}
+  .color-opt{width:30px;height:30px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all 0.2s}
+  .color-opt.sel{border-color:#fff;transform:scale(1.15)}
+  .key-status{display:flex;align-items:center;gap:0.5rem;font-size:0.74rem;margin:0.3rem 0}
+  .key-on{color:var(--success)}.key-off{color:#e08a8a}
+
   @media(max-width:760px){
-    .inbox-layout,.site-grid{grid-template-columns:1fr}
+    .inbox-layout,.site-grid,.set-grid{grid-template-columns:1fr}
     .cal-cell{min-height:64px}
+    .bell-drop{width:280px}
   }
 
   @media(max-width:760px){
@@ -266,6 +305,10 @@
   <div class="topbar">
     <div class="brand"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span><small>Studio Manager</small></div>
     <div class="top-actions">
+      <div class="bell-wrap">
+        <button class="bell" onclick="toggleBell()" title="Notifications">🔔<span class="bell-badge" id="bell-badge" style="display:none">0</span></button>
+        <div class="bell-drop" id="bell-drop"></div>
+      </div>
       <a class="btn btn-ghost btn-sm" href="index.html" target="_blank">View Site ↗</a>
       <button class="btn btn-ghost btn-sm" onclick="logout()">Log Out</button>
     </div>
@@ -276,7 +319,9 @@
     <button class="tab" data-tab="inbox" onclick="showTab('inbox')">Inbox <span class="dot" id="inq-dot" style="display:none">0</span></button>
     <button class="tab" data-tab="messages" onclick="showTab('messages')">Messages <span class="dot" id="msg-dot" style="display:none">0</span></button>
     <button class="tab" data-tab="team" onclick="showTab('team')">Team</button>
+    <button class="tab" data-tab="clients" onclick="showTab('clients')">Clients</button>
     <button class="tab" data-tab="site" onclick="showTab('site')">Site</button>
+    <button class="tab" data-tab="settings" onclick="showTab('settings')">Settings</button>
   </div>
 
   <div class="wrap">
@@ -307,6 +352,7 @@
           <button id="vw-month" class="on" onclick="setView('month')">Month</button>
           <button id="vw-week" onclick="setView('week')">Week</button>
           <button id="vw-day" onclick="setView('day')">Day</button>
+          <button id="vw-upcoming" onclick="setView('upcoming')">Upcoming</button>
         </div>
         <div class="date-nav">
           <button class="icon-btn" onclick="calNav(-1)">‹</button>
@@ -324,7 +370,92 @@
       <div id="cal-month-wrap"></div>
       <div id="cal-week-wrap" style="display:none"></div>
       <div id="schedule-list" style="display:none"></div>
+      <div id="upcoming-wrap" style="display:none"></div>
       <div class="legend" id="cal-legend"></div>
+    </section>
+
+    <!-- CLIENTS -->
+    <section class="panel" id="panel-clients">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Clients</div>
+          <div class="page-desc">The system remembers everyone automatically — every booking and signup builds their profile. Add what they like and don't like; it's saved forever.</div>
+        </div>
+        <input class="login-input" id="client-search" placeholder="Search name, phone, email…" oninput="renderClients()" style="max-width:260px;padding:0.6rem 0.9rem" />
+      </div>
+      <div id="clients-list"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="panel" id="panel-settings">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Settings</div>
+          <div class="page-desc">Your studio's control room — business details, booking policies, notifications, your color, and mass messaging.</div>
+        </div>
+        <button class="btn btn-gold" onclick="saveSettings()">Save All Settings</button>
+      </div>
+      <div class="set-grid">
+        <div class="site-card">
+          <h3>Your Color ✦</h3>
+          <p>Your personal color across the studio system. Your appointments show as dots in this color. Only you can change colors — yours or your team's.</p>
+          <div class="color-opts" id="owner-color-opts"></div>
+          <p class="set-note">Team member colors are set in the Team tab when you add or edit someone — each keeps one consistent color forever.</p>
+        </div>
+        <div class="site-card">
+          <h3>Business Details</h3>
+          <label class="fld-label">Studio Name</label>
+          <input id="set-bizname" placeholder="ZOLA Nail Studio" style="margin-bottom:0.7rem" />
+          <label class="fld-label">Location</label>
+          <input id="set-bizloc" placeholder="Porterville, California" style="margin-bottom:0.7rem" />
+          <label class="fld-label">Working Hours (shown to clients)</label>
+          <input id="set-bizhours" placeholder="Tue–Sat · 9 AM – 6 PM · By appointment" />
+        </div>
+        <div class="site-card">
+          <h3>Booking Policies</h3>
+          <label class="fld-label">Deposit (% of total, due at booking)</label>
+          <input id="set-deposit" type="number" min="0" max="100" placeholder="50" style="margin-bottom:0.7rem" />
+          <label class="fld-label">Free cancellation window (hours before)</label>
+          <input id="set-cancel-hours" type="number" min="0" placeholder="24" style="margin-bottom:0.7rem" />
+          <label class="fld-label">Cancellation policy text (shown at checkout)</label>
+          <textarea id="set-policy-text" rows="3" placeholder="Deposits are non-refundable. With 48+ hours notice…"></textarea>
+        </div>
+        <div class="site-card">
+          <h3>Notifications</h3>
+          <p>What sends automatically, the instant something happens.</p>
+          <div class="key-status" id="key-email">✉️ Email delivery: checking…</div>
+          <div class="key-status" id="key-sms">📱 Text delivery: checking…</div>
+          <p class="set-note">Booking confirmations to clients, new-appointment alerts to your team, and welcome messages to signups are all wired and fire instantly. Delivery switches on the moment the keys above are added in Vercel → Settings → Environment Variables. In-app bell notifications always work.</p>
+        </div>
+        <div class="site-card">
+          <h3>Calendar Preferences</h3>
+          <label class="fld-label">Default calendar view</label>
+          <select id="set-defview" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--cream);padding:0.7rem 0.85rem">
+            <option value="month">Month</option>
+            <option value="week">Week</option>
+            <option value="day">Day</option>
+            <option value="upcoming">Upcoming list</option>
+          </select>
+        </div>
+        <div class="site-card">
+          <h3>Mass Message 📣</h3>
+          <p>One message to your whole list. Use <b>{name}</b> to drop in each client's first name.</p>
+          <textarea id="mass-msg" rows="3" placeholder="Hi {name}! 2 spots opened up this Friday — first come first served ✦"></textarea>
+          <div style="display:flex;gap:0.5rem;margin-top:0.7rem;flex-wrap:wrap">
+            <select id="mass-channel" style="background:var(--bg);border:1px solid var(--border);color:var(--cream);padding:0.55rem 0.7rem">
+              <option value="both">Text + Email</option>
+              <option value="sms">Text only</option>
+              <option value="email">Email only</option>
+            </select>
+            <select id="mass-audience" style="background:var(--bg);border:1px solid var(--border);color:var(--cream);padding:0.55rem 0.7rem">
+              <option value="optin">Signed-up list only</option>
+              <option value="all">All clients</option>
+            </select>
+            <button class="btn btn-gold btn-sm" onclick="sendMass()">Send to Everyone</button>
+          </div>
+          <p class="set-note" id="mass-result"></p>
+        </div>
+      </div>
     </section>
 
     <!-- INBOX -->
@@ -426,6 +557,10 @@
     <input type="hidden" id="m-id" />
     <div class="field"><label class="fld-label">Full Name</label><input id="m-name" placeholder="e.g. Emma Magana" /></div>
     <div class="field"><label class="fld-label">Role / Title</label><input id="m-role" placeholder="Nail Artist" value="Nail Artist" /></div>
+    <div class="field two">
+      <div><label class="fld-label">Phone (gets booking texts)</label><input id="m-phone" placeholder="(555) 000-0000" /></div>
+      <div><label class="fld-label">Email (gets booking emails)</label><input id="m-email" placeholder="artist@email.com" /></div>
+    </div>
     <div class="field"><label class="fld-label">Accent Color</label>
       <select id="m-color">
         <option value="#C4A882">Champagne</option>
@@ -457,6 +592,7 @@
       <div><label class="fld-label">Client Name</label><input id="a-client" placeholder="Client name" /></div>
       <div><label class="fld-label">Client Phone</label><input id="a-phone" placeholder="(555) 000-0000" /></div>
     </div>
+    <div class="field"><label class="fld-label">Client Email (for instant confirmation)</label><input id="a-email" placeholder="client@email.com" /></div>
     <div class="field"><label class="fld-label">Service</label><select id="a-service"></select></div>
     <div class="field two">
       <div><label class="fld-label">Date</label><input type="date" id="a-date" /></div>
@@ -496,10 +632,18 @@ async function login(){
     PWD=pwd;
     const d=await r.json();
     members=d.members||[];appts=d.appointments||[];
+    PROVIDERS=d.providers||{email:false,sms:false};
     sessionStorage.setItem('zm_pwd',pwd);
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='block';
-    renderMembers();renderCal();refreshThreadDot();loadInquiries();
+    // owner color + default view from saved settings
+    try{
+      const sr=await fetch('/api/site-settings');const sd=await sr.json();const s=sd.settings||{};
+      if(s.owner_color)applyOwnerColor(s.owner_color);
+      if(s.default_view&&['month','week','day','upcoming'].includes(s.default_view))calView=s.default_view;
+    }catch{}
+    setView(calView);
+    renderMembers();refreshThreadDot();loadInquiries();loadBell();
   }catch{err.textContent='Connection error.';}
 }
 function logout(){sessionStorage.removeItem('zm_pwd');location.reload();}
@@ -514,13 +658,54 @@ function showTab(name){
   if(name==='team')renderMembers();
   if(name==='inbox')loadInquiries();
   if(name==='site')loadSite();
+  if(name==='clients')loadClients();
+  if(name==='settings')loadSettings();
 }
+
+/* ── OWNER COLOR / THEME ── */
+let OWNER_COLOR='#C4A882';
+let PROVIDERS={email:false,sms:false};
+const COLOR_CHOICES=['#E8A0BF','#C4A882','#B5838D','#9E6B8E','#6B8E9E','#8E9E6B','#E8D4B0','#FFFFFF'];
+function applyOwnerColor(c){
+  OWNER_COLOR=c||'#C4A882';
+  document.documentElement.style.setProperty('--gold',OWNER_COLOR);
+  document.documentElement.style.setProperty('--gold-faint',OWNER_COLOR+'12');
+}
+
+/* ── NOTIFICATION BELL ── */
+let bellOpen=false;
+function toggleBell(){
+  bellOpen=!bellOpen;
+  document.getElementById('bell-drop').classList.toggle('open',bellOpen);
+  if(bellOpen){renderBell();api('/api/notifications',{method:'PUT'}).then(()=>setTimeout(loadBell,800));}
+}
+let notifs=[];
+async function loadBell(){
+  try{
+    const r=await api('/api/notifications');const d=await r.json();
+    notifs=d.notifications||[];
+    const b=document.getElementById('bell-badge');
+    if(d.unread>0){b.style.display='flex';b.textContent=d.unread;}else b.style.display='none';
+    if(bellOpen)renderBell();
+  }catch{}
+}
+function renderBell(){
+  const drop=document.getElementById('bell-drop');
+  if(!notifs.length){drop.innerHTML='<div class="empty" style="padding:1.5rem 1rem">No notifications yet.<br><span style="font-size:0.7rem">You\'ll see every new booking here instantly.</span></div>';return;}
+  drop.innerHTML=notifs.map(n=>`
+    <div class="notif ${Number(n.read)?'':'unread'}">
+      <div class="notif-title">${esc(n.title)}</div>
+      <div class="notif-body">${esc(n.body)}</div>
+      <div class="notif-ts">${new Date(Number(n.ts)).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>
+    </div>`).join('');
+}
+setInterval(()=>{if(PWD)loadBell();},30000);
 
 /* ── CALENDAR ENGINE (Month / Week / Day) ── */
 let calView='month';
 function setView(v){
   calView=v;
-  ['month','week','day'].forEach(x=>document.getElementById('vw-'+x).classList.toggle('on',x===v));
+  ['month','week','day','upcoming'].forEach(x=>document.getElementById('vw-'+x).classList.toggle('on',x===v));
   renderCal();
 }
 function calNav(n){
@@ -539,15 +724,19 @@ function renderCal(){
   document.getElementById('cal-month-wrap').style.display=calView==='month'?'block':'none';
   document.getElementById('cal-week-wrap').style.display=calView==='week'?'block':'none';
   document.getElementById('schedule-list').style.display=calView==='day'?'block':'none';
+  document.getElementById('upcoming-wrap').style.display=calView==='upcoming'?'block':'none';
   renderLegend();
   if(calView==='month')renderMonth();
   else if(calView==='week')renderWeek();
+  else if(calView==='upcoming')renderUpcoming();
   else renderSchedule();
 }
+function apptColor(a){return a.team_member_id?(a.member_color||'#8B7355'):OWNER_COLOR;}
+function apptOwnerName(a){return a.team_member_id?(a.member_name||'Artist'):'You';}
 function renderLegend(){
   const el=document.getElementById('cal-legend');
-  el.innerHTML=members.map(m=>`<span><i style="background:${m.color}"></i>${esc(m.name)}</span>`).join('')
-    +(members.length?'':'<span>Add team members to color-code the calendar.</span>');
+  el.innerHTML=`<span><i style="background:${OWNER_COLOR}"></i>You (Zahra)</span>`
+    +members.map(m=>`<span><i style="background:${m.color}"></i>${esc(m.name)}</span>`).join('');
   const sel=document.getElementById('cal-member-filter');
   const cur=sel.value;
   sel.innerHTML='<option value="">All artists</option>'+members.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
@@ -565,13 +754,35 @@ function renderMonth(){
   for(let i=0;i<first;i++)cells+='<div class="cal-cell off"></div>';
   for(let day=1;day<=days;day++){
     const ds=`${y}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    const dayAppts=list.filter(a=>a.date===ds).sort((a,b)=>a.time.localeCompare(b.time));
-    const chips=dayAppts.slice(0,3).map(a=>`<span class="cal-chip" style="background:${a.member_color||'#8B7355'}">${fmtTime(a.time).replace(':00','')} ${esc((a.client_name||'Open').split(' ')[0])}</span>`).join('');
-    const more=dayAppts.length>3?`<span class="cal-more">+${dayAppts.length-3} more</span>`:'';
-    cells+=`<div class="cal-cell ${ds===today?'today':''} ${ds===curDate?'sel':''}" onclick="openDay('${ds}')"><span class="cal-num">${day}</span>${chips}${more}</div>`;
+    const dayAppts=list.filter(a=>a.date===ds);
+    // one dot per artist booked that day, in their fixed color (owner = your color)
+    const colors=[...new Set(dayAppts.map(a=>apptColor(a)))];
+    const dots=colors.length?`<span class="dot-row">${colors.map(c=>`<span class="adot" style="background:${c}"></span>`).join('')}</span>`:'';
+    const count=dayAppts.length?`<span class="cal-count">${dayAppts.length} appt${dayAppts.length>1?'s':''}</span>`:'';
+    cells+=`<div class="cal-cell ${ds===today?'today':''} ${ds===curDate?'sel':''}" onclick="openDay('${ds}')"><span class="cal-num">${day}</span>${dots}${count}</div>`;
   }
   document.getElementById('cal-month-wrap').innerHTML=
     `<div class="cal-month"><div class="cal-dows"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div><div class="cal-cells">${cells}</div></div>`;
+}
+function renderUpcoming(){
+  document.getElementById('date-label').textContent='Upcoming';
+  const today=new Date().toISOString().slice(0,10);
+  const list=filteredAppts().filter(a=>a.date>=today&&a.status==='scheduled').sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).slice(0,40);
+  const el=document.getElementById('upcoming-wrap');
+  if(!list.length){el.innerHTML='<div class="empty"><div class="big">📅</div>No upcoming appointments yet.</div>';return;}
+  let html='',lastDate='';
+  for(const a of list){
+    if(a.date!==lastDate){lastDate=a.date;html+=`<div class="up-group">${fmtDateLabel(a.date)}</div>`;}
+    html+=`<div class="appt" style="--at:${apptColor(a)}">
+      <div class="appt-time" style="--at:${apptColor(a)}"><div class="t">${fmtTime(a.time)}</div><div class="d">${esc(apptOwnerName(a))}</div></div>
+      <div class="appt-main">
+        <div class="appt-client">${esc(a.client_name||'Open')}</div>
+        <div class="appt-svc">${esc(a.service||'—')}${a.client_phone?' · '+esc(a.client_phone):''}</div>
+      </div>
+      <div class="appt-actions"><button class="btn btn-ghost btn-sm" onclick="editAppt(${a.id})">Edit</button></div>
+    </div>`;
+  }
+  el.innerHTML=html;
 }
 function renderWeek(){
   const d=new Date(curDate+'T12:00:00');
@@ -636,6 +847,8 @@ function openMemberModal(){
   document.getElementById('m-id').value='';
   document.getElementById('m-name').value='';
   document.getElementById('m-role').value='Nail Artist';
+  document.getElementById('m-phone').value='';
+  document.getElementById('m-email').value='';
   document.getElementById('m-color').value='#C4A882';
   document.getElementById('m-active-wrap').style.display='none';
   openModal('modal-member');
@@ -646,6 +859,8 @@ function editMember(id){
   document.getElementById('m-id').value=m.id;
   document.getElementById('m-name').value=m.name;
   document.getElementById('m-role').value=m.role||'Nail Artist';
+  document.getElementById('m-phone').value=m.phone||'';
+  document.getElementById('m-email').value=m.email||'';
   document.getElementById('m-color').value=m.color||'#C4A882';
   document.getElementById('m-active-wrap').style.display='block';
   document.getElementById('m-active').value=String(Number(m.active));
@@ -656,13 +871,15 @@ async function saveMember(){
   const name=document.getElementById('m-name').value.trim();
   const role=document.getElementById('m-role').value.trim();
   const color=document.getElementById('m-color').value;
+  const phone=document.getElementById('m-phone').value.trim();
+  const email=document.getElementById('m-email').value.trim();
   if(!name){toast('Enter a name');return;}
   if(id){
     const active=document.getElementById('m-active').value;
-    await api('/api/manager',{method:'PUT',body:JSON.stringify({action:'update_member',id,name,role,color,active:Number(active)})});
+    await api('/api/manager',{method:'PUT',body:JSON.stringify({action:'update_member',id,name,role,color,phone,email,active:Number(active)})});
     toast('Team member updated');
   }else{
-    const r=await api('/api/manager',{method:'POST',body:JSON.stringify({action:'add_member',name,role,color})});
+    const r=await api('/api/manager',{method:'POST',body:JSON.stringify({action:'add_member',name,role,color,phone,email})});
     const d=await r.json();
     if(d.member)toast('Added — PIN '+d.member.pin);
   }
@@ -733,6 +950,7 @@ function openApptModal(){
   document.getElementById('a-id').value='';
   document.getElementById('a-client').value='';
   document.getElementById('a-phone').value='';
+  document.getElementById('a-email').value='';
   document.getElementById('a-notes').value='';
   document.getElementById('a-date').value=curDate;
   fillMemberSelect(document.getElementById('a-member'),'');
@@ -761,6 +979,7 @@ async function saveAppt(){
     team_member_id:document.getElementById('a-member').value||null,
     client_name:document.getElementById('a-client').value.trim(),
     client_phone:document.getElementById('a-phone').value.trim(),
+    client_email:document.getElementById('a-email').value.trim(),
     service:document.getElementById('a-service').value,
     date:document.getElementById('a-date').value,
     time:document.getElementById('a-time').value,
@@ -772,9 +991,11 @@ async function saveAppt(){
     await api('/api/manager',{method:'PUT',body:JSON.stringify({action:'update_appt',id,...payload})});
     toast('Appointment updated');
   }else{
-    await api('/api/manager',{method:'POST',body:JSON.stringify({action:'add_appt',...payload})});
-    toast('Appointment booked');
+    const r=await api('/api/manager',{method:'POST',body:JSON.stringify({action:'add_appt',...payload})});
+    const d=await r.json().catch(()=>({}));
+    toast(d.notify&&(d.notify.client_sms?.sent||d.notify.client_email?.sent)?'Booked — confirmation sent to client ✦':'Appointment booked ✦');
     curDate=payload.date;
+    loadBell();
   }
   closeModal('modal-appt');await reloadAppts();
 }
@@ -899,6 +1120,129 @@ async function saveSite(){
   };
   const r=await api('/api/site-settings',{method:'PUT',body:JSON.stringify({settings})});
   if(r.ok)toast('Published — live on the site now ✦');else toast('Save failed');
+}
+
+/* ── CLIENTS ── */
+let clients=[];let openClientId=null;
+async function loadClients(){
+  const el=document.getElementById('clients-list');
+  el.innerHTML='<div class="empty">Loading clients…</div>';
+  try{
+    const r=await api('/api/clients');const d=await r.json();
+    clients=d.clients||[];renderClients();
+  }catch{el.innerHTML='<div class="empty">Could not load clients.</div>';}
+}
+function renderClients(){
+  const q=(document.getElementById('client-search').value||'').toLowerCase();
+  const list=clients.filter(c=>!q||String(c.name||'').toLowerCase().includes(q)||String(c.phone||'').includes(q)||String(c.email||'').toLowerCase().includes(q));
+  const el=document.getElementById('clients-list');
+  if(!list.length){el.innerHTML='<div class="empty"><div class="big">👥</div>'+(clients.length?'No matches.':'No clients yet.<br><span style="font-size:0.72rem">Every booking and signup automatically creates a client profile here.</span>')+'</div>';return;}
+  el.innerHTML=list.map((c,i)=>{
+    const isOpen=openClientId===c.id;
+    const head=`<div class="client-row" style="animation-delay:${i*0.03}s;${isOpen?'border-color:var(--gold);':''}" onclick="toggleClient(${c.id})">
+      <div class="avatar" style="background:${OWNER_COLOR};width:38px;height:38px;font-size:0.95rem">${initials(c.name||'?')}</div>
+      <div><div class="client-name">${esc(c.name||'Unnamed')}</div>
+      <div class="client-sub">${esc(c.phone||'')}${c.phone&&c.email?' · ':''}${esc(c.email||'')}</div></div>
+      <div class="client-stat">${Number(c.visits)||0} visit${Number(c.visits)===1?'':'s'}${c.last_service?'<br>Last: '+esc(c.last_service):''}<br>${Number(c.marketing_opt_in)?'<span class="optin-pill">On your list</span>':''}</div>
+    </div>`;
+    if(!isOpen)return head;
+    return head+`<div class="site-card" style="margin:-0.3rem 0 0.8rem;border-top:none;animation:fadeUp 0.25s ease">
+      <div class="field two">
+        <div><label class="fld-label">Name</label><input id="cl-name" value="${esc(c.name||'')}" /></div>
+        <div><label class="fld-label">Phone</label><input id="cl-phone" value="${esc(c.phone||'')}" /></div>
+      </div>
+      <div class="field"><label class="fld-label">Email</label><input id="cl-email" value="${esc(c.email||'')}" /></div>
+      <div class="field two">
+        <div><label class="fld-label">💛 Likes (shapes, colors, styles)</label><textarea id="cl-likes" rows="2">${esc(c.likes||'')}</textarea></div>
+        <div><label class="fld-label">🚫 Dislikes / avoid</label><textarea id="cl-dislikes" rows="2">${esc(c.dislikes||'')}</textarea></div>
+      </div>
+      <div class="field"><label class="fld-label">Notes (allergies, preferences, anything)</label><textarea id="cl-notes" rows="2">${esc(c.notes||'')}</textarea></div>
+      <label style="display:flex;gap:0.5rem;align-items:center;font-size:0.78rem;color:var(--muted);margin-bottom:0.9rem"><input type="checkbox" id="cl-optin" ${Number(c.marketing_opt_in)?'checked':''}/> Gets mass messages</label>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+        <button class="btn btn-gold btn-sm" onclick="saveClient(${c.id})">Save Profile</button>
+        <button class="btn btn-danger btn-sm" onclick="delClient(${c.id})">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function toggleClient(id){openClientId=openClientId===id?null:id;renderClients();}
+async function saveClient(id){
+  await api('/api/clients?action=update',{method:'PUT',body:JSON.stringify({action:'update',id,
+    name:document.getElementById('cl-name').value.trim(),
+    phone:document.getElementById('cl-phone').value.trim(),
+    email:document.getElementById('cl-email').value.trim(),
+    likes:document.getElementById('cl-likes').value.trim(),
+    dislikes:document.getElementById('cl-dislikes').value.trim(),
+    notes:document.getElementById('cl-notes').value.trim(),
+    marketing_opt_in:document.getElementById('cl-optin').checked?1:0})});
+  toast('Client profile saved — the system will remember ✦');
+  openClientId=null;await loadClients();
+}
+async function delClient(id){
+  if(!confirm('Delete this client profile?'))return;
+  await api('/api/clients',{method:'DELETE',body:JSON.stringify({id})});
+  openClientId=null;await loadClients();
+}
+
+/* ── SETTINGS ── */
+async function loadSettings(){
+  // provider status
+  document.getElementById('key-email').innerHTML='✉️ Email delivery: '+(PROVIDERS.email?'<span class="key-on">ON — sending live</span>':'<span class="key-off">OFF — add RESEND_API_KEY in Vercel</span>');
+  document.getElementById('key-sms').innerHTML='📱 Text delivery: '+(PROVIDERS.sms?'<span class="key-on">ON — sending live</span>':'<span class="key-off">OFF — add TWILIO keys in Vercel</span>');
+  // color picker
+  const wrap=document.getElementById('owner-color-opts');
+  wrap.innerHTML=COLOR_CHOICES.map(c=>`<span class="color-opt ${c===OWNER_COLOR?'sel':''}" style="background:${c}" onclick="pickOwnerColor('${c}')"></span>`).join('');
+  try{
+    const r=await fetch('/api/site-settings');const d=await r.json();const s=d.settings||{};
+    document.getElementById('set-bizname').value=s.biz_name||'';
+    document.getElementById('set-bizloc').value=s.biz_location||'';
+    document.getElementById('set-bizhours').value=s.biz_hours||'';
+    document.getElementById('set-deposit').value=s.deposit_pct||'';
+    document.getElementById('set-cancel-hours').value=s.cancel_hours||'';
+    document.getElementById('set-policy-text').value=s.policy_text||'';
+    document.getElementById('set-defview').value=s.default_view||'month';
+  }catch{}
+}
+function pickOwnerColor(c){
+  applyOwnerColor(c);
+  document.querySelectorAll('.color-opt').forEach(el=>el.classList.toggle('sel',el.style.background&&rgbToHex(el.style.backgroundColor)===c.toLowerCase()));
+  loadSettings();renderCal();
+  toast('Your color updated — hit Save All Settings to keep it');
+}
+function rgbToHex(rgb){
+  const m=String(rgb).match(/\d+/g);if(!m)return String(rgb).toLowerCase();
+  return '#'+m.slice(0,3).map(x=>Number(x).toString(16).padStart(2,'0')).join('');
+}
+async function saveSettings(){
+  const settings={
+    owner_color:OWNER_COLOR,
+    biz_name:document.getElementById('set-bizname').value.trim(),
+    biz_location:document.getElementById('set-bizloc').value.trim(),
+    biz_hours:document.getElementById('set-bizhours').value.trim(),
+    deposit_pct:document.getElementById('set-deposit').value,
+    cancel_hours:document.getElementById('set-cancel-hours').value,
+    policy_text:document.getElementById('set-policy-text').value.trim(),
+    default_view:document.getElementById('set-defview').value,
+  };
+  const r=await api('/api/site-settings',{method:'PUT',body:JSON.stringify({settings})});
+  if(r.ok)toast('Settings saved ✦');else toast('Save failed');
+}
+async function sendMass(){
+  const message=document.getElementById('mass-msg').value.trim();
+  if(!message){toast('Write your message first');return;}
+  if(!confirm('Send this message to your list right now?'))return;
+  const out=document.getElementById('mass-result');
+  out.textContent='Sending…';
+  const r=await api('/api/clients?action=mass',{method:'POST',body:JSON.stringify({action:'mass',message,
+    channel:document.getElementById('mass-channel').value,
+    audience:document.getElementById('mass-audience').value==='all'?'all':'optin'})});
+  const d=await r.json();
+  if(d.provider_missing){
+    out.innerHTML='<span class="key-off">Reached '+d.targeted+' people on your list, but delivery keys aren\'t connected yet — add TWILIO / RESEND keys in Vercel and this button sends for real.</span>';
+  }else if(d.ok){
+    out.innerHTML='<span class="key-on">Sent ✦ '+d.sms_sent+' texts · '+d.emails_sent+' emails ('+d.targeted+' people targeted'+(d.skipped?', '+d.skipped+' had no contact info':'')+')</span>';
+    toast('Mass message sent ✦');
+  }else out.textContent='Send failed — try again.';
 }
 
 /* ── MESSAGES ── */

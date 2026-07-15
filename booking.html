@@ -421,6 +421,10 @@
       </div>
 
       <!-- Client info -->
+      <div id="welcome-back" style="display:none;background:rgba(196,168,130,0.08);border:1px solid rgba(196,168,130,0.25);padding:0.85rem 1.1rem;margin-bottom:1rem;font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--espresso);">
+        Welcome back, <strong id="wb-name">✦</strong> — your details are filled in below.
+        <a href="#" onclick="clearSavedClient();return false;" style="color:var(--champagne);margin-left:0.4rem;">Not you?</a>
+      </div>
       <div style="margin:1.25rem 0;">
         <label class="luxury-label">Full Name</label>
         <input class="luxury-input" id="client-name" placeholder="Your name" style="margin-bottom:0.75rem;" />
@@ -967,6 +971,9 @@ async function submitBooking() {
       return;
     }
 
+    // Remember this client on this device so next booking is 3 fields shorter
+    try { localStorage.setItem('zola_client', JSON.stringify({ name, phone, email })); } catch (_) {}
+
     document.getElementById('step-4').querySelector('.step-nav').style.display = 'none';
     document.getElementById('booking-conf-num').textContent = 'Confirmation: ' + data.confirmation;
     document.getElementById('booking-success').style.display = 'block';
@@ -984,6 +991,52 @@ window.addEventListener('scroll', () => {
 document.getElementById('hamburger').addEventListener('click', () => {
   document.getElementById('nav-mobile').classList.toggle('open');
 });
+
+// ── Returning client: prefill saved details so rebooking takes seconds ──
+function applySavedClient(c) {
+  if (!c) return;
+  if (c.name)  document.getElementById('client-name').value  = c.name;
+  if (c.phone) document.getElementById('client-phone').value = c.phone;
+  if (c.email) document.getElementById('client-email').value = c.email;
+  if (c.name) {
+    document.getElementById('wb-name').textContent = c.name.split(' ')[0];
+    document.getElementById('welcome-back').style.display = 'block';
+  }
+}
+function clearSavedClient() {
+  try { localStorage.removeItem('zola_client'); } catch (_) {}
+  ['client-name','client-phone','client-email'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('welcome-back').style.display = 'none';
+}
+(function () {
+  try {
+    const saved = JSON.parse(localStorage.getItem('zola_client') || 'null');
+    if (saved) { applySavedClient(saved); return; }
+  } catch (_) {}
+})();
+// If they type an email/phone we already know (booked on another device), autofill the rest
+async function lookupClient(el) {
+  const q = el.value.trim();
+  if (q.length < 6) return;
+  try {
+    const r = await fetch('/api/clients?action=lookup&q=' + encodeURIComponent(q));
+    const d = await r.json();
+    if (d.found && d.client) {
+      const cur = {
+        name: document.getElementById('client-name').value.trim(),
+        phone: document.getElementById('client-phone').value.trim(),
+        email: document.getElementById('client-email').value.trim(),
+      };
+      applySavedClient({
+        name: cur.name || d.client.name,
+        phone: cur.phone || d.client.phone,
+        email: cur.email || d.client.email,
+      });
+    }
+  } catch (_) {}
+}
+document.getElementById('client-email').addEventListener('blur', function () { lookupClient(this); });
+document.getElementById('client-phone').addEventListener('blur', function () { lookupClient(this); });
 </script>
 </body>
 </html>

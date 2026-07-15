@@ -51,6 +51,34 @@ async function ensureTables() {
     key TEXT PRIMARY KEY,
     value TEXT
   )`);
+  await execute(`CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    recipient TEXT,          -- 'owner' | 'member'
+    member_id INTEGER,
+    title TEXT,
+    body TEXT,
+    read INTEGER DEFAULT 0,
+    ts INTEGER
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS clients (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    email TEXT,
+    phone TEXT,
+    likes TEXT DEFAULT '',
+    dislikes TEXT DEFAULT '',
+    notes TEXT DEFAULT '',
+    marketing_opt_in INTEGER DEFAULT 0,
+    visits INTEGER DEFAULT 0,
+    last_service TEXT DEFAULT '',
+    last_visit TEXT DEFAULT '',
+    created_ts INTEGER
+  )`);
+  // Columns added after launch — idempotent, ignored once they exist
+  for (const sql of [
+    "ALTER TABLE team_members ADD COLUMN phone TEXT DEFAULT ''",
+    "ALTER TABLE team_members ADD COLUMN email TEXT DEFAULT ''",
+  ]) { try { await execute(sql); } catch (_) {} }
   _ready = true;
 }
 

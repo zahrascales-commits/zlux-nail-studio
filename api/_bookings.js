@@ -1,5 +1,8 @@
 const { services, addons, bookings, ALL_SLOTS, incId } = require('./_store');
 const { queryOne, execute } = require('./_db');
+const { notifyNewAppointment } = require('./_notify');
+const { upsertClient } = require('./_clients');
+const teamDb = require('./_team-db');
 
 const NAIL_FACTS = [
   "Cuticle oil is your best friend before a visit — apply it daily leading up to your appointment for the smoothest results.",
@@ -223,6 +226,7 @@ module.exports = async (req, res) => {
       );
     } catch (_) {}
 
+    // Legacy sender (SendGrid/Twilio npm packages, if those keys exist)
     sendBookingConfirmation({
       customerName: customer_name,
       customerEmail: customer_email,
@@ -235,6 +239,32 @@ module.exports = async (req, res) => {
       totalCents: total_cents,
       depositCents: deposit_cents,
     }).catch(() => {});
+
+    // Unified pipeline: mirror into the team calendar (dots + team portal),
+    // remember the client, alert the booked artist + owner instantly.
+    try {
+      await teamDb.ensureTables();
+      let m = null;
+      if (worker) m = await teamDb.queryOne('SELECT id, name, phone, email FROM team_members WHERE name=? AND active=1', [worker]).catch(() => null);
+      await teamDb.execute(
+        `INSERT INTO team_appointments (team_member_id, client_name, client_phone, service, date, time, notes, status, chat_token)
+         VALUES (?,?,?,?,?,?,?, 'scheduled', ?)`,
+        [m ? m.id : null, customer_name, customer_phone || '', service_name, date, time_slot,
+         'Booked online · ' + confirmation + (addon_names.length ? ' · +' + addon_names.join(', ') : ''), teamDb.token()]
+      );
+      // Skip duplicate client email/SMS if the legacy SendGrid path is active
+      const legacyActive = !!process.env.SENDGRID_API_KEY;
+      await notifyNewAppointment({
+        clientName: customer_name,
+        clientEmail: legacyActive ? null : customer_email,
+        clientPhone: (legacyActive && process.env.TWILIO_ACCOUNT_SID) ? null : customer_phone,
+        service: service_name, date, time: time_slot,
+        dateLabel: formatDate(date), timeLabel: formatTime(time_slot),
+        memberId: m ? m.id : null, memberName: m ? m.name : null,
+        memberPhone: m ? m.phone : null, memberEmail: m ? m.email : null,
+      });
+      await upsertClient({ name: customer_name, email: customer_email, phone: customer_phone, service: service_name, date });
+    } catch (_) {}
 
     return res.status(201).json({ id, confirmation, total_cents, deposit_cents });
   }
