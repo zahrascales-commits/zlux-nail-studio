@@ -131,6 +131,7 @@
   <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
 </nav>
 <div class="nav-mobile" id="nav-mobile">
+  <a href="index.html">Home</a>
   <a href="services.html">Services</a>
   <a href="memberships.html">Memberships</a>
   <a href="about.html">About</a>
@@ -1109,9 +1110,7 @@ async function submitBooking() {
 window.addEventListener('scroll', () => {
   document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60);
 });
-document.getElementById('hamburger').addEventListener('click', () => {
-  document.getElementById('nav-mobile').classList.toggle('open');
-});
+// Hamburger toggle handled by js/main.js (avoids double-toggle bug)
 
 // Owner test mode: booking.html?test=1 reveals the $1 test service
 if (new URLSearchParams(location.search).get('test') === '1') {

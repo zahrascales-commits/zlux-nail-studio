@@ -26,13 +26,43 @@ document.addEventListener('DOMContentLoaded', () => {
     btt.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
   }
 
-  /* ── MOBILE NAV ── */
+  /* ── MOBILE NAV (full-screen drawer) ── */
   const hamburger = document.getElementById('hamburger');
   const navMobile = document.getElementById('nav-mobile');
   if (hamburger && navMobile) {
-    hamburger.addEventListener('click', () => navMobile.classList.toggle('open'));
+    // Inject a close (×) button once, appended after the links so it never
+    // shifts the nth-of-type stagger delays on the <a> tags.
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'nav-mobile-close';
+    closeBtn.setAttribute('aria-label', 'Close menu');
+    closeBtn.innerHTML = '&times;';
+    navMobile.appendChild(closeBtn);
+
+    const openMenu = () => {
+      navMobile.classList.add('open');
+      hamburger.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    };
+    const closeMenu = () => {
+      navMobile.classList.remove('open');
+      hamburger.classList.remove('open');
+      document.body.style.overflow = '';
+    };
+
+    hamburger.addEventListener('click', () => {
+      navMobile.classList.contains('open') ? closeMenu() : openMenu();
+    });
+    closeBtn.addEventListener('click', closeMenu);
+    // Tapping the dark backdrop itself (not a link) also closes it
+    navMobile.addEventListener('click', (e) => {
+      if (e.target === navMobile) closeMenu();
+    });
     navMobile.querySelectorAll('a').forEach(a => {
-      a.addEventListener('click', () => navMobile.classList.remove('open'));
+      a.addEventListener('click', closeMenu);
+    });
+    // Escape key closes it (desktop/keyboard users)
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeMenu();
     });
   }
 
@@ -109,27 +139,38 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  /* ── SOCIAL PROOF TOASTS ── */
+  /* ── SOCIAL PROOF TOASTS ──
+     Timing tuned to published FOMO-notification research (Fomo.com /
+     ProveSource field data): first toast ~8-12s in (visitor has absorbed
+     the hero but hasn't decided to leave), each visible ~5s, then repeat
+     on a RANDOMIZED 25-45s gap (a fixed interval reads as robotic once
+     a visitor notices the rhythm). Capped at 6 appearances per session
+     so a long visit never turns into spam — quiet luxury, not a flash sale. */
   const toast = document.getElementById('sp-toast');
   if (toast) {
     const msgs = [
-      ['Just viewed', 'Black Card — 4 founding spots remaining'],
-      ['New member', 'Joined Luxe Club today'],
       ['Appointment booked', 'Organic Manicure — this week'],
       ['Spot claimed', 'Signature Club now 92% full'],
-      ['Member milestone', '6-month streak — Black Card holder'],
+      ['New member', 'Joined Luxe Club today'],
+      ['Just viewed', 'Black Card — 4 founding spots remaining'],
+      ['Appointment booked', 'Russian Dry Pedicure — this week'],
+      ['Spot claimed', 'Luxe Club — 2 spots left'],
     ];
-    let mi = 0;
+    const order = [...msgs.keys()].sort(() => Math.random() - 0.5); // shuffled, no immediate repeats
+    let shown = 0;
+    const MAX_SHOWS = 6;
+    const rand = (min, max) => Math.floor(min + Math.random() * (max - min));
+
     const show = () => {
-      const [title, body] = msgs[mi % msgs.length];
+      const [title, body] = msgs[order[shown % order.length]];
       toast.querySelector('.sp-toast-title').textContent = title;
       toast.querySelector('.sp-toast-body').textContent  = body;
       toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 4200);
-      mi++;
+      setTimeout(() => toast.classList.remove('show'), 5000);
+      shown++;
+      if (shown < MAX_SHOWS) setTimeout(show, rand(25000, 45000));
     };
-    setTimeout(show, 14000);
-    setInterval(show, 38000);
+    setTimeout(show, rand(8000, 12000));
   }
 
   /* ── HERO PARTICLE CANVAS ── */

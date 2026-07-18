@@ -24,7 +24,13 @@
   <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
 </nav>
 <div class="nav-mobile" id="nav-mobile">
-  <a href="index.html">Home</a><a href="services.html">Services</a><a href="memberships.html">Memberships</a><a href="about.html">About</a><a href="contact.html">Contact</a><a href="team.html">Team Login</a><a href="booking.html">Book Now</a>
+  <a href="index.html">Home</a>
+  <a href="services.html">Services</a>
+  <a href="memberships.html">Memberships</a>
+  <a href="about.html">About</a>
+  <a href="contact.html">Contact</a>
+  <a href="team.html">Team Login</a>
+  <a href="booking.html" class="nav-cta">Book Now</a>
 </div>
 
 <div style="padding-top:8rem;background:var(--espresso);padding-bottom:4rem;text-align:center;">
@@ -104,7 +110,7 @@
     <div class="grid-2">
       <div class="luxury-card">
         <h3 style="font-size:1.2rem;margin-bottom:0.4rem;">Soak Off Removal</h3>
-        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:var(--latte);margin-bottom:0.75rem;line-height:1.7;">Have nails from another salon? Add this to your new service booking. Required if coming in with existing acrylics, gel, or dip.</p>
+        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:var(--latte);margin-bottom:0.75rem;line-height:1.7;">Have nails from another salon? Add this to your new service booking. Required if coming in with existing acrylics or gel.</p>
         <div style="font-family:'Syne',serif;font-size:1.8rem;color:var(--champagne);">+$35</div>
       </div>
       <div class="luxury-card">
@@ -167,8 +173,9 @@
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:2rem;">
         <div style="flex:1;min-width:260px;">
           <h3 style="font-size:1.5rem;margin-bottom:0.75rem;">Mini Manicure &amp; Nail Art</h3>
-          <p style="font-family:'Josefin Sans',sans-serif;font-size:0.88rem;color:var(--latte);line-height:1.8;margin-bottom:1rem;">A curated party experience designed for children — safe, fun, and elevated. Every child gets a mini manicure and custom nail art in a warm studio setting. No chaos. No shortcuts. Just little hands leaving with something special on them.</p>
+          <p style="font-family:'Josefin Sans',sans-serif;font-size:0.88rem;color:var(--latte);line-height:1.8;margin-bottom:1rem;">A curated party experience designed for children — safe, fun, and elevated. Every child gets a mini manicure and custom nail art in a warm studio setting. No chaos. No shortcuts. Just little hands leaving with something special on them. We travel to you — Zola comes to your event, wherever it's happening.</p>
           <ul style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);list-style:none;padding:0;line-height:2.1;margin-bottom:1.25rem;">
+            <li>✦ &nbsp; We travel to your event — home, venue, anywhere</li>
             <li>✦ &nbsp; Mini manicure for every child</li>
             <li>✦ &nbsp; Custom nail art — age-appropriate, fun, and creative</li>
             <li>✦ &nbsp; Non-toxic, child-safe products only</li>
@@ -224,7 +231,7 @@
 <script src="js/chatbot.js"></script>
 <script>
   window.addEventListener('scroll', () => { document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60); });
-  document.getElementById('hamburger').addEventListener('click', () => { document.getElementById('nav-mobile').classList.toggle('open'); });
+  // Hamburger toggle handled by js/main.js (avoids double-toggle bug)
 </script>
 </body>
 </html>

@@ -73,7 +73,7 @@
   <a href="about.html">About</a>
   <a href="contact.html">Contact</a>
   <a href="team.html">Team Login</a>
-  <a href="memberships.html">Buy a Membership</a>
+  <a href="memberships.html" class="nav-cta">Buy a Membership</a>
 </div>
 
 <!-- HERO -->
@@ -85,7 +85,7 @@
   <div class="hero-content animate-slide-up">
     <div class="section-label">Porterville, California</div>
     <h1>Nails That Speak<br><span class="gold-text">Before You Do</span></h1>
-    <p class="hero-sub">A private membership studio where your nails are never an afterthought. Limited spots. Zero compromises.</p>
+    <p class="hero-sub">A private membership studio where your dream nails come true — with a plan tailored just for you.</p>
     <div class="hero-ctas">
       <a href="memberships.html" class="btn-gold">Buy a ZOLA Membership</a>
       <a href="memberships.html" class="btn-outline">See All Tiers</a>
@@ -391,7 +391,7 @@
         <div class="section-label">For the Little Ones</div>
         <h2 style="margin:0.75rem 0 1.25rem;">Princess Party<br>Experience</h2>
         <p style="font-family:'Josefin Sans',sans-serif;font-size:0.95rem;color:var(--latte);line-height:1.9;margin-bottom:1rem;">
-          Your daughter's nails deserve the same care and joy as yours. Zola princess parties bring the full studio experience to the kids in your life — an elevated, fun, and totally safe nail event that little ones remember.
+          Your daughter's nails deserve the same care and joy as yours. Zola princess parties bring the full studio experience to the kids in your life — an elevated, fun, and totally safe nail event that little ones remember. We travel to you — Zola comes to your event, wherever it's happening.
         </p>
         <p style="font-family:'Josefin Sans',sans-serif;font-size:0.88rem;color:var(--latte);line-height:1.8;margin-bottom:1.5rem;">
           Every child gets a mini manicure and custom nail art in a warm, welcoming space designed just for them. No rushing. No shortcuts. Just tiny hands leaving with something beautiful on them and a memory worth talking about.
@@ -409,6 +409,7 @@
           </div>
         </div>
         <ul style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);line-height:2;list-style:none;padding:0;margin-bottom:1.75rem;">
+          <li>✦ &nbsp; We travel to your event — home, venue, anywhere</li>
           <li>✦ &nbsp; Mini manicure for every child</li>
           <li>✦ &nbsp; Custom nail art — age-appropriate, fun, and creative</li>
           <li>✦ &nbsp; Zola studio experience in a kid-friendly format</li>
@@ -423,6 +424,7 @@
           <div style="font-family:'Syne',serif;font-size:1.6rem;color:var(--espresso);line-height:1.4;">Princess<br>Party</div>
           <div style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--latte);">By Zola Nails</div>
           <div style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--latte);margin-top:0.5rem;line-height:1.7;max-width:200px;">Luxury nail experience, made for the little queens in your life</div>
+          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.62rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--champagne);background:rgba(196,168,130,0.12);padding:0.3rem 0.8rem;margin-top:0.75rem;">We Travel to You</div>
         </div>
       </div>
     </div>
@@ -656,10 +658,7 @@
     document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60);
   });
 
-  // Hamburger
-  document.getElementById('hamburger').addEventListener('click', () => {
-    document.getElementById('nav-mobile').classList.toggle('open');
-  });
+  // Hamburger toggle handled by js/main.js (avoids double-toggle bug)
 
   // Join the list signup
   async function joinList() {

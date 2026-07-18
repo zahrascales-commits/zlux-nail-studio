@@ -24,7 +24,13 @@
   <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
 </nav>
 <div class="nav-mobile" id="nav-mobile">
-  <a href="index.html">Home</a><a href="services.html">Services</a><a href="memberships.html">Memberships</a><a href="about.html">About</a><a href="contact.html">Contact</a><a href="team.html">Team Login</a><a href="booking.html">Book Now</a>
+  <a href="index.html">Home</a>
+  <a href="services.html">Services</a>
+  <a href="memberships.html">Memberships</a>
+  <a href="about.html">About</a>
+  <a href="contact.html">Contact</a>
+  <a href="team.html">Team Login</a>
+  <a href="booking.html" class="nav-cta">Book Now</a>
 </div>
 
 <div style="padding-top:8rem;background:var(--espresso);padding-bottom:4rem;text-align:center;">
@@ -138,7 +144,7 @@
     document.getElementById('contact-success').style.display = 'block';
   }
   window.addEventListener('scroll', () => { document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60); });
-  document.getElementById('hamburger').addEventListener('click', () => { document.getElementById('nav-mobile').classList.toggle('open'); });
+  // Hamburger toggle handled by js/main.js (avoids double-toggle bug)
 </script>
 </body>
 </html>

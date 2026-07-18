@@ -269,7 +269,13 @@
   <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
 </nav>
 <div class="nav-mobile" id="nav-mobile">
-  <a href="index.html">Home</a><a href="services.html">Services</a><a href="memberships.html">Memberships</a><a href="about.html">About</a><a href="contact.html">Contact</a><a href="team.html">Team Login</a><a href="booking.html">Book Now</a>
+  <a href="index.html">Home</a>
+  <a href="services.html">Services</a>
+  <a href="memberships.html">Memberships</a>
+  <a href="about.html">About</a>
+  <a href="contact.html">Contact</a>
+  <a href="team.html">Team Login</a>
+  <a href="booking.html" class="nav-cta">Book Now</a>
 </div>
 
 <div class="signup-wrap">
@@ -539,9 +545,22 @@
     initStripe();
   }
 
-  function initStripe() {
+  async function initStripe() {
     if (stripe) return;
-    stripe = Stripe(document.querySelector('meta[name="stripe-pk"]')?.content || window.STRIPE_PK || 'pk_test_51ThhZRQ9pYWoKTNtWDpFLPKeTno3SbRe9MaWWqfw4TdHoYKmMMPcFwgoHMnDo9gp70XQemo1V7IMPT2bxYgUyqOB006z1OkhRZ');
+    // Single source of truth: the live/test publishable key always comes
+    // from the server (Vercel env var), same as booking.html. This means
+    // going live is just swapping keys in Vercel — no code to touch here.
+    let pk = document.querySelector('meta[name="stripe-pk"]')?.content || window.STRIPE_PK;
+    if (!pk) {
+      try {
+        const cfg = await (await fetch('/api/pay?action=config')).json();
+        pk = cfg.publishable_key;
+      } catch (_) {}
+    }
+    // Last-resort fallback only if the server is unreachable — keeps the
+    // signup form from hard-crashing, but this is test-mode and should
+    // never be hit once /api/pay is live.
+    stripe = Stripe(pk || 'pk_test_51ThhZRQ9pYWoKTNtWDpFLPKeTno3SbRe9MaWWqfw4TdHoYKmMMPcFwgoHMnDo9gp70XQemo1V7IMPT2bxYgUyqOB006z1OkhRZ');
     const elements = stripe.elements();
     cardElement = elements.create('card', {
       style: {
@@ -709,7 +728,7 @@
   }
 
   window.addEventListener('scroll', () => { document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60); });
-  document.getElementById('hamburger').addEventListener('click', () => { document.getElementById('nav-mobile').classList.toggle('open'); });
+  // Hamburger toggle handled by js/main.js (avoids double-toggle bug)
 </script>
 </body>
 </html>
