@@ -265,17 +265,13 @@
       </button>
 
       <div class="section-label" style="margin:1rem 0 0.75rem;">Pedicure</div>
-      <button class="option-btn" id="svc-btn-7" onclick="selectService('Hydro Free Pedicure',85,'pedicure',this)">
-        <div><span class="option-name">Hydro Free Pedicure</span></div>
-        <div style="text-align:right;"><span class="option-price" id="price-7">$85</span><div id="tag-7"></div></div>
+      <button class="option-btn" id="svc-btn-7" onclick="selectService('Russian Dry Pedicure',95,'pedicure',this)">
+        <div><span class="option-name">Russian Dry Pedicure</span><span class="option-sub">Water-free Russian technique — the healthiest way to grow out your natural nails</span></div>
+        <div style="text-align:right;"><span class="option-price" id="price-7">$95</span><div id="tag-7"></div></div>
       </button>
-      <button class="option-btn" id="svc-btn-8" onclick="selectService('Classic Spa Pedicure',95,'pedicure',this)">
-        <div><span class="option-name">Classic Spa Pedicure</span></div>
-        <div style="text-align:right;"><span class="option-price" id="price-8">$95</span><div id="tag-8"></div></div>
-      </button>
-      <button class="option-btn" id="svc-btn-9" onclick="selectService('Royal Citrus Pedicure',105,'pedicure',this)">
-        <div><span class="option-name">Royal Citrus Pedicure</span></div>
-        <div style="text-align:right;"><span class="option-price" id="price-9">$105</span><div id="tag-9"></div></div>
+      <button class="option-btn" id="svc-btn-8" onclick="selectService('Russian Dry Pedicure — Full Correction',125,'pedicure',this)">
+        <div><span class="option-name">Russian Dry Pedicure — Full Correction</span><span class="option-sub">Complete foot renewal — exfoliation, buffing, and callus correction each visit</span></div>
+        <div style="text-align:right;"><span class="option-price" id="price-8">$125</span><div id="tag-8"></div></div>
       </button>
 
       <div class="section-label" style="margin:1.25rem 0 0.75rem;">Add-Ons <span style="font-size:0.65rem;color:var(--latte);text-transform:none;letter-spacing:0;">(optional)</span></div>
@@ -664,7 +660,7 @@ function updateServiceTags() {
       tag.innerHTML = '<span class="addon-free-tag">Included</span>';
     }
   }
-  for (let i = 7; i <= 9; i++) {
+  for (let i = 7; i <= 8; i++) {
     const tag = document.getElementById('tag-' + i);
     if (!tag) continue;
     if (rules.freeServiceCount !== null || rules.freePedicures > 0) {

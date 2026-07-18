@@ -1,15 +1,14 @@
 // Module-level singleton — persists across warm invocations on the same instance
 const services = [
-  { id: 1,  name: 'Organic Structured Manicure', description: 'A healthy nail enhancement using organic product for a clean, structured look.', duration_min: 60, price_cents: 9000, starting_at: true },
+  { id: 1,  name: 'Organic Structured Manicure', description: 'A healthy nail enhancement using organic product for a clean, structured look. As we learn you, we tailor every visit precisely to you.', duration_min: 60, price_cents: 9000, starting_at: true },
   { id: 2,  name: 'Medium Gel X',                description: 'Medium-length Gel X extensions for a sleek, polished finish.',                  duration_min: 75, price_cents: 10000 },
   { id: 3,  name: 'Short Gel X',                 description: 'Short Gel X extensions — low-maintenance, high-impact.',                         duration_min: 60, price_cents: 9500  },
   { id: 4,  name: 'Long Gel X',                  description: 'Long Gel X extensions for a dramatic, statement look.',                           duration_min: 90, price_cents: 11000 },
   { id: 5,  name: 'Long Acrylic',                description: 'Long acrylic nails sculpted to perfection.',                                     duration_min: 90, price_cents: 11000 },
   { id: 6,  name: 'Medium Acrylic',              description: 'Classic medium acrylic nails with a flawless finish.',                           duration_min: 75, price_cents: 10000 },
   { id: 7,  name: 'Short Acrylic',               description: 'Short acrylic nails — clean, precise, and polished.',                            duration_min: 60, price_cents: 9500  },
-  { id: 8,  name: 'Hydro Free Pedicure',         description: 'A waterless pedicure using advanced dry techniques for a hygienic treatment.',   duration_min: 60, price_cents: 8500  },
-  { id: 9,  name: 'Classic Spa Pedicure',        description: 'A luxurious spa pedicure with soak, scrub, mask, and polish.',                   duration_min: 75, price_cents: 9500  },
-  { id: 10, name: 'Royal Citrus Pedicure',       description: 'Our signature pedicure featuring citrus-infused treatments and extended massage.', duration_min: 90, price_cents: 10500 },
+  { id: 8,  name: 'Russian Dry Pedicure',        description: 'An exacting, water-free technique rooted in the Russian method — precision gel applied directly to the natural toenail to support real growth with every visit. No soaking, no shortcuts, just the healthiest pedicure available — refined toward flawless, camera-ready feet and immaculate cuticle work. As we learn you, we tailor every visit precisely to you.', duration_min: 60, price_cents: 9500 },
+  { id: 9,  name: 'Russian Dry Pedicure — Full Correction', description: 'Everything in the Russian Dry Pedicure, elevated into a complete foot renewal. Each visit is built around targeted exfoliation, buffing, and callus removal — the only method that truly resolves them, appointment by appointment, until your feet are fully restored. Precision cuticle work and picture-perfect polish complete the transformation. As we learn you, we tailor every visit precisely to you.', duration_min: 90, price_cents: 12500 },
   { id: 11, name: 'Test Run',                    description: 'Owner testing only — $1 end-to-end checkout test.', duration_min: 15, price_cents: 100, hidden: true },
 ];
 

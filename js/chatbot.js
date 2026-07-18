@@ -165,7 +165,7 @@ function askZolaFallback(msg) {
     return "Every product used at Zola is personally vetted by Zahra. Organic products are standard for Luxe and Black Card members. She will always choose the healthier option, regardless of cost. Most studios cannot say that.";
 
   if (m.includes('price') || m.includes('cost') || m.includes('how much'))
-    return "Services start at $85 for pedicures and $90 for manicures. Memberships start at $99/month and save you significantly compared to drop-in pricing. Full pricing is on the Services page.";
+    return "Services start at $90 for manicures and $95 for the Russian Dry Pedicure. Memberships start at $99/month and save you significantly compared to drop-in pricing. Full pricing is on the Services page.";
 
   if (m.includes('soak') || m.includes('removal') || m.includes('another salon'))
     return "If you're coming from another salon, add a soak off removal (+$35) to your booking. It's on the booking page — select it as an add-on and we take care of the rest.";
@@ -203,8 +203,8 @@ function askZolaFallback(msg) {
   if (m.includes('gift') || m.includes('gift card'))
     return "Gift cards are available! They make perfect presents. Purchase through the contact form and we'll send a digital gift card directly to you or the recipient.";
 
-  if (m.includes('pedicure') || m.includes('feet') || m.includes('toes'))
-    return "Pedicure services start at $85 for the Hydro Free Pedicure (waterless, ultra-hygienic), $95 for the Classic Spa Pedicure, and $105 for the Royal Citrus Pedicure — our signature treatment with citrus-infused products and an extended massage.";
+  if (m.includes('pedicure') || m.includes('feet') || m.includes('toes') || m.includes('callus'))
+    return "Zola offers the Russian Dry Pedicure ($95) — a water-free, Russian-technique treatment that grows out your natural toenails flawlessly, no soaking required. For calluses and complete foot renewal, the Russian Dry Pedicure — Full Correction ($125) adds targeted exfoliation and buffing each visit — the only way calluses truly resolve.";
 
   if (m.includes('worker') || m.includes('who does') || m.includes('zahra') || m.includes('who will do'))
     return "Zola services are performed by Zahra and her trained team of nail technicians. Black Card members have the exclusive option to request Zahra for every appointment.";
