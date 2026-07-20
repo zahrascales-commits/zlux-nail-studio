@@ -116,6 +116,48 @@
   </div>
   <div class="stat-row" id="stat-row"></div>
 
+  <!-- Rebook in one tap (all tiers) -->
+  <div id="rebook-row" style="display:none;margin-bottom:1.4rem;">
+    <div class="card" style="border-left:3px solid var(--gold);">
+      <div style="font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:0.4rem;">Your last visit</div>
+      <div style="font-family:'Syne',sans-serif;font-size:1.15rem;margin-bottom:0.9rem;" id="rebook-name">—</div>
+      <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+        <a class="gold-btn" id="rebook-btn" style="flex:1;min-width:150px;text-align:center;text-decoration:none;display:block;" href="booking.html">Book This Again</a>
+        <a class="gold-btn" style="flex:1;min-width:150px;text-align:center;text-decoration:none;display:block;background:transparent;border:1px solid var(--gold);color:var(--gold);" href="booking.html">Book Something New</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- BLACK CARD PROFILE — appears only for confirmed Black Card members -->
+  <div id="bc-section" style="display:none;">
+    <style>
+      .bcp { background:#111; border:1px solid rgba(196,168,130,0.3); padding:2rem 1.5rem; margin-bottom:1.5rem; }
+      .bcp-head { text-align:center; margin-bottom:2.2rem; }
+      .bcp-title { font-family:'Syne',sans-serif; font-size:1.35rem; color:#C4A882; letter-spacing:0.04em; }
+      .bcp-sub { font-family:'Josefin Sans',sans-serif; font-size:0.78rem; color:#8B7355; margin-top:0.5rem; line-height:1.7; max-width:420px; margin-left:auto; margin-right:auto; }
+      .bcp-q { background:#181512; border:1px solid rgba(196,168,130,0.16); padding:1.4rem 1.3rem; margin-bottom:1.4rem; }
+      .bcp-q label { display:block; font-family:'Syne',sans-serif; font-size:0.95rem; color:#F5EEE8; line-height:1.5; margin-bottom:0.85rem; }
+      .bcp-q textarea { width:100%; background:#0D0B09; border:1px solid rgba(196,168,130,0.2); color:#F5EEE8; font-family:'Josefin Sans',sans-serif; font-size:0.88rem; padding:0.8rem 0.95rem; min-height:64px; resize:vertical; outline:none; transition:border-color 0.2s; line-height:1.6; }
+      .bcp-q textarea:focus { border-color:#C4A882; }
+      .bcp-save { width:100%; background:#C4A882; color:#0D0B09; border:none; padding:1rem; font-family:'Josefin Sans',sans-serif; font-size:0.72rem; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; cursor:pointer; }
+      .bcp-saved-note { font-family:'Josefin Sans',sans-serif; font-size:0.72rem; color:#8B7355; text-align:center; margin-top:0.75rem; }
+    </style>
+    <div class="sect">Black Card ✦ Your Personal Profile</div>
+    <div class="bcp">
+      <div class="bcp-head">
+        <div class="bcp-title">Built Just For You</div>
+        <div class="bcp-sub">Answer once, edit anytime. Your artist reads this before every single visit — so we already know what you like before you sit down.</div>
+      </div>
+      <div id="bcp-questions"></div>
+      <div class="bcp-q">
+        <label>Anything else you'd like us to know?</label>
+        <textarea id="bcp-note" placeholder="Free space — anything at all…"></textarea>
+      </div>
+      <button class="bcp-save" onclick="saveBcProfile()">Save My Profile</button>
+      <div class="bcp-saved-note" id="bcp-status">Your answers are saved to your account and visible to your artists.</div>
+    </div>
+  </div>
+
   <div class="sect">Upcoming Appointments</div>
   <div id="upcoming"></div>
 
@@ -219,11 +261,68 @@ async function enter(){
   document.getElementById('upcoming').innerHTML=up.length?up.map(render).join(''):'<div class="empty">Nothing booked yet — your next great set is one tap away 💅</div>';
   document.getElementById('past').innerHTML=past.length?past.map(render).join(''):'<div class="empty">Your visit history will appear here.</div>';
 
+  renderRebook();
+  renderBcProfile();
+
   document.getElementById('p-name').value=ME.account.name||'';
   document.getElementById('p-phone').value=ME.account.phone||'';
   document.getElementById('p-likes').value=(ME.profile&&ME.profile.likes)||'';
   document.getElementById('p-dislikes').value=(ME.profile&&ME.profile.dislikes)||'';
   document.getElementById('p-optin').checked=!!(ME.profile&&Number(ME.profile.opt_in));
+}
+
+/* ── BLACK CARD PROFILE (18 questions + free note) ── */
+const BC_QUESTIONS = [
+  'Do you prefer a silent appointment, or do you like to talk?',
+  'Favorite nail color(s)?',
+  'Favorite nail shape?',
+  'Favorite nail length?',
+  'Favorite type of design or style?',
+  'Favorite scent, if any, for your service?',
+  'Do you prefer organic products?',
+  'Which services do you book most, or want to book most?',
+  'Do you want your natural nails to grow longer over time?',
+  'Are your natural nails thin, or do they feel strong?',
+  'Do your nails chip or break easily?',
+  'Do your nails grow fast or slow?',
+  'Do your nails tend to curve upward, downward, or grow straight?',
+  'Do you bite your nails or pick at your skin?',
+  'Any allergies or sensitivities we should know about?',
+  'Any past nail damage or issues we should track?',
+  'Do you prefer a firmer or lighter touch during cuticle work?',
+  'Any pressure points, ticklishness, or areas to avoid on your hands or feet?',
+];
+function renderBcProfile(){
+  if(!ME || ME.tier!=='BLACK_CARD'){document.getElementById('bc-section').style.display='none';return;}
+  document.getElementById('bc-section').style.display='block';
+  const answers=(ME.bc_profile&&ME.bc_profile.answers)||{};
+  document.getElementById('bcp-questions').innerHTML=BC_QUESTIONS.map((q,i)=>
+    '<div class="bcp-q"><label>'+(i+1)+'. '+q+'</label><textarea id="bcp-q'+(i+1)+'" placeholder="Your answer…">'+esc(answers['q'+(i+1)]||'')+'</textarea></div>'
+  ).join('');
+  document.getElementById('bcp-note').value=(ME.bc_profile&&ME.bc_profile.note)||'';
+}
+async function saveBcProfile(){
+  const answers={};
+  BC_QUESTIONS.forEach((_,i)=>{answers['q'+(i+1)]=document.getElementById('bcp-q'+(i+1)).value.trim();});
+  const note=document.getElementById('bcp-note').value.trim();
+  const st=document.getElementById('bcp-status');
+  st.textContent='Saving…';
+  try{
+    const r=await fetch('/api/account?action=bc_profile',{method:'PUT',headers:{'Content-Type':'application/json','X-Client-Token':TOKEN},body:JSON.stringify({action:'bc_profile',answers,note})});
+    if(r.ok){st.innerHTML='<span style="color:#6ab07a;">Saved ✓</span> — Zahra and your artists have been notified.';toast('Profile saved ✦');}
+    else{const d=await r.json().catch(()=>({}));st.textContent=d.error||'Save failed — try again.';}
+  }catch{st.textContent='Connection error — try again.';}
+}
+
+/* ── Rebook in one tap ── */
+function renderRebook(){
+  const appts=ME.appointments||[];
+  const past=[...appts].sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
+  const last=past[0];
+  if(!last||!last.service)return;
+  document.getElementById('rebook-row').style.display='block';
+  document.getElementById('rebook-name').textContent=last.service;
+  document.getElementById('rebook-btn').href='booking.html?rebook='+encodeURIComponent(last.service);
 }
 
 async function saveProfile(){

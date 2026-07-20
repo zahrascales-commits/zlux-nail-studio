@@ -173,6 +173,30 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(show, rand(8000, 12000));
   }
 
+  /* ── OWNER-UPLOADED SITE PHOTOS ──
+     Any element with data-photo-slot="name" gets the photo Zahra uploaded
+     in Studio Manager → Site → Site Photos. IMG tags get src; anything
+     else becomes a covered background with a dark overlay for text. */
+  const slotEls = document.querySelectorAll('[data-photo-slot]');
+  if (slotEls.length) {
+    fetch('/api/photos').then(r => r.json()).then(d => {
+      const photos = (d && d.photos) || {};
+      slotEls.forEach(el => {
+        const url = photos[el.dataset.photoSlot];
+        if (!url) return;
+        if (el.tagName === 'IMG') { el.src = url; el.style.display = 'block'; }
+        else {
+          const overlay = el.dataset.photoOverlay !== 'none'
+            ? 'linear-gradient(rgba(13,13,13,0.55), rgba(13,13,13,0.65)), ' : '';
+          el.style.backgroundImage = overlay + 'url(' + url + ')';
+          el.style.backgroundSize = 'cover';
+          el.style.backgroundPosition = 'center';
+        }
+        el.classList.add('has-photo');
+      });
+    }).catch(() => {});
+  }
+
   /* ── HERO PARTICLE CANVAS ── */
   const canvas = document.getElementById('hero-canvas');
   if (canvas) {

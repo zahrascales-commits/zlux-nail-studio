@@ -66,7 +66,13 @@ async function handler(req, res) {
 
     if (req.method === 'GET') {
       const rows = await query('SELECT * FROM clients ORDER BY created_ts DESC LIMIT 500');
-      return res.json({ clients: rows });
+      // include Black Card questionnaire profiles so the owner sees everything
+      let bc_profiles = {};
+      try {
+        const profiles = await query('SELECT email, answers, note, updated_ts FROM client_profiles');
+        for (const p of profiles) bc_profiles[String(p.email).toLowerCase()] = { answers: JSON.parse(p.answers || '{}'), note: p.note || '', updated_ts: p.updated_ts };
+      } catch (_) {}
+      return res.json({ clients: rows, bc_profiles });
     }
 
     if (req.method === 'PUT' && action === 'update') {

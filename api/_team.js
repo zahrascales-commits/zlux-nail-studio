@@ -51,6 +51,19 @@ module.exports = async function (req, res) {
     const member = await authMember(req);
     if (!member) return res.status(401).json({ error: 'Not authenticated' });
 
+    // ── ALL CLIENTS (intentionally studio-wide, not per-artist: supports
+    //    last-minute swaps — any artist gets full context on any client) ──
+    if (method === 'GET' && action === 'all_clients') {
+      const clients = await query('SELECT id, name, email, phone, visits, last_service, last_visit, likes, dislikes, notes FROM clients ORDER BY last_visit DESC, name LIMIT 300');
+      const appts = await query(`SELECT a.client_name, a.client_phone, a.service, a.date, a.time, a.status, m.name AS artist
+        FROM team_appointments a LEFT JOIN team_members m ON m.id=a.team_member_id
+        ORDER BY a.date DESC, a.time DESC LIMIT 500`);
+      const profiles = await query('SELECT email, answers, note, updated_ts FROM client_profiles');
+      const profMap = {};
+      for (const p of profiles) profMap[String(p.email).toLowerCase()] = { answers: JSON.parse(p.answers || '{}'), note: p.note || '', updated_ts: p.updated_ts };
+      return res.json({ clients, appointments: appts, bc_profiles: profMap });
+    }
+
     if (method === 'GET' && action === 'schedule') {
       const today = new Date().toISOString().slice(0, 10);
       const rows = await query(

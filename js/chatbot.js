@@ -135,10 +135,10 @@ function askZolaFallback(msg) {
     return "Luxe Club is $199/month. Up to 2 services per month, a complimentary Russian manicure, 30% off all add-ons, one free scrub or lotion massage monthly, all organic products, and second-priority booking. Nail health is a priority at every appointment.";
 
   if (m.includes('black card') || m.includes('blackcard'))
-    return "Black Card is $299/month founding rate — locked forever. Up to 3 services, choose your specific nail artist every time, all add-ons complimentary, monthly nail art, quarterly nail assessments, personal client profile, and first access to every open slot. Most exclusive tier available.";
+    return "Black Card is $299/month founding rate — locked forever. 2 services a month, choose your specific nail artist every time, all add-ons complimentary, monthly nail art, quarterly nail assessments, personal client profile, and first access to every open slot. Most exclusive tier available.";
 
   if (m.includes('member') || m.includes('membership') || m.includes('join') || m.includes('tier'))
-    return "Three tiers: Signature ($99/mo, 1 service, 10% off add-ons), Luxe ($199/mo, 2 services + Russian manicure + 30% off add-ons + organic products), Black Card ($299/mo founding rate, 3 services + free add-ons + choose your artist + quarterly assessments). Spots are limited.";
+    return "Three tiers: Signature ($99/mo, 1 service, 10% off add-ons), Luxe ($199/mo, 2 services + Russian manicure + 30% off add-ons + organic products), Black Card ($299/mo founding rate, 2 services + free add-ons + choose your artist + quarterly assessments). Spots are limited.";
 
   if (m.includes('roll') || m.includes('unused') || (m.includes('miss') && m.includes('month')))
     return "Signature and Luxe services do not roll over — if you don't book before the month ends, the service drops. Black Card members can carry over one service. The membership renews regardless.";

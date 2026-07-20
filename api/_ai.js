@@ -20,7 +20,7 @@ Brand voice: warm, confident, quiet luxury ("Quiet Luxury. Loud Results."). Neve
 MEMBERSHIPS (6-month minimum, then month-to-month, 30 days notice):
 - Signature Club $99/mo — 1 service/month (mani OR pedi), 10% off add-ons, third-priority booking, birthday month upgrade. 25 spots.
 - Luxe Club $199/mo — up to 2 services/month, complimentary Russian manicure monthly, 30% off add-ons + 1 free scrub or lotion massage/mo, all organic products, second-priority booking. 15 spots. Most popular.
-- Black Card $299/mo FOUNDING RATE locked forever — up to 3 services/month, choose your specific artist, ALL add-ons complimentary, monthly nail art, quarterly nail assessments, first-priority "Atelier Access". 10 spots.
+- Black Card $299/mo FOUNDING RATE locked forever — up to 2 services/month, choose your specific artist, ALL add-ons complimentary, monthly nail art, quarterly nail assessments, first-priority "Atelier Access". 10 spots.
 Members always book before guests. Unused services do NOT roll over.
 
 SERVICES (drop-in prices):

@@ -25,5 +25,5 @@ export const TIER_LABEL = {
 export const TIER_MAX_SERVICES = {
   SIGNATURE: 1,
   LUXE: 2,
-  BLACK_CARD: 3,
+  BLACK_CARD: 2,
 };

@@ -62,6 +62,34 @@ module.exports = async function (req, res) {
       });
     }
 
+    // Multiple services / multiple people in ONE checkout: one PaymentIntent
+    // covering the summed deposits, each recomputed server-side.
+    if (req.method === 'POST' && action === 'multi_deposit_intent') {
+      if (!stripeKey()) return res.status(400).json({ error: 'Payments not configured' });
+      const { items, customer_name, customer_email, member_tier } = req.body || {};
+      if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: 'items required' });
+      let total = 0, deposit = 0;
+      const lines = [];
+      for (const it of items.slice(0, 10)) {
+        const calc = computeDeposit({ service_name: it.service_name, addon_names: it.addon_names || [], member_tier: member_tier || null });
+        if (!calc) return res.status(400).json({ error: 'Unknown service: ' + it.service_name });
+        total += calc.total_cents;
+        deposit += calc.deposit_cents;
+        lines.push((it.for_name ? it.for_name + ': ' : '') + it.service_name);
+      }
+      const params = {
+        amount: String(deposit),
+        currency: 'usd',
+        'automatic_payment_methods[enabled]': 'true',
+        description: `ZOLA deposit — ${lines.join(' + ')}`.slice(0, 300),
+        'metadata[services]': lines.join(' | ').slice(0, 480),
+        'metadata[client]': customer_name || '',
+      };
+      if (customer_email && /@/.test(customer_email)) params.receipt_email = customer_email;
+      const pi = await stripeApi('payment_intents', params);
+      return res.json({ client_secret: pi.client_secret, payment_intent_id: pi.id, deposit_cents: deposit, total_cents: total });
+    }
+
     if (req.method === 'POST' && action === 'deposit_intent') {
       if (!stripeKey()) return res.status(400).json({ error: 'Payments not configured' });
       const { service_name, addon_names, member_tier, customer_name, customer_email } = req.body || {};

@@ -6,6 +6,16 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { query, queryOne, execute, ensureTables } = require('./_team-db');
 const { upsertClient } = require('./_clients');
+const { notifyInApp } = require('./_notify');
+const mainDb = require('./_db'); // members table lives in the main schema
+
+// Membership tier for an email — '' if not a member
+async function tierFor(email) {
+  try {
+    const m = await mainDb.queryOne('SELECT tier FROM members WHERE lower(email)=?', [String(email).toLowerCase()]);
+    return (m && m.tier) || '';
+  } catch (_) { return ''; }
+}
 
 let _ready = false;
 async function ensureAccountTables() {
@@ -93,11 +103,49 @@ module.exports = async function (req, res) {
             OR lower(a.client_name)=lower(?)
          ORDER BY a.date DESC, a.time DESC LIMIT 60`,
         [ph || '~none~', acc.name || client?.name || '~none~']);
+      const tier = await tierFor(acc.email);
+      // Black Card only: their personal questionnaire profile
+      let bc_profile = null;
+      if (tier === 'BLACK_CARD') {
+        const p = await queryOne('SELECT answers, note, updated_ts FROM client_profiles WHERE email=?', [acc.email]);
+        bc_profile = p ? { answers: JSON.parse(p.answers || '{}'), note: p.note || '', updated_ts: p.updated_ts } : { answers: {}, note: '', updated_ts: null };
+      }
       return res.json({
         account: { name: acc.name, email: acc.email, phone: acc.phone },
+        tier,
+        bc_profile,
         profile: client ? { visits: client.visits, last_service: client.last_service, likes: client.likes, dislikes: client.dislikes, opt_in: Number(client.marketing_opt_in) } : null,
         appointments: appts,
       });
+    }
+
+    // ── BLACK CARD PROFILE: save/edit answers (client-editable anytime) ──
+    if (req.method === 'PUT' && action === 'bc_profile') {
+      const tier = await tierFor(acc.email);
+      if (tier !== 'BLACK_CARD') return res.status(403).json({ error: 'This profile is part of the Black Card membership.' });
+      const { answers, note } = req.body || {};
+      const clean = {};
+      if (answers && typeof answers === 'object') {
+        for (const [k, v] of Object.entries(answers)) {
+          if (/^q([1-9]|1[0-8])$/.test(k)) clean[k] = String(v == null ? '' : v).slice(0, 1200);
+        }
+      }
+      const existing = await queryOne('SELECT email FROM client_profiles WHERE email=?', [acc.email]);
+      await execute(
+        `INSERT INTO client_profiles (email, answers, note, updated_ts) VALUES (?,?,?,?)
+         ON CONFLICT(email) DO UPDATE SET answers=excluded.answers, note=excluded.note, updated_ts=excluded.updated_ts`,
+        [acc.email, JSON.stringify(clean), String(note || '').slice(0, 3000), Date.now()]);
+      // Every save/edit alerts Zahra AND every worker (intentional — supports
+      // last-minute artist swaps; any artist has full context on any client)
+      try {
+        const first = (acc.name || acc.email).split(' ')[0];
+        const title = `Black Card profile ${existing ? 'updated' : 'completed'} ✦ ${first}`;
+        const body = `${acc.name || acc.email} ${existing ? 'edited' : 'filled out'} their preference profile — view it in Clients`;
+        await notifyInApp('owner', null, title, body);
+        const members = await query('SELECT id FROM team_members WHERE active=1');
+        for (const m of members) await notifyInApp('member', m.id, title, body);
+      } catch (_) {}
+      return res.json({ ok: true });
     }
 
     // ── UPDATE PROFILE / SETTINGS ──

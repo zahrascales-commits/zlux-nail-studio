@@ -146,15 +146,72 @@
       <h1 style="font-size:2.5rem;margin-top:0.5rem;">Reserve Your Appointment</h1>
     </div>
 
-    <!-- Progress -->
-    <div class="booking-progress">
-      <div class="step-dot active" id="dot-1">1</div>
-      <div class="step-line" id="line-1"></div>
-      <div class="step-dot" id="dot-2">2</div>
-      <div class="step-line" id="line-2"></div>
-      <div class="step-dot" id="dot-3">3</div>
-      <div class="step-line" id="line-3"></div>
-      <div class="step-dot" id="dot-4">4</div>
+    <style>
+      /* ── GG-style 3-icon progress (Services → Day & Time → Details) ── */
+      .gg-steps { display:flex; align-items:center; justify-content:center; gap:0; margin-bottom:2rem; }
+      .gg-step { display:flex; flex-direction:column; align-items:center; gap:0.35rem; min-width:74px; }
+      .gg-ico { width:46px; height:46px; border-radius:50%; border:1.5px solid rgba(196,168,130,0.35); display:flex; align-items:center; justify-content:center; font-size:1.05rem; background:transparent; color:var(--latte); transition:all 0.3s; }
+      .gg-step.on .gg-ico { border-color:var(--champagne); background:var(--champagne); color:var(--espresso); box-shadow:0 6px 18px rgba(196,168,130,0.35); }
+      .gg-step.done .gg-ico { border-color:var(--champagne); color:var(--champagne); }
+      .gg-lbl { font-family:'Josefin Sans',sans-serif; font-size:0.56rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--latte); }
+      .gg-step.on .gg-lbl { color:var(--champagne); font-weight:700; }
+      .gg-line { flex:1; max-width:70px; height:1px; background:rgba(196,168,130,0.3); margin:0 0.4rem 1.1rem; }
+      .gg-line.done { background:var(--champagne); }
+
+      /* multi-select service cards */
+      .option-btn.svc-selected { background:var(--espresso); border-color:var(--espresso); }
+      .option-btn.svc-selected .option-name, .option-btn.svc-selected .option-sub { color:var(--cream); }
+      .option-btn.svc-selected .option-price { color:var(--champagne); }
+      .svc-state { font-family:'Josefin Sans',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--champagne); margin-top:0.2rem; display:block; }
+      .qty-step { display:inline-flex; align-items:center; gap:0.55rem; margin-top:0.35rem; }
+      .qty-step button { width:26px; height:26px; border:1px solid rgba(196,168,130,0.5); background:transparent; color:var(--champagne); font-size:1rem; line-height:1; cursor:pointer; }
+      .qty-step span { font-family:'Syne',serif; font-size:0.95rem; color:var(--cream); min-width:16px; text-align:center; }
+
+      /* sticky "Book N services" bar (GG pattern) */
+      .sticky-book { position:fixed; left:0; right:0; bottom:0; z-index:90; background:var(--espresso); border-top:1px solid rgba(196,168,130,0.3); padding:0.8rem 1.1rem calc(0.8rem + env(safe-area-inset-bottom)); display:none; align-items:center; justify-content:space-between; gap:1rem; }
+      .sticky-book.show { display:flex; animation:fadeIn 0.25s ease; }
+      .sb-info { font-family:'Josefin Sans',sans-serif; font-size:0.72rem; color:var(--cream); line-height:1.5; }
+      .sb-info strong { color:var(--champagne); }
+      .sb-btn { background:var(--champagne); color:var(--espresso); border:none; font-family:'Josefin Sans',sans-serif; font-size:0.72rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; padding:0.9rem 1.5rem; cursor:pointer; white-space:nowrap; min-height:48px; }
+
+      /* SELECT A DAY calendar */
+      .bk-cal { background:#fff; border:1px solid rgba(196,168,130,0.22); margin-bottom:1.25rem; }
+      .bk-cal-head { display:flex; align-items:center; justify-content:space-between; padding:0.8rem 1rem; border-bottom:1px solid rgba(196,168,130,0.15); }
+      .bk-cal-label { font-family:'Syne',serif; font-size:1.05rem; color:var(--espresso); }
+      .bk-cal-nav { width:40px; height:40px; border:1px solid rgba(196,168,130,0.3); background:none; color:var(--latte); font-size:1rem; cursor:pointer; }
+      .bk-dows, .bk-cells { display:grid; grid-template-columns:repeat(7,1fr); }
+      .bk-dows div { text-align:center; font-family:'Josefin Sans',sans-serif; font-size:0.58rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--latte); padding:0.5rem 0; }
+      .bk-day { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-family:'Josefin Sans',sans-serif; font-size:0.9rem; color:var(--espresso); cursor:pointer; border:1px solid transparent; transition:all 0.15s; }
+      .bk-day:hover { border-color:rgba(196,168,130,0.5); }
+      .bk-day.off { opacity:0.25; cursor:default; }
+      .bk-day.sel { background:var(--espresso); color:var(--champagne); font-weight:700; }
+      .bk-day.today { border-color:var(--champagne); }
+
+      /* time ranges */
+      .timeslot-grid { grid-template-columns:1fr 1fr; }
+      .timeslot-btn { min-height:48px; }
+
+      /* who-is-this-for */
+      .who-card { background:var(--cream); border:1px solid rgba(196,168,130,0.25); padding:0.9rem 1rem; margin-bottom:0.6rem; }
+      .who-svc { font-family:'Syne',serif; font-size:0.95rem; color:var(--espresso); margin-bottom:0.4rem; }
+
+      /* Apple Pay hint */
+      .ap-hint { display:flex; align-items:center; gap:0.5rem; font-family:'Josefin Sans',sans-serif; font-size:0.74rem; color:var(--latte); margin:0.5rem 0 0.75rem; }
+
+      /* inspo uploader on success */
+      .inspo-up { background:var(--cream); border:2px dashed rgba(196,168,130,0.5); padding:1.5rem; margin-top:1.5rem; text-align:center; }
+      .inspo-up img { max-width:180px; max-height:180px; object-fit:cover; margin:0.75rem auto 0; display:block; border:1px solid rgba(196,168,130,0.4); }
+      @media (min-width:761px) { .sticky-book { position:static; margin-top:1rem; } }
+      body.has-sticky { padding-bottom:90px; }
+    </style>
+
+    <!-- Progress: 3 steps, GlossGenius pattern -->
+    <div class="gg-steps">
+      <div class="gg-step on" id="gg-1"><div class="gg-ico">✦</div><div class="gg-lbl">Services</div></div>
+      <div class="gg-line" id="gg-l1"></div>
+      <div class="gg-step" id="gg-2"><div class="gg-ico">📅</div><div class="gg-lbl">Day &amp; Time</div></div>
+      <div class="gg-line" id="gg-l2"></div>
+      <div class="gg-step" id="gg-3"><div class="gg-ico">👤</div><div class="gg-lbl">Details</div></div>
     </div>
 
     <!-- ══ STEP 1: Member ID or Guest ══ -->
@@ -230,47 +287,47 @@
         <div id="step2-reminder-text" style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--espresso);"></div>
       </div>
 
-      <button class="option-btn" id="test-service-btn" onclick="selectService('Test Run',1,'manicure',this)" style="display:none;border-style:dashed;border-color:var(--champagne);">
+      <button class="option-btn" id="test-service-btn" onclick="toggleService('Test Run',1,'manicure',this)" style="display:none;border-style:dashed;border-color:var(--champagne);">
         <div><span class="option-name">🧪 Test Run — owner testing</span><span class="option-sub">Real $1 charge to test the full checkout</span></div>
         <div style="text-align:right;"><span class="option-price">$1</span></div>
       </button>
 
       <div class="section-label" style="margin-bottom:0.75rem;">Manicure</div>
-      <button class="option-btn" id="svc-btn-0" onclick="selectService('Organic Structured Manicure',90,'manicure',this)">
+      <button class="option-btn" id="svc-btn-0" onclick="toggleService('Organic Structured Manicure',90,'manicure',this)">
         <div><span class="option-name">Organic Structured Manicure</span><span class="option-sub">Healthiest option — recommended for nail growth</span></div>
         <div style="text-align:right;"><span class="option-price" id="price-0">from $90</span><div id="tag-0"></div></div>
       </button>
-      <button class="option-btn" id="svc-btn-1" onclick="selectService('Short Gel X',95,'manicure',this)">
+      <button class="option-btn" id="svc-btn-1" onclick="toggleService('Short Gel X',95,'manicure',this)">
         <div><span class="option-name">Short Gel X</span></div>
         <div style="text-align:right;"><span class="option-price" id="price-1">$95</span><div id="tag-1"></div></div>
       </button>
-      <button class="option-btn" id="svc-btn-2" onclick="selectService('Medium Gel X',100,'manicure',this)">
+      <button class="option-btn" id="svc-btn-2" onclick="toggleService('Medium Gel X',100,'manicure',this)">
         <div><span class="option-name">Medium Gel X</span></div>
         <div style="text-align:right;"><span class="option-price" id="price-2">$100</span><div id="tag-2"></div></div>
       </button>
-      <button class="option-btn" id="svc-btn-3" onclick="selectService('Long Gel X',110,'manicure',this)">
+      <button class="option-btn" id="svc-btn-3" onclick="toggleService('Long Gel X',110,'manicure',this)">
         <div><span class="option-name">Long Gel X</span></div>
         <div style="text-align:right;"><span class="option-price" id="price-3">$110</span><div id="tag-3"></div></div>
       </button>
-      <button class="option-btn" id="svc-btn-4" onclick="selectService('Short Acrylic Set',95,'manicure',this)">
+      <button class="option-btn" id="svc-btn-4" onclick="toggleService('Short Acrylic Set',95,'manicure',this)">
         <div><span class="option-name">Short Acrylic Set</span></div>
         <div style="text-align:right;"><span class="option-price" id="price-4">$95</span><div id="tag-4"></div></div>
       </button>
-      <button class="option-btn" id="svc-btn-5" onclick="selectService('Medium Acrylic Set',100,'manicure',this)">
+      <button class="option-btn" id="svc-btn-5" onclick="toggleService('Medium Acrylic Set',100,'manicure',this)">
         <div><span class="option-name">Medium Acrylic Set</span></div>
         <div style="text-align:right;"><span class="option-price" id="price-5">$100</span><div id="tag-5"></div></div>
       </button>
-      <button class="option-btn" id="svc-btn-6" onclick="selectService('Long Acrylic Set',110,'manicure',this)">
+      <button class="option-btn" id="svc-btn-6" onclick="toggleService('Long Acrylic Set',110,'manicure',this)">
         <div><span class="option-name">Long Acrylic Set</span></div>
         <div style="text-align:right;"><span class="option-price" id="price-6">$110</span><div id="tag-6"></div></div>
       </button>
 
       <div class="section-label" style="margin:1rem 0 0.75rem;">Pedicure</div>
-      <button class="option-btn" id="svc-btn-7" onclick="selectService('Russian Dry Pedicure',95,'pedicure',this)">
+      <button class="option-btn" id="svc-btn-7" onclick="toggleService('Russian Dry Pedicure',95,'pedicure',this)">
         <div><span class="option-name">Russian Dry Pedicure</span><span class="option-sub">Water-free Russian technique — the healthiest way to grow out your natural nails</span></div>
         <div style="text-align:right;"><span class="option-price" id="price-7">$95</span><div id="tag-7"></div></div>
       </button>
-      <button class="option-btn" id="svc-btn-8" onclick="selectService('Russian Dry Pedicure — Full Correction',125,'pedicure',this)">
+      <button class="option-btn" id="svc-btn-8" onclick="toggleService('Russian Dry Pedicure — Full Correction',125,'pedicure',this)">
         <div><span class="option-name">Russian Dry Pedicure — Full Correction</span><span class="option-sub">Complete foot renewal — exfoliation, buffing, and callus correction each visit</span></div>
         <div style="text-align:right;"><span class="option-price" id="price-8">$125</span><div id="tag-8"></div></div>
       </button>
@@ -348,22 +405,37 @@
 
       <div class="step-nav">
         <button class="btn-outline-dark" onclick="goStep(1)">← Back</button>
-        <button class="btn-gold" onclick="goStep(3)" style="animation:none;">Continue →</button>
       </div>
+    </div>
+
+    <!-- Sticky GG-style "Book N services" bar -->
+    <div class="sticky-book" id="sticky-book">
+      <div class="sb-info" id="sb-info"></div>
+      <button class="sb-btn" id="sb-btn" onclick="goStep(3)">Book 1 Service →</button>
     </div>
 
     <!-- ══ STEP 3: Date + Time ══ -->
     <div class="booking-step" id="step-3">
-      <div class="step-title">Pick a Date & Time</div>
+      <div class="step-title">Select a Day</div>
 
       <div id="priority-note-step3" style="display:none;" class="member-id-banner">
         <span id="priority-note-text" style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--espresso);"></span>
       </div>
 
-      <label class="luxury-label" style="margin-top:0.5rem;">Select Date</label>
-      <input type="date" class="luxury-input" id="booking-date" style="margin-bottom:1.25rem;" />
-      <label class="luxury-label">Available Times</label>
-      <div class="timeslot-grid" id="timeslots"><p style="color:var(--latte);font-size:0.82rem;grid-column:1/-1;">Pick a date above to see open times ✦</p></div>
+      <!-- GG-style month calendar (replaces the old date input) -->
+      <input type="hidden" id="booking-date" />
+      <div class="bk-cal">
+        <div class="bk-cal-head">
+          <button class="bk-cal-nav" onclick="bkCalNav(-1)">‹</button>
+          <span class="bk-cal-label" id="bk-cal-label"></span>
+          <button class="bk-cal-nav" onclick="bkCalNav(1)">›</button>
+        </div>
+        <div class="bk-dows"><div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div></div>
+        <div class="bk-cells" id="bk-cells"></div>
+      </div>
+
+      <label class="luxury-label">Select a Time</label>
+      <div class="timeslot-grid" id="timeslots"><p style="color:var(--latte);font-size:0.82rem;grid-column:1/-1;">Pick a day above to see open times ✦</p></div>
       <div id="step3-error" style="display:none;background:rgba(192,82,74,0.08);border:1px solid rgba(192,82,74,0.3);padding:0.8rem 1rem;margin-top:1rem;font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:#a04038;"></div>
       <div class="step-nav">
         <button class="btn-outline-dark" onclick="goStep(2)">← Back</button>
@@ -440,9 +512,17 @@
         <textarea class="luxury-input" id="client-notes" rows="2" placeholder="Nail shape, current nails on, inspiration photo link…" style="resize:vertical;"></textarea>
       </div>
 
+      <!-- Who is each service for? (multi-person bookings) -->
+      <div id="who-section" style="display:none;margin:1.25rem 0;">
+        <label class="luxury-label">Who is each service for?</label>
+        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.74rem;color:var(--latte);margin-bottom:0.6rem;">Booking for your mom, sister, friend? Put their name on their service so we greet the right person.</p>
+        <div id="who-list"></div>
+      </div>
+
       <!-- Card payment (Stripe) -->
       <div id="card-section" style="display:none;margin:1.25rem 0;">
-        <label class="luxury-label">Card — your deposit is charged automatically</label>
+        <div class="ap-hint" id="ap-hint" style="display:none;"> Apple Pay available — double-tap to pay, no typing</div>
+        <label class="luxury-label">Pay your deposit — Apple Pay or card</label>
         <div id="payment-element" style="background:#fff;border:1px solid rgba(139,106,62,0.22);padding:1rem;"></div>
         <div id="card-errors" style="display:none;font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:#c0524a;margin-top:0.5rem;"></div>
       </div>
@@ -475,6 +555,17 @@
         <div style="font-family:'Syne',serif;font-size:2rem;color:var(--espresso);margin-bottom:0.5rem;">You're Confirmed ✦</div>
         <div id="booking-conf-num" style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--champagne);margin-bottom:0.75rem;"></div>
         <p style="font-family:'Josefin Sans',sans-serif;font-size:0.88rem;color:var(--latte);line-height:1.8;">A confirmation text and email is on its way. We can't wait to see you.<br>Questions? DM us <strong>@zluxnails</strong> or text us directly.</p>
+
+        <!-- Inspo photo upload — goes straight to Zahra + every artist -->
+        <div class="inspo-up" id="inspo-up">
+          <div style="font-family:'Syne',serif;font-size:1.2rem;color:var(--espresso);">Have inspo? Show us 💅</div>
+          <p style="font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:var(--latte);line-height:1.7;margin:0.5rem 0 0.9rem;">Add a photo of the nails you're dreaming of. Your artist sees it <strong>before</strong> your visit — so we can order anything special your look needs.</p>
+          <input type="file" id="inspo-file" accept="image/*" style="display:none" onchange="inspoPicked(this)">
+          <button class="btn-gold" style="animation:none;" onclick="document.getElementById('inspo-file').click()">Add Inspo Photo</button>
+          <img id="inspo-preview" style="display:none;" alt="Your inspo" />
+          <div id="inspo-status" style="font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);margin-top:0.6rem;"></div>
+        </div>
+
         <a href="index.html" class="btn-gold" style="margin-top:1.5rem;display:inline-block;animation:none;">Back to Home</a>
       </div>
     </div>
@@ -520,11 +611,11 @@ const TIER_RULES = {
     tagStyle: 'background:var(--espresso);color:var(--champagne);',
     freeManicures: null,
     freePedicures: null,
-    freeServiceCount: 4,
+    freeServiceCount: 2,
     freeAddonNames: [],
     freeAddonCount: 0,
     addonDiscountPct: 75,
-    reminderText: 'Black Card: Up to 4 services included. All add-ons at 75% off automatically.',
+    reminderText: 'Black Card: 2 services a month included. All add-ons at 75% off automatically.',
     priorityText: '✦  Atelier Access — first selection of every available slot before the calendar opens.'
   }
 };
@@ -546,7 +637,10 @@ const booking = {
   birthdayMonth: null,
   birthdayActive: false,
   birthdayGift: null,
-  service: null,
+  // Multi-service / multi-person: every selected service is an item.
+  // qty lets one service be booked twice (e.g. mani for you AND your mom).
+  items: [],            // [{service, price, category, qty}]
+  service: null,        // mirror of items[0] — legacy code reads these
   servicePrice: 0,
   serviceCategory: null,
   selectedAddons: [],   // [{name, price, basePrice}]
@@ -554,6 +648,23 @@ const booking = {
   date: null,
   time: null
 };
+
+// minutes per service — used to show real time ranges like GlossGenius
+const SERVICE_MINUTES = {
+  'Organic Structured Manicure': 60, 'Short Gel X': 60, 'Medium Gel X': 75, 'Long Gel X': 90,
+  'Short Acrylic Set': 60, 'Medium Acrylic Set': 75, 'Long Acrylic Set': 90,
+  'Russian Dry Pedicure': 60, 'Russian Dry Pedicure — Full Correction': 90, 'Test Run': 15,
+};
+function totalMinutes() {
+  return booking.items.reduce((s, it) => s + (SERVICE_MINUTES[it.service] || 60) * it.qty, 0) || 60;
+}
+function itemCount() { return booking.items.reduce((s, it) => s + it.qty, 0); }
+function syncLegacyMirror() {
+  const first = booking.items[0] || null;
+  booking.service = first ? first.service : null;
+  booking.servicePrice = first ? first.price : 0;
+  booking.serviceCategory = first ? first.category : null;
+}
 
 // ═══════════════════════════════════════════
 // STEP 1: MEMBER ID
@@ -632,6 +743,50 @@ function selectGuest(btn) {
   document.getElementById('atelier-note').style.display = 'none';
   document.getElementById('birthday-month-row').style.display = 'none';
   document.getElementById('member-id-error').style.display = 'none';
+  // guests don't need a second tap — straight to services
+  setTimeout(() => goStep(2), 250);
+}
+
+// ── Inspo photo after booking → Zahra + every artist see it, with your name ──
+function inspoPicked(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const status = document.getElementById('inspo-status');
+  status.textContent = 'Preparing your photo…';
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = e => { img.src = e.target.result; };
+  img.onload = async () => {
+    // resize to max 1000px + compress so uploads are instant on phone data
+    const scale = Math.min(1, 1000 / Math.max(img.width, img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    let dataUrl = canvas.toDataURL('image/jpeg', 0.78);
+    if (dataUrl.length > 850000) dataUrl = canvas.toDataURL('image/jpeg', 0.55);
+    const prev = document.getElementById('inspo-preview');
+    prev.src = dataUrl; prev.style.display = 'block';
+    status.textContent = 'Sending to your artist…';
+    try {
+      const ctx = window._inspoCtx || {};
+      const r = await fetch('/api/photos?action=inspo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'inspo', ...ctx, data_url: dataUrl })
+      });
+      if (r.ok) {
+        status.innerHTML = '<strong style="color:#4e8e5e;">Sent ✓</strong> Your artist will see this before your appointment.';
+        document.querySelector('#inspo-up .btn-gold').textContent = 'Add a Different Photo';
+      } else {
+        const d = await r.json().catch(() => ({}));
+        status.textContent = d.error || 'Upload didn\'t go through — try once more.';
+      }
+    } catch (_) {
+      status.textContent = 'Connection hiccup — tap the button to try again.';
+    }
+  };
+  reader.readAsDataURL(file);
 }
 
 function selectBirthdayGift(gift) {
@@ -711,12 +866,55 @@ function updateAddonPriceTags() {
   });
 }
 
-function selectService(name, price, category, btn) {
-  booking.service = name;
-  booking.servicePrice = price;
-  booking.serviceCategory = category;
-  document.querySelectorAll('#step-2 .option-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
+// ── Multi-select services (GlossGenius pattern: tap to Select/Unselect,
+//    sticky bar counts up, + / − stepper books the same service twice for
+//    a second person) ──
+function toggleService(name, price, category, btn) {
+  const idx = booking.items.findIndex(it => it.service === name);
+  if (idx >= 0) {
+    booking.items.splice(idx, 1);
+    btn.classList.remove('svc-selected');
+    const extra = btn.querySelector('.svc-extra'); if (extra) extra.remove();
+  } else {
+    booking.items.push({ service: name, price, category, qty: 1 });
+    btn.classList.add('svc-selected');
+    const holder = document.createElement('span');
+    holder.className = 'svc-extra';
+    holder.innerHTML = '<span class="svc-state">Selected ✓</span>'
+      + '<span class="qty-step" onclick="event.stopPropagation();">'
+      + '<button type="button" onclick="event.stopPropagation();changeQty(\'' + name.replace(/'/g, "\\'") + '\',-1,this)">−</button>'
+      + '<span class="qty-n">1</span>'
+      + '<button type="button" onclick="event.stopPropagation();changeQty(\'' + name.replace(/'/g, "\\'") + '\',1,this)">+</button>'
+      + '<span style="font-family:\'Josefin Sans\',sans-serif;font-size:0.62rem;color:var(--champagne);letter-spacing:0.06em;">people</span></span>';
+    (btn.querySelector('div') || btn).appendChild(holder);
+  }
+  syncLegacyMirror();
+  updateStickyBar();
+}
+function changeQty(name, delta, el) {
+  const it = booking.items.find(x => x.service === name);
+  if (!it) return;
+  it.qty = Math.max(1, Math.min(5, it.qty + delta));
+  const n = el.parentElement.querySelector('.qty-n');
+  if (n) n.textContent = it.qty;
+  updateStickyBar();
+}
+function updateStickyBar() {
+  const bar = document.getElementById('sticky-book');
+  const n = itemCount();
+  const onServicesStep = document.getElementById('step-2').classList.contains('active');
+  if (!n || !onServicesStep) {
+    bar.classList.remove('show');
+    document.body.classList.remove('has-sticky');
+    return;
+  }
+  const names = [];
+  booking.items.forEach(it => names.push(it.qty > 1 ? it.service + ' ×' + it.qty : it.service));
+  document.getElementById('sb-info').innerHTML =
+    '<strong>' + n + ' service' + (n > 1 ? 's' : '') + '</strong> · ' + names.join(' + ');
+  document.getElementById('sb-btn').textContent = 'Book ' + n + ' Service' + (n > 1 ? 's' : '') + ' →';
+  bar.classList.add('show');
+  document.body.classList.add('has-sticky');
 }
 
 function selectWorker(name, btn) {
@@ -752,17 +950,6 @@ function fmt12(slot) {
 }
 
 function loadTimeslots() {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const dateEl = document.getElementById('booking-date');
-  dateEl.min = tomorrow.toISOString().split('T')[0];
-  dateEl.onchange = e => {
-    booking.date = e.target.value;
-    booking.time = null; // a new date means the old time no longer applies
-    document.getElementById('step3-error').style.display = 'none';
-    if (booking.date) renderTimeslots(booking.date);
-  };
-
   const note = document.getElementById('priority-note-step3');
   const noteText = document.getElementById('priority-note-text');
   if (booking.memberTier) {
@@ -771,8 +958,20 @@ function loadTimeslots() {
   } else {
     note.style.display = 'none';
   }
-
   if (booking.date) renderTimeslots(booking.date);
+}
+
+// "10:00 AM – 12:00 PM" style ranges — end time from your services' real duration
+function slotRange(slot) {
+  const [h, m] = slot.split(':').map(Number);
+  const start = h * 60 + m;
+  const end = start + totalMinutes();
+  const f = (mins) => {
+    const hh = Math.floor(mins / 60) % 24, mm = mins % 60;
+    const ap = hh >= 12 ? 'PM' : 'AM';
+    return (hh > 12 ? hh - 12 : hh || 12) + ':' + String(mm).padStart(2, '0') + ' ' + ap;
+  };
+  return f(start) + ' – ' + f(end);
 }
 
 async function renderTimeslots(date) {
@@ -800,7 +999,7 @@ async function renderTimeslots(date) {
   slotsToShow.forEach(slot => {
     const isBlocked = isAllBlocked || blocks.some(b => b.slot === slot);
     const isBooked = booked.includes(slot);
-    const label = fmt12(slot);
+    const label = slotRange(slot); // real start–end range, like GlossGenius
     const btn = document.createElement('button');
     btn.className = 'timeslot-btn';
     btn.textContent = label;
@@ -850,25 +1049,25 @@ function loadSummary() {
   lineItemsEl.innerHTML = '';
   let total = 0;
 
-  // ── Main service ──
-  let serviceCharge = booking.servicePrice;
-  let serviceNote = '';
-  if (rules) {
-    const isMani = booking.serviceCategory === 'manicure';
-    const isPedi = booking.serviceCategory === 'pedicure';
-    if (rules.freeServiceCount !== null) {
-      serviceCharge = 0;
-      serviceNote = 'Included in Black Card (4 services/mo)';
-    } else if (isMani && rules.freeManicures > 0) {
-      serviceCharge = 0;
-      serviceNote = 'Included in ' + rules.label;
-    } else if (isPedi && rules.freePedicures > 0) {
-      serviceCharge = 0;
-      serviceNote = 'Included in ' + rules.label;
+  // ── Every selected service (multi-service / multi-person) ──
+  // Member free-service allowances are allocated to the first matching
+  // items; anything beyond the allowance is charged normally.
+  let freeAny = rules && rules.freeServiceCount !== null ? rules.freeServiceCount : 0;
+  let freeMani = rules ? (rules.freeManicures || 0) : 0;
+  let freePedi = rules ? (rules.freePedicures || 0) : 0;
+  booking.items.forEach(it => {
+    for (let u = 0; u < it.qty; u++) {
+      let charge = it.price, note = '';
+      if (rules) {
+        if (freeAny > 0) { charge = 0; freeAny--; note = 'Included in ' + rules.label + ' (2 services/mo)'; }
+        else if (it.category === 'manicure' && freeMani > 0) { charge = 0; freeMani--; note = 'Included in ' + rules.label; }
+        else if (it.category === 'pedicure' && freePedi > 0) { charge = 0; freePedi--; note = 'Included in ' + rules.label; }
+      }
+      total += charge;
+      lineItemsEl.innerHTML += buildLine(it.service + (it.qty > 1 ? ' (person ' + (u + 1) + ')' : ''), it.price, charge, note);
     }
-  }
-  total += serviceCharge;
-  lineItemsEl.innerHTML += buildLine(booking.service || '—', booking.servicePrice, serviceCharge, serviceNote);
+  });
+  if (!booking.items.length) lineItemsEl.innerHTML += buildLine('—', 0, 0, '');
 
   // ── Add-ons ──
   booking.selectedAddons.forEach(a => {
@@ -923,22 +1122,76 @@ function _trackFunnel(step, dropped) {
 }
 
 function goStep(n) {
+  // Leaving services without picking anything? Friendly stop.
+  if (n === 3 && !booking.items.length) {
+    alert('Tap a service first — then the gold Book button appears ✦');
+    return;
+  }
   document.querySelectorAll('.booking-step').forEach(s => s.classList.remove('active'));
   document.getElementById('step-' + n).classList.add('active');
-  for (let i = 1; i <= 4; i++) {
-    const dot = document.getElementById('dot-' + i);
-    if (i < n)      dot.className = 'step-dot done';
-    else if (i === n) dot.className = 'step-dot active';
-    else            dot.className = 'step-dot';
-    if (i < 4) {
-      document.getElementById('line-' + i).className = 'step-line' + (i < n ? ' done' : '');
-    }
+  // 3-icon header: internal steps 1&2 = icon 1 (Services), 3 = icon 2, 4 = icon 3
+  const icon = n <= 2 ? 1 : n - 1;
+  for (let i = 1; i <= 3; i++) {
+    const el = document.getElementById('gg-' + i);
+    el.className = 'gg-step' + (i === icon ? ' on' : i < icon ? ' done' : '');
+    if (i < 3) document.getElementById('gg-l' + i).className = 'gg-line' + (i < icon ? ' done' : '');
   }
   if (n === 2 && booking.memberTier) updateServiceTags();
-  if (n === 3) loadTimeslots();
-  if (n === 4) { loadSummary(); initPayment(); }
+  if (n === 3) { renderBkCal(); loadTimeslots(); }
+  if (n === 4) { loadSummary(); renderWhoSection(); initPayment(); }
+  updateStickyBar();
   _trackFunnel(n, false);
   window.scrollTo(0, 0);
+}
+
+// ── SELECT A DAY calendar (GlossGenius pattern) ──
+let bkCalCursor = new Date().toISOString().slice(0, 10);
+function bkCalNav(dir) {
+  const d = new Date(bkCalCursor + 'T12:00:00');
+  d.setMonth(d.getMonth() + dir);
+  bkCalCursor = d.toISOString().slice(0, 10);
+  renderBkCal();
+}
+function renderBkCal() {
+  const d = new Date(bkCalCursor + 'T12:00:00');
+  const y = d.getFullYear(), mo = d.getMonth();
+  document.getElementById('bk-cal-label').textContent = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const first = new Date(y, mo, 1).getDay();
+  const days = new Date(y, mo + 1, 0).getDate();
+  const today = new Date().toISOString().slice(0, 10);
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  let html = '';
+  for (let i = 0; i < first; i++) html += '<div class="bk-day off"></div>';
+  for (let day = 1; day <= days; day++) {
+    const ds = y + '-' + String(mo + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+    const past = ds < tomorrow; // bookings start tomorrow, same rule as before
+    const cls = 'bk-day' + (past ? ' off' : '') + (ds === booking.date ? ' sel' : '') + (ds === today ? ' today' : '');
+    html += '<div class="' + cls + '"' + (past ? '' : ' onclick="pickBkDay(\'' + ds + '\')"') + '>' + day + '</div>';
+  }
+  document.getElementById('bk-cells').innerHTML = html;
+}
+function pickBkDay(ds) {
+  booking.date = ds;
+  booking.time = null;
+  document.getElementById('booking-date').value = ds;
+  document.getElementById('step3-error').style.display = 'none';
+  renderBkCal();
+  renderTimeslots(ds);
+}
+
+// ── Who is each service for? (multi-person) ──
+function renderWhoSection() {
+  const wrap = document.getElementById('who-section');
+  const list = document.getElementById('who-list');
+  // expand items × qty into individual person slots
+  const units = [];
+  booking.items.forEach(it => { for (let i = 0; i < it.qty; i++) units.push(it.service); });
+  if (units.length <= 1) { wrap.style.display = 'none'; list.innerHTML = ''; return; }
+  wrap.style.display = 'block';
+  list.innerHTML = units.map((svc, i) =>
+    '<div class="who-card"><div class="who-svc">' + svc + '</div>' +
+    '<input class="luxury-input who-name" data-svc="' + svc.replace(/"/g, '&quot;') + '" placeholder="' + (i === 0 ? 'Me (leave blank if it\'s you)' : 'Their name — e.g. Mom') + '" /></div>'
+  ).join('');
 }
 
 // Track drop-off when page unloads mid-booking
@@ -960,13 +1213,23 @@ async function initPayment() {
   try {
     const cfg = await (await fetch('/api/pay?action=config')).json();
     if (!cfg.enabled || typeof Stripe === 'undefined') return; // graceful: no card section
-    const intent = await (await fetch('/api/pay?action=deposit_intent', {
+    // One PaymentIntent covering EVERY selected service's deposit
+    const items = [];
+    booking.items.forEach((it, i) => {
+      for (let u = 0; u < it.qty; u++) {
+        items.push({
+          service_name: it.service,
+          // add-ons apply to the primary (first) service only
+          addon_names: (i === 0 && u === 0) ? booking.selectedAddons.map(a => a.name) : [],
+        });
+      }
+    });
+    const intent = await (await fetch('/api/pay?action=multi_deposit_intent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action: 'deposit_intent',
-        service_name: booking.service,
-        addon_names: booking.selectedAddons.map(a => a.name),
+        action: 'multi_deposit_intent',
+        items,
         member_tier: booking.memberTier || null,
         customer_name: document.getElementById('client-name').value.trim(),
         customer_email: document.getElementById('client-email').value.trim(),
@@ -976,8 +1239,14 @@ async function initPayment() {
     _paymentIntentId = intent.payment_intent_id;
     _stripe = Stripe(cfg.publishable_key);
     _elements = _stripe.elements({ clientSecret: intent.client_secret, appearance: { theme: 'flat', variables: { colorPrimary: '#C4A882', fontFamily: 'Josefin Sans, sans-serif' } } });
-    _elements.create('payment').mount('#payment-element');
+    // wallets:auto = Apple Pay appears automatically on iPhone Safari —
+    // the "double-tap to pay" experience, no typing card numbers
+    _elements.create('payment', { wallets: { applePay: 'auto', googlePay: 'auto' }, layout: 'tabs' }).mount('#payment-element');
     document.getElementById('card-section').style.display = 'block';
+    // Show the Apple Pay hint on Apple devices
+    if (/iPhone|iPad|Macintosh/.test(navigator.userAgent) && window.ApplePaySession) {
+      document.getElementById('ap-hint').style.display = 'flex';
+    }
     _payEnabled = true;
   } catch (_) { /* payments unavailable — booking still works without card */ }
 }
@@ -1036,45 +1305,66 @@ async function submitBooking() {
     paymentIntentId = (paymentIntent && paymentIntent.id) || _paymentIntentId;
   }
 
-  // 2) Confirm the booking — with automatic retry so a slow connection can't kill it
-  const payload = {
-    customer_name:  name,
-    customer_email: email,
-    customer_phone: phone,
-    service_name:   booking.service,
-    service_price:  booking.servicePrice,
-    addon_names:    booking.selectedAddons.map(a => a.name),
-    addon_charged:  booking.selectedAddons.map(a => a.charged),
-    member_id:      document.getElementById('member-id-input').value.trim().toUpperCase() || null,
-    member_tier:    booking.memberTier || null,
-    date:           booking.date,
-    time_slot:      booking.time,
-    worker:         booking.worker || null,
-    payment_intent_id: paymentIntentId,
-  };
+  // 2) Confirm every booking (multi-service / multi-person) — with retry
+  //    so a slow connection can't kill it
   if (btn) btn.textContent = 'Confirming…';
-  let data = null, lastErr = null;
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const res = await fetch('/api/bookings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+  // who-is-this-for names typed on this step, matched to expanded units
+  const whoInputs = [...document.querySelectorAll('#who-list .who-name')].map(i => i.value.trim());
+  const units = [];
+  booking.items.forEach((it, i) => {
+    for (let u = 0; u < it.qty; u++) {
+      units.push({
+        service_name: it.service,
+        service_price: it.price,
+        addon_names: (i === 0 && u === 0) ? booking.selectedAddons.map(a => a.name) : [],
+        addon_charged: (i === 0 && u === 0) ? booking.selectedAddons.map(a => a.charged) : [],
+        for_name: whoInputs[units.length] || '',
       });
-      data = await res.json();
-      if (res.ok) { lastErr = null; break; }
-      lastErr = data.error || ('Booking failed (' + res.status + ').');
-      if (res.status < 500) break; // real rejection — don't retry
-    } catch (e) {
-      lastErr = 'Connection hiccup — retrying…';
-      if (attempt < 3) { showSubmitError('Connection hiccup — retrying (' + attempt + '/2)…'); await new Promise(r => setTimeout(r, 1500 * attempt)); }
     }
+  });
+
+  const postOne = async (unit) => {
+    let data = null, lastErr = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const res = await fetch('/api/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer_name: name, customer_email: email, customer_phone: phone,
+            ...unit,
+            member_id: document.getElementById('member-id-input').value.trim().toUpperCase() || null,
+            member_tier: booking.memberTier || null,
+            date: booking.date, time_slot: booking.time,
+            worker: booking.worker || null,
+            payment_intent_id: paymentIntentId,
+          })
+        });
+        data = await res.json();
+        if (res.ok) return { ok: true, data };
+        lastErr = data.error || ('Booking failed (' + res.status + ').');
+        if (res.status < 500) break;
+      } catch (e) {
+        lastErr = 'Connection hiccup — retrying…';
+        if (attempt < 3) { showSubmitError('Connection hiccup — retrying (' + attempt + '/2)…'); await new Promise(r => setTimeout(r, 1500 * attempt)); }
+      }
+    }
+    return { ok: false, error: lastErr };
+  };
+
+  const confirmations = [];
+  for (const unit of units) {
+    const r = await postOne(unit);
+    if (!r.ok) {
+      restore();
+      showSubmitError(r.error
+        + (confirmations.length ? ' (' + confirmations.length + ' of ' + units.length + ' services DID book: ' + confirmations.join(', ') + '.)' : '')
+        + (paymentIntentId ? ' Your deposit WAS charged — do not pay again. Screenshot this and message us, we will make it right.' : ''));
+      return;
+    }
+    confirmations.push(r.data.confirmation);
   }
-  if (lastErr) {
-    restore();
-    showSubmitError(lastErr + (paymentIntentId ? ' Your deposit WAS charged — do not pay again. Screenshot this and message us, we will confirm your spot manually.' : ''));
-    return;
-  }
+  const data = { confirmation: confirmations.join(' · ') };
 
   // Remember this client on this device so next booking is 3 fields shorter
   try { localStorage.setItem('zola_client', JSON.stringify({ name, phone, email })); } catch (_) {}
@@ -1091,6 +1381,14 @@ async function submitBooking() {
       if (acc.token) localStorage.setItem('zola_acct', JSON.stringify({ token: acc.token, name, email }));
     }
   } catch (_) {}
+
+  // context for the optional inspo-photo upload on the success screen
+  window._inspoCtx = {
+    confirmation: confirmations[0],
+    client_name: name, client_email: email,
+    service: booking.items.map(i => i.service).join(' + '),
+    appt_date: booking.date,
+  };
 
   document.getElementById('step-4').querySelector('.step-nav').style.display = 'none';
   document.getElementById('booking-conf-num').textContent = 'Confirmation: ' + data.confirmation;
@@ -1117,6 +1415,20 @@ if (new URLSearchParams(location.search).get('test') === '1') {
   const t = document.getElementById('test-service-btn');
   if (t) t.style.display = 'flex';
 }
+
+// "Book This Again" from My Account: pre-select their last service and
+// jump straight to the services step with it already in the bag
+(function () {
+  const rebook = new URLSearchParams(location.search).get('rebook');
+  if (!rebook) return;
+  const btns = [...document.querySelectorAll('#step-2 .option-btn')];
+  const match = btns.find(b => (b.querySelector('.option-name') || {}).textContent === rebook);
+  if (match) {
+    goStep(2);
+    match.click(); // toggleService selects it + sticky bar appears
+    setTimeout(() => match.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+  }
+})();
 
 // ── Returning client: prefill saved details so rebooking takes seconds ──
 function applySavedClient(c) {

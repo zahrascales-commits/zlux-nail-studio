@@ -138,6 +138,7 @@ module.exports = async (req, res) => {
       member_id, member_tier,
       date, time_slot, worker,
       payment_intent_id,
+      for_name, // multi-person bookings: who this specific service is for
     } = req.body;
 
     // If a card payment was made, verify it with Stripe before confirming
@@ -154,7 +155,7 @@ module.exports = async (req, res) => {
 
     // Enforce monthly service limits for members
     if (member_id && member_tier) {
-      const TIER_LIMIT = { SIGNATURE: 1, LUXE: 2, BLACK_CARD: 3 };
+      const TIER_LIMIT = { SIGNATURE: 1, LUXE: 2, BLACK_CARD: 2 };
       const limit = TIER_LIMIT[member_tier];
       if (limit) {
         const monthYear = new Date().toISOString().slice(0, 7);
@@ -255,8 +256,10 @@ module.exports = async (req, res) => {
       await teamDb.execute(
         `INSERT INTO team_appointments (team_member_id, client_name, client_phone, service, date, time, notes, status, chat_token)
          VALUES (?,?,?,?,?,?,?, 'scheduled', ?)`,
-        [m ? m.id : null, customer_name, customer_phone || '', service_name, date, time_slot,
-         'Booked online · ' + confirmation + (addon_names.length ? ' · +' + addon_names.join(', ') : ''), teamDb.token()]
+        [m ? m.id : null, (for_name && for_name.trim()) || customer_name, customer_phone || '', service_name, date, time_slot,
+         'Booked online · ' + confirmation
+           + (for_name && for_name.trim() && for_name.trim() !== customer_name ? ' · for ' + for_name.trim() + ' (booked by ' + customer_name + ')' : '')
+           + (addon_names.length ? ' · +' + addon_names.join(', ') : ''), teamDb.token()]
       );
       // Skip duplicate client email/SMS if the legacy SendGrid path is active
       const legacyActive = !!process.env.SENDGRID_API_KEY;

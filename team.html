@@ -158,6 +158,8 @@
   <div class="tabs">
     <button class="tab active" data-t="schedule" onclick="showTab('schedule')">My Schedule</button>
     <button class="tab" data-t="chats" onclick="showTab('chats')">Client Chats</button>
+    <button class="tab" data-t="clients" onclick="showTab('clients')">Clients</button>
+    <button class="tab" data-t="inspo" onclick="showTab('inspo')">Inspo</button>
   </div>
   <div class="wrap">
     <section class="panel active" id="panel-schedule">
@@ -168,6 +170,17 @@
     <section class="panel" id="panel-chats">
       <div class="label-sm">Your Client Conversations</div>
       <div id="chats"><div class="loading">Loading…</div></div>
+    </section>
+    <section class="panel" id="panel-clients">
+      <div class="label-sm">Every Client — Full Context</div>
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.76rem;color:var(--muted);margin-bottom:1rem;line-height:1.7;">You can see every client's history and preferences — not just your own — so any artist can step in with full context.</p>
+      <input class="login-input" id="tc-search" placeholder="Search name or phone…" oninput="renderTeamClients()" style="font-size:0.9rem;letter-spacing:normal;text-align:left;margin-bottom:1rem;padding:0.7rem 0.9rem;" />
+      <div id="tclients"><div class="loading">Loading…</div></div>
+    </section>
+    <section class="panel" id="panel-inspo">
+      <div class="label-sm">Client Inspo 💅</div>
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.76rem;color:var(--muted);margin-bottom:1rem;line-height:1.7;">Photos clients attach when they book — with their name, so you know exactly who wants what and can flag anything that needs ordering.</p>
+      <div id="tinspo"><div class="loading">Loading…</div></div>
     </section>
   </div>
 </div>
@@ -288,6 +301,78 @@ function showTab(t){
   document.getElementById('panel-'+t).classList.add('active');
   if(t==='schedule')loadSchedule();
   if(t==='chats')loadChats();
+  if(t==='clients')loadTeamClients();
+  if(t==='inspo')loadTeamInspo();
+}
+
+/* ── ALL CLIENTS (studio-wide visibility, incl. Black Card profiles) ── */
+let _tcData=null;
+const BC_QS=['Silent appointment or chatty?','Favorite nail color(s)','Favorite nail shape','Favorite nail length','Favorite design/style','Favorite scent','Prefers organic products?','Services booked/wanted most','Wants natural nails longer?','Nails thin or strong?','Chip or break easily?','Grow fast or slow?','Curve up, down, or straight?','Bites nails / picks skin?','Allergies or sensitivities','Past nail damage to track','Firmer or lighter cuticle touch?','Pressure points / ticklish spots'];
+async function loadTeamClients(){
+  const el=document.getElementById('tclients');
+  try{
+    const r=await fetch('/api/team?action=all_clients&member_id='+MID+'&pin='+PIN);
+    _tcData=await r.json();
+    renderTeamClients();
+  }catch{el.innerHTML='<div class="empty">Could not load clients.</div>';}
+}
+let _tcOpen=null;
+function renderTeamClients(){
+  const el=document.getElementById('tclients');
+  if(!_tcData){el.innerHTML='<div class="loading">Loading…</div>';return;}
+  const q=(document.getElementById('tc-search').value||'').toLowerCase();
+  const list=(_tcData.clients||[]).filter(c=>!q||String(c.name||'').toLowerCase().includes(q)||String(c.phone||'').includes(q));
+  if(!list.length){el.innerHTML='<div class="empty">No clients'+(q?' match':' yet')+'.</div>';return;}
+  el.innerHTML=list.map(c=>{
+    const open=_tcOpen===c.id;
+    const em=String(c.email||'').toLowerCase();
+    const prof=(_tcData.bc_profiles||{})[em];
+    let extra='';
+    if(open){
+      const hist=(_tcData.appointments||[]).filter(a=>
+        (c.phone&&String(a.client_phone||'').replace(/\D/g,'')===String(c.phone).replace(/\D/g,''))||
+        (c.name&&String(a.client_name||'').toLowerCase()===String(c.name).toLowerCase())
+      ).slice(0,10);
+      extra='<div style="margin-top:0.8rem;border-top:1px solid var(--border);padding-top:0.8rem">'
+        +'<div style="font-size:0.58rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--gold);margin-bottom:0.4rem">History</div>'
+        +(hist.length?hist.map(a=>'<div style="font-size:0.78rem;color:var(--cream);padding:0.25rem 0">'+esc(a.service||'')+' · '+a.date+' '+fmtTime(a.time)+(a.artist?' · '+esc(a.artist):'')+' <span style="color:var(--muted)">('+a.status+')</span></div>').join(''):'<div style="font-size:0.76rem;color:var(--muted)">No visits recorded yet.</div>')
+        +(c.likes?'<div style="margin-top:0.5rem;font-size:0.76rem;color:var(--cream)">💛 '+esc(c.likes)+'</div>':'')
+        +(c.dislikes?'<div style="font-size:0.76rem;color:var(--cream)">🚫 '+esc(c.dislikes)+'</div>':'')
+        +(c.notes?'<div style="font-size:0.76rem;color:var(--muted);margin-top:0.3rem">'+esc(c.notes)+'</div>':'');
+      if(prof){
+        const rows=BC_QS.map((qq,i)=>{const a=prof.answers['q'+(i+1)];return a?'<div style="padding:0.35rem 0"><div style="font-size:0.56rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">'+qq+'</div><div style="font-size:0.8rem;color:var(--cream)">'+esc(a)+'</div></div>':'';}).join('');
+        extra+='<div style="margin-top:0.7rem;border:1px solid var(--border-hi);padding:0.8rem;background:var(--gold-faint)">'
+          +'<div style="font-size:0.6rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--gold);margin-bottom:0.3rem">✦ Black Card Profile</div>'
+          +(rows||'<div style="font-size:0.76rem;color:var(--muted)">No answers yet.</div>')
+          +(prof.note?'<div style="padding:0.35rem 0"><div style="font-size:0.56rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Anything else</div><div style="font-size:0.8rem;color:var(--cream)">'+esc(prof.note)+'</div></div>':'')
+          +'</div>';
+      }
+      extra+='</div>';
+    }
+    return '<div class="appt" style="flex-direction:column;align-items:stretch;cursor:pointer" onclick="_tcOpen=_tcOpen==='+c.id+'?null:'+c.id+';renderTeamClients()">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem">'
+      +'<div><div class="appt-c">'+esc(c.name||'Unnamed')+(prof?' <span style="font-size:0.6rem;color:var(--gold)">✦ BC</span>':'')+'</div>'
+      +'<div class="appt-s">'+esc(c.phone||'')+(c.last_service?' · Last: '+esc(c.last_service):'')+'</div></div>'
+      +'<div style="font-size:0.7rem;color:var(--muted)">'+(Number(c.visits)||0)+' visit'+(Number(c.visits)===1?'':'s')+' '+(open?'▲':'▼')+'</div>'
+      +'</div>'+extra+'</div>';
+  }).join('');
+}
+
+/* ── CLIENT INSPO FEED ── */
+async function loadTeamInspo(){
+  const el=document.getElementById('tinspo');
+  try{
+    const r=await fetch('/api/photos?action=inspo_feed&member_id='+MID+'&pin='+PIN);
+    const d=await r.json();
+    const rows=d.inspo||[];
+    if(!rows.length){el.innerHTML='<div class="empty"><div class="big">💅</div>No inspo photos yet.<br><span style="font-size:0.72rem">When clients attach inspo at booking, it lands here with their name.</span></div>';return;}
+    el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0.8rem">'
+      +rows.map(p=>'<div style="border:1px solid var(--border);background:var(--card);padding:0.5rem">'
+        +'<img src="'+p.data_url+'" style="width:100%;height:140px;object-fit:cover;display:block" alt="">'
+        +'<div style="font-family:\'Syne\',serif;font-size:0.85rem;color:var(--cream);margin-top:0.4rem">'+esc(p.client_name||'Client')+'</div>'
+        +'<div style="font-size:0.62rem;color:var(--muted)">'+esc(p.service||'')+(p.appt_date?' · '+p.appt_date:'')+'</div>'
+        +'</div>').join('')+'</div>';
+  }catch{el.innerHTML='<div class="empty">Could not load inspo.</div>';}
 }
 
 function fmtTime(t){const[h,m]=t.split(':').map(Number);const ap=h>=12?'PM':'AM';const hh=h>12?h-12:(h===0?12:h);return hh+':'+String(m).padStart(2,'0')+' '+ap;}

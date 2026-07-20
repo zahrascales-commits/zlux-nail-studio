@@ -336,6 +336,14 @@
         <button class="btn btn-gold" onclick="openMemberModal()">+ Add Team Member</button>
       </div>
       <div class="cards" id="members-grid"></div>
+
+      <div class="page-head" style="margin-top:2rem;">
+        <div>
+          <div class="page-title" style="font-size:1.15rem;">Client Inspo 💅</div>
+          <div class="page-desc">Photos clients attach after booking — tagged with who sent them, so you can order supplies before their visit. Your whole team sees these too.</div>
+        </div>
+      </div>
+      <div id="client-inspo-feed" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.8rem;"></div>
     </section>
 
     <!-- CALENDAR / SCHEDULE -->
@@ -530,6 +538,11 @@
           <label class="fld-label">Banner Text</label>
           <textarea id="site-banner-text" rows="3" placeholder="The founding rate locks in at $299/mo forever…"></textarea>
         </div>
+        <div class="site-card" style="grid-column:1/-1;">
+          <h3>Site Photos 📸</h3>
+          <p>Tap any slot to upload a photo from your phone — it appears on the live website in seconds. Photos are auto-compressed for you.</p>
+          <div id="photo-slots" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.8rem;"></div>
+        </div>
         <div class="site-card">
           <h3>Announcement (optional)</h3>
           <p>A one-line notice pinned at the top of the homepage — sales, closures, holidays. Leave empty for none.</p>
@@ -677,7 +690,7 @@ function showTab(name){
   document.getElementById('panel-'+name).classList.add('active');
   if(name==='schedule')renderCal();
   if(name==='messages')loadThreads();
-  if(name==='team')renderMembers();
+  if(name==='team'){renderMembers();loadClientInspo();}
   if(name==='inbox')loadInquiries();
   if(name==='site')loadSite();
   if(name==='clients')loadClients();
@@ -1117,8 +1130,85 @@ async function deleteInq(){
   loadInquiries();
 }
 
+/* ── SITE PHOTOS (owner uploads into any image slot on the site) ── */
+const PHOTO_SLOTS=[
+  {slot:'home-hero',label:'Homepage Hero'},
+  {slot:'princess-party',label:'Princess Party'},
+  {slot:'about-portrait',label:'About — Zahra'},
+  {slot:'services-header',label:'Services Header'},
+  {slot:'insta-1',label:'Instagram 1'},{slot:'insta-2',label:'Instagram 2'},
+  {slot:'insta-3',label:'Instagram 3'},{slot:'insta-4',label:'Instagram 4'},
+  {slot:'insta-5',label:'Instagram 5'},{slot:'insta-6',label:'Instagram 6'},
+];
+let sitePhotos={};
+async function loadSitePhotos(){
+  try{const r=await fetch('/api/photos');const d=await r.json();sitePhotos=d.photos||{};}catch{sitePhotos={};}
+  renderPhotoSlots();
+}
+function renderPhotoSlots(){
+  const grid=document.getElementById('photo-slots');
+  grid.innerHTML=PHOTO_SLOTS.map(p=>{
+    const has=sitePhotos[p.slot];
+    return '<div style="border:1px '+(has?'solid':'dashed')+' var(--border-hi);padding:0.5rem;text-align:center;cursor:pointer;background:var(--bg)" onclick="pickSlotPhoto(\''+p.slot+'\')">'
+      +(has?'<img src="'+has+'" style="width:100%;height:90px;object-fit:cover;display:block;margin-bottom:0.4rem" alt="">':'<div style="height:90px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;color:var(--muted)">+</div>')
+      +'<div style="font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold)">'+p.label+'</div>'
+      +(has?'<button class="btn btn-danger btn-sm" style="margin-top:0.35rem" onclick="event.stopPropagation();clearSlotPhoto(\''+p.slot+'\')">Remove</button>':'')
+      +'</div>';
+  }).join('');
+}
+function pickSlotPhoto(slot){
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='image/*';
+  inp.onchange=()=>{
+    const file=inp.files&&inp.files[0];if(!file)return;
+    const img=new Image();const reader=new FileReader();
+    reader.onload=e=>{img.src=e.target.result;};
+    img.onload=async()=>{
+      const scale=Math.min(1,1400/Math.max(img.width,img.height));
+      const canvas=document.createElement('canvas');
+      canvas.width=Math.round(img.width*scale);canvas.height=Math.round(img.height*scale);
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      let dataUrl=canvas.toDataURL('image/jpeg',0.8);
+      if(dataUrl.length>850000)dataUrl=canvas.toDataURL('image/jpeg',0.55);
+      toast('Uploading…');
+      const r=await api('/api/photos?action=slot',{method:'PUT',body:JSON.stringify({action:'slot',slot,data_url:dataUrl})});
+      if(r.ok){toast('Photo live on the site ✦');await loadSitePhotos();}else toast('Upload failed');
+    };
+    reader.readAsDataURL(file);
+  };
+  inp.click();
+}
+async function clearSlotPhoto(slot){
+  if(!confirm('Remove this photo?'))return;
+  await api('/api/photos?action=slot',{method:'PUT',body:JSON.stringify({action:'slot',slot,data_url:''})});
+  toast('Removed');await loadSitePhotos();
+}
+
+/* ── CLIENT INSPO FEED (photos clients attach after booking) ── */
+async function loadClientInspo(){
+  const el=document.getElementById('client-inspo-feed');
+  if(!el)return;
+  try{
+    const r=await api('/api/photos?action=inspo_feed');const d=await r.json();
+    const rows=d.inspo||[];
+    if(!rows.length){el.innerHTML='<div style="color:var(--muted);font-size:0.8rem;">No client inspo photos yet — they can attach one right after booking.</div>';return;}
+    el.innerHTML=rows.map(p=>'<div style="border:1px solid var(--border);background:var(--bg);padding:0.5rem;">'
+      +'<img src="'+p.data_url+'" style="width:100%;height:130px;object-fit:cover;display:block" alt="">'
+      +'<div style="font-family:\'Syne\',serif;font-size:0.82rem;color:var(--cream);margin-top:0.4rem">'+esc(p.client_name||'Client')+'</div>'
+      +'<div style="font-size:0.62rem;color:var(--muted)">'+esc(p.service||'')+(p.appt_date?' · '+p.appt_date:'')+'</div>'
+      +'<button class="btn btn-danger btn-sm" style="margin-top:0.35rem" onclick="delClientInspo('+p.id+')">Delete</button>'
+      +'</div>').join('');
+  }catch{el.innerHTML='<div style="color:var(--muted);font-size:0.8rem;">Could not load inspo.</div>';}
+}
+async function delClientInspo(id){
+  if(!confirm('Delete this inspo photo?'))return;
+  await api('/api/photos?action=inspo',{method:'DELETE',body:JSON.stringify({action:'inspo',id})});
+  loadClientInspo();
+}
+
 /* ── SITE EDITOR ── */
 async function loadSite(){
+  loadSitePhotos();
   try{
     const r=await fetch('/api/site-settings');const d=await r.json();const s=d.settings||{};
     document.getElementById('site-ticker').value=s.ticker_facts||'';
@@ -1145,14 +1235,26 @@ async function saveSite(){
 }
 
 /* ── CLIENTS ── */
-let clients=[];let openClientId=null;
+let clients=[];let openClientId=null;let bcProfiles={};
+const BC_QS=['Silent appointment or chatty?','Favorite nail color(s)','Favorite nail shape','Favorite nail length','Favorite design/style','Favorite scent','Prefers organic products?','Services booked/wanted most','Wants natural nails longer?','Nails thin or strong?','Chip or break easily?','Grow fast or slow?','Curve up, down, or straight?','Bites nails / picks skin?','Allergies or sensitivities','Past nail damage to track','Firmer or lighter cuticle touch?','Pressure points / ticklish spots'];
 async function loadClients(){
   const el=document.getElementById('clients-list');
   el.innerHTML='<div class="empty">Loading clients…</div>';
   try{
     const r=await api('/api/clients');const d=await r.json();
-    clients=d.clients||[];renderClients();
+    clients=d.clients||[];bcProfiles=d.bc_profiles||{};renderClients();
   }catch{el.innerHTML='<div class="empty">Could not load clients.</div>';}
+}
+function bcProfileHtml(email){
+  const p=bcProfiles[String(email||'').toLowerCase()];
+  if(!p)return '';
+  const rows=BC_QS.map((q,i)=>{const a=p.answers['q'+(i+1)];return a?'<div style="padding:0.45rem 0;border-bottom:1px solid var(--border)"><div style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">'+q+'</div><div style="font-size:0.85rem;color:var(--cream);margin-top:0.15rem">'+esc(a)+'</div></div>':'';}).join('');
+  return '<div style="margin-top:1rem;border:1px solid var(--border-hi);padding:1rem 1.1rem;background:var(--bg)">'
+    +'<div class="ai-tag" style="margin-bottom:0.5rem">Black Card Profile</div>'
+    +(rows||'<div style="font-size:0.8rem;color:var(--muted)">Profile created but no answers yet.</div>')
+    +(p.note?'<div style="padding:0.45rem 0"><div style="font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Anything else</div><div style="font-size:0.85rem;color:var(--cream);margin-top:0.15rem">'+esc(p.note)+'</div></div>':'')
+    +(p.updated_ts?'<div style="font-size:0.6rem;color:var(--muted);margin-top:0.5rem">Updated '+new Date(Number(p.updated_ts)).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+'</div>':'')
+    +'</div>';
 }
 function renderClients(){
   const q=(document.getElementById('client-search').value||'').toLowerCase();
@@ -1184,6 +1286,7 @@ function renderClients(){
         <button class="btn btn-gold btn-sm" onclick="saveClient(${c.id})">Save Profile</button>
         <button class="btn btn-danger btn-sm" onclick="delClient(${c.id})">Delete</button>
       </div>
+      ${bcProfileHtml(c.email)}
     </div>`;
   }).join('');
 }

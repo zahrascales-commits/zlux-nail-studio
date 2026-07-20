@@ -315,7 +315,7 @@ async function loadDashboard(member) {
 
 function populatePortal(d) {
   const { member, preferences, history, upcoming, announcements, messages, usage } = d;
-  const tierMax = { SIGNATURE:1, LUXE:2, BLACK_CARD:3 }[member.tier] || 1;
+  const tierMax = { SIGNATURE:1, LUXE:2, BLACK_CARD:2 }[member.tier] || 1;
   document.getElementById('stat-services-left').textContent = Math.max(0, tierMax - (usage.services_used || 0));
   document.getElementById('stat-upcoming').textContent = upcoming.length;
   document.getElementById('stat-next-billing-day').textContent = member.nextBilling ? new Date(member.nextBilling).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';

@@ -74,6 +74,27 @@ async function ensureTables() {
     last_visit TEXT DEFAULT '',
     created_ts INTEGER
   )`);
+  await execute(`CREATE TABLE IF NOT EXISTS client_profiles (
+    email TEXT PRIMARY KEY,
+    answers TEXT DEFAULT '{}',
+    note TEXT DEFAULT '',
+    updated_ts INTEGER
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS site_photos (
+    slot TEXT PRIMARY KEY,
+    data_url TEXT,
+    updated_ts INTEGER
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS client_inspo (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    confirmation TEXT,
+    client_name TEXT,
+    client_email TEXT,
+    service TEXT,
+    appt_date TEXT,
+    data_url TEXT,
+    ts INTEGER
+  )`);
   // Columns added after launch — idempotent, ignored once they exist
   for (const sql of [
     "ALTER TABLE team_members ADD COLUMN phone TEXT DEFAULT ''",
