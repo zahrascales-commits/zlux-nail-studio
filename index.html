@@ -102,6 +102,18 @@
   <p class="ticker-text" id="ticker-text">✦ &nbsp; Every set is custom-crafted. No templates, no rushing. &nbsp; ✦</p>
 </div>
 
+<!-- MEMBER LOGIN — Member ID sign-in, right on the homepage -->
+<div style="background:var(--espresso-dark);border-top:1px solid rgba(196,168,130,0.12);border-bottom:1px solid rgba(196,168,130,0.12);padding:1.4rem 1.5rem;">
+  <div class="container" style="max-width:620px;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;justify-content:center;">
+    <div style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--champagne);white-space:nowrap;">Already a Member?</div>
+    <div style="display:flex;gap:0.5rem;flex:1;min-width:240px;max-width:420px;">
+      <input id="home-member-id" placeholder="Your Member ID — e.g. ZL-XXXXXX" style="flex:1;background:rgba(245,238,232,0.06);border:1px solid rgba(196,168,130,0.3);color:var(--cream);font-family:'Josefin Sans',sans-serif;font-size:0.85rem;padding:0.7rem 0.9rem;outline:none;min-height:44px;" onkeydown="if(event.key==='Enter')homeMemberLogin()" />
+      <button class="btn-gold" style="animation:none;white-space:nowrap;min-height:44px;" onclick="homeMemberLogin()">Log In</button>
+    </div>
+  </div>
+  <div id="home-member-err" style="display:none;text-align:center;font-family:'Josefin Sans',sans-serif;font-size:0.76rem;color:#e07070;margin-top:0.6rem;"></div>
+</div>
+
 <!-- STATS BAR -->
 <div class="stats-bar">
   <div class="stat-item">
@@ -677,6 +689,32 @@
     document.getElementById('join-success').style.display = 'block';
   }
   window.joinList = joinList;
+
+  // Homepage Member Login — signs in with a Member ID, then hands the
+  // session off to the Client Portal (same localStorage key it already
+  // reads on load, so it opens straight into the dashboard).
+  async function homeMemberLogin() {
+    const input = document.getElementById('home-member-id');
+    const errEl = document.getElementById('home-member-err');
+    const id = input.value.trim().toUpperCase();
+    errEl.style.display = 'none';
+    if (!id) { errEl.textContent = 'Enter your Member ID first.'; errEl.style.display = 'block'; return; }
+    try {
+      const res = await fetch('/api/member-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId: id })
+      });
+      const data = await res.json();
+      if (!res.ok) { errEl.textContent = data.error || 'Member ID not found.'; errEl.style.display = 'block'; return; }
+      localStorage.setItem('zlux_token', data.token);
+      window.location.href = 'client-portal.html';
+    } catch (_) {
+      errEl.textContent = 'Connection error — try again.';
+      errEl.style.display = 'block';
+    }
+  }
+  window.homeMemberLogin = homeMemberLogin;
 </script>
 </body>
 </html>

@@ -179,6 +179,7 @@
           <canvas id="qr-canvas" width="220" height="220"></canvas>
           <div id="qr-name-watermark" style="font-family:'Josefin Sans',sans-serif;font-size:0.68rem;color:var(--latte);margin-top:0.35rem;"></div>
         </div>
+        <div id="qr-error" style="display:none;cursor:pointer;font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:#b43232;background:rgba(180,50,50,0.08);border:1px solid rgba(180,50,50,0.25);padding:0.75rem 1rem;margin-top:0.75rem;text-align:center;"></div>
         <div class="qr-expire">Refreshes in <strong id="qr-countdown">5:00</strong></div>
         <div class="qr-warning">Screenshots will not be accepted at the studio. This QR is tied to your live session.</div>
         <div style="margin-top:1.25rem;">
@@ -391,9 +392,15 @@ function startQrCycle() {
 
 async function loadQr() {
   if (!authToken) return;
+  const errEl = document.getElementById('qr-error');
+  if (errEl) errEl.style.display = 'none';
   try {
     const r = await fetch('/api/qr-generate', { headers:{'Authorization':'Bearer '+authToken} });
-    if (!r.ok) return;
+    if (!r.ok) {
+      const d = await r.json().catch(()=>({}));
+      showQrError(d.error || ('Could not load your QR right now (error ' + r.status + ').'));
+      return;
+    }
     const d = await r.json();
     const canvas = document.getElementById('qr-canvas');
     QRCode.toCanvas(canvas, d.qrPayload, { width:220, margin:2, color:{dark:'#0D0D0D',light:'#FFFFFF'} });
@@ -410,7 +417,17 @@ async function loadQr() {
     document.getElementById('qr-countdown').textContent = Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
     canvas.addEventListener('contextmenu',e=>e.preventDefault());
     canvas.addEventListener('dragstart',e=>e.preventDefault());
-  } catch (_) {}
+  } catch (err) {
+    showQrError('Connection hiccup loading your QR — tap to try again.');
+  }
+}
+
+function showQrError(msg) {
+  const el = document.getElementById('qr-error');
+  if (!el) return;
+  el.textContent = msg + '  (tap to retry)';
+  el.style.display = 'block';
+  el.onclick = loadQr;
 }
 
 function startCountdown(ms) {

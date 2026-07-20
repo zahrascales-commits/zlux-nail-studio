@@ -1,9 +1,17 @@
-const { queryOne } = require('./_db');
+const { queryOne, execute } = require('./_db');
 const crypto = require('crypto');
 
 async function getSession(token) {
   if (!token) return null;
   return queryOne('SELECT * FROM sessions WHERE token = ? AND role = ? AND expires_at > datetime("now")', [token, 'CLIENT']);
+}
+
+// Self-heal a production DB where the `members` table predates the
+// qr_secret column (CREATE TABLE IF NOT EXISTS never re-applies new
+// columns to an already-existing table). Idempotent — safe to call
+// every request; the ALTER is a silent no-op once the column exists.
+async function ensureQrSecretColumn() {
+  try { await execute("ALTER TABLE members ADD COLUMN qr_secret TEXT"); } catch (_) {}
 }
 
 function generateToken(secret, memberId, tier) {
@@ -24,8 +32,22 @@ module.exports = async (req, res) => {
     const session = await getSession(token);
     if (!session) return res.status(401).json({ error: 'Unauthorized.' });
 
-    const member = await queryOne('SELECT member_id, full_name, tier, qr_secret FROM members WHERE member_id = ?', [session.user_id]);
+    let member;
+    try {
+      member = await queryOne('SELECT member_id, full_name, tier, qr_secret FROM members WHERE member_id = ?', [session.user_id]);
+    } catch (colErr) {
+      // "no such column: qr_secret" on a table that predates it — add it and retry once
+      await ensureQrSecretColumn();
+      member = await queryOne('SELECT member_id, full_name, tier, qr_secret FROM members WHERE member_id = ?', [session.user_id]);
+    }
     if (!member) return res.status(404).json({ error: 'Member not found.' });
+
+    // Backfill a secret for members created before this column existed,
+    // or whose secret is otherwise missing.
+    if (!member.qr_secret) {
+      member.qr_secret = crypto.randomBytes(20).toString('hex');
+      await execute('UPDATE members SET qr_secret = ? WHERE member_id = ?', [member.qr_secret, member.member_id]);
+    }
 
     const qrToken = generateToken(member.qr_secret, member.member_id, member.tier);
     const expiresAt = new Date((Math.floor(Date.now() / (5 * 60 * 1000)) + 1) * 5 * 60 * 1000).toISOString();

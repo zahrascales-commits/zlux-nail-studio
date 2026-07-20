@@ -34,6 +34,12 @@ module.exports = async (req, res) => {
     const member = await queryOne('SELECT * FROM members WHERE member_id = ?', [memberId]);
     if (!member) return res.status(404).json({ error: 'Member not found.' });
 
+    // Same schema-drift/backfill guard as qr-generate — a client's QR is
+    // only ever valid if their secret was already generated for them.
+    if (!member.qr_secret) {
+      return res.status(409).json({ error: 'Their QR hasn\'t been generated yet — have them open "My QR" in their portal once, then rescan.' });
+    }
+
     const valid = verifyToken(member.qr_secret, memberId, tier, qrToken);
     if (!valid) {
       await execute('INSERT INTO security_log (event, details) VALUES (?,?)', ['QR_VERIFY_FAILED', JSON.stringify({ memberId })]);
