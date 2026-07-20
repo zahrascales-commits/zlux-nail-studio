@@ -4,7 +4,7 @@ const store = require('./_store');
 async function getSessionFromReq(req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
   if (!token) return null;
-  return queryOne('SELECT * FROM sessions WHERE token = ? AND expires_at > datetime("now")', [token]);
+  return queryOne('SELECT * FROM sessions WHERE token = ? AND expires_at > CURRENT_TIMESTAMP', [token]);
 }
 
 module.exports = async (req, res) => {

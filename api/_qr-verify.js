@@ -20,7 +20,7 @@ module.exports = async (req, res) => {
 
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
   try {
-    const session = await queryOne('SELECT * FROM sessions WHERE token = ? AND (role = ? OR role = ?) AND expires_at > datetime("now")', [token, 'STAFF', 'ADMIN']);
+    const session = await queryOne('SELECT * FROM sessions WHERE token = ? AND (role = ? OR role = ?) AND expires_at > CURRENT_TIMESTAMP', [token, 'STAFF', 'ADMIN']);
     if (!session) return res.status(401).json({ error: 'Only staff or admin can verify QR codes.' });
 
     const { qrPayload } = req.body;

@@ -3,7 +3,7 @@ const crypto = require('crypto');
 
 async function getSession(token) {
   if (!token) return null;
-  return queryOne('SELECT * FROM sessions WHERE token = ? AND role = ? AND expires_at > datetime("now")', [token, 'CLIENT']);
+  return queryOne('SELECT * FROM sessions WHERE token = ? AND role = ? AND expires_at > CURRENT_TIMESTAMP', [token, 'CLIENT']);
 }
 
 // Self-heal a production DB where the `members` table predates the

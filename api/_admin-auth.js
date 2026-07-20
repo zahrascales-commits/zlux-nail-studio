@@ -22,7 +22,7 @@ module.exports = async (req, res) => {
     const token = crypto.randomBytes(32).toString('hex');
     const expires = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
     await execute('INSERT INTO sessions (token, role, user_id, expires_at) VALUES (?,?,?,?)', [token, 'ADMIN', String(admin.id), expires]);
-    await execute('UPDATE admin SET last_login = datetime("now") WHERE id = ?', [admin.id]);
+    await execute('UPDATE admin SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [admin.id]);
 
     return res.status(200).json({ token, email: admin.email });
   } catch (err) {

@@ -3,7 +3,7 @@ const { queryOne, query, execute } = require('./_db');
 async function authAdmin(req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
   if (!token) return null;
-  return queryOne('SELECT * FROM sessions WHERE token = ? AND role = ? AND expires_at > datetime("now")', [token, 'ADMIN']);
+  return queryOne('SELECT * FROM sessions WHERE token = ? AND role = ? AND expires_at > CURRENT_TIMESTAMP', [token, 'ADMIN']);
 }
 
 module.exports = async (req, res) => {
@@ -36,7 +36,7 @@ module.exports = async (req, res) => {
       const appointments = await query(sql, params);
       const staff        = await query('SELECT id, name, email FROM staff WHERE active=1', []);
       const config       = await queryOne('SELECT * FROM schedule_config WHERE id=1', []);
-      const blocks       = await query('SELECT * FROM availability_blocks WHERE block_date >= date("now") ORDER BY block_date ASC', []);
+      const blocks       = await query('SELECT * FROM availability_blocks WHERE block_date >= CURRENT_DATE ORDER BY block_date ASC', []);
 
       return res.status(200).json({ appointments, staff, config, blocks });
     }
@@ -46,7 +46,7 @@ module.exports = async (req, res) => {
 
       if (action === 'update_config') {
         const { blackCardDays, luxeDays, signatureDays, publicDays, openTime, closeTime } = req.body;
-        await execute('UPDATE schedule_config SET black_card_days_ahead=?, luxe_days_ahead=?, signature_days_ahead=?, public_days_ahead=?, studio_open_time=?, studio_close_time=?, updated_at=datetime("now") WHERE id=1',
+        await execute('UPDATE schedule_config SET black_card_days_ahead=?, luxe_days_ahead=?, signature_days_ahead=?, public_days_ahead=?, studio_open_time=?, studio_close_time=?, updated_at=CURRENT_TIMESTAMP WHERE id=1',
           [blackCardDays||20, luxeDays||13, signatureDays||3, publicDays||0, openTime||'06:00', closeTime||'22:00']);
         return res.status(200).json({ success: true });
       }

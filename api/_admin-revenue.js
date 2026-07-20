@@ -3,7 +3,7 @@ const { queryOne, query } = require('./_db');
 async function authAdmin(req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
   if (!token) return null;
-  return queryOne('SELECT * FROM sessions WHERE token = ? AND role = ? AND expires_at > datetime("now")', [token, 'ADMIN']);
+  return queryOne('SELECT * FROM sessions WHERE token = ? AND role = ? AND expires_at > CURRENT_TIMESTAMP', [token, 'ADMIN']);
 }
 
 const TIER_PRICE = { SIGNATURE: 99, LUXE: 199, BLACK_CARD: 299 };

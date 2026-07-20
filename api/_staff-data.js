@@ -3,7 +3,7 @@ const { queryOne, query } = require('./_db');
 async function authStaff(req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
   if (!token) return null;
-  return queryOne('SELECT * FROM sessions WHERE token = ? AND role = ? AND expires_at > datetime("now")', [token, 'STAFF']);
+  return queryOne('SELECT * FROM sessions WHERE token = ? AND role = ? AND expires_at > CURRENT_TIMESTAMP', [token, 'STAFF']);
 }
 
 module.exports = async (req, res) => {
