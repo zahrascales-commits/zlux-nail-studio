@@ -234,6 +234,15 @@
   .site-card textarea,.site-card input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--cream);padding:0.7rem 0.85rem;outline:none;font-family:inherit;font-size:0.85rem}
   .site-card textarea:focus,.site-card input:focus{border-color:var(--gold)}
 
+  /* ── TRAFFIC / STAT CARDS ── */
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem}
+  .stat-card{background:var(--card);border:1px solid var(--border);padding:1.2rem;text-align:center}
+  .stat-num{font-family:'Syne',sans-serif;font-size:1.6rem;color:var(--gold);word-break:break-word}
+  .stat-label{font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-top:0.3rem}
+  .tr-row{display:flex;justify-content:space-between;gap:0.6rem;padding:0.5rem 0.7rem;background:var(--bg);border:1px solid var(--border);font-size:0.85rem}
+  .tr-row .tr-bar{flex:1;height:6px;background:var(--border);margin:0 0.7rem;position:relative;align-self:center}
+  .tr-row .tr-bar-fill{position:absolute;left:0;top:0;height:100%;background:var(--gold)}
+
   /* ── NOTIFICATION BELL ── */
   .bell-wrap{position:relative}
   .bell{background:none;border:1px solid var(--border);color:var(--muted);width:34px;height:34px;cursor:pointer;font-size:0.95rem;display:inline-flex;align-items:center;justify-content:center;transition:all 0.2s;position:relative}
@@ -321,6 +330,7 @@
     <button class="tab" data-tab="team" onclick="showTab('team')">Team</button>
     <button class="tab" data-tab="clients" onclick="showTab('clients')">Clients</button>
     <button class="tab" data-tab="site" onclick="showTab('site')">Site</button>
+    <button class="tab" data-tab="traffic" onclick="showTab('traffic')">Traffic</button>
     <button class="tab" data-tab="settings" onclick="showTab('settings')">Settings</button>
   </div>
 
@@ -578,6 +588,44 @@
       </div>
     </section>
 
+    <!-- TRAFFIC / ANALYTICS -->
+    <section class="panel" id="panel-traffic">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Website Traffic</div>
+          <div class="page-desc">How many people visit, where they tend to stop scrolling, and which page they're on when they leave the site — so you know exactly what to fix.</div>
+        </div>
+        <select id="traffic-days" onchange="loadTraffic()" style="max-width:160px;">
+          <option value="7">Last 7 days</option>
+          <option value="30" selected>Last 30 days</option>
+          <option value="90">Last 90 days</option>
+        </select>
+      </div>
+      <div class="stat-grid" style="margin-bottom:1.5rem;">
+        <div class="stat-card"><div class="stat-num" id="tr-visits">—</div><div class="stat-label">Unique Visits</div></div>
+        <div class="stat-card"><div class="stat-num" id="tr-views">—</div><div class="stat-label">Total Page Views</div></div>
+        <div class="stat-card"><div class="stat-num" id="tr-top-exit">—</div><div class="stat-label">#1 Exit Page</div></div>
+        <div class="stat-card"><div class="stat-num" id="tr-low-scroll">—</div><div class="stat-label">Lowest Avg. Scroll</div></div>
+      </div>
+      <div class="site-grid">
+        <div class="site-card">
+          <h3>Most Visited Pages</h3>
+          <p>Where traffic actually goes.</p>
+          <div id="tr-top-pages" style="display:grid;gap:0.4rem;margin-top:0.6rem;"></div>
+        </div>
+        <div class="site-card">
+          <h3>Where People Leave 🚪</h3>
+          <p>The last page someone viewed before leaving the site — your biggest opportunity to fix something.</p>
+          <div id="tr-exit-pages" style="display:grid;gap:0.4rem;margin-top:0.6rem;"></div>
+        </div>
+        <div class="site-card" style="grid-column:1/-1;">
+          <h3>Scroll Depth by Page 📉</h3>
+          <p>How far people scroll on average before stopping, per page. A low number on a page with real content below the fold means people are giving up early — that's the page to fix first.</p>
+          <div id="tr-scroll-pages" style="display:grid;gap:0.4rem;margin-top:0.8rem;"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- MESSAGES -->
     <section class="panel" id="panel-messages">
       <div class="page-head">
@@ -775,6 +823,7 @@ function showTab(name){
   if(name==='team'){renderMembers();loadClientInspo();loadOverrides();}
   if(name==='inbox')loadInquiries();
   if(name==='site')loadSite();
+  if(name==='traffic')loadTraffic();
   if(name==='clients')loadClients();
   if(name==='settings')loadSettings();
 }
@@ -1188,6 +1237,41 @@ async function delClassPurchase(id){
   if(!confirm('Remove this purchase record? This does not issue a refund.'))return;
   await api('/api/classes',{method:'DELETE',body:JSON.stringify({action:'delete_purchase',id})});
   toast('Removed');await loadClassPurchases();
+}
+
+/* ── TRAFFIC ── */
+async function loadTraffic(){
+  const days=document.getElementById('traffic-days').value||30;
+  const r=await fetch('/api/analytics?action=summary&days='+days,{headers:{'X-CEO-Password':PWD}});
+  const d=await r.json();
+  document.getElementById('tr-visits').textContent=d.unique_visits??'—';
+  document.getElementById('tr-views').textContent=d.total_pageviews??'—';
+  document.getElementById('tr-top-exit').textContent=d.top_exit_pages&&d.top_exit_pages[0]?d.top_exit_pages[0].path:'—';
+  document.getElementById('tr-low-scroll').textContent=d.scroll_by_page&&d.scroll_by_page[0]?d.scroll_by_page[0].path+' ('+d.scroll_by_page[0].avg_scroll_pct+'%)':'—';
+
+  renderTrafficRows('tr-top-pages',d.top_pages,'count',Math.max(1,(d.top_pages&&d.top_pages[0]?d.top_pages[0].count:1)));
+  renderTrafficRows('tr-exit-pages',d.top_exit_pages,'count',Math.max(1,(d.top_exit_pages&&d.top_exit_pages[0]?d.top_exit_pages[0].count:1)));
+  renderScrollRows('tr-scroll-pages',d.scroll_by_page);
+}
+function renderTrafficRows(elId,rows,valueKey,maxVal){
+  const el=document.getElementById(elId);
+  if(!rows||!rows.length){el.innerHTML='<div class="empty" style="padding:1rem">Not enough data yet — check back once you have some visitors.</div>';return;}
+  el.innerHTML=rows.slice(0,10).map(r=>`
+    <div class="tr-row">
+      <span>${esc(r.path)}</span>
+      <span class="tr-bar"><span class="tr-bar-fill" style="width:${Math.round((r[valueKey]/maxVal)*100)}%"></span></span>
+      <strong>${r[valueKey]}</strong>
+    </div>`).join('');
+}
+function renderScrollRows(elId,rows){
+  const el=document.getElementById(elId);
+  if(!rows||!rows.length){el.innerHTML='<div class="empty" style="padding:1rem">Not enough scroll data yet.</div>';return;}
+  el.innerHTML=rows.map(r=>`
+    <div class="tr-row">
+      <span>${esc(r.path)} <span style="color:var(--muted);font-size:0.75rem">(${r.samples} visit${r.samples===1?'':'s'})</span></span>
+      <span class="tr-bar"><span class="tr-bar-fill" style="width:${r.avg_scroll_pct}%"></span></span>
+      <strong>${r.avg_scroll_pct}%</strong>
+    </div>`).join('');
 }
 
 /* ── SCHEDULE ── */

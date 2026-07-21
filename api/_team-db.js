@@ -127,6 +127,21 @@ async function ensureTables() {
     payment_intent_id TEXT,
     ts INTEGER
   )`);
+  await execute(`CREATE TABLE IF NOT EXISTS analytics_pageviews (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    path TEXT NOT NULL,
+    referrer TEXT DEFAULT '',
+    ts INTEGER NOT NULL
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS analytics_exits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    path TEXT NOT NULL,
+    max_scroll_pct INTEGER DEFAULT 0,
+    time_on_page_ms INTEGER DEFAULT 0,
+    ts INTEGER NOT NULL
+  )`);
   // Columns added after launch — idempotent, ignored once they exist
   for (const sql of [
     "ALTER TABLE team_members ADD COLUMN phone TEXT DEFAULT ''",
