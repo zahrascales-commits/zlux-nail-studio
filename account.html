@@ -6,11 +6,11 @@
 <title>My ZOLA — Your Account</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  :root{--espresso:#0D0D0D;--gold:#C4A882;--gold-light:#E8D4B0;--cream:#F5EEE8;--latte:#8B6A3E;
-    --bg:#FAF7F2;--card:#fff;--border:rgba(139,106,62,0.15);--muted:#9C8B73}
+  :root{--espresso:#0D0D0D;--gold:#B6A588;--gold-light:#DDD0B8;--cream:#F5EEE8;--latte:#8C7A5E;
+    --bg:#FAF7F2;--card:#fff;--border:rgba(140,122,94,0.15);--muted:#9C8B73}
   body{font-family:'Josefin Sans',sans-serif;background:var(--bg);color:var(--espresso);min-height:100vh;line-height:1.6}
   input,button,textarea{font-family:inherit;color:inherit;font-size:inherit}
   a{text-decoration:none;color:inherit}
@@ -19,16 +19,16 @@
   @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
 
   .head{background:var(--espresso);color:var(--cream);padding:1rem 1.4rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}
-  .logo{font-family:'Syne',sans-serif;font-size:1.4rem;letter-spacing:0.1em}
+  .logo{font-family:'Cinzel', serif;font-size:1.4rem;letter-spacing:0.1em}
   .head-right{display:flex;gap:0.6rem;align-items:center}
-  .head-btn{background:none;border:1px solid rgba(196,168,130,0.35);color:var(--gold);font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;padding:0.45rem 0.85rem;cursor:pointer;transition:all 0.2s}
-  .head-btn:hover{background:rgba(196,168,130,0.12)}
+  .head-btn{background:none;border:1px solid rgba(182,165,136,0.35);color:var(--gold);font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;padding:0.45rem 0.85rem;cursor:pointer;transition:all 0.2s}
+  .head-btn:hover{background:rgba(182,165,136,0.12)}
 
   /* AUTH */
   #auth{max-width:400px;margin:0 auto;padding:4rem 1.4rem}
   .auth-card{background:var(--card);border:1px solid var(--border);padding:2.5rem 2rem;animation:fadeUp 0.5s ease;position:relative;overflow:hidden}
   .auth-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);background-size:200% 100%;animation:shimmer 3s linear infinite}
-  .auth-title{font-family:'Syne',sans-serif;font-size:1.6rem;text-align:center}
+  .auth-title{font-family:'Cinzel', serif;font-size:1.6rem;text-align:center}
   .auth-sub{font-size:0.8rem;color:var(--latte);text-align:center;margin:0.4rem 0 1.8rem}
   .lbl{display:block;font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--latte);margin-bottom:0.4rem}
   .inp{width:100%;background:var(--bg);border:1px solid var(--border);padding:0.8rem 1rem;outline:none;margin-bottom:0.9rem;transition:border-color 0.2s}
@@ -42,22 +42,22 @@
   /* DASHBOARD */
   #dash{display:none;max-width:720px;margin:0 auto;padding:1.6rem 1.4rem 5rem}
   .hello{margin-bottom:1.5rem;animation:fadeUp 0.4s ease}
-  .hello h1{font-family:'Syne',sans-serif;font-size:1.7rem}
+  .hello h1{font-family:'Cinzel', serif;font-size:1.7rem}
   .hello p{font-size:0.85rem;color:var(--latte)}
   .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:0.7rem;margin-bottom:1.5rem}
   .stat{background:var(--card);border:1px solid var(--border);padding:1rem;text-align:center;animation:pop 0.4s ease both}
-  .stat .n{font-family:'Syne',sans-serif;font-size:1.5rem;color:var(--gold)}
+  .stat .n{font-family:'Cinzel', serif;font-size:1.5rem;color:var(--gold)}
   .stat .l{font-size:0.56rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted)}
   .sect{font-size:0.6rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--gold);margin:1.6rem 0 0.8rem;font-weight:600}
   .appt{background:var(--card);border:1px solid var(--border);padding:1.1rem 1.25rem;margin-bottom:0.6rem;display:flex;gap:1rem;align-items:center;animation:fadeUp 0.35s ease both}
-  .appt-when{min-width:74px;text-align:center;background:var(--bg);padding:0.5rem 0.3rem;border-left:2px solid var(--ac,#C4A882)}
+  .appt-when{min-width:74px;text-align:center;background:var(--bg);padding:0.5rem 0.3rem;border-left:2px solid var(--ac,#B6A588)}
   .appt-when .d{font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)}
-  .appt-when .t{font-family:'Syne',sans-serif;font-size:1rem}
+  .appt-when .t{font-family:'Cinzel', serif;font-size:1rem}
   .appt-mid{flex:1;min-width:0}
-  .appt-svc{font-family:'Syne',sans-serif;font-size:1rem}
+  .appt-svc{font-family:'Cinzel', serif;font-size:1rem}
   .appt-artist{font-size:0.74rem;color:var(--latte)}
   .chip{display:inline-block;font-size:0.54rem;letter-spacing:0.12em;text-transform:uppercase;padding:0.15rem 0.5rem;margin-top:0.25rem}
-  .c-sch{background:rgba(196,168,130,0.14);color:var(--latte)}
+  .c-sch{background:rgba(182,165,136,0.14);color:var(--latte)}
   .c-done{background:rgba(106,176,122,0.15);color:#4e8e5e}
   .msg-btn{background:var(--espresso);color:var(--gold);border:none;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;padding:0.55rem 0.9rem;cursor:pointer;transition:opacity 0.2s}
   .msg-btn:hover{opacity:0.85}
@@ -120,7 +120,7 @@
   <div id="rebook-row" style="display:none;margin-bottom:1.4rem;">
     <div class="card" style="border-left:3px solid var(--gold);">
       <div style="font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:0.4rem;">Your last visit</div>
-      <div style="font-family:'Syne',sans-serif;font-size:1.15rem;margin-bottom:0.9rem;" id="rebook-name">—</div>
+      <div style="font-family:'Cinzel', serif;font-size:1.15rem;margin-bottom:0.9rem;" id="rebook-name">—</div>
       <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
         <a class="gold-btn" id="rebook-btn" style="flex:1;min-width:150px;text-align:center;text-decoration:none;display:block;" href="booking.html">Book This Again</a>
         <a class="gold-btn" style="flex:1;min-width:150px;text-align:center;text-decoration:none;display:block;background:transparent;border:1px solid var(--gold);color:var(--gold);" href="booking.html">Book Something New</a>
@@ -131,15 +131,15 @@
   <!-- BLACK CARD PROFILE — appears only for confirmed Black Card members -->
   <div id="bc-section" style="display:none;">
     <style>
-      .bcp { background:#111; border:1px solid rgba(196,168,130,0.3); padding:2rem 1.5rem; margin-bottom:1.5rem; }
+      .bcp { background:#111; border:1px solid rgba(182,165,136,0.3); padding:2rem 1.5rem; margin-bottom:1.5rem; }
       .bcp-head { text-align:center; margin-bottom:2.2rem; }
-      .bcp-title { font-family:'Syne',sans-serif; font-size:1.35rem; color:#C4A882; letter-spacing:0.04em; }
+      .bcp-title { font-family:'Cinzel', serif; font-size:1.35rem; color:#B6A588; letter-spacing:0.04em; }
       .bcp-sub { font-family:'Josefin Sans',sans-serif; font-size:0.78rem; color:#8B7355; margin-top:0.5rem; line-height:1.7; max-width:420px; margin-left:auto; margin-right:auto; }
-      .bcp-q { background:#181512; border:1px solid rgba(196,168,130,0.16); padding:1.4rem 1.3rem; margin-bottom:1.4rem; }
-      .bcp-q label { display:block; font-family:'Syne',sans-serif; font-size:0.95rem; color:#F5EEE8; line-height:1.5; margin-bottom:0.85rem; }
-      .bcp-q textarea { width:100%; background:#0D0B09; border:1px solid rgba(196,168,130,0.2); color:#F5EEE8; font-family:'Josefin Sans',sans-serif; font-size:0.88rem; padding:0.8rem 0.95rem; min-height:64px; resize:vertical; outline:none; transition:border-color 0.2s; line-height:1.6; }
-      .bcp-q textarea:focus { border-color:#C4A882; }
-      .bcp-save { width:100%; background:#C4A882; color:#0D0B09; border:none; padding:1rem; font-family:'Josefin Sans',sans-serif; font-size:0.72rem; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; cursor:pointer; }
+      .bcp-q { background:#181512; border:1px solid rgba(182,165,136,0.16); padding:1.4rem 1.3rem; margin-bottom:1.4rem; }
+      .bcp-q label { display:block; font-family:'Cinzel', serif; font-size:0.95rem; color:#F5EEE8; line-height:1.5; margin-bottom:0.85rem; }
+      .bcp-q textarea { width:100%; background:#0D0B09; border:1px solid rgba(182,165,136,0.2); color:#F5EEE8; font-family:'Josefin Sans',sans-serif; font-size:0.88rem; padding:0.8rem 0.95rem; min-height:64px; resize:vertical; outline:none; transition:border-color 0.2s; line-height:1.6; }
+      .bcp-q textarea:focus { border-color:#B6A588; }
+      .bcp-save { width:100%; background:#B6A588; color:#0D0B09; border:none; padding:1rem; font-family:'Josefin Sans',sans-serif; font-size:0.72rem; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; cursor:pointer; }
       .bcp-saved-note { font-family:'Josefin Sans',sans-serif; font-size:0.72rem; color:#8B7355; text-align:center; margin-top:0.75rem; }
     </style>
     <div class="sect">Black Card ✦ Your Personal Profile</div>
@@ -249,7 +249,7 @@ async function enter(){
     +'<div class="stat" style="animation-delay:0.08s"><div class="n">'+visits+'</div><div class="l">Total Visits</div></div>'
     +'<div class="stat" style="animation-delay:0.16s"><div class="n">'+(visits>=10?'💎':visits>=5?'🥇':'✦')+'</div><div class="l">'+(visits>=10?'VIP Client':visits>=5?'Regular':'Member')+'</div></div>';
 
-  const render=a=>`<div class="appt" style="--ac:${a.artist_color||'#C4A882'}">
+  const render=a=>`<div class="appt" style="--ac:${a.artist_color||'#B6A588'}">
       <div class="appt-when"><div class="d">${fmtDate(a.date)}</div><div class="t">${fmtTime(a.time)}</div></div>
       <div class="appt-mid">
         <div class="appt-svc">${esc(a.service||'Appointment')}</div>

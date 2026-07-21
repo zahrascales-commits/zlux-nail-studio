@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ZOLA — CEO Studio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;600&display=swap" rel="stylesheet" />
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
-      --bg:#0D0D0D;--surface:#161412;--card:#1E1A16;--border:rgba(196,168,130,0.12);
-      --gold:#C4A882;--gold-dim:rgba(196,168,130,0.55);--gold-faint:rgba(196,168,130,0.08);
-      --cream:#F5EEE8;--latte:#8B6A3E;--blush:#F0EAD8;
-      --text:#F5EEE8;--muted:#8B6A3E;--danger:#c0392b;--success:#27ae60;
+      --bg:#0D0D0D;--surface:#161412;--card:#1E1A16;--border:rgba(182,165,136,0.12);
+      --gold:#B6A588;--gold-dim:rgba(182,165,136,0.55);--gold-faint:rgba(182,165,136,0.08);
+      --cream:#F5EEE8;--latte:#8C7A5E;--blush:#F0EAD8;
+      --text:#F5EEE8;--muted:#8C7A5E;--danger:#c0392b;--success:#27ae60;
       --sidebar:220px;
     }
     body{background:var(--bg);color:var(--text);font-family:'Josefin Sans',sans-serif;font-size:0.9rem;line-height:1.6;min-height:100vh;display:flex;}
@@ -22,7 +22,7 @@
     /* ── LOGIN OVERLAY ── */
     #login-overlay{position:fixed;inset:0;background:#0D0D0D;z-index:9999;display:flex;align-items:center;justify-content:center;}
     .login-box{width:360px;padding:3rem 2.5rem;border:1px solid var(--border);background:var(--surface);}
-    .login-logo{font-family:'Syne',sans-serif;font-size:2rem;letter-spacing:0.08em;color:var(--gold);text-align:center;margin-bottom:0.3rem;}
+    .login-logo{font-family:'Cinzel', serif;font-size:2rem;letter-spacing:0.08em;color:var(--gold);text-align:center;margin-bottom:0.3rem;}
     .login-sub{font-size:0.68rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--muted);text-align:center;margin-bottom:2.5rem;}
     .login-label{display:block;font-size:0.62rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;}
     .login-input{width:100%;background:var(--card);border:1px solid var(--border);color:var(--text);padding:0.8rem 1rem;outline:none;transition:border-color 0.2s;}
@@ -34,7 +34,7 @@
     /* ── SIDEBAR ── */
     .sidebar{width:var(--sidebar);min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:50;}
     .sidebar-logo{padding:1.75rem 1.5rem 1.25rem;border-bottom:1px solid var(--border);}
-    .sidebar-logo-text{font-family:'Syne',sans-serif;font-size:1.5rem;letter-spacing:0.08em;color:var(--gold);}
+    .sidebar-logo-text{font-family:'Cinzel', serif;font-size:1.5rem;letter-spacing:0.08em;color:var(--gold);}
     .sidebar-logo-sub{font-size:0.58rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-top:0.15rem;}
     .sidebar-nav{flex:1;padding:1rem 0;}
     .nav-item{display:flex;align-items:center;gap:0.75rem;padding:0.7rem 1.5rem;cursor:pointer;color:var(--muted);transition:all 0.2s;font-size:0.78rem;letter-spacing:0.06em;border-left:2px solid transparent;}
@@ -46,7 +46,7 @@
     /* ── MAIN ── */
     .main{margin-left:var(--sidebar);flex:1;min-height:100vh;display:flex;flex-direction:column;}
     .topbar{display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:40;}
-    .topbar-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:600;color:var(--text);}
+    .topbar-title{font-family:'Cinzel', serif;font-size:1.1rem;font-weight:600;color:var(--text);}
     .topbar-meta{font-size:0.72rem;color:var(--muted);}
     .topbar-right{display:flex;align-items:center;gap:1rem;}
     .alert-badge{background:var(--danger);color:#fff;font-size:0.6rem;font-weight:700;padding:0.2rem 0.45rem;border-radius:10px;}
@@ -61,11 +61,11 @@
     .metric-card{background:var(--card);border:1px solid var(--border);padding:1.5rem;position:relative;overflow:hidden;}
     .metric-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold);opacity:0.4;}
     .metric-label{font-size:0.62rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;}
-    .metric-value{font-family:'Syne',sans-serif;font-size:2rem;font-weight:600;color:var(--gold);line-height:1;}
+    .metric-value{font-family:'Cinzel', serif;font-size:2rem;font-weight:600;color:var(--gold);line-height:1;}
     .metric-sub{font-size:0.7rem;color:var(--muted);margin-top:0.35rem;}
 
     .card{background:var(--card);border:1px solid var(--border);padding:1.5rem;margin-bottom:1.25rem;}
-    .card-title{font-family:'Syne',sans-serif;font-size:0.78rem;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;}
+    .card-title{font-family:'Cinzel', serif;font-size:0.78rem;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;}
     .card-title .card-action{font-size:0.65rem;letter-spacing:0.1em;background:var(--gold-faint);border:1px solid var(--border);color:var(--gold);padding:0.25rem 0.65rem;cursor:pointer;transition:all 0.2s;}
     .card-title .card-action:hover{background:var(--gold);color:#0D0D0D;}
 
@@ -76,11 +76,11 @@
     /* ── TABLE ── */
     .data-table{width:100%;border-collapse:collapse;}
     .data-table th{font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);padding:0.6rem 0.75rem;text-align:left;border-bottom:1px solid var(--border);}
-    .data-table td{padding:0.65rem 0.75rem;border-bottom:1px solid rgba(196,168,130,0.06);font-size:0.83rem;}
+    .data-table td{padding:0.65rem 0.75rem;border-bottom:1px solid rgba(182,165,136,0.06);font-size:0.83rem;}
     .data-table tr:hover td{background:var(--gold-faint);}
     .data-table .badge{display:inline-block;font-size:0.58rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;padding:0.18rem 0.55rem;}
-    .badge-sig{background:rgba(196,168,130,0.12);color:var(--gold);}
-    .badge-luxe{background:rgba(196,168,130,0.2);color:#e0c49a;}
+    .badge-sig{background:rgba(182,165,136,0.12);color:var(--gold);}
+    .badge-luxe{background:rgba(182,165,136,0.2);color:#e0c49a;}
     .badge-black{background:#1a1410;color:var(--gold);border:1px solid var(--border);}
     .badge-ok{background:rgba(39,174,96,0.15);color:#27ae60;}
     .badge-warn{background:rgba(192,57,43,0.15);color:#e74c3c;}
@@ -105,7 +105,7 @@
 
     /* ── CALENDAR ── */
     .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
-    .cal-month-label{font-family:'Syne',sans-serif;font-size:1rem;color:var(--gold);}
+    .cal-month-label{font-family:'Cinzel', serif;font-size:1rem;color:var(--gold);}
     .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
     .cal-dow{text-align:center;font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);padding:0.5rem 0;}
     .cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-size:0.82rem;position:relative;border:1px solid transparent;transition:all 0.15s;background:var(--card);}
@@ -120,7 +120,7 @@
     .slot-btn{padding:0.5rem;text-align:center;font-size:0.72rem;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--text);transition:all 0.2s;}
     .slot-btn:hover{border-color:var(--gold-dim);}
     .slot-btn.blocked{background:rgba(192,57,43,0.1);border-color:rgba(192,57,43,0.3);color:#e74c3c;}
-    .slot-btn.booked{background:rgba(196,168,130,0.1);border-color:var(--gold-dim);color:var(--gold);cursor:default;}
+    .slot-btn.booked{background:rgba(182,165,136,0.1);border-color:var(--gold-dim);color:var(--gold);cursor:default;}
     .slot-btn.available{background:rgba(39,174,96,0.06);border-color:rgba(39,174,96,0.2);color:#27ae60;}
 
     /* ── FUNNEL CHART ── */
@@ -135,13 +135,13 @@
     .goal-card{background:var(--card);border:1px solid var(--border);padding:1.25rem;margin-bottom:1rem;}
     .goal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;}
     .goal-title{font-size:0.85rem;color:var(--text);}
-    .goal-pct{font-family:'Syne',sans-serif;font-size:1.1rem;color:var(--gold);}
+    .goal-pct{font-family:'Cinzel', serif;font-size:1.1rem;color:var(--gold);}
     .goal-bar-wrap{height:6px;background:var(--bg);border-radius:3px;overflow:hidden;margin-bottom:0.5rem;}
     .goal-bar{height:100%;background:var(--gold);border-radius:3px;transition:width 1s ease;}
     .goal-meta{display:flex;justify-content:space-between;font-size:0.68rem;color:var(--muted);}
 
     /* ── INVENTORY ── */
-    .inv-item{display:flex;align-items:center;gap:1rem;padding:0.7rem 0;border-bottom:1px solid rgba(196,168,130,0.06);}
+    .inv-item{display:flex;align-items:center;gap:1rem;padding:0.7rem 0;border-bottom:1px solid rgba(182,165,136,0.06);}
     .inv-name{flex:1;font-size:0.85rem;}
     .inv-qty-wrap{display:flex;align-items:center;gap:0.4rem;}
     .inv-qty-btn{background:none;border:1px solid var(--border);color:var(--muted);width:26px;height:26px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
@@ -150,7 +150,7 @@
     .inv-low{color:#e74c3c!important;}
 
     /* ── AI INSIGHT BOX ── */
-    .ai-insight{background:rgba(196,168,130,0.05);border:1px solid rgba(196,168,130,0.15);padding:1.25rem;margin-bottom:0.75rem;position:relative;}
+    .ai-insight{background:rgba(182,165,136,0.05);border:1px solid rgba(182,165,136,0.15);padding:1.25rem;margin-bottom:0.75rem;position:relative;}
     .ai-insight::before{content:'✦ AI';font-size:0.58rem;letter-spacing:0.2em;color:var(--gold);display:block;margin-bottom:0.4rem;}
     .ai-insight p{font-size:0.84rem;line-height:1.7;color:var(--blush);}
 
@@ -158,7 +158,7 @@
     .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;display:none;align-items:center;justify-content:center;}
     .modal-overlay.open{display:flex;}
     .modal{background:var(--surface);border:1px solid var(--border);padding:2rem;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto;}
-    .modal-title{font-family:'Syne',sans-serif;font-size:1rem;color:var(--gold);margin-bottom:1.5rem;}
+    .modal-title{font-family:'Cinzel', serif;font-size:1rem;color:var(--gold);margin-bottom:1.5rem;}
     .form-row{margin-bottom:1rem;}
     .form-label{display:block;font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;}
     .form-input{width:100%;background:var(--card);border:1px solid var(--border);color:var(--text);padding:0.7rem 0.9rem;outline:none;}
@@ -654,7 +654,7 @@ function loadOverview() {
     const lowWrap = document.getElementById('low-inv-wrap');
     if (d.lowInventory?.length) {
       lowWrap.innerHTML = d.lowInventory.map(i =>
-        `<div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid rgba(196,168,130,0.06);font-size:0.82rem;"><span>${i.name}</span><span style="color:#e74c3c;">Only ${i.qty} ${i.unit} left</span></div>`
+        `<div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid rgba(182,165,136,0.06);font-size:0.82rem;"><span>${i.name}</span><span style="color:#e74c3c;">Only ${i.qty} ${i.unit} left</span></div>`
       ).join('') + `<div style="margin-top:0.75rem;"><button class="btn btn-outline btn-sm" onclick="showSection('inventory')">Manage Inventory</button></div>`;
       const badge = `<span class="alert-badge">${d.lowInventory.length} alert${d.lowInventory.length>1?'s':''}</span>`;
       document.getElementById('alert-count').innerHTML = badge;
@@ -929,8 +929,8 @@ function loadReports() {
     const qEl = document.getElementById('top-questions-list');
     if (d.topQuestions?.length) {
       qEl.innerHTML = d.topQuestions.map((q, i) => `
-        <div style="display:flex;align-items:center;gap:1rem;padding:0.55rem 0;border-bottom:1px solid rgba(196,168,130,0.06);">
-          <span style="font-family:'Syne',sans-serif;color:var(--gold);font-size:0.82rem;width:24px;flex-shrink:0;">${i+1}</span>
+        <div style="display:flex;align-items:center;gap:1rem;padding:0.55rem 0;border-bottom:1px solid rgba(182,165,136,0.06);">
+          <span style="font-family:'Cinzel', serif;color:var(--gold);font-size:0.82rem;width:24px;flex-shrink:0;">${i+1}</span>
           <span style="flex:1;font-size:0.83rem;">${q.q}</span>
           <span style="font-size:0.72rem;color:var(--muted);">${q.count}×</span>
         </div>`).join('');
@@ -1030,8 +1030,8 @@ function loadFAQ() {
     const el = document.getElementById('faq-questions-list');
     if (d.topQuestions?.length) {
       el.innerHTML = d.topQuestions.map((q, i) => `
-        <div style="display:flex;gap:1rem;align-items:flex-start;padding:0.65rem 0;border-bottom:1px solid rgba(196,168,130,0.06);">
-          <span style="font-family:'Syne',sans-serif;color:var(--gold);width:22px;flex-shrink:0;">${i+1}</span>
+        <div style="display:flex;gap:1rem;align-items:flex-start;padding:0.65rem 0;border-bottom:1px solid rgba(182,165,136,0.06);">
+          <span style="font-family:'Cinzel', serif;color:var(--gold);width:22px;flex-shrink:0;">${i+1}</span>
           <div style="flex:1;"><p style="font-size:0.84rem;margin-bottom:0.2rem;">${q.q}</p><span style="font-size:0.68rem;color:var(--muted);">Asked ${q.count} time${q.count!==1?'s':''}</span></div>
         </div>`).join('');
     } else {
@@ -1040,7 +1040,7 @@ function loadFAQ() {
     // Chip preview
     const FAQ_CHIPS = ['How does membership work?','How do I book?','What tier is right for me?','How much does it cost?','Do services roll over?','Can I pick my artist?','What is a structure mani?','What is the Black Card?','Cancellation & deposits','Kids / princess parties'];
     document.getElementById('chip-preview').innerHTML = FAQ_CHIPS.map(c =>
-      `<span style="border:1px solid rgba(196,168,130,0.35);color:var(--muted);padding:0.3rem 0.65rem;font-size:0.7rem;letter-spacing:0.04em;">${c}</span>`
+      `<span style="border:1px solid rgba(182,165,136,0.35);color:var(--muted);padding:0.3rem 0.65rem;font-size:0.7rem;letter-spacing:0.04em;">${c}</span>`
     ).join('');
   });
 }

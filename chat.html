@@ -6,23 +6,23 @@
 <title>ZOLA — Your Appointment Chat</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  :root{--espresso:#0D0D0D;--gold:#C4A882;--cream:#F5EEE8;--latte:#8B6A3E;--muted:#9C8B73;
-    --card:#fff;--bg:#FAF7F2;--border:rgba(139,106,62,0.16);--border-hi:rgba(196,168,130,0.5)}
+  :root{--espresso:#0D0D0D;--gold:#B6A588;--cream:#F5EEE8;--latte:#8C7A5E;--muted:#9C8B73;
+    --card:#fff;--bg:#FAF7F2;--border:rgba(140,122,94,0.16);--border-hi:rgba(182,165,136,0.5)}
   body{font-family:'Josefin Sans',sans-serif;background:var(--bg);color:var(--espresso);min-height:100vh;display:flex;flex-direction:column}
   input,button{font-family:inherit;color:inherit}
   @keyframes pop{0%{transform:scale(0.96);opacity:0}100%{transform:scale(1);opacity:1}}
   @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
   .head{background:var(--espresso);color:var(--cream);padding:1.1rem 1.4rem;text-align:center;position:sticky;top:0;z-index:10}
-  .head .logo{font-family:'Syne',sans-serif;font-size:1.5rem;letter-spacing:0.1em}
+  .head .logo{font-family:'Cinzel', serif;font-size:1.5rem;letter-spacing:0.1em}
   .head .sub{font-size:0.58rem;letter-spacing:0.28em;text-transform:uppercase;color:var(--gold);margin-top:2px}
 
   .meta{max-width:620px;margin:1.25rem auto 0;padding:0 1.2rem;width:100%;animation:fadeUp 0.5s ease}
   .meta-card{background:var(--card);border:1px solid var(--border);padding:1.1rem 1.3rem;border-left:3px solid var(--gold)}
-  .meta-title{font-family:'Syne',sans-serif;font-size:1.1rem;color:var(--espresso)}
+  .meta-title{font-family:'Cinzel', serif;font-size:1.1rem;color:var(--espresso)}
   .meta-sub{font-size:0.8rem;color:var(--latte);margin-top:0.2rem}
 
   .chat{flex:1;max-width:620px;width:100%;margin:0 auto;padding:1.25rem 1.2rem 1rem;display:flex;flex-direction:column;gap:0.55rem}

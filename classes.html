@@ -6,13 +6,13 @@
   <title>Classes — ZOLA Nail Studio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@200;300;400;600;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" /><link rel="stylesheet" href="css/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@200;300;400;600;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" /><link rel="stylesheet" href="css/styles.css" />
   <script src="https://js.stripe.com/v3/"></script>
   <style>
     .class-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1.5rem; margin-top:2.5rem; }
-    .class-card { background:#fff; border:1px solid rgba(196,168,130,0.22); padding:2rem; display:flex; flex-direction:column; }
-    .class-name { font-family:'Syne',serif; font-size:1.4rem; color:var(--espresso); margin-bottom:0.5rem; }
-    .class-price { font-family:'Syne',serif; font-size:1.8rem; color:var(--champagne); margin-bottom:0.75rem; }
+    .class-card { background:#fff; border:1px solid rgba(182,165,136,0.22); padding:2rem; display:flex; flex-direction:column; }
+    .class-name { font-family:'Cinzel',serif; font-size:1.4rem; color:var(--espresso); margin-bottom:0.5rem; }
+    .class-price { font-family:'Cinzel',serif; font-size:1.8rem; color:var(--champagne); margin-bottom:0.75rem; }
     .class-desc { font-family:'Josefin Sans',sans-serif; font-size:0.88rem; color:var(--latte); line-height:1.7; flex:1; margin-bottom:1.5rem; }
     .class-empty { text-align:center; padding:3rem 1rem; font-family:'Josefin Sans',sans-serif; color:var(--latte); grid-column:1/-1; }
     .checkout-overlay { display:none; position:fixed; inset:0; background:rgba(30,20,15,0.55); z-index:200; align-items:flex-start; justify-content:center; padding:5vh 1rem; overflow-y:auto; }
@@ -50,7 +50,7 @@
 </div>
 
 <div style="padding-top:8rem;background:var(--espresso);padding-bottom:4rem;text-align:center;">
-  <div class="section-label" style="color:rgba(196,168,130,0.6);">Learn the Craft</div>
+  <div class="section-label" style="color:rgba(182,165,136,0.6);">Learn the Craft</div>
   <h1 style="color:var(--cream);font-size:clamp(2.5rem,5vw,4rem);margin:0.75rem 0 1rem;">ZOLA Classes</h1>
   <p style="font-family:'Josefin Sans',sans-serif;font-size:0.95rem;color:var(--latte);max-width:420px;margin:0 auto;">Learn directly from Zahra — technique, precision, and the business behind the chair.</p>
 </div>
@@ -79,8 +79,8 @@
 <div class="checkout-overlay" id="checkout-overlay">
   <div class="checkout-box">
     <div id="checkout-form-wrap">
-      <div style="font-family:'Syne',serif;font-size:1.5rem;color:var(--espresso);margin-bottom:0.25rem;" id="checkout-class-name"></div>
-      <div style="font-family:'Syne',serif;font-size:1.6rem;color:var(--champagne);margin-bottom:1.25rem;" id="checkout-class-price"></div>
+      <div style="font-family:'Cinzel',serif;font-size:1.5rem;color:var(--espresso);margin-bottom:0.25rem;" id="checkout-class-name"></div>
+      <div style="font-family:'Cinzel',serif;font-size:1.6rem;color:var(--champagne);margin-bottom:1.25rem;" id="checkout-class-price"></div>
       <label class="luxury-label">Full Name</label>
       <input class="luxury-input" id="cls-name" placeholder="Your name" />
       <label class="luxury-label">Email</label>
@@ -90,10 +90,10 @@
       <div id="class-payment-element"></div>
       <div id="checkout-error" style="display:none;color:#b43232;font-family:'Josefin Sans',sans-serif;font-size:0.82rem;margin-bottom:1rem;"></div>
       <button class="btn-gold" style="width:100%;animation:none;" onclick="confirmClassPurchase()" id="checkout-pay-btn">Pay &amp; Enroll</button>
-      <button class="btn" style="width:100%;margin-top:0.6rem;background:none;border:1px solid rgba(196,168,130,0.3);color:var(--latte);" onclick="closeCheckout()">Cancel</button>
+      <button class="btn" style="width:100%;margin-top:0.6rem;background:none;border:1px solid rgba(182,165,136,0.3);color:var(--latte);" onclick="closeCheckout()">Cancel</button>
     </div>
     <div id="checkout-success" style="display:none;text-align:center;padding:1rem 0;">
-      <div style="font-family:'Syne',serif;font-size:1.8rem;color:var(--espresso);margin-bottom:0.5rem;">You're Enrolled ✦</div>
+      <div style="font-family:'Cinzel',serif;font-size:1.8rem;color:var(--espresso);margin-bottom:0.5rem;">You're Enrolled ✦</div>
       <p style="font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:var(--latte);line-height:1.8;">Zahra will reach out directly to schedule your class time. A confirmation email is on its way.</p>
       <button class="btn-gold" style="margin-top:1.25rem;animation:none;" onclick="closeCheckout()">Done</button>
     </div>
@@ -180,7 +180,7 @@ async function initClassPayment() {
     if (!intent.client_secret) { showCheckoutError(intent.error || 'Could not start checkout.'); return; }
     _paymentIntentId = intent.payment_intent_id;
     _stripe = Stripe(cfg.publishable_key);
-    _elements = _stripe.elements({ clientSecret: intent.client_secret, appearance: { theme: 'flat', variables: { colorPrimary: '#C4A882', fontFamily: 'Josefin Sans, sans-serif' } } });
+    _elements = _stripe.elements({ clientSecret: intent.client_secret, appearance: { theme: 'flat', variables: { colorPrimary: '#B6A588', fontFamily: 'Josefin Sans, sans-serif' } } });
     _elements.create('payment', { wallets: { applePay: 'auto', googlePay: 'auto' }, layout: 'tabs' }).mount('#class-payment-element');
     _payEnabled = true;
   } catch (_) {

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Join Zola — Membership Sign-Up</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
   <script src="https://js.stripe.com/v3/"></script>
   <link rel="stylesheet" href="css/styles.css" />
   <style>
@@ -28,7 +28,7 @@
       left:10%;
       right:10%;
       height:1px;
-      background:rgba(196,168,130,0.18);
+      background:rgba(182,165,136,0.18);
     }
     .step-dot {
       display: flex;
@@ -42,12 +42,12 @@
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      border: 1px solid rgba(196,168,130,0.25);
+      border: 1px solid rgba(182,165,136,0.25);
       background: var(--soft-white);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: 'Syne', serif;
+      font-family: 'Cinzel', serif;
       font-size: 1rem;
       color: var(--latte);
       transition: all 0.3s;
@@ -75,11 +75,11 @@
     .step-panel.active { display: block; }
     .signup-card {
       background: #fff;
-      border: 1px solid rgba(196,168,130,0.15);
+      border: 1px solid rgba(182,165,136,0.15);
       padding: 2.5rem 2rem;
     }
     .signup-heading {
-      font-family: 'Syne', serif;
+      font-family: 'Cinzel', serif;
       font-size: 1.9rem;
       color: var(--espresso);
       margin-bottom: 0.25rem;
@@ -108,7 +108,7 @@
     .form-field input,
     .form-field select {
       width: 100%;
-      border: 1px solid rgba(196,168,130,0.22);
+      border: 1px solid rgba(182,165,136,0.22);
       background: var(--soft-white);
       font-family: 'Josefin Sans', sans-serif;
       font-size: 0.88rem;
@@ -133,7 +133,7 @@
       margin-bottom: 1.5rem;
     }
     .tier-opt {
-      border: 1px solid rgba(196,168,130,0.2);
+      border: 1px solid rgba(182,165,136,0.2);
       padding: 1rem 0.75rem;
       text-align: center;
       cursor: pointer;
@@ -141,9 +141,9 @@
       font-family: 'Josefin Sans', sans-serif;
     }
     .tier-opt:hover { border-color: var(--champagne); }
-    .tier-opt.selected { border-color: var(--champagne); background: rgba(196,168,130,0.07); }
+    .tier-opt.selected { border-color: var(--champagne); background: rgba(182,165,136,0.07); }
     .tier-opt-name { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--espresso); }
-    .tier-opt-price { font-family: 'Syne', serif; font-size: 1.5rem; color: var(--champagne); margin: 0.25rem 0; }
+    .tier-opt-price { font-family: 'Cinzel', serif; font-size: 1.5rem; color: var(--champagne); margin: 0.25rem 0; }
     .tier-opt-desc { font-size: 0.65rem; color: var(--latte); line-height: 1.4; }
     .btn-signup {
       width: 100%;
@@ -173,7 +173,7 @@
       display: none;
     }
     .policy-note {
-      background: rgba(196,168,130,0.06);
+      background: rgba(182,165,136,0.06);
       border-left: 3px solid var(--champagne);
       padding: 0.875rem 1rem;
       font-family: 'Josefin Sans', sans-serif;
@@ -190,7 +190,7 @@
       margin: 1.5rem 0;
     }
     .member-id-code {
-      font-family: 'Syne', serif;
+      font-family: 'Cinzel', serif;
       font-size: 2.5rem;
       color: var(--champagne);
       letter-spacing: 0.18em;
@@ -219,7 +219,7 @@
     }
     .copy-btn:hover { background: var(--champagne); color: var(--espresso); }
     #stripe-card-element {
-      border: 1px solid rgba(196,168,130,0.22);
+      border: 1px solid rgba(182,165,136,0.22);
       background: var(--soft-white);
       padding: 0.75rem 0.875rem;
       margin-bottom: 0.25rem;
@@ -240,7 +240,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 0.65rem 0;
-      border-bottom: 1px solid rgba(196,168,130,0.1);
+      border-bottom: 1px solid rgba(182,165,136,0.1);
       font-family: 'Josefin Sans', sans-serif;
       font-size: 0.85rem;
     }
@@ -397,7 +397,7 @@
 
       <div id="signup-price-display" style="text-align:center;margin-bottom:1.5rem;">
         <div style="font-family:'Josefin Sans',sans-serif;font-size:0.68rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--latte);margin-bottom:0.25rem;">Today's Charge</div>
-        <div id="price-display" style="font-family:'Syne',serif;font-size:3rem;color:var(--champagne);"></div>
+        <div id="price-display" style="font-family:'Cinzel',serif;font-size:3rem;color:var(--champagne);"></div>
         <div style="font-family:'Josefin Sans',sans-serif;font-size:0.75rem;color:var(--latte);">then monthly — cancel after 6 months</div>
       </div>
 
@@ -454,7 +454,7 @@
         </div>
         <div class="confirmation-detail">
           <span class="label">Member ID</span>
-          <span class="value" id="conf-id" style="font-family:'Syne',serif;font-size:1.2rem;color:var(--champagne);">—</span>
+          <span class="value" id="conf-id" style="font-family:'Cinzel',serif;font-size:1.2rem;color:var(--champagne);">—</span>
         </div>
         <div class="confirmation-detail">
           <span class="label">Membership Tier</span>
@@ -571,7 +571,7 @@
           fontFamily: 'Jost, sans-serif',
           fontSize: '15px',
           color: '#0D0D0D',
-          '::placeholder': { color: '#8B6A3E', fontWeight: '300' },
+          '::placeholder': { color: '#8C7A5E', fontWeight: '300' },
         },
         invalid: { color: '#b43232' },
       }

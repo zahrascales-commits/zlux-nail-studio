@@ -6,14 +6,14 @@
 <title>ZOLA — Studio Manager</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   :root{
     --bg:#0B0B0B;--surface:#141210;--card:#1C1815;--card-hi:#221D18;
-    --border:rgba(196,168,130,0.14);--border-hi:rgba(196,168,130,0.32);
-    --gold:#C4A882;--gold-light:#E8D4B0;--gold-faint:rgba(196,168,130,0.07);
-    --cream:#F5EEE8;--latte:#8B6A3E;--muted:#8B7355;
+    --border:rgba(182,165,136,0.14);--border-hi:rgba(182,165,136,0.32);
+    --gold:#B6A588;--gold-light:#DDD0B8;--gold-faint:rgba(182,165,136,0.07);
+    --cream:#F5EEE8;--latte:#8C7A5E;--muted:#8B7355;
     --text:#F5EEE8;--danger:#d66;--success:#6ab07a;
   }
   html{scroll-behavior:smooth}
@@ -26,8 +26,8 @@
 
   /* animated gold ambient background */
   body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
-    background:radial-gradient(600px 400px at 12% 8%,rgba(196,168,130,0.06),transparent 60%),
-               radial-gradient(500px 400px at 88% 92%,rgba(196,168,130,0.05),transparent 60%);
+    background:radial-gradient(600px 400px at 12% 8%,rgba(182,165,136,0.06),transparent 60%),
+               radial-gradient(500px 400px at 88% 92%,rgba(182,165,136,0.05),transparent 60%);
     animation:ambient 14s ease-in-out infinite alternate}
   @keyframes ambient{0%{opacity:0.7}100%{opacity:1;transform:scale(1.04)}}
 
@@ -44,21 +44,21 @@
     padding:3rem 2.5rem;animation:fadeUp 0.6s ease;position:relative;overflow:hidden}
   .login-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
     background:linear-gradient(90deg,transparent,var(--gold),transparent);background-size:200% 100%;animation:shimmer 3s linear infinite}
-  .login-logo{font-family:'Syne',sans-serif;font-size:2.2rem;letter-spacing:0.1em;text-align:center;color:var(--cream)}
+  .login-logo{font-family:'Cinzel', serif;font-size:2.2rem;letter-spacing:0.1em;text-align:center;color:var(--cream)}
   .login-sub{font-size:0.62rem;letter-spacing:0.32em;text-transform:uppercase;color:var(--gold);text-align:center;margin:0.4rem 0 2.5rem}
   .fld-label{display:block;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem}
   .login-input{width:100%;background:var(--card);border:1px solid var(--border);padding:0.85rem 1rem;outline:none;transition:border-color 0.25s;letter-spacing:0.05em}
   .login-input:focus{border-color:var(--gold)}
   .login-btn{width:100%;margin-top:1.5rem;background:var(--gold);color:#0B0B0B;border:none;padding:0.95rem;
     font-size:0.7rem;font-weight:600;letter-spacing:0.24em;text-transform:uppercase;cursor:pointer;transition:transform 0.2s,box-shadow 0.2s}
-  .login-btn:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(196,168,130,0.2)}
+  .login-btn:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(182,165,136,0.2)}
   .login-err{color:var(--danger);font-size:0.75rem;margin-top:1rem;text-align:center;min-height:1.2em}
 
   /* ── APP SHELL ── */
   #app{display:none;position:relative;z-index:1;min-height:100vh}
   .topbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;
     padding:1rem 1.5rem;background:rgba(11,11,11,0.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
-  .brand{font-family:'Syne',sans-serif;font-size:1.35rem;letter-spacing:0.08em;color:var(--cream)}
+  .brand{font-family:'Cinzel', serif;font-size:1.35rem;letter-spacing:0.08em;color:var(--cream)}
   .brand small{display:block;font-family:'Josefin Sans';font-size:0.54rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--gold);margin-top:1px}
   .top-actions{display:flex;gap:0.6rem;align-items:center}
 
@@ -76,14 +76,14 @@
   .panel.active{display:block}
 
   .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap}
-  .page-title{font-family:'Syne',sans-serif;font-size:1.5rem;color:var(--cream)}
+  .page-title{font-family:'Cinzel', serif;font-size:1.5rem;color:var(--cream)}
   .page-desc{font-size:0.82rem;color:var(--muted);margin-top:0.2rem;max-width:520px}
 
   /* ── BUTTONS ── */
   .btn{display:inline-flex;align-items:center;gap:0.45rem;padding:0.65rem 1.2rem;font-size:0.68rem;font-weight:600;
     letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;border:none;transition:all 0.2s;white-space:nowrap}
   .btn-gold{background:var(--gold);color:#0B0B0B}
-  .btn-gold:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(196,168,130,0.22)}
+  .btn-gold:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(182,165,136,0.22)}
   .btn-ghost{background:transparent;color:var(--gold);border:1px solid var(--border-hi)}
   .btn-ghost:hover{background:var(--gold-faint);border-color:var(--gold)}
   .btn-danger{background:rgba(200,80,80,0.12);color:#e08a8a;border:1px solid rgba(200,80,80,0.25)}
@@ -98,15 +98,15 @@
   .member-card{background:var(--card);border:1px solid var(--border);padding:1.4rem;position:relative;overflow:hidden;
     transition:transform 0.25s,border-color 0.25s;animation:pop 0.4s ease both}
   .member-card:hover{transform:translateY(-3px);border-color:var(--border-hi)}
-  .member-card::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--mc,#C4A882)}
+  .member-card::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--mc,#B6A588)}
   .mc-top{display:flex;align-items:center;gap:0.9rem;margin-bottom:1rem}
   .avatar{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;
-    font-family:'Syne',sans-serif;font-size:1.2rem;color:#0B0B0B;font-weight:600}
-  .mc-name{font-family:'Syne',sans-serif;font-size:1.1rem;color:var(--cream);line-height:1.2}
+    font-family:'Cinzel', serif;font-size:1.2rem;color:#0B0B0B;font-weight:600}
+  .mc-name{font-family:'Cinzel', serif;font-size:1.1rem;color:var(--cream);line-height:1.2}
   .mc-role{font-size:0.66rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted)}
   .pin-row{display:flex;align-items:center;gap:0.6rem;background:var(--bg);border:1px dashed var(--border-hi);padding:0.7rem 0.9rem;margin-bottom:0.9rem}
   .pin-label{font-size:0.56rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted)}
-  .pin-val{font-family:'Syne',sans-serif;font-size:1.5rem;letter-spacing:0.28em;color:var(--gold)}
+  .pin-val{font-family:'Cinzel', serif;font-size:1.5rem;letter-spacing:0.28em;color:var(--gold)}
   .mc-actions{display:flex;gap:0.4rem;flex-wrap:wrap}
   .status-pill{display:inline-block;font-size:0.56rem;letter-spacing:0.14em;text-transform:uppercase;padding:0.2rem 0.6rem;margin-left:auto}
   .status-on{background:rgba(106,176,122,0.14);color:var(--success)}
@@ -115,15 +115,15 @@
   /* ── SCHEDULE ── */
   .date-bar{display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;flex-wrap:wrap}
   .date-nav{display:flex;align-items:center;gap:0.5rem;background:var(--card);border:1px solid var(--border);padding:0.35rem}
-  .date-label{font-family:'Syne',sans-serif;font-size:0.95rem;color:var(--cream);min-width:210px;text-align:center}
+  .date-label{font-family:'Cinzel', serif;font-size:0.95rem;color:var(--cream);min-width:210px;text-align:center}
   .appt{display:flex;gap:1rem;background:var(--card);border:1px solid var(--border);padding:1.1rem 1.25rem;margin-bottom:0.7rem;
     align-items:flex-start;transition:border-color 0.2s,transform 0.2s;animation:fadeUp 0.35s ease both}
   .appt:hover{border-color:var(--border-hi)}
-  .appt-time{min-width:78px;text-align:center;padding:0.55rem 0.3rem;background:var(--bg);border-left:2px solid var(--at,#C4A882)}
-  .appt-time .t{font-family:'Syne',sans-serif;font-size:1.05rem;color:var(--cream)}
+  .appt-time{min-width:78px;text-align:center;padding:0.55rem 0.3rem;background:var(--bg);border-left:2px solid var(--at,#B6A588)}
+  .appt-time .t{font-family:'Cinzel', serif;font-size:1.05rem;color:var(--cream)}
   .appt-time .d{font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-top:2px}
   .appt-main{flex:1;min-width:0}
-  .appt-client{font-family:'Syne',sans-serif;font-size:1.05rem;color:var(--cream)}
+  .appt-client{font-family:'Cinzel', serif;font-size:1.05rem;color:var(--cream)}
   .appt-svc{font-size:0.78rem;color:var(--muted);margin:0.15rem 0}
   .appt-assign{display:inline-flex;align-items:center;gap:0.4rem;font-size:0.66rem;letter-spacing:0.08em;text-transform:uppercase;margin-top:0.35rem}
   .assign-chip{display:inline-flex;align-items:center;gap:0.4rem;padding:0.2rem 0.6rem;background:var(--gold-faint);border:1px solid var(--border);color:var(--gold)}
@@ -141,13 +141,13 @@
   .thread{padding:0.9rem 1rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.18s}
   .thread:hover{background:var(--gold-faint)}
   .thread.active{background:var(--gold-faint);border-left:2px solid var(--gold)}
-  .thread-name{font-family:'Syne',sans-serif;font-size:0.92rem;color:var(--cream);display:flex;justify-content:space-between;gap:0.5rem}
+  .thread-name{font-family:'Cinzel', serif;font-size:0.92rem;color:var(--cream);display:flex;justify-content:space-between;gap:0.5rem}
   .thread-name .ct{font-family:'Josefin Sans';font-size:0.58rem;color:var(--gold);background:var(--gold-faint);padding:0.05rem 0.4rem;align-self:center}
   .thread-meta{font-size:0.66rem;color:var(--muted);margin-top:0.15rem}
   .thread-last{font-size:0.72rem;color:var(--muted);margin-top:0.3rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .chat-pane{background:var(--card);border:1px solid var(--border);display:flex;flex-direction:column}
   .chat-head{padding:0.9rem 1.1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap}
-  .chat-head-name{font-family:'Syne',sans-serif;font-size:1rem;color:var(--cream)}
+  .chat-head-name{font-family:'Cinzel', serif;font-size:1rem;color:var(--cream)}
   .chat-head-sub{font-size:0.66rem;color:var(--muted)}
   .chat-body{flex:1;padding:1.1rem;overflow-y:auto;display:flex;flex-direction:column;gap:0.6rem;max-height:52vh}
   .bubble{max-width:78%;padding:0.6rem 0.85rem;font-size:0.84rem;line-height:1.5;animation:pop 0.25s ease;position:relative}
@@ -167,7 +167,7 @@
   .overlay{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,0.72);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:1rem}
   .overlay.open{display:flex;animation:fadeIn 0.2s ease}
   .modal{background:var(--surface);border:1px solid var(--border-hi);width:100%;max-width:460px;max-height:92vh;overflow-y:auto;padding:1.75rem;animation:pop 0.3s ease}
-  .modal-title{font-family:'Syne',sans-serif;font-size:1.15rem;color:var(--gold);margin-bottom:1.25rem}
+  .modal-title{font-family:'Cinzel', serif;font-size:1.15rem;color:var(--gold);margin-bottom:1.25rem}
   .field{margin-bottom:0.9rem}
   .field input,.field select,.field textarea{width:100%;background:var(--card);border:1px solid var(--border);padding:0.7rem 0.85rem;outline:none;transition:border-color 0.2s}
   .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold)}
@@ -187,7 +187,7 @@
   .cal-dows{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border)}
   .cal-dows div{padding:0.6rem 0.4rem;text-align:center;font-size:0.56rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted)}
   .cal-cells{display:grid;grid-template-columns:repeat(7,1fr)}
-  .cal-cell{min-height:96px;border-right:1px solid rgba(196,168,130,0.07);border-bottom:1px solid rgba(196,168,130,0.07);padding:0.35rem;cursor:pointer;transition:background 0.15s;position:relative}
+  .cal-cell{min-height:96px;border-right:1px solid rgba(182,165,136,0.07);border-bottom:1px solid rgba(182,165,136,0.07);padding:0.35rem;cursor:pointer;transition:background 0.15s;position:relative}
   .cal-cell:hover{background:var(--gold-faint)}
   .cal-cell.off{opacity:0.32}
   .cal-cell.today .cal-num{background:var(--gold);color:#0B0B0B;font-weight:700}
@@ -196,10 +196,10 @@
   .cal-chip{display:block;font-size:0.6rem;line-height:1.35;padding:0.12rem 0.35rem;margin-bottom:2px;color:#0B0B0B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:2px;font-weight:600}
   .cal-more{font-size:0.56rem;color:var(--gold)}
   .cal-week{display:grid;grid-template-columns:52px repeat(7,1fr);background:var(--card);border:1px solid var(--border);animation:fadeUp 0.35s ease;overflow-x:auto}
-  .wk-hour{font-size:0.56rem;color:var(--muted);padding:0.3rem 0.4rem;border-bottom:1px solid rgba(196,168,130,0.05);height:34px}
-  .wk-head{padding:0.5rem 0.3rem;text-align:center;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);border-left:1px solid rgba(196,168,130,0.07)}
+  .wk-hour{font-size:0.56rem;color:var(--muted);padding:0.3rem 0.4rem;border-bottom:1px solid rgba(182,165,136,0.05);height:34px}
+  .wk-head{padding:0.5rem 0.3rem;text-align:center;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);border-left:1px solid rgba(182,165,136,0.07)}
   .wk-head.today{color:var(--gold);font-weight:700}
-  .wk-cell{height:34px;border-bottom:1px solid rgba(196,168,130,0.05);border-left:1px solid rgba(196,168,130,0.07);cursor:pointer;padding:1px 2px;overflow:hidden}
+  .wk-cell{height:34px;border-bottom:1px solid rgba(182,165,136,0.05);border-left:1px solid rgba(182,165,136,0.07);cursor:pointer;padding:1px 2px;overflow:hidden}
   .wk-cell:hover{background:var(--gold-faint)}
   .wk-chip{font-size:0.56rem;line-height:1.25;padding:0.08rem 0.3rem;color:#0B0B0B;border-radius:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;display:block}
   .legend{display:flex;gap:0.9rem;flex-wrap:wrap;margin-top:0.8rem}
@@ -212,7 +212,7 @@
   .inq:hover{background:var(--gold-faint)}
   .inq.active{background:var(--gold-faint);border-left:2px solid var(--gold)}
   .inq-top{display:flex;justify-content:space-between;gap:0.5rem;align-items:center}
-  .inq-name{font-family:'Syne',sans-serif;font-size:0.92rem;color:var(--cream)}
+  .inq-name{font-family:'Cinzel', serif;font-size:0.92rem;color:var(--cream)}
   .inq-badge{font-size:0.52rem;letter-spacing:0.14em;text-transform:uppercase;padding:0.14rem 0.5rem}
   .bg-new{background:var(--gold);color:#0B0B0B;font-weight:700}
   .bg-replied{background:rgba(106,176,122,0.14);color:var(--success)}
@@ -229,7 +229,7 @@
   /* ── SITE EDITOR ── */
   .site-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
   .site-card{background:var(--card);border:1px solid var(--border);padding:1.4rem}
-  .site-card h3{font-family:'Syne',sans-serif;font-size:0.95rem;color:var(--gold);margin-bottom:0.4rem}
+  .site-card h3{font-family:'Cinzel', serif;font-size:0.95rem;color:var(--gold);margin-bottom:0.4rem}
   .site-card p{font-size:0.74rem;color:var(--muted);margin-bottom:0.9rem;line-height:1.6}
   .site-card textarea,.site-card input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--cream);padding:0.7rem 0.85rem;outline:none;font-family:inherit;font-size:0.85rem}
   .site-card textarea:focus,.site-card input:focus{border-color:var(--gold)}
@@ -237,7 +237,7 @@
   /* ── TRAFFIC / STAT CARDS ── */
   .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem}
   .stat-card{background:var(--card);border:1px solid var(--border);padding:1.2rem;text-align:center}
-  .stat-num{font-family:'Syne',sans-serif;font-size:1.3rem;color:var(--gold);overflow-wrap:break-word;hyphens:auto}
+  .stat-num{font-family:'Cinzel', serif;font-size:1.3rem;color:var(--gold);overflow-wrap:break-word;hyphens:auto}
   .stat-label{font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-top:0.3rem}
   .tr-row{display:flex;justify-content:space-between;gap:0.6rem;padding:0.5rem 0.7rem;background:var(--bg);border:1px solid var(--border);font-size:0.85rem}
   .tr-row .tr-bar{flex:1;height:6px;background:var(--border);margin:0 0.7rem;position:relative;align-self:center}
@@ -252,7 +252,7 @@
   .bell-drop.open{display:block}
   .notif{padding:0.8rem 1rem;border-bottom:1px solid var(--border)}
   .notif.unread{background:var(--gold-faint);border-left:2px solid var(--gold)}
-  .notif-title{font-family:'Syne',sans-serif;font-size:0.82rem;color:var(--cream)}
+  .notif-title{font-family:'Cinzel', serif;font-size:0.82rem;color:var(--cream)}
   .notif-body{font-size:0.72rem;color:var(--muted);margin-top:0.15rem}
   .notif-ts{font-size:0.58rem;color:var(--muted);margin-top:0.2rem;opacity:0.7}
 
@@ -267,7 +267,7 @@
   /* ── CLIENTS TAB ── */
   .client-row{display:flex;align-items:center;gap:0.9rem;background:var(--card);border:1px solid var(--border);padding:0.9rem 1.1rem;margin-bottom:0.55rem;cursor:pointer;transition:border-color 0.2s;animation:fadeUp 0.3s ease both}
   .client-row:hover{border-color:var(--border-hi)}
-  .client-name{font-family:'Syne',sans-serif;font-size:0.95rem;color:var(--cream)}
+  .client-name{font-family:'Cinzel', serif;font-size:0.95rem;color:var(--cream)}
   .client-sub{font-size:0.7rem;color:var(--muted)}
   .client-stat{margin-left:auto;text-align:right;font-size:0.62rem;color:var(--muted)}
   .optin-pill{font-size:0.52rem;letter-spacing:0.12em;text-transform:uppercase;padding:0.12rem 0.45rem;background:rgba(106,176,122,0.14);color:var(--success)}
@@ -672,8 +672,8 @@
     </div>
     <div class="field"><label class="fld-label">Accent Color</label>
       <select id="m-color">
-        <option value="#C4A882">Champagne</option>
-        <option value="#8B6A3E">Latte</option>
+        <option value="#B6A588">Champagne</option>
+        <option value="#8C7A5E">Latte</option>
         <option value="#B5838D">Rose</option>
         <option value="#6B8E9E">Slate Blue</option>
         <option value="#8E9E6B">Sage</option>
@@ -832,11 +832,11 @@ function showTab(name){
 }
 
 /* ── OWNER COLOR / THEME ── */
-let OWNER_COLOR='#C4A882';
+let OWNER_COLOR='#B6A588';
 let PROVIDERS={email:false,sms:false};
-const COLOR_CHOICES=['#E8A0BF','#C4A882','#B5838D','#9E6B8E','#6B8E9E','#8E9E6B','#E8D4B0','#FFFFFF'];
+const COLOR_CHOICES=['#E8A0BF','#B6A588','#B5838D','#9E6B8E','#6B8E9E','#8E9E6B','#DDD0B8','#FFFFFF'];
 function applyOwnerColor(c){
-  OWNER_COLOR=c||'#C4A882';
+  OWNER_COLOR=c||'#B6A588';
   document.documentElement.style.setProperty('--gold',OWNER_COLOR);
   document.documentElement.style.setProperty('--gold-faint',OWNER_COLOR+'12');
 }
@@ -1019,7 +1019,7 @@ function openMemberModal(){
   document.getElementById('m-role').value='Nail Artist';
   document.getElementById('m-phone').value='';
   document.getElementById('m-email').value='';
-  document.getElementById('m-color').value='#C4A882';
+  document.getElementById('m-color').value='#B6A588';
   document.getElementById('m-active-wrap').style.display='none';
   openModal('modal-member');
 }
@@ -1031,7 +1031,7 @@ function editMember(id){
   document.getElementById('m-role').value=m.role||'Nail Artist';
   document.getElementById('m-phone').value=m.phone||'';
   document.getElementById('m-email').value=m.email||'';
-  document.getElementById('m-color').value=m.color||'#C4A882';
+  document.getElementById('m-color').value=m.color||'#B6A588';
   document.getElementById('m-active-wrap').style.display='block';
   document.getElementById('m-active').value=String(Number(m.active));
   openModal('modal-member');
@@ -1115,7 +1115,7 @@ function renderOverrides(){
   g.innerHTML=overrides.map(o=>{
     const names=o.team_member_ids.map(id=>{const m=members.find(x=>x.id===id);return m?m.name:'—';}).join(', ');
     const active=today>=o.start_date&&today<=o.end_date;
-    return `<div class="member-card" style="--mc:#C4A882;">
+    return `<div class="member-card" style="--mc:#B6A588;">
       <div class="mc-top">
         <div style="flex:1">
           <div class="mc-name">${fmtDateLabel(o.start_date)} → ${fmtDateLabel(o.end_date)}</div>
@@ -1167,7 +1167,7 @@ function renderClasses(){
   const g=document.getElementById('classes-list');if(!g)return;
   if(!classesData.length){g.innerHTML='<div class="empty">No classes yet.</div>';return;}
   g.innerHTML=classesData.map(c=>`
-    <div class="member-card" style="--mc:#C4A882;">
+    <div class="member-card" style="--mc:#B6A588;">
       <div class="mc-top">
         <div style="flex:1">
           <div class="mc-name">${esc(c.name)}</div>
@@ -1536,7 +1536,7 @@ async function loadClientInspo(){
     if(!rows.length){el.innerHTML='<div style="color:var(--muted);font-size:0.8rem;">No client inspo photos yet — they can attach one right after booking.</div>';return;}
     el.innerHTML=rows.map(p=>'<div style="border:1px solid var(--border);background:var(--bg);padding:0.5rem;">'
       +'<img src="'+p.data_url+'" style="width:100%;height:130px;object-fit:cover;display:block" alt="">'
-      +'<div style="font-family:\'Syne\',serif;font-size:0.82rem;color:var(--cream);margin-top:0.4rem">'+esc(p.client_name||'Client')+'</div>'
+      +'<div style="font-family:\'Cinzel\',serif;font-size:0.82rem;color:var(--cream);margin-top:0.4rem">'+esc(p.client_name||'Client')+'</div>'
       +'<div style="font-size:0.62rem;color:var(--muted)">'+esc(p.service||'')+(p.appt_date?' · '+p.appt_date:'')+'</div>'
       +'<button class="btn btn-danger btn-sm" style="margin-top:0.35rem" onclick="delClientInspo('+p.id+')">Delete</button>'
       +'</div>').join('');

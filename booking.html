@@ -6,7 +6,7 @@
   <title>Book — ZOLA Nail Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@200;300;400;600;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" /><link rel="stylesheet" href="css/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@200;300;400;600;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" /><link rel="stylesheet" href="css/styles.css" />
   <script src="https://js.stripe.com/v3/"></script>
   <style>
     .checkout-line {
@@ -14,7 +14,7 @@
       justify-content: space-between;
       align-items: flex-start;
       padding: 0.7rem 0;
-      border-bottom: 1px solid rgba(196,168,130,0.08);
+      border-bottom: 1px solid rgba(182,165,136,0.08);
       gap: 1rem;
     }
     .checkout-item-name {
@@ -41,7 +41,7 @@
       opacity: 0.6;
     }
     .checkout-charged-price {
-      font-family: 'Syne', serif;
+      font-family: 'Cinzel', serif;
       font-size: 1.15rem;
       color: var(--espresso);
     }
@@ -49,8 +49,8 @@
       color: var(--champagne);
     }
     .member-id-banner {
-      background: rgba(196,168,130,0.07);
-      border: 1px solid rgba(196,168,130,0.25);
+      background: rgba(182,165,136,0.07);
+      border: 1px solid rgba(182,165,136,0.25);
       padding: 1rem 1.25rem;
       margin-bottom: 1.25rem;
       display: flex;
@@ -70,11 +70,11 @@
       align-items: center;
       gap: 0.75rem;
       padding: 0.75rem 0;
-      border-bottom: 1px solid rgba(196,168,130,0.1);
+      border-bottom: 1px solid rgba(182,165,136,0.1);
       cursor: pointer;
     }
     .addon-price-tag {
-      font-family: 'Syne', serif;
+      font-family: 'Cinzel', serif;
       font-size: 1.1rem;
       color: var(--champagne);
       flex-shrink: 0;
@@ -87,18 +87,18 @@
       font-weight: 700;
       letter-spacing: 0.12em;
       color: var(--champagne);
-      background: rgba(196,168,130,0.1);
+      background: rgba(182,165,136,0.1);
       padding: 0.15rem 0.45rem;
       text-transform: uppercase;
     }
     .birthday-box {
-      background: linear-gradient(135deg, rgba(196,168,130,0.1), rgba(232,213,196,0.15));
-      border: 1px solid rgba(196,168,130,0.35);
+      background: linear-gradient(135deg, rgba(182,165,136,0.1), rgba(232,213,196,0.15));
+      border: 1px solid rgba(182,165,136,0.35);
       padding: 1.1rem 1.25rem;
       margin-bottom: 1rem;
     }
     .birthday-title {
-      font-family: 'Syne', serif;
+      font-family: 'Cinzel', serif;
       font-size: 1.2rem;
       color: var(--champagne);
       margin-bottom: 0.35rem;
@@ -152,12 +152,12 @@
       /* ── GG-style 3-icon progress (Services → Day & Time → Details) ── */
       .gg-steps { display:flex; align-items:center; justify-content:center; gap:0; margin-bottom:2rem; }
       .gg-step { display:flex; flex-direction:column; align-items:center; gap:0.35rem; min-width:74px; }
-      .gg-ico { width:46px; height:46px; border-radius:50%; border:1.5px solid rgba(196,168,130,0.35); display:flex; align-items:center; justify-content:center; font-size:1.05rem; background:transparent; color:var(--latte); transition:all 0.3s; }
-      .gg-step.on .gg-ico { border-color:var(--champagne); background:var(--champagne); color:var(--espresso); box-shadow:0 6px 18px rgba(196,168,130,0.35); }
+      .gg-ico { width:46px; height:46px; border-radius:50%; border:1.5px solid rgba(182,165,136,0.35); display:flex; align-items:center; justify-content:center; font-size:1.05rem; background:transparent; color:var(--latte); transition:all 0.3s; }
+      .gg-step.on .gg-ico { border-color:var(--champagne); background:var(--champagne); color:var(--espresso); box-shadow:0 6px 18px rgba(182,165,136,0.35); }
       .gg-step.done .gg-ico { border-color:var(--champagne); color:var(--champagne); }
       .gg-lbl { font-family:'Josefin Sans',sans-serif; font-size:0.56rem; letter-spacing:0.16em; text-transform:uppercase; color:var(--latte); }
       .gg-step.on .gg-lbl { color:var(--champagne); font-weight:700; }
-      .gg-line { flex:1; max-width:70px; height:1px; background:rgba(196,168,130,0.3); margin:0 0.4rem 1.1rem; }
+      .gg-line { flex:1; max-width:70px; height:1px; background:rgba(182,165,136,0.3); margin:0 0.4rem 1.1rem; }
       .gg-line.done { background:var(--champagne); }
 
       /* multi-select service cards */
@@ -166,25 +166,25 @@
       .option-btn.svc-selected .option-price { color:var(--champagne); }
       .svc-state { font-family:'Josefin Sans',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--champagne); margin-top:0.2rem; display:block; }
       .qty-step { display:inline-flex; align-items:center; gap:0.55rem; margin-top:0.35rem; }
-      .qty-step button { width:26px; height:26px; border:1px solid rgba(196,168,130,0.5); background:transparent; color:var(--champagne); font-size:1rem; line-height:1; cursor:pointer; }
-      .qty-step span { font-family:'Syne',serif; font-size:0.95rem; color:var(--cream); min-width:16px; text-align:center; }
+      .qty-step button { width:26px; height:26px; border:1px solid rgba(182,165,136,0.5); background:transparent; color:var(--champagne); font-size:1rem; line-height:1; cursor:pointer; }
+      .qty-step span { font-family:'Cinzel',serif; font-size:0.95rem; color:var(--cream); min-width:16px; text-align:center; }
 
       /* sticky "Book N services" bar (GG pattern) */
-      .sticky-book { position:fixed; left:0; right:0; bottom:0; z-index:90; background:var(--espresso); border-top:1px solid rgba(196,168,130,0.3); padding:0.8rem 1.1rem calc(0.8rem + env(safe-area-inset-bottom)); display:none; align-items:center; justify-content:space-between; gap:1rem; }
+      .sticky-book { position:fixed; left:0; right:0; bottom:0; z-index:90; background:var(--espresso); border-top:1px solid rgba(182,165,136,0.3); padding:0.8rem 1.1rem calc(0.8rem + env(safe-area-inset-bottom)); display:none; align-items:center; justify-content:space-between; gap:1rem; }
       .sticky-book.show { display:flex; animation:fadeIn 0.25s ease; }
       .sb-info { font-family:'Josefin Sans',sans-serif; font-size:0.72rem; color:var(--cream); line-height:1.5; }
       .sb-info strong { color:var(--champagne); }
       .sb-btn { background:var(--champagne); color:var(--espresso); border:none; font-family:'Josefin Sans',sans-serif; font-size:0.72rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; padding:0.9rem 1.5rem; cursor:pointer; white-space:nowrap; min-height:48px; }
 
       /* SELECT A DAY calendar */
-      .bk-cal { background:#fff; border:1px solid rgba(196,168,130,0.22); margin-bottom:1.25rem; }
-      .bk-cal-head { display:flex; align-items:center; justify-content:space-between; padding:0.8rem 1rem; border-bottom:1px solid rgba(196,168,130,0.15); }
-      .bk-cal-label { font-family:'Syne',serif; font-size:1.05rem; color:var(--espresso); }
-      .bk-cal-nav { width:40px; height:40px; border:1px solid rgba(196,168,130,0.3); background:none; color:var(--latte); font-size:1rem; cursor:pointer; }
+      .bk-cal { background:#fff; border:1px solid rgba(182,165,136,0.22); margin-bottom:1.25rem; }
+      .bk-cal-head { display:flex; align-items:center; justify-content:space-between; padding:0.8rem 1rem; border-bottom:1px solid rgba(182,165,136,0.15); }
+      .bk-cal-label { font-family:'Cinzel',serif; font-size:1.05rem; color:var(--espresso); }
+      .bk-cal-nav { width:40px; height:40px; border:1px solid rgba(182,165,136,0.3); background:none; color:var(--latte); font-size:1rem; cursor:pointer; }
       .bk-dows, .bk-cells { display:grid; grid-template-columns:repeat(7,1fr); }
       .bk-dows div { text-align:center; font-family:'Josefin Sans',sans-serif; font-size:0.58rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--latte); padding:0.5rem 0; }
       .bk-day { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-family:'Josefin Sans',sans-serif; font-size:0.9rem; color:var(--espresso); cursor:pointer; border:1px solid transparent; transition:all 0.15s; }
-      .bk-day:hover { border-color:rgba(196,168,130,0.5); }
+      .bk-day:hover { border-color:rgba(182,165,136,0.5); }
       .bk-day.off { opacity:0.25; cursor:default; }
       .bk-day.sel { background:var(--espresso); color:var(--champagne); font-weight:700; }
       .bk-day.today { border-color:var(--champagne); }
@@ -194,15 +194,15 @@
       .timeslot-btn { min-height:48px; }
 
       /* who-is-this-for */
-      .who-card { background:var(--cream); border:1px solid rgba(196,168,130,0.25); padding:0.9rem 1rem; margin-bottom:0.6rem; }
-      .who-svc { font-family:'Syne',serif; font-size:0.95rem; color:var(--espresso); margin-bottom:0.4rem; }
+      .who-card { background:var(--cream); border:1px solid rgba(182,165,136,0.25); padding:0.9rem 1rem; margin-bottom:0.6rem; }
+      .who-svc { font-family:'Cinzel',serif; font-size:0.95rem; color:var(--espresso); margin-bottom:0.4rem; }
 
       /* Apple Pay hint */
       .ap-hint { display:flex; align-items:center; gap:0.5rem; font-family:'Josefin Sans',sans-serif; font-size:0.74rem; color:var(--latte); margin:0.5rem 0 0.75rem; }
 
       /* inspo uploader on success */
-      .inspo-up { background:var(--cream); border:2px dashed rgba(196,168,130,0.5); padding:1.5rem; margin-top:1.5rem; text-align:center; }
-      .inspo-up img { max-width:180px; max-height:180px; object-fit:cover; margin:0.75rem auto 0; display:block; border:1px solid rgba(196,168,130,0.4); }
+      .inspo-up { background:var(--cream); border:2px dashed rgba(182,165,136,0.5); padding:1.5rem; margin-top:1.5rem; text-align:center; }
+      .inspo-up img { max-width:180px; max-height:180px; object-fit:cover; margin:0.75rem auto 0; display:block; border:1px solid rgba(182,165,136,0.4); }
       @media (min-width:761px) { .sticky-book { position:static; margin-top:1rem; } }
       body.has-sticky { padding-bottom:90px; }
     </style>
@@ -224,7 +224,7 @@
       </div>
 
       <!-- Member ID entry -->
-      <div style="background:var(--cream);border:1px solid rgba(196,168,130,0.2);padding:1.5rem;margin-bottom:1rem;">
+      <div style="background:var(--cream);border:1px solid rgba(182,165,136,0.2);padding:1.5rem;margin-bottom:1rem;">
         <div class="section-label" style="font-size:0.6rem;margin-bottom:0.75rem;">Member Login</div>
         <label class="luxury-label">Member ID</label>
         <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;">
@@ -435,7 +435,7 @@
         <div class="bk-dows"><div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div></div>
         <div class="bk-cells" id="bk-cells"></div>
       </div>
-      <div id="bk-coverage-note" style="display:none;font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);background:rgba(196,168,130,0.08);border:1px solid rgba(196,168,130,0.2);padding:0.7rem 0.9rem;margin:-0.75rem 0 1.25rem;">Some days above are grayed out because one or more of your selected services needs an artist who isn't in on those dates.</div>
+      <div id="bk-coverage-note" style="display:none;font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);background:rgba(182,165,136,0.08);border:1px solid rgba(182,165,136,0.2);padding:0.7rem 0.9rem;margin:-0.75rem 0 1.25rem;">Some days above are grayed out because one or more of your selected services needs an artist who isn't in on those dates.</div>
 
       <label class="luxury-label">Select a Time</label>
       <div class="timeslot-grid" id="timeslots"><p style="color:var(--latte);font-size:0.82rem;grid-column:1/-1;">Pick a day above to see open times ✦</p></div>
@@ -467,7 +467,7 @@
           <span>Date: <strong id="summary-date" style="color:var(--espresso);">—</strong> &nbsp; <strong id="summary-time" style="color:var(--espresso);">—</strong></span>
         </div>
 
-        <hr style="border:none;border-top:1px solid rgba(196,168,130,0.1);margin:0.75rem 0;">
+        <hr style="border:none;border-top:1px solid rgba(182,165,136,0.1);margin:0.75rem 0;">
 
         <!-- Line items injected by JS -->
         <div id="checkout-line-items"></div>
@@ -483,10 +483,10 @@
           </div>
         </div>
 
-        <hr style="border:none;border-top:1px solid rgba(196,168,130,0.15);margin:0.75rem 0;">
+        <hr style="border:none;border-top:1px solid rgba(182,165,136,0.15);margin:0.75rem 0;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;">
           <span style="font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);letter-spacing:0.08em;text-transform:uppercase;">Appointment Total</span>
-          <span style="font-family:'Syne',serif;font-size:1.5rem;color:var(--espresso);" id="summary-total">—</span>
+          <span style="font-family:'Cinzel',serif;font-size:1.5rem;color:var(--espresso);" id="summary-total">—</span>
         </div>
       </div>
 
@@ -500,7 +500,7 @@
       </div>
 
       <!-- Client info -->
-      <div id="welcome-back" style="display:none;background:rgba(196,168,130,0.08);border:1px solid rgba(196,168,130,0.25);padding:0.85rem 1.1rem;margin-bottom:1rem;font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--espresso);">
+      <div id="welcome-back" style="display:none;background:rgba(182,165,136,0.08);border:1px solid rgba(182,165,136,0.25);padding:0.85rem 1.1rem;margin-bottom:1rem;font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--espresso);">
         Welcome back, <strong id="wb-name">✦</strong> — your details are filled in below.
         <a href="#" onclick="clearSavedClient();return false;" style="color:var(--champagne);margin-left:0.4rem;">Not you?</a>
       </div>
@@ -526,12 +526,12 @@
       <div id="card-section" style="display:none;margin:1.25rem 0;">
         <div class="ap-hint" id="ap-hint" style="display:none;"> Apple Pay available — double-tap to pay, no typing</div>
         <label class="luxury-label">Pay your deposit — Apple Pay or card</label>
-        <div id="payment-element" style="background:#fff;border:1px solid rgba(139,106,62,0.22);padding:1rem;"></div>
+        <div id="payment-element" style="background:#fff;border:1px solid rgba(140,122,94,0.22);padding:1rem;"></div>
         <div id="card-errors" style="display:none;font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:#c0524a;margin-top:0.5rem;"></div>
       </div>
 
       <!-- Optional account creation -->
-      <div style="margin:1.25rem 0;background:rgba(196,168,130,0.06);border:1px solid rgba(196,168,130,0.2);padding:1rem 1.25rem;">
+      <div style="margin:1.25rem 0;background:rgba(182,165,136,0.06);border:1px solid rgba(182,165,136,0.2);padding:1rem 1.25rem;">
         <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--espresso);">
           <input type="checkbox" id="make-account" checked>
           <span><strong>Create my ZOLA account</strong> — see your appointments, chat with your artist, and rebook in two taps</span>
@@ -555,13 +555,13 @@
         <button class="btn-gold" onclick="submitBooking()" style="animation:none;flex:1;text-align:center;">Pay Deposit & Confirm</button>
       </div>
       <div id="booking-success" style="display:none;text-align:center;padding:2rem 0;">
-        <div style="font-family:'Syne',serif;font-size:2rem;color:var(--espresso);margin-bottom:0.5rem;">You're Confirmed ✦</div>
+        <div style="font-family:'Cinzel',serif;font-size:2rem;color:var(--espresso);margin-bottom:0.5rem;">You're Confirmed ✦</div>
         <div id="booking-conf-num" style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--champagne);margin-bottom:0.75rem;"></div>
         <p style="font-family:'Josefin Sans',sans-serif;font-size:0.88rem;color:var(--latte);line-height:1.8;">A confirmation text and email is on its way. We can't wait to see you.<br>Questions? DM us <strong>@zola_officials_</strong> or text us directly.</p>
 
         <!-- Inspo photo upload — goes straight to Zahra + every artist -->
         <div class="inspo-up" id="inspo-up">
-          <div style="font-family:'Syne',serif;font-size:1.2rem;color:var(--espresso);">Have inspo? Show us 💅</div>
+          <div style="font-family:'Cinzel',serif;font-size:1.2rem;color:var(--espresso);">Have inspo? Show us 💅</div>
           <p style="font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:var(--latte);line-height:1.7;margin:0.5rem 0 0.9rem;">Add a photo of the nails you're dreaming of. Your artist sees it <strong>before</strong> your visit — so we can order anything special your look needs.</p>
           <input type="file" id="inspo-file" accept="image/*" style="display:none" onchange="inspoPicked(this)">
           <button class="btn-gold" style="animation:none;" onclick="document.getElementById('inspo-file').click()">Add Inspo Photo</button>
@@ -585,7 +585,7 @@ const TIER_RULES = {
   SIGNATURE: {
     label: 'Signature Club',
     tagText: 'SIGNATURE',
-    tagStyle: 'background:rgba(139,106,62,0.15);color:var(--latte);',
+    tagStyle: 'background:rgba(140,122,94,0.15);color:var(--latte);',
     freeManicures: 1,
     freePedicures: 1,
     freeServiceCount: null,
@@ -598,7 +598,7 @@ const TIER_RULES = {
   LUXE: {
     label: 'Luxe Club',
     tagText: 'LUXE',
-    tagStyle: 'background:rgba(196,168,130,0.15);color:var(--champagne);',
+    tagStyle: 'background:rgba(182,165,136,0.15);color:var(--champagne);',
     freeManicures: 2,
     freePedicures: 1,
     freeServiceCount: null,
@@ -1271,7 +1271,7 @@ async function initPayment() {
     if (!intent.client_secret) return;
     _paymentIntentId = intent.payment_intent_id;
     _stripe = Stripe(cfg.publishable_key);
-    _elements = _stripe.elements({ clientSecret: intent.client_secret, appearance: { theme: 'flat', variables: { colorPrimary: '#C4A882', fontFamily: 'Josefin Sans, sans-serif' } } });
+    _elements = _stripe.elements({ clientSecret: intent.client_secret, appearance: { theme: 'flat', variables: { colorPrimary: '#B6A588', fontFamily: 'Josefin Sans, sans-serif' } } });
     // wallets:auto = Apple Pay appears automatically on iPhone Safari —
     // the "double-tap to pay" experience, no typing card numbers
     _elements.create('payment', { wallets: { applePay: 'auto', googlePay: 'auto' }, layout: 'tabs' }).mount('#payment-element');

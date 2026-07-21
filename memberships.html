@@ -6,7 +6,7 @@
   <title>Memberships — ZOLA Nail Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@200;300;400;600;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" /><link rel="stylesheet" href="css/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@200;300;400;600;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" /><link rel="stylesheet" href="css/styles.css" />
   <style>
     .comparison-price-wrap {
       display: flex;
@@ -16,7 +16,7 @@
       margin: 0.35rem 0 0.75rem;
     }
     .comparison-old {
-      font-family: 'Syne', serif;
+      font-family: 'Cinzel', serif;
       font-size: 1.5rem;
       color: var(--latte);
       text-decoration: line-through;
@@ -29,11 +29,11 @@
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--champagne);
-      background: rgba(196,168,130,0.1);
+      background: rgba(182,165,136,0.1);
       padding: 0.2rem 0.55rem;
     }
     .atelier-block {
-      background: rgba(196,168,130,0.05);
+      background: rgba(182,165,136,0.05);
       border-left: 3px solid var(--champagne);
       padding: 1rem 1.25rem;
       margin-top: 1rem;
@@ -83,7 +83,7 @@
 </div>
 
 <div style="padding-top:8rem;background:var(--espresso);padding-bottom:4rem;text-align:center;">
-  <div class="section-label" style="color:rgba(196,168,130,0.6);">Exclusive Access</div>
+  <div class="section-label" style="color:rgba(182,165,136,0.6);">Exclusive Access</div>
   <h1 style="color:var(--cream);font-size:clamp(2.5rem,5vw,4rem);margin:0.75rem 0 1rem;">Choose Your Club</h1>
   <p style="font-family:'Josefin Sans',sans-serif;font-size:0.95rem;color:var(--latte);max-width:420px;margin:0 auto;">Three tiers. Strictly limited. Once a spot is gone, it's gone.</p>
 </div>
@@ -92,7 +92,7 @@
 <section class="section section-espresso" id="compare">
   <div class="container" style="max-width:1020px;">
     <div class="section-header" style="text-align:center;margin-bottom:2.5rem;">
-      <div class="section-label" style="color:rgba(196,168,130,0.6);">Side by Side</div>
+      <div class="section-label" style="color:rgba(182,165,136,0.6);">Side by Side</div>
       <h2 class="light" style="margin:0.75rem 0;">What You Get at Every Tier</h2>
       <p style="font-family:'Josefin Sans',sans-serif;font-size:0.88rem;color:var(--latte);margin-top:0.5rem;">The difference between tiers is not just price — it's access, care, and continuity.</p>
     </div>
@@ -100,18 +100,18 @@
     <style>
       .ladder-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1.25rem; align-items:start; }
       @media (max-width:860px){ .ladder-grid { grid-template-columns:1fr; max-width:440px; margin:0 auto; } }
-      .ladder-card { background:rgba(245,238,232,0.03); border:1px solid rgba(196,168,130,0.18); padding:1.9rem 1.6rem; }
-      .ladder-card.lc-blk { border-color:rgba(196,168,130,0.45); background:rgba(196,168,130,0.05); }
+      .ladder-card { background:rgba(245,238,232,0.03); border:1px solid rgba(182,165,136,0.18); padding:1.9rem 1.6rem; }
+      .ladder-card.lc-blk { border-color:rgba(182,165,136,0.45); background:rgba(182,165,136,0.05); }
       .lc-toplabel { font-family:'Josefin Sans',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:0.22em; text-transform:uppercase; color:var(--champagne); text-align:center; margin-bottom:0.7rem; min-height:0.9rem; }
-      .lc-name { font-family:'Syne',serif; font-size:1.15rem; letter-spacing:0.06em; color:var(--cream); text-align:center; text-transform:uppercase; }
-      .lc-price { font-family:'Syne',serif; font-size:2.4rem; color:var(--champagne); text-align:center; margin:0.5rem 0 0.1rem; }
+      .lc-name { font-family:'Cinzel',serif; font-size:1.15rem; letter-spacing:0.06em; color:var(--cream); text-align:center; text-transform:uppercase; }
+      .lc-price { font-family:'Cinzel',serif; font-size:2.4rem; color:var(--champagne); text-align:center; margin:0.5rem 0 0.1rem; }
       .lc-price span { font-family:'Josefin Sans',sans-serif; font-size:0.8rem; color:var(--latte); }
       .lc-note { font-family:'Josefin Sans',sans-serif; font-size:0.7rem; color:var(--latte); text-align:center; line-height:1.6; margin-bottom:0.4rem; }
       .lc-note strong { color:var(--champagne); font-weight:600; }
       .lc-list { list-style:none; padding:0; margin:1.25rem 0 1.5rem; }
       .lc-list li { display:flex; gap:0.6rem; align-items:flex-start; font-family:'Josefin Sans',sans-serif; font-size:0.85rem; color:var(--cream); line-height:1.6; padding:0.42rem 0; }
       .lc-list li::before { content:'✦'; color:var(--champagne); font-size:0.6rem; margin-top:0.4rem; flex-shrink:0; }
-      .lc-divider { font-family:'Josefin Sans',sans-serif; font-size:0.66rem; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:rgba(196,168,130,0.65); border-top:1px solid rgba(196,168,130,0.18); margin:1.1rem 0 0.35rem; padding-top:1rem; }
+      .lc-divider { font-family:'Josefin Sans',sans-serif; font-size:0.66rem; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:rgba(182,165,136,0.65); border-top:1px solid rgba(182,165,136,0.18); margin:1.1rem 0 0.35rem; padding-top:1rem; }
     </style>
 
     <div class="ladder-grid">
@@ -189,7 +189,7 @@
 ══════════════════════════════════ -->
 <section class="section section-soft" id="signature">
   <div class="container" style="max-width:900px;">
-    <div class="membership-card" style="border:1px solid rgba(196,168,130,0.2);">
+    <div class="membership-card" style="border:1px solid rgba(182,165,136,0.2);">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1.5rem;">
         <div>
           <div class="section-label">Signature Club</div>
@@ -209,12 +209,12 @@
         </div>
       </div>
 
-      <hr style="border:none;border-top:1px solid rgba(196,168,130,0.12);margin:1.5rem 0;">
+      <hr style="border:none;border-top:1px solid rgba(182,165,136,0.12);margin:1.5rem 0;">
 
       <div class="grid-2">
         <div>
           <div class="section-label" style="font-size:0.6rem;margin-bottom:0.75rem;">What's Included</div>
-          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.6rem;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;background:rgba(139,106,62,0.12);color:var(--latte);padding:0.22rem 0.55rem;display:inline-block;margin-bottom:0.75rem;">Third Priority Booking</div>
+          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.6rem;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;background:rgba(140,122,94,0.12);color:var(--latte);padding:0.22rem 0.55rem;display:inline-block;margin-bottom:0.75rem;">Third Priority Booking</div>
           <p style="font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:var(--latte);line-height:1.65;margin-bottom:0.85rem;">Signature members book before all drop-ins and guests. Black Card and Luxe members have their selection window first — once they've booked, Signature members get first pick of what's left. Your time is still protected. You're just third in line.</p>
           <ul class="membership-list">
             <li><strong>1 free service per month — your choice of manicure OR pedicure. Not both.</strong> Pick hands or toes each month.</li>
@@ -230,14 +230,14 @@
         </div>
         <div>
           <div class="section-label" style="font-size:0.6rem;margin-bottom:0.75rem;">Checkout Pricing</div>
-          <div style="border:1px solid rgba(196,168,130,0.12);margin-bottom:1rem;">
-            <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(196,168,130,0.08);">
+          <div style="border:1px solid rgba(182,165,136,0.12);margin-bottom:1rem;">
+            <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(182,165,136,0.08);">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
                 <span style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--espresso);">1 service/mo — manicure OR pedicure (your choice)</span>
-                <span style="font-family:'Syne',serif;font-size:1rem;color:var(--champagne);flex-shrink:0;">$0.00</span>
+                <span style="font-family:'Cinzel',serif;font-size:1rem;color:var(--champagne);flex-shrink:0;">$0.00</span>
               </div>
             </div>
-            <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(196,168,130,0.08);">
+            <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(182,165,136,0.08);">
               <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--espresso);">Add-ons</span>
                 <span style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--latte);">10% off</span>
@@ -294,7 +294,7 @@
         </div>
       </div>
 
-      <hr style="border:none;border-top:1px solid rgba(196,168,130,0.18);margin:1.5rem 0;">
+      <hr style="border:none;border-top:1px solid rgba(182,165,136,0.18);margin:1.5rem 0;">
 
       <div class="grid-2">
         <div>
@@ -320,26 +320,26 @@
         </div>
         <div>
           <div class="section-label" style="font-size:0.6rem;margin-bottom:0.75rem;">Checkout Pricing</div>
-          <div style="border:1px solid rgba(196,168,130,0.12);margin-bottom:1rem;">
-            <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(196,168,130,0.08);">
+          <div style="border:1px solid rgba(182,165,136,0.12);margin-bottom:1rem;">
+            <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(182,165,136,0.08);">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
                 <span style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--espresso);">Up to 2 services/mo — any combo of mani or pedi</span>
-                <span style="font-family:'Syne',serif;font-size:1rem;color:var(--champagne);flex-shrink:0;">$0.00</span>
+                <span style="font-family:'Cinzel',serif;font-size:1rem;color:var(--champagne);flex-shrink:0;">$0.00</span>
               </div>
             </div>
-            <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(196,168,130,0.08);">
+            <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(182,165,136,0.08);">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
                 <span style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--espresso);">Complimentary Russian manicure (1/mo)</span>
-                <span style="font-family:'Syne',serif;font-size:1rem;color:var(--champagne);flex-shrink:0;">$0.00</span>
+                <span style="font-family:'Cinzel',serif;font-size:1rem;color:var(--champagne);flex-shrink:0;">$0.00</span>
               </div>
             </div>
-            <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(196,168,130,0.08);">
+            <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(182,165,136,0.08);">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
                 <span style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--espresso);">Scrub or lotion massage (1/mo)</span>
-                <span style="font-family:'Syne',serif;font-size:1rem;color:var(--champagne);flex-shrink:0;">$0.00</span>
+                <span style="font-family:'Cinzel',serif;font-size:1rem;color:var(--champagne);flex-shrink:0;">$0.00</span>
               </div>
             </div>
-            <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(196,168,130,0.08);">
+            <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(182,165,136,0.08);">
               <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--espresso);">All add-ons</span>
                 <span style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--champagne);">30% off</span>
@@ -375,13 +375,13 @@
 ══════════════════════════════════ -->
 <section class="section section-soft" id="black-card">
   <div class="container" style="max-width:900px;">
-    <div class="membership-card" style="border:1px solid rgba(196,168,130,0.2);background:var(--espresso);">
+    <div class="membership-card" style="border:1px solid rgba(182,165,136,0.2);background:var(--espresso);">
       <div class="founding-badge">Founding Rate — Locked Forever</div>
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1.5rem;margin-top:0.75rem;">
         <div>
           <div class="section-label">Black Card</div>
           <div class="comparison-price-wrap">
-            <span class="comparison-old" style="color:rgba(139,106,62,0.5);">$780/mo</span>
+            <span class="comparison-old" style="color:rgba(140,122,94,0.5);">$780/mo</span>
             <div class="membership-price" style="margin:0;color:var(--champagne);">$299<span style="font-size:0.85rem;font-family:'Josefin Sans',sans-serif;color:var(--latte);">/mo</span></div>
             <span class="comparison-savings">Save $481/mo</span>
           </div>
@@ -396,11 +396,11 @@
         </div>
       </div>
 
-      <hr style="border:none;border-top:1px solid rgba(196,168,130,0.12);margin:1.5rem 0;">
+      <hr style="border:none;border-top:1px solid rgba(182,165,136,0.12);margin:1.5rem 0;">
 
       <div class="grid-2">
         <div>
-          <div class="section-label" style="font-size:0.6rem;margin-bottom:0.75rem;color:rgba(196,168,130,0.6);">What's Included</div>
+          <div class="section-label" style="font-size:0.6rem;margin-bottom:0.75rem;color:rgba(182,165,136,0.6);">What's Included</div>
           <ul class="membership-list">
             <li style="color:var(--cream);"><strong style="color:var(--champagne);">2 services a month</strong> — all included, no charge</li>
             <li style="color:var(--cream);"><strong style="color:var(--champagne);">Choose your specific nail artist</strong> for every appointment — exclusive to Black Card</li>
@@ -425,21 +425,21 @@
           </div>
         </div>
         <div>
-          <div class="section-label" style="font-size:0.6rem;margin-bottom:0.75rem;color:rgba(196,168,130,0.6);">Checkout Pricing</div>
-          <div style="border:1px solid rgba(196,168,130,0.12);margin-bottom:1rem;">
-            <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(196,168,130,0.08);">
+          <div class="section-label" style="font-size:0.6rem;margin-bottom:0.75rem;color:rgba(182,165,136,0.6);">Checkout Pricing</div>
+          <div style="border:1px solid rgba(182,165,136,0.12);margin-bottom:1rem;">
+            <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(182,165,136,0.08);">
               <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--cream);">Services (up to 2/mo)</span>
-                <span style="font-family:'Syne',serif;font-size:1rem;color:var(--champagne);">$0.00 each</span>
+                <span style="font-family:'Cinzel',serif;font-size:1rem;color:var(--champagne);">$0.00 each</span>
               </div>
             </div>
-            <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(196,168,130,0.08);">
+            <div style="padding:0.6rem 0.875rem;border-bottom:1px solid rgba(182,165,136,0.08);">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
                 <div>
                   <div style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--cream);">All add-ons</div>
                   <div style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:var(--latte);">Complimentary at every visit</div>
                 </div>
-                <span style="font-family:'Syne',serif;font-size:1rem;color:var(--champagne);flex-shrink:0;">$0.00</span>
+                <span style="font-family:'Cinzel',serif;font-size:1rem;color:var(--champagne);flex-shrink:0;">$0.00</span>
               </div>
             </div>
             <div style="padding:0.6rem 0.875rem;">
@@ -473,27 +473,27 @@
     <div class="section-label">Common Questions</div>
     <h2 style="margin-top:0.75rem;margin-bottom:2rem;">Before You Join</h2>
     <div style="text-align:left;display:flex;flex-direction:column;gap:1rem;">
-      <details style="border:1px solid rgba(196,168,130,0.2);padding:1rem 1.25rem;">
+      <details style="border:1px solid rgba(182,165,136,0.2);padding:1rem 1.25rem;">
         <summary style="font-family:'Josefin Sans',sans-serif;font-weight:600;font-size:0.88rem;color:var(--espresso);cursor:pointer;">How does the Member ID checkout work?</summary>
         <p style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);margin-top:0.75rem;line-height:1.7;">Enter your Member ID on the booking page to unlock your tier benefits. Whatever's included in your membership shows as $0.00. Anything outside your inclusions is charged at the regular price. Black Card add-ons show the 75% discount automatically.</p>
       </details>
-      <details style="border:1px solid rgba(196,168,130,0.2);padding:1rem 1.25rem;">
+      <details style="border:1px solid rgba(182,165,136,0.2);padding:1rem 1.25rem;">
         <summary style="font-family:'Josefin Sans',sans-serif;font-weight:600;font-size:0.88rem;color:var(--espresso);cursor:pointer;">Can I cancel anytime?</summary>
         <p style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);margin-top:0.75rem;line-height:1.7;">All memberships have a 6-month minimum. After 6 months you may cancel with 30 days written notice. No refunds on months already billed.</p>
       </details>
-      <details style="border:1px solid rgba(196,168,130,0.2);padding:1rem 1.25rem;">
+      <details style="border:1px solid rgba(182,165,136,0.2);padding:1rem 1.25rem;">
         <summary style="font-family:'Josefin Sans',sans-serif;font-weight:600;font-size:0.88rem;color:var(--espresso);cursor:pointer;">What happens if I miss a month?</summary>
         <p style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);margin-top:0.75rem;line-height:1.7;">Signature and Luxe services do not roll over. Black Card members may carry over 1 service per month. Your membership still auto-renews regardless.</p>
       </details>
-      <details style="border:1px solid rgba(196,168,130,0.2);padding:1rem 1.25rem;">
+      <details style="border:1px solid rgba(182,165,136,0.2);padding:1rem 1.25rem;">
         <summary style="font-family:'Josefin Sans',sans-serif;font-weight:600;font-size:0.88rem;color:var(--espresso);cursor:pointer;">Do I still pay a deposit with a membership?</summary>
         <p style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);margin-top:0.75rem;line-height:1.7;">Yes. Every appointment requires a 50% non-refundable deposit at booking. This protects the artist's time. Deposits on $0.00 service totals are $0.00.</p>
       </details>
-      <details style="border:1px solid rgba(196,168,130,0.2);padding:1rem 1.25rem;">
+      <details style="border:1px solid rgba(182,165,136,0.2);padding:1rem 1.25rem;">
         <summary style="font-family:'Josefin Sans',sans-serif;font-weight:600;font-size:0.88rem;color:var(--espresso);cursor:pointer;">Can I upgrade my tier?</summary>
         <p style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);margin-top:0.75rem;line-height:1.7;">Yes, subject to spot availability in the higher tier. Downgrades are not allowed until after the 6-month minimum.</p>
       </details>
-      <details style="border:1px solid rgba(196,168,130,0.2);padding:1rem 1.25rem;">
+      <details style="border:1px solid rgba(182,165,136,0.2);padding:1rem 1.25rem;">
         <summary style="font-family:'Josefin Sans',sans-serif;font-weight:600;font-size:0.88rem;color:var(--espresso);cursor:pointer;">How do I claim my Birthday Month Upgrade?</summary>
         <p style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);margin-top:0.75rem;line-height:1.7;">Enter your birthday month when booking or in your Client Portal. During your birthday month, the upgrade unlocks automatically and you'll see it as a free option at checkout. Available to all tiers — choose a free scrub, massage, or removal.</p>
       </details>

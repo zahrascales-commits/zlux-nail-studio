@@ -6,14 +6,14 @@
 <title>ZOLA — Team Portal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   :root{
     --bg:#0B0B0B;--surface:#141210;--card:#1C1815;--card-hi:#221D18;
-    --border:rgba(196,168,130,0.14);--border-hi:rgba(196,168,130,0.32);
-    --gold:#C4A882;--gold-faint:rgba(196,168,130,0.07);
-    --cream:#F5EEE8;--latte:#8B6A3E;--muted:#8B7355;--text:#F5EEE8;--success:#6ab07a;--danger:#e08a8a;
+    --border:rgba(182,165,136,0.14);--border-hi:rgba(182,165,136,0.32);
+    --gold:#B6A588;--gold-faint:rgba(182,165,136,0.07);
+    --cream:#F5EEE8;--latte:#8C7A5E;--muted:#8B7355;--text:#F5EEE8;--success:#6ab07a;--danger:#e08a8a;
   }
   body{background:var(--bg);color:var(--text);font-family:'Josefin Sans',sans-serif;min-height:100vh;line-height:1.6}
   input,button,textarea,select{font-family:inherit;color:inherit}
@@ -28,20 +28,20 @@
     background:radial-gradient(1200px 800px at 50% 25%,#161210,#0B0B0B)}
   .login-card{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--border);padding:3rem 2.5rem;text-align:center;animation:fadeUp 0.6s ease;position:relative;overflow:hidden}
   .login-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);background-size:200% 100%;animation:shimmer 3s linear infinite}
-  .login-logo{font-family:'Syne',sans-serif;font-size:2.2rem;letter-spacing:0.1em;color:var(--cream)}
+  .login-logo{font-family:'Cinzel', serif;font-size:2.2rem;letter-spacing:0.1em;color:var(--cream)}
   .login-sub{font-size:0.6rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--gold);margin:0.4rem 0 2.4rem}
   .login-label{display:block;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem;text-align:left}
   .login-input{width:100%;background:var(--card);border:1px solid var(--border);color:var(--cream);font-size:1.4rem;letter-spacing:0.5em;
     padding:0.85rem;outline:none;text-align:center;transition:border-color 0.2s}
   .login-input:focus{border-color:var(--gold)}
   .login-btn{width:100%;margin-top:1.5rem;background:var(--gold);color:#0B0B0B;border:none;padding:0.95rem;font-size:0.7rem;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;cursor:pointer;transition:transform 0.2s,box-shadow 0.2s}
-  .login-btn:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(196,168,130,0.2)}
+  .login-btn:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(182,165,136,0.2)}
   .login-err{color:var(--danger);font-size:0.75rem;margin-top:1rem;min-height:1.1em}
 
   /* SHELL */
   #app{display:none}
   .topbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;padding:1rem 1.4rem;background:rgba(11,11,11,0.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
-  .brand{font-family:'Syne',sans-serif;font-size:1.3rem;letter-spacing:0.08em;color:var(--cream)}
+  .brand{font-family:'Cinzel', serif;font-size:1.3rem;letter-spacing:0.08em;color:var(--cream)}
   .who-name{font-size:0.66rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--gold)}
   .logout{background:none;border:1px solid var(--border);color:var(--muted);font-size:0.58rem;letter-spacing:0.14em;text-transform:uppercase;padding:0.45rem 0.8rem;cursor:pointer;transition:all 0.2s}
   .logout:hover{border-color:var(--gold);color:var(--gold)}
@@ -56,10 +56,10 @@
   .appt:hover{border-color:var(--border-hi)}
   .appt-t{min-width:76px;text-align:center;background:var(--bg);padding:0.55rem 0.3rem;border-left:2px solid var(--gold)}
   .appt-t .d{font-size:0.54rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)}
-  .appt-t .h{font-family:'Syne',sans-serif;font-size:1.15rem;color:var(--cream)}
+  .appt-t .h{font-family:'Cinzel', serif;font-size:1.15rem;color:var(--cream)}
   .badge-today{display:inline-block;background:var(--gold);color:#0B0B0B;font-size:0.5rem;letter-spacing:0.14em;text-transform:uppercase;font-weight:700;padding:0.15rem 0.4rem;margin-bottom:0.3rem}
   .appt-b{flex:1;min-width:0}
-  .appt-c{font-family:'Syne',sans-serif;font-size:1.1rem;color:var(--cream)}
+  .appt-c{font-family:'Cinzel', serif;font-size:1.1rem;color:var(--cream)}
   .appt-s{font-size:0.78rem;color:var(--muted);margin:0.1rem 0}
   .appt-p{font-size:0.74rem;color:var(--gold)}
   .appt-note{font-size:0.72rem;color:var(--muted);font-style:italic;margin-top:0.25rem}
@@ -80,7 +80,7 @@
   .overlay.open{display:flex;animation:fadeIn 0.2s ease}
   .sheet{background:var(--surface);border:1px solid var(--border-hi);width:100%;max-width:540px;max-height:85vh;display:flex;flex-direction:column;animation:fadeUp 0.3s ease}
   .sheet-head{padding:1rem 1.2rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
-  .sheet-head .n{font-family:'Syne',sans-serif;font-size:1.05rem;color:var(--cream)}
+  .sheet-head .n{font-family:'Cinzel', serif;font-size:1.05rem;color:var(--cream)}
   .sheet-head .s{font-size:0.66rem;color:var(--muted)}
   .sheet-body{flex:1;overflow-y:auto;padding:1.1rem;display:flex;flex-direction:column;gap:0.55rem;min-height:200px}
   .bubble{max-width:80%;padding:0.6rem 0.85rem;font-size:0.85rem;line-height:1.5;animation:pop 0.22s ease}
@@ -105,14 +105,14 @@
   .bell-drop.open{display:block}
   .notif{padding:0.75rem 0.9rem;border-bottom:1px solid var(--border)}
   .notif.unread{background:var(--gold-faint);border-left:2px solid var(--gold)}
-  .notif-title{font-family:'Syne',sans-serif;font-size:0.8rem;color:var(--cream)}
+  .notif-title{font-family:'Cinzel', serif;font-size:0.8rem;color:var(--cream)}
   .notif-body{font-size:0.7rem;color:var(--muted);margin-top:0.15rem}
   .notif-ts{font-size:0.56rem;color:var(--muted);margin-top:0.2rem;opacity:0.7}
 
   /* mini month calendar with dots */
   .mini-cal{background:var(--card);border:1px solid var(--border);margin-bottom:1.2rem;animation:fadeUp 0.35s ease}
   .mini-cal-head{display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0.9rem;border-bottom:1px solid var(--border)}
-  .mini-cal-label{font-family:'Syne',sans-serif;font-size:0.88rem;color:var(--cream)}
+  .mini-cal-label{font-family:'Cinzel', serif;font-size:0.88rem;color:var(--cream)}
   .mini-nav{background:none;border:1px solid var(--border);color:var(--muted);width:26px;height:26px;cursor:pointer;font-size:0.8rem}
   .mini-nav:hover{border-color:var(--gold);color:var(--gold)}
   .mini-dows,.mini-cells{display:grid;grid-template-columns:repeat(7,1fr)}
@@ -203,7 +203,7 @@
 <div id="toast"></div>
 
 <script>
-let MID=null,PIN=null,NAME=null,COLOR='#C4A882';
+let MID=null,PIN=null,NAME=null,COLOR='#B6A588';
 let schedule=[];
 let activeAppt=null;
 let selDay=null;
@@ -216,7 +216,7 @@ function login(){
     .then(r=>r.json().then(d=>({ok:r.ok,d})))
     .then(({ok,d})=>{
       if(!ok||!d.ok){err.textContent='Invalid PIN. Try again.';return;}
-      MID=d.member_id;PIN=pin;NAME=d.name;COLOR=d.color||'#C4A882';
+      MID=d.member_id;PIN=pin;NAME=d.name;COLOR=d.color||'#B6A588';
       sessionStorage.setItem('zt',JSON.stringify({MID,PIN,NAME,COLOR}));
       enter();
     }).catch(()=>err.textContent='Connection error.');
@@ -369,7 +369,7 @@ async function loadTeamInspo(){
     el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0.8rem">'
       +rows.map(p=>'<div style="border:1px solid var(--border);background:var(--card);padding:0.5rem">'
         +'<img src="'+p.data_url+'" style="width:100%;height:140px;object-fit:cover;display:block" alt="">'
-        +'<div style="font-family:\'Syne\',serif;font-size:0.85rem;color:var(--cream);margin-top:0.4rem">'+esc(p.client_name||'Client')+'</div>'
+        +'<div style="font-family:\'Cinzel\',serif;font-size:0.85rem;color:var(--cream);margin-top:0.4rem">'+esc(p.client_name||'Client')+'</div>'
         +'<div style="font-size:0.62rem;color:var(--muted)">'+esc(p.service||'')+(p.appt_date?' · '+p.appt_date:'')+'</div>'
         +'</div>').join('')+'</div>';
   }catch{el.innerHTML='<div class="empty">Could not load inspo.</div>';}
@@ -464,7 +464,7 @@ function hdr(){return{'Content-Type':'application/json','X-Team-Id':String(MID),
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2400);}
 
-(function(){const s=sessionStorage.getItem('zt');if(s){try{const o=JSON.parse(s);MID=o.MID;PIN=o.PIN;NAME=o.NAME;COLOR=o.COLOR||'#C4A882';enter();}catch{}}})();
+(function(){const s=sessionStorage.getItem('zt');if(s){try{const o=JSON.parse(s);MID=o.MID;PIN=o.PIN;NAME=o.NAME;COLOR=o.COLOR||'#B6A588';enter();}catch{}}})();
 </script>
 </body>
 </html>
