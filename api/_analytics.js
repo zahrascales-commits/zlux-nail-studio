@@ -82,6 +82,14 @@ module.exports = async function (req, res) {
       });
     }
 
+    // ── OWNER: wipe all tracked traffic and start fresh ──
+    if (req.method === 'DELETE' && action === 'reset') {
+      if (req.headers['x-ceo-password'] !== CEO_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
+      await execute('DELETE FROM analytics_pageviews', []);
+      await execute('DELETE FROM analytics_exits', []);
+      return res.json({ ok: true });
+    }
+
     return res.status(400).json({ error: 'Unknown action' });
   } catch (err) {
     return res.status(500).json({ error: String(err.message || err) });

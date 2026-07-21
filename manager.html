@@ -237,7 +237,7 @@
   /* ── TRAFFIC / STAT CARDS ── */
   .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem}
   .stat-card{background:var(--card);border:1px solid var(--border);padding:1.2rem;text-align:center}
-  .stat-num{font-family:'Syne',sans-serif;font-size:1.6rem;color:var(--gold);word-break:break-word}
+  .stat-num{font-family:'Syne',sans-serif;font-size:1.3rem;color:var(--gold);overflow-wrap:break-word;hyphens:auto}
   .stat-label{font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-top:0.3rem}
   .tr-row{display:flex;justify-content:space-between;gap:0.6rem;padding:0.5rem 0.7rem;background:var(--bg);border:1px solid var(--border);font-size:0.85rem}
   .tr-row .tr-bar{flex:1;height:6px;background:var(--border);margin:0 0.7rem;position:relative;align-self:center}
@@ -595,11 +595,14 @@
           <div class="page-title">Website Traffic</div>
           <div class="page-desc">How many people visit, where they tend to stop scrolling, and which page they're on when they leave the site — so you know exactly what to fix.</div>
         </div>
-        <select id="traffic-days" onchange="loadTraffic()" style="max-width:160px;">
-          <option value="7">Last 7 days</option>
-          <option value="30" selected>Last 30 days</option>
-          <option value="90">Last 90 days</option>
-        </select>
+        <div style="display:flex;gap:0.6rem;align-items:center;">
+          <select id="traffic-days" onchange="loadTraffic()" style="max-width:160px;">
+            <option value="7">Last 7 days</option>
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="resetTraffic()">Reset Data</button>
+        </div>
       </div>
       <div class="stat-grid" style="margin-bottom:1.5rem;">
         <div class="stat-card"><div class="stat-num" id="tr-visits">—</div><div class="stat-label">Unique Visits</div></div>
@@ -1272,6 +1275,11 @@ function renderScrollRows(elId,rows){
       <span class="tr-bar"><span class="tr-bar-fill" style="width:${r.avg_scroll_pct}%"></span></span>
       <strong>${r.avg_scroll_pct}%</strong>
     </div>`).join('');
+}
+async function resetTraffic(){
+  if(!confirm('Erase ALL tracked traffic data and start fresh? This cannot be undone.'))return;
+  await api('/api/analytics',{method:'DELETE',body:JSON.stringify({action:'reset'})});
+  toast('Traffic data reset');await loadTraffic();
 }
 
 /* ── SCHEDULE ── */
