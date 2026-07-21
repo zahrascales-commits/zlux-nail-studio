@@ -7,7 +7,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <!-- Self-hosted (the old jsDelivr URL 404'd, and its actual browser
+       bundle isn't a plain <script>-ready file anyway — vendoring a
+       verified, dependency-free QR library removes both failure modes
+       and any future CDN/ad-blocker risk entirely). -->
+  <script src="js/qrcode.min.js"></script>
   <style>
     body { background: var(--soft-white); }
     .login-wrap { max-width:400px; margin:0 auto; padding:7rem 1.5rem 3rem; }
@@ -176,7 +180,7 @@
       <p style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--latte);margin-bottom:1.5rem;">Show this at the studio. Refreshes every 5 minutes — do not screenshot.</p>
       <div class="qr-wrap p-card">
         <div class="qr-canvas-wrap">
-          <canvas id="qr-canvas" width="220" height="220"></canvas>
+          <div id="qr-canvas" style="width:220px;height:220px;"></div>
           <div id="qr-name-watermark" style="font-family:'Josefin Sans',sans-serif;font-size:0.68rem;color:var(--latte);margin-top:0.35rem;"></div>
         </div>
         <div id="qr-error" style="display:none;cursor:pointer;font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:#b43232;background:rgba(180,50,50,0.08);border:1px solid rgba(180,50,50,0.25);padding:0.75rem 1rem;margin-top:0.75rem;text-align:center;"></div>
@@ -402,8 +406,11 @@ async function loadQr() {
       return;
     }
     const d = await r.json();
-    const canvas = document.getElementById('qr-canvas');
-    QRCode.toCanvas(canvas, d.qrPayload, { width:220, margin:2, color:{dark:'#0D0D0D',light:'#FFFFFF'} });
+    const holder = document.getElementById('qr-canvas');
+    // davidshimjs/qrcodejs renders into a container it manages itself —
+    // clear + rebuild each refresh rather than reusing a stale instance.
+    holder.innerHTML = '';
+    new QRCode(holder, { text: d.qrPayload, width:220, height:220, colorDark:'#0D0D0D', colorLight:'#FFFFFF', correctLevel: QRCode.CorrectLevel.M });
     document.getElementById('qr-name-watermark').textContent = d.fullName+' · '+d.memberId;
     document.getElementById('qr-member-id-show').textContent = d.memberId;
     document.getElementById('qr-tier-show').textContent = {SIGNATURE:'Signature Club',LUXE:'Luxe Club',BLACK_CARD:'Black Card'}[d.tier]||d.tier;
@@ -415,8 +422,9 @@ async function loadQr() {
       document.getElementById('qr-countdown').textContent = Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
     },1000);
     document.getElementById('qr-countdown').textContent = Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
-    canvas.addEventListener('contextmenu',e=>e.preventDefault());
-    canvas.addEventListener('dragstart',e=>e.preventDefault());
+    holder.addEventListener('contextmenu',e=>e.preventDefault());
+    holder.addEventListener('dragstart',e=>e.preventDefault());
+    holder.querySelectorAll('img,canvas').forEach(el=>{el.addEventListener('contextmenu',e=>e.preventDefault());el.addEventListener('dragstart',e=>e.preventDefault());});
   } catch (err) {
     showQrError('Connection hiccup loading your QR — tap to try again.');
   }
