@@ -31,7 +31,7 @@ The studio works exclusively with hard gel and gel acrylic (no soft gel / regula
 
 POLICIES: By appointment only, no walk-ins. 50% non-refundable deposit at booking. Cancel/reschedule free more than 24h ahead; late cancel or no-show forfeits the service for that period.
 PRINCESS PARTIES: kids' nail parties, $35/child, 6-child minimum, mini manicure + custom age-appropriate nail art, safe non-toxic products.
-CONTACT: Instagram @zluxnails · email zahrascales@gmail.com · book at booking.html · join at memberships.html.
+CONTACT: Instagram @zola_officials_ · email zahrascales@gmail.com · book at booking.html · join at memberships.html.
 `;
 
 async function callClaude(system, messages, maxTokens) {
@@ -71,7 +71,7 @@ module.exports = async function (req, res) {
         }
       }
       msgs.push({ role: 'user', content: String(message).slice(0, 600) });
-      const system = `You are "Ask Zola", the AI concierge on the ZOLA Nail Studio website. Answer client questions using ONLY the business facts below. Be warm, concise (2-4 sentences), on-brand luxury but friendly. Gently guide people toward booking or a membership when it fits naturally. If asked something you don't know (like exact open slots), point them to booking.html or Instagram @zluxnails. Never invent prices or policies.\n${BUSINESS_KNOWLEDGE}`;
+      const system = `You are "Ask Zola", the AI concierge on the ZOLA Nail Studio website. Answer client questions using ONLY the business facts below. Be warm, concise (2-4 sentences), on-brand luxury but friendly. Gently guide people toward booking or a membership when it fits naturally. If asked something you don't know (like exact open slots), point them to booking.html or Instagram @zola_officials_. Never invent prices or policies.\n${BUSINESS_KNOWLEDGE}`;
       const reply = await callClaude(system, msgs, 300);
       return res.json({ reply }); // reply:null → widget falls back to scripted answers
     }

@@ -95,10 +95,24 @@ async function ensureTables() {
     data_url TEXT,
     ts INTEGER
   )`);
+  await execute(`CREATE TABLE IF NOT EXISTS worker_skills (
+    team_member_id INTEGER NOT NULL,
+    service_name TEXT NOT NULL,
+    PRIMARY KEY (team_member_id, service_name)
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS schedule_overrides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    start_date TEXT NOT NULL,
+    end_date TEXT NOT NULL,
+    team_member_ids TEXT NOT NULL,
+    note TEXT DEFAULT '',
+    created_ts INTEGER
+  )`);
   // Columns added after launch — idempotent, ignored once they exist
   for (const sql of [
     "ALTER TABLE team_members ADD COLUMN phone TEXT DEFAULT ''",
     "ALTER TABLE team_members ADD COLUMN email TEXT DEFAULT ''",
+    "ALTER TABLE team_members ADD COLUMN restricted INTEGER DEFAULT 0",
   ]) { try { await execute(sql); } catch (_) {} }
   _ready = true;
 }

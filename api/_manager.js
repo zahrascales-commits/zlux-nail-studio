@@ -6,6 +6,17 @@ const { upsertClient } = require('./_clients');
 
 const CEO_PASSWORD = process.env.CEO_PASSWORD || 'ZOLA2026';
 
+async function membersWithSkills() {
+  const members = await query('SELECT id, name, role, pin, color, active, phone, email, restricted FROM team_members ORDER BY id');
+  const skillRows = await query('SELECT team_member_id, service_name FROM worker_skills');
+  const skillsByMember = {};
+  for (const row of skillRows) {
+    (skillsByMember[row.team_member_id] = skillsByMember[row.team_member_id] || []).push(row.service_name);
+  }
+  for (const m of members) m.skills = skillsByMember[m.id] || [];
+  return members;
+}
+
 module.exports = async function (req, res) {
   const method = req.method.toUpperCase();
   const action = req.query.action || (req.body && req.body.action);
@@ -21,7 +32,7 @@ module.exports = async function (req, res) {
 
     // ── BOOTSTRAP: everything the dashboard needs on load ──
     if (method === 'GET' && action === 'bootstrap') {
-      const members = await query('SELECT id, name, role, pin, color, active, phone, email FROM team_members ORDER BY id');
+      const members = await membersWithSkills();
       const appts = await query(`SELECT a.*, m.name AS member_name, m.color AS member_color
         FROM team_appointments a LEFT JOIN team_members m ON m.id = a.team_member_id
         ORDER BY a.date, a.time`);
@@ -113,8 +124,43 @@ module.exports = async function (req, res) {
 
     // ── MEMBERS ──
     if (method === 'GET' && action === 'members') {
-      const members = await query('SELECT id, name, role, pin, color, active, phone, email FROM team_members ORDER BY id');
-      return res.json({ members });
+      return res.json({ members: await membersWithSkills() });
+    }
+
+    // ── WORKER SKILLS (which services this artist is allowed to book) ──
+    if (method === 'PUT' && action === 'worker_skills') {
+      const { id, restricted, services } = req.body || {};
+      if (!id) return res.status(400).json({ error: 'id required' });
+      await execute('UPDATE team_members SET restricted=? WHERE id=?', [restricted ? 1 : 0, Number(id)]);
+      await execute('DELETE FROM worker_skills WHERE team_member_id=?', [Number(id)]);
+      for (const name of (Array.isArray(services) ? services : [])) {
+        await execute('INSERT OR IGNORE INTO worker_skills (team_member_id, service_name) VALUES (?,?)', [Number(id), name]);
+      }
+      return res.json({ ok: true });
+    }
+
+    // ── SCHEDULE COVERAGE OVERRIDES (e.g. "only Maria working July 21–Aug 2") ──
+    if (method === 'GET' && action === 'overrides') {
+      const overrides = await query('SELECT * FROM schedule_overrides ORDER BY start_date DESC');
+      return res.json({ overrides: overrides.map(o => ({ ...o, team_member_ids: JSON.parse(o.team_member_ids || '[]') })) });
+    }
+
+    if (method === 'POST' && action === 'overrides') {
+      const { start_date, end_date, team_member_ids, note } = req.body || {};
+      if (!start_date || !end_date || !Array.isArray(team_member_ids) || !team_member_ids.length) {
+        return res.status(400).json({ error: 'start_date, end_date, and at least one team member are required' });
+      }
+      const r = await execute(
+        'INSERT INTO schedule_overrides (start_date, end_date, team_member_ids, note, created_ts) VALUES (?,?,?,?,?)',
+        [start_date, end_date, JSON.stringify(team_member_ids.map(Number)), note || '', Date.now()]
+      );
+      return res.json({ ok: true, id: r.lastInsertRowid });
+    }
+
+    if (method === 'DELETE' && action === 'overrides') {
+      const { id } = req.body || {};
+      await execute('DELETE FROM schedule_overrides WHERE id=?', [Number(id)]);
+      return res.json({ ok: true });
     }
 
     if (method === 'POST' && action === 'add_member') {

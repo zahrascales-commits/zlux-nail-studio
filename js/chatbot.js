@@ -194,8 +194,8 @@ function askZolaFallback(msg) {
   if (m.includes('hours') || m.includes('open') || (m.includes('when') && !m.includes('member')))
     return "The studio is available Monday through Sunday, 8 AM to 10 PM. All appointments are by booking — no walk-ins.";
 
-  if (m.includes('instagram') || m.includes('social') || m.includes('@zlux'))
-    return "Follow the work at @zluxnails on Instagram. For the fastest direct response, that's the place.";
+  if (m.includes('instagram') || m.includes('social') || m.includes('@zlux') || m.includes('@zola'))
+    return "Follow the work at @zola_officials_ on Instagram. For the fastest direct response, that's the place.";
 
   if (m.includes('different') || m.includes('other salon') || m.includes('why zola'))
     return "Most salons prioritize speed and volume. Zola prioritizes health, precision, and privacy. Organic products, Russian technique expertise, personal client tracking, quarterly assessments — none of that exists at a standard salon. Every visit here has context.";
@@ -209,5 +209,5 @@ function askZolaFallback(msg) {
   if (m.includes('worker') || m.includes('who does') || m.includes('zahra') || m.includes('who will do'))
     return "Zola services are performed by Zahra and her trained team of nail technicians. Black Card members have the exclusive option to request Zahra for every appointment.";
 
-  return "That's a great one for the Zola team — reach out through the contact form or DM @zluxnails on Instagram for the fastest response.";
+  return "That's a great one for the Zola team — reach out through the contact form or DM @zola_officials_ on Instagram for the fastest response.";
 }

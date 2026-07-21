@@ -344,6 +344,15 @@
         </div>
       </div>
       <div id="client-inspo-feed" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.8rem;"></div>
+
+      <div class="page-head" style="margin-top:2rem;">
+        <div>
+          <div class="page-title" style="font-size:1.15rem;">Coverage Periods 📅</div>
+          <div class="page-desc">When you're out, tell it who's covering — the booking page automatically hides any service that artist can't do, only for those dates. Everything reverts to normal the day after it ends.</div>
+        </div>
+        <button class="btn btn-gold" onclick="openOverrideModal()">+ Add Coverage Period</button>
+      </div>
+      <div id="overrides-list" style="display:grid;gap:0.6rem;"></div>
     </section>
 
     <!-- CALENDAR / SCHEDULE -->
@@ -617,6 +626,47 @@
   </div>
 </div>
 
+<div class="overlay" id="modal-skills">
+  <div class="modal">
+    <div class="modal-title">Services — <span id="skills-name"></span></div>
+    <input type="hidden" id="sk-id" />
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+        <input type="checkbox" id="sk-restricted" onchange="toggleSkillsList()" style="width:auto;" />
+        <span>Limit this artist to only the services checked below</span>
+      </label>
+      <p style="font-size:0.8rem;color:var(--text-soft);margin-top:0.35rem;">Unchecked = this artist can be booked for everything (default). Check it on to hand-pick exactly which services they're trained for.</p>
+    </div>
+    <div class="field" id="sk-list-wrap">
+      <label class="fld-label">Services</label>
+      <div id="sk-list" style="display:grid;gap:0.5rem;margin-top:0.4rem;"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-skills')">Cancel</button>
+      <button class="btn btn-gold" onclick="saveSkills()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-override">
+  <div class="modal">
+    <div class="modal-title">Add Coverage Period</div>
+    <div class="field two">
+      <div><label class="fld-label">First Day Out</label><input type="date" id="ov-start" /></div>
+      <div><label class="fld-label">Last Day Out</label><input type="date" id="ov-end" /></div>
+    </div>
+    <div class="field">
+      <label class="fld-label">Who's covering while you're out?</label>
+      <div id="ov-members" style="display:grid;gap:0.5rem;margin-top:0.4rem;"></div>
+    </div>
+    <div class="field"><label class="fld-label">Note (optional, for your own reference)</label><input id="ov-note" placeholder="e.g. Zahra out — Maria solo coverage" /></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-override')">Cancel</button>
+      <button class="btn btn-gold" onclick="saveOverride()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- APPT MODAL -->
 <div class="overlay" id="modal-appt">
   <div class="modal">
@@ -690,7 +740,7 @@ function showTab(name){
   document.getElementById('panel-'+name).classList.add('active');
   if(name==='schedule')renderCal();
   if(name==='messages')loadThreads();
-  if(name==='team'){renderMembers();loadClientInspo();}
+  if(name==='team'){renderMembers();loadClientInspo();loadOverrides();}
   if(name==='inbox')loadInquiries();
   if(name==='site')loadSite();
   if(name==='clients')loadClients();
@@ -873,6 +923,7 @@ function renderMembers(){
         <button class="btn btn-ghost btn-sm" onclick="copyPortal('${m.pin}')">Copy Login Link</button>
         <button class="btn btn-ghost btn-sm" onclick="regenPin(${m.id})">New PIN</button>
         <button class="btn btn-ghost btn-sm" onclick="editMember(${m.id})">Edit</button>
+        <button class="btn btn-ghost btn-sm" onclick="openSkillsModal(${m.id})">Services${Number(m.restricted)?' ('+(m.skills||[]).length+')':''}</button>
         <button class="btn btn-danger btn-sm" onclick="delMember(${m.id},'${esc(m.name)}')">Remove</button>
       </div>
     </div>`).join('');
@@ -938,6 +989,88 @@ async function reloadMembers(){
 function copyPortal(pin){
   const url=location.origin+'/team.html';
   copy(url+'  (PIN: '+pin+')','Login link + PIN copied');
+}
+
+/* ── WORKER SKILLS ── */
+function toggleSkillsList(){
+  document.getElementById('sk-list-wrap').style.opacity=document.getElementById('sk-restricted').checked?'1':'0.4';
+}
+function openSkillsModal(id){
+  const m=members.find(x=>x.id===id);if(!m)return;
+  document.getElementById('skills-name').textContent=m.name;
+  document.getElementById('sk-id').value=m.id;
+  document.getElementById('sk-restricted').checked=!!Number(m.restricted);
+  const skills=m.skills||[];
+  document.getElementById('sk-list').innerHTML=SERVICES.map(s=>`
+    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.88rem;">
+      <input type="checkbox" class="sk-check" value="${esc(s)}" ${skills.includes(s)?'checked':''} style="width:auto;" />
+      <span>${esc(s)}</span>
+    </label>`).join('');
+  toggleSkillsList();
+  openModal('modal-skills');
+}
+async function saveSkills(){
+  const id=document.getElementById('sk-id').value;
+  const restricted=document.getElementById('sk-restricted').checked;
+  const services=[...document.querySelectorAll('.sk-check:checked')].map(c=>c.value);
+  await api('/api/manager',{method:'PUT',body:JSON.stringify({action:'worker_skills',id,restricted,services})});
+  toast('Services updated');
+  closeModal('modal-skills');await reloadMembers();
+}
+
+/* ── COVERAGE OVERRIDES ── */
+let overrides=[];
+async function loadOverrides(){
+  const r=await api('/api/manager?action=overrides');const d=await r.json();
+  overrides=d.overrides||[];renderOverrides();
+}
+function renderOverrides(){
+  const g=document.getElementById('overrides-list');if(!g)return;
+  if(!overrides.length){g.innerHTML='<div class="empty"><div class="big">📅</div>No coverage periods set.<br>Everything stays open to your full team.</div>';return;}
+  const today=new Date().toISOString().slice(0,10);
+  g.innerHTML=overrides.map(o=>{
+    const names=o.team_member_ids.map(id=>{const m=members.find(x=>x.id===id);return m?m.name:'—';}).join(', ');
+    const active=today>=o.start_date&&today<=o.end_date;
+    return `<div class="member-card" style="--mc:#C4A882;">
+      <div class="mc-top">
+        <div style="flex:1">
+          <div class="mc-name">${fmtDateLabel(o.start_date)} → ${fmtDateLabel(o.end_date)}</div>
+          <div class="mc-role">Covering: ${esc(names)}${o.note?' · '+esc(o.note):''}</div>
+        </div>
+        <span class="status-pill ${active?'status-on':'status-off'}">${active?'Active Now':'Upcoming'}</span>
+      </div>
+      <div class="mc-actions">
+        <button class="btn btn-danger btn-sm" onclick="delOverride(${o.id})">Remove</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function openOverrideModal(){
+  document.getElementById('ov-start').value='';
+  document.getElementById('ov-end').value='';
+  document.getElementById('ov-note').value='';
+  document.getElementById('ov-members').innerHTML=members.map(m=>`
+    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.88rem;">
+      <input type="checkbox" class="ov-check" value="${m.id}" style="width:auto;" />
+      <span>${esc(m.name)}</span>
+    </label>`).join('');
+  openModal('modal-override');
+}
+async function saveOverride(){
+  const start_date=document.getElementById('ov-start').value;
+  const end_date=document.getElementById('ov-end').value;
+  const note=document.getElementById('ov-note').value.trim();
+  const team_member_ids=[...document.querySelectorAll('.ov-check:checked')].map(c=>Number(c.value));
+  if(!start_date||!end_date){toast('Pick a start and end date');return;}
+  if(!team_member_ids.length){toast('Pick at least one covering team member');return;}
+  await api('/api/manager',{method:'POST',body:JSON.stringify({action:'overrides',start_date,end_date,team_member_ids,note})});
+  toast('Coverage period saved');
+  closeModal('modal-override');await loadOverrides();
+}
+async function delOverride(id){
+  if(!confirm('Remove this coverage period? Full team availability returns immediately for those dates.'))return;
+  await api('/api/manager',{method:'DELETE',body:JSON.stringify({action:'overrides',id})});
+  toast('Removed');await loadOverrides();
 }
 
 /* ── SCHEDULE ── */

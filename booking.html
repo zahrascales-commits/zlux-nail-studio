@@ -433,6 +433,7 @@
         <div class="bk-dows"><div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div></div>
         <div class="bk-cells" id="bk-cells"></div>
       </div>
+      <div id="bk-coverage-note" style="display:none;font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);background:rgba(196,168,130,0.08);border:1px solid rgba(196,168,130,0.2);padding:0.7rem 0.9rem;margin:-0.75rem 0 1.25rem;">Some days above are grayed out because one or more of your selected services needs an artist who isn't in on those dates.</div>
 
       <label class="luxury-label">Select a Time</label>
       <div class="timeslot-grid" id="timeslots"><p style="color:var(--latte);font-size:0.82rem;grid-column:1/-1;">Pick a day above to see open times ✦</p></div>
@@ -554,7 +555,7 @@
       <div id="booking-success" style="display:none;text-align:center;padding:2rem 0;">
         <div style="font-family:'Syne',serif;font-size:2rem;color:var(--espresso);margin-bottom:0.5rem;">You're Confirmed ✦</div>
         <div id="booking-conf-num" style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--champagne);margin-bottom:0.75rem;"></div>
-        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.88rem;color:var(--latte);line-height:1.8;">A confirmation text and email is on its way. We can't wait to see you.<br>Questions? DM us <strong>@zluxnails</strong> or text us directly.</p>
+        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.88rem;color:var(--latte);line-height:1.8;">A confirmation text and email is on its way. We can't wait to see you.<br>Questions? DM us <strong>@zola_officials_</strong> or text us directly.</p>
 
         <!-- Inspo photo upload — goes straight to Zahra + every artist -->
         <div class="inspo-up" id="inspo-up">
@@ -652,13 +653,35 @@ const booking = {
 // minutes per service — used to show real time ranges like GlossGenius
 const SERVICE_MINUTES = {
   'Organic Structured Manicure': 60, 'Short Gel X': 60, 'Medium Gel X': 75, 'Long Gel X': 90,
-  'Short Acrylic Set': 60, 'Medium Acrylic Set': 75, 'Long Acrylic Set': 90,
+  'Short Acrylic': 60, 'Medium Acrylic': 75, 'Long Acrylic': 90,
   'Russian Dry Pedicure': 60, 'Russian Dry Pedicure — Full Correction': 90, 'Test Run': 15,
 };
 function totalMinutes() {
   return booking.items.reduce((s, it) => s + (SERVICE_MINUTES[it.service] || 60) * it.qty, 0) || 60;
 }
 function itemCount() { return booking.items.reduce((s, it) => s + it.qty, 0); }
+
+// ── Coverage windows: date ranges where a limited team means limited services ──
+let bkCoverageWindows = [];
+let _coverageLoaded = false;
+async function loadCoverageWindows() {
+  if (_coverageLoaded) return;
+  try {
+    const r = await fetch('/api/coverage?action=windows');
+    const d = await r.json();
+    bkCoverageWindows = d.windows || [];
+  } catch (_) { bkCoverageWindows = []; }
+  _coverageLoaded = true;
+}
+function coverageBlockFor(ds) {
+  for (const w of bkCoverageWindows) {
+    if (ds < w.start_date || ds > w.end_date) continue;
+    if (w.all_services) continue;
+    const selected = booking.items.map(it => it.service);
+    if (selected.some(s => !w.allowed_services.includes(s))) return w;
+  }
+  return null;
+}
 function syncLegacyMirror() {
   const first = booking.items[0] || null;
   booking.service = first ? first.service : null;
@@ -1137,7 +1160,7 @@ function goStep(n) {
     if (i < 3) document.getElementById('gg-l' + i).className = 'gg-line' + (i < icon ? ' done' : '');
   }
   if (n === 2 && booking.memberTier) updateServiceTags();
-  if (n === 3) { renderBkCal(); loadTimeslots(); }
+  if (n === 3) { loadCoverageWindows().then(renderBkCal); renderBkCal(); loadTimeslots(); }
   if (n === 4) { loadSummary(); renderWhoSection(); initPayment(); }
   updateStickyBar();
   _trackFunnel(n, false);
@@ -1162,13 +1185,20 @@ function renderBkCal() {
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
   let html = '';
   for (let i = 0; i < first; i++) html += '<div class="bk-day off"></div>';
+  let sawBlock = false;
   for (let day = 1; day <= days; day++) {
     const ds = y + '-' + String(mo + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
     const past = ds < tomorrow; // bookings start tomorrow, same rule as before
-    const cls = 'bk-day' + (past ? ' off' : '') + (ds === booking.date ? ' sel' : '') + (ds === today ? ' today' : '');
-    html += '<div class="' + cls + '"' + (past ? '' : ' onclick="pickBkDay(\'' + ds + '\')"') + '>' + day + '</div>';
+    const block = !past && coverageBlockFor(ds);
+    if (block) sawBlock = true;
+    const disabled = past || block;
+    const cls = 'bk-day' + (disabled ? ' off' : '') + (ds === booking.date ? ' sel' : '') + (ds === today ? ' today' : '');
+    const title = block ? ' title="Not available this day — limited team in"' : '';
+    html += '<div class="' + cls + '"' + title + (disabled ? '' : ' onclick="pickBkDay(\'' + ds + '\')"') + '>' + day + '</div>';
   }
   document.getElementById('bk-cells').innerHTML = html;
+  const note = document.getElementById('bk-coverage-note');
+  if (note) note.style.display = sawBlock ? 'block' : 'none';
 }
 function pickBkDay(ds) {
   booking.date = ds;
