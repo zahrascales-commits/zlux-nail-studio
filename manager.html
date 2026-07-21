@@ -552,6 +552,20 @@
           <p>Tap any slot to upload a photo from your phone — it appears on the live website in seconds. Photos are auto-compressed for you.</p>
           <div id="photo-slots" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.8rem;"></div>
         </div>
+        <div class="site-card" style="grid-column:1/-1;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+            <div>
+              <h3>Classes 🎓</h3>
+              <p>Set the price and description for each class — clients pay online at classes.html and you get notified the moment someone enrolls.</p>
+            </div>
+            <button class="btn btn-gold" onclick="openClassModal()">+ Add Class</button>
+          </div>
+          <div id="classes-list" style="display:grid;gap:0.6rem;margin-top:0.8rem;"></div>
+          <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--border)">
+            <div class="ai-tag">Who's purchased</div>
+            <div id="class-purchases-list" style="display:grid;gap:0.4rem;margin-top:0.6rem;"></div>
+          </div>
+        </div>
         <div class="site-card">
           <h3>Announcement (optional)</h3>
           <p>A one-line notice pinned at the top of the homepage — sales, closures, holidays. Leave empty for none.</p>
@@ -663,6 +677,24 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-override')">Cancel</button>
       <button class="btn btn-gold" onclick="saveOverride()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-class">
+  <div class="modal">
+    <div class="modal-title" id="class-modal-title">Add Class</div>
+    <input type="hidden" id="cl-id" />
+    <div class="field"><label class="fld-label">Class Name</label><input id="cl-name" placeholder="e.g. Russian Manicure Class" /></div>
+    <div class="field"><label class="fld-label">Price ($)</label><input id="cl-price" type="number" min="0" step="0.01" placeholder="150" /></div>
+    <div class="field"><label class="fld-label">Description</label><textarea id="cl-desc" rows="3" placeholder="What's included, how long it runs, what they leave with…"></textarea></div>
+    <div class="field" id="cl-active-wrap" style="display:none">
+      <label class="fld-label">Status</label>
+      <select id="cl-active"><option value="1">Active — open for purchase</option><option value="0">Paused — hidden from clients</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-class')">Cancel</button>
+      <button class="btn btn-gold" onclick="saveClass()">Save</button>
     </div>
   </div>
 </div>
@@ -1073,6 +1105,84 @@ async function delOverride(id){
   toast('Removed');await loadOverrides();
 }
 
+/* ── CLASSES ── */
+let classesData=[];
+async function loadClasses(){
+  const r=await fetch('/api/classes?action=admin_list',{headers:{'X-CEO-Password':PWD}});
+  const d=await r.json();classesData=d.classes||[];renderClasses();
+}
+function renderClasses(){
+  const g=document.getElementById('classes-list');if(!g)return;
+  if(!classesData.length){g.innerHTML='<div class="empty">No classes yet.</div>';return;}
+  g.innerHTML=classesData.map(c=>`
+    <div class="member-card" style="--mc:#C4A882;">
+      <div class="mc-top">
+        <div style="flex:1">
+          <div class="mc-name">${esc(c.name)}</div>
+          <div class="mc-role">${c.price_cents?'$'+(c.price_cents/100).toFixed(2):'Not priced yet'}${c.description?' · '+esc(c.description):''}</div>
+        </div>
+        <span class="status-pill ${Number(c.active)?'status-on':'status-off'}">${Number(c.active)?'Active':'Paused'}</span>
+      </div>
+      <div class="mc-actions">
+        <button class="btn btn-ghost btn-sm" onclick="editClass(${c.id})">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="delClass(${c.id},'${esc(c.name)}')">Remove</button>
+      </div>
+    </div>`).join('');
+}
+function openClassModal(){
+  document.getElementById('class-modal-title').textContent='Add Class';
+  document.getElementById('cl-id').value='';
+  document.getElementById('cl-name').value='';
+  document.getElementById('cl-price').value='';
+  document.getElementById('cl-desc').value='';
+  document.getElementById('cl-active-wrap').style.display='none';
+  openModal('modal-class');
+}
+function editClass(id){
+  const c=classesData.find(x=>x.id===id);if(!c)return;
+  document.getElementById('class-modal-title').textContent='Edit Class';
+  document.getElementById('cl-id').value=c.id;
+  document.getElementById('cl-name').value=c.name;
+  document.getElementById('cl-price').value=c.price_cents?(c.price_cents/100).toFixed(2):'';
+  document.getElementById('cl-desc').value=c.description||'';
+  document.getElementById('cl-active-wrap').style.display='block';
+  document.getElementById('cl-active').value=String(Number(c.active));
+  openModal('modal-class');
+}
+async function saveClass(){
+  const id=document.getElementById('cl-id').value;
+  const name=document.getElementById('cl-name').value.trim();
+  const price_cents=Math.round(Number(document.getElementById('cl-price').value||0)*100);
+  const description=document.getElementById('cl-desc').value.trim();
+  if(!name){toast('Enter a class name');return;}
+  if(id){
+    const active=document.getElementById('cl-active').value;
+    await api('/api/classes',{method:'PUT',body:JSON.stringify({action:'update',id,name,price_cents,description,active:Number(active)})});
+    toast('Class updated');
+  }else{
+    await api('/api/classes',{method:'POST',body:JSON.stringify({action:'add',name,price_cents,description})});
+    toast('Class added');
+  }
+  closeModal('modal-class');await loadClasses();
+}
+async function delClass(id,name){
+  if(!confirm('Remove '+name+'? It will no longer be purchasable.'))return;
+  await api('/api/classes',{method:'DELETE',body:JSON.stringify({action:'delete',id})});
+  toast('Removed');await loadClasses();
+}
+async function loadClassPurchases(){
+  const r=await fetch('/api/classes?action=purchases',{headers:{'X-CEO-Password':PWD}});
+  const d=await r.json();
+  const g=document.getElementById('class-purchases-list');if(!g)return;
+  const purchases=d.purchases||[];
+  if(!purchases.length){g.innerHTML='<div class="empty" style="padding:1rem">No purchases yet.</div>';return;}
+  g.innerHTML=purchases.map(p=>`
+    <div style="font-size:0.85rem;padding:0.5rem 0.7rem;background:var(--bg);border:1px solid var(--border);display:flex;justify-content:space-between;gap:0.6rem;flex-wrap:wrap;">
+      <span><strong>${esc(p.buyer_name||'—')}</strong> — ${esc(p.class_name)}</span>
+      <span style="color:var(--muted)">${esc(p.buyer_email||'')} ${p.buyer_phone?'· '+esc(p.buyer_phone):''} · $${(p.price_cents/100).toFixed(2)}</span>
+    </div>`).join('');
+}
+
 /* ── SCHEDULE ── */
 function fmtDateLabel(ds){const d=new Date(ds+'T12:00:00');return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});}
 function fmtTime(t){const[h,m]=t.split(':').map(Number);const ap=h>=12?'PM':'AM';const hh=h>12?h-12:(h===0?12:h);return hh+':'+String(m).padStart(2,'0')+' '+ap;}
@@ -1342,6 +1452,8 @@ async function delClientInspo(id){
 /* ── SITE EDITOR ── */
 async function loadSite(){
   loadSitePhotos();
+  loadClasses();
+  loadClassPurchases();
   try{
     const r=await fetch('/api/site-settings');const d=await r.json();const s=d.settings||{};
     document.getElementById('site-ticker').value=s.ticker_facts||'';

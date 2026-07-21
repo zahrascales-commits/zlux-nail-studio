@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Classes — ZOLA Nail Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@200;300;400;600;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" /><link rel="stylesheet" href="css/styles.css" />
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    .class-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1.5rem; margin-top:2.5rem; }
+    .class-card { background:#fff; border:1px solid rgba(196,168,130,0.22); padding:2rem; display:flex; flex-direction:column; }
+    .class-name { font-family:'Syne',serif; font-size:1.4rem; color:var(--espresso); margin-bottom:0.5rem; }
+    .class-price { font-family:'Syne',serif; font-size:1.8rem; color:var(--champagne); margin-bottom:0.75rem; }
+    .class-desc { font-family:'Josefin Sans',sans-serif; font-size:0.88rem; color:var(--latte); line-height:1.7; flex:1; margin-bottom:1.5rem; }
+    .class-empty { text-align:center; padding:3rem 1rem; font-family:'Josefin Sans',sans-serif; color:var(--latte); grid-column:1/-1; }
+    .checkout-overlay { display:none; position:fixed; inset:0; background:rgba(30,20,15,0.55); z-index:200; align-items:flex-start; justify-content:center; padding:5vh 1rem; overflow-y:auto; }
+    .checkout-overlay.open { display:flex; }
+    .checkout-box { background:#fff; max-width:440px; width:100%; padding:2.25rem 2rem; }
+    .checkout-box .luxury-input { margin-bottom:0.9rem; }
+    #class-payment-element { margin:1rem 0 1.25rem; }
+  </style>
+</head>
+<body>
+
+<nav class="nav" id="nav">
+  <a href="index.html" class="nav-logo"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span></a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="services.html">Services</a>
+    <a href="memberships.html">Memberships</a>
+    <a href="classes.html" style="color:var(--champagne)">Classes</a>
+    <a href="about.html">About</a>
+    <a href="contact.html">Contact</a>
+    <a href="team.html">Team Login</a>
+    <a href="booking.html" class="btn-gold" style="animation:none;">Book Now</a>
+  </div>
+  <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
+</nav>
+<div class="nav-mobile" id="nav-mobile">
+  <a href="index.html">Home</a>
+  <a href="services.html">Services</a>
+  <a href="memberships.html">Memberships</a>
+  <a href="classes.html">Classes</a>
+  <a href="about.html">About</a>
+  <a href="contact.html">Contact</a>
+  <a href="team.html">Team Login</a>
+  <a href="booking.html" class="nav-cta">Book Now</a>
+</div>
+
+<div style="padding-top:8rem;background:var(--espresso);padding-bottom:4rem;text-align:center;">
+  <div class="section-label" style="color:rgba(196,168,130,0.6);">Learn the Craft</div>
+  <h1 style="color:var(--cream);font-size:clamp(2.5rem,5vw,4rem);margin:0.75rem 0 1rem;">ZOLA Classes</h1>
+  <p style="font-family:'Josefin Sans',sans-serif;font-size:0.95rem;color:var(--latte);max-width:420px;margin:0 auto;">Learn directly from Zahra — technique, precision, and the business behind the chair.</p>
+</div>
+
+<section class="section section-soft">
+  <div class="container" style="max-width:1000px;">
+    <div id="class-list" class="class-grid">
+      <div class="class-empty">Loading classes…</div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div><div class="footer-logo">ZOLA</div><p class="footer-desc">Porterville's luxury nail membership studio.</p></div>
+      <div><div class="footer-heading">Studio</div><div class="footer-links"><a href="services.html">Services</a><a href="memberships.html">Memberships</a><a href="booking.html">Book Now</a><a href="about.html">About</a></div></div>
+      <div><div class="footer-heading">Portals</div><div class="footer-links"><a href="client-portal.html">Client Portal</a><a href="team.html">Team Portal</a><a href="dashboard.html">Admin</a></div></div>
+      <div><div class="footer-heading">Contact</div><div class="footer-links"><a href="contact.html">Get in Touch</a><a href="https://instagram.com/zola_officials_" target="_blank">Instagram</a><a href="https://tiktok.com/@zolaofficial" target="_blank">TikTok</a></div></div>
+    </div>
+    <div class="footer-bottom">© 2026 ZOLA Nail Studio · Porterville, CA</div>
+  </div>
+</footer>
+
+<!-- CHECKOUT -->
+<div class="checkout-overlay" id="checkout-overlay">
+  <div class="checkout-box">
+    <div id="checkout-form-wrap">
+      <div style="font-family:'Syne',serif;font-size:1.5rem;color:var(--espresso);margin-bottom:0.25rem;" id="checkout-class-name"></div>
+      <div style="font-family:'Syne',serif;font-size:1.6rem;color:var(--champagne);margin-bottom:1.25rem;" id="checkout-class-price"></div>
+      <label class="luxury-label">Full Name</label>
+      <input class="luxury-input" id="cls-name" placeholder="Your name" />
+      <label class="luxury-label">Email</label>
+      <input class="luxury-input" id="cls-email" placeholder="you@email.com" />
+      <label class="luxury-label">Phone</label>
+      <input class="luxury-input" id="cls-phone" placeholder="(555) 000-0000" />
+      <div id="class-payment-element"></div>
+      <div id="checkout-error" style="display:none;color:#b43232;font-family:'Josefin Sans',sans-serif;font-size:0.82rem;margin-bottom:1rem;"></div>
+      <button class="btn-gold" style="width:100%;animation:none;" onclick="confirmClassPurchase()" id="checkout-pay-btn">Pay &amp; Enroll</button>
+      <button class="btn" style="width:100%;margin-top:0.6rem;background:none;border:1px solid rgba(196,168,130,0.3);color:var(--latte);" onclick="closeCheckout()">Cancel</button>
+    </div>
+    <div id="checkout-success" style="display:none;text-align:center;padding:1rem 0;">
+      <div style="font-family:'Syne',serif;font-size:1.8rem;color:var(--espresso);margin-bottom:0.5rem;">You're Enrolled ✦</div>
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:var(--latte);line-height:1.8;">Zahra will reach out directly to schedule your class time. A confirmation email is on its way.</p>
+      <button class="btn-gold" style="margin-top:1.25rem;animation:none;" onclick="closeCheckout()">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="chat-widget">
+  <div class="chat-box" id="chat-box">
+    <div class="chat-header">
+      <div><div class="chat-header-title">Ask Zola</div><div class="chat-header-sub">Replies instantly</div></div>
+      <button class="chat-close" onclick="toggleChat()">&times;</button>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-msg zlux">Hi love! 💅 Have a question? Ask me here.</div>
+    </div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="chat-input" placeholder="Ask a question…" onkeydown="if(event.key==='Enter')sendChat()" />
+      <button class="chat-send" onclick="sendChat()">→</button>
+    </div>
+  </div>
+  <button class="chat-toggle" onclick="toggleChat()">💅 &nbsp; Ask Zola</button>
+</div>
+
+<script src="js/main.js"></script>
+<script src="js/chatbot.js"></script>
+<script>
+let CLASSES = [];
+let _stripe = null, _elements = null, _payEnabled = false, _activeClass = null;
+
+async function loadClasses() {
+  const wrap = document.getElementById('class-list');
+  try {
+    const r = await fetch('/api/classes?action=list');
+    const d = await r.json();
+    CLASSES = (d.classes || []).filter(c => c.price_cents > 0);
+    if (!CLASSES.length) {
+      wrap.innerHTML = '<div class="class-empty">Classes are being finalized — check back soon, or DM us on Instagram to be first in line.</div>';
+      return;
+    }
+    wrap.innerHTML = CLASSES.map(c => `
+      <div class="class-card">
+        <div class="class-name">${esc(c.name)}</div>
+        <div class="class-price">$${(c.price_cents / 100).toFixed(2)}</div>
+        <div class="class-desc">${esc(c.description || '')}</div>
+        <button class="btn-gold" style="animation:none;" onclick="openCheckout(${c.id})">Purchase</button>
+      </div>`).join('');
+  } catch (_) {
+    wrap.innerHTML = '<div class="class-empty">Couldn’t load classes right now — refresh to try again.</div>';
+  }
+}
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+async function openCheckout(id) {
+  _activeClass = CLASSES.find(c => c.id === id);
+  if (!_activeClass) return;
+  document.getElementById('checkout-form-wrap').style.display = 'block';
+  document.getElementById('checkout-success').style.display = 'none';
+  document.getElementById('checkout-class-name').textContent = _activeClass.name;
+  document.getElementById('checkout-class-price').textContent = '$' + (_activeClass.price_cents / 100).toFixed(2);
+  document.getElementById('checkout-error').style.display = 'none';
+  document.getElementById('checkout-overlay').classList.add('open');
+  await initClassPayment();
+}
+function closeCheckout() {
+  document.getElementById('checkout-overlay').classList.remove('open');
+  document.getElementById('class-payment-element').innerHTML = '';
+  _stripe = null; _elements = null; _payEnabled = false;
+}
+function showCheckoutError(msg) {
+  const el = document.getElementById('checkout-error');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+async function initClassPayment() {
+  try {
+    const cfg = await (await fetch('/api/pay?action=config')).json();
+    if (!cfg.enabled || typeof Stripe === 'undefined') { showCheckoutError('Card payments aren’t available right now — DM us on Instagram to enroll.'); return; }
+    const intent = await (await fetch('/api/classes?action=purchase_intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ class_id: _activeClass.id, buyer_name: document.getElementById('cls-name').value.trim(), buyer_email: document.getElementById('cls-email').value.trim() }),
+    })).json();
+    if (!intent.client_secret) { showCheckoutError(intent.error || 'Could not start checkout.'); return; }
+    _paymentIntentId = intent.payment_intent_id;
+    _stripe = Stripe(cfg.publishable_key);
+    _elements = _stripe.elements({ clientSecret: intent.client_secret, appearance: { theme: 'flat', variables: { colorPrimary: '#C4A882', fontFamily: 'Josefin Sans, sans-serif' } } });
+    _elements.create('payment', { wallets: { applePay: 'auto', googlePay: 'auto' }, layout: 'tabs' }).mount('#class-payment-element');
+    _payEnabled = true;
+  } catch (_) {
+    showCheckoutError('Connection hiccup loading checkout — close and try again.');
+  }
+}
+
+async function confirmClassPurchase() {
+  const name = document.getElementById('cls-name').value.trim();
+  const email = document.getElementById('cls-email').value.trim();
+  const phone = document.getElementById('cls-phone').value.trim();
+  if (!name || !email || !phone) { showCheckoutError('Please fill in your name, email, and phone.'); return; }
+  if (!_payEnabled || !_stripe || !_elements) { showCheckoutError('Checkout isn’t ready yet — give it a second and try again.'); return; }
+
+  const btn = document.getElementById('checkout-pay-btn');
+  btn.disabled = true; btn.textContent = 'Charging…';
+  const { error, paymentIntent } = await _stripe.confirmPayment({
+    elements: _elements,
+    redirect: 'if_required',
+    confirmParams: { payment_method_data: { billing_details: { name, email, phone } } },
+  });
+  if (error) {
+    btn.disabled = false; btn.textContent = 'Pay & Enroll';
+    showCheckoutError(error.message || 'Your card was declined — you have not been charged.');
+    return;
+  }
+  const payment_intent_id = (paymentIntent && paymentIntent.id) || _paymentIntentId;
+  const r = await fetch('/api/classes?action=confirm_purchase', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ class_id: _activeClass.id, payment_intent_id, buyer_name: name, buyer_email: email, buyer_phone: phone }),
+  });
+  const d = await r.json();
+  btn.disabled = false; btn.textContent = 'Pay & Enroll';
+  if (!r.ok) { showCheckoutError(d.error || 'Something went wrong confirming your purchase.'); return; }
+  document.getElementById('checkout-form-wrap').style.display = 'none';
+  document.getElementById('checkout-success').style.display = 'block';
+}
+
+loadClasses();
+</script>
+</body>
+</html>

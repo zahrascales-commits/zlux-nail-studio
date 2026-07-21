@@ -58,6 +58,7 @@ app.all('/api/pay',              require('./_pay'));
 app.all('/api/account',          require('./_account'));
 app.all('/api/photos',           require('./_photos'));
 app.all('/api/coverage',         require('./_coverage'));
+app.all('/api/classes',          require('./_classes'));
 
 // Reminders (24h + 2h before appointment — call daily via cron)
 app.all('/api/reminders',        require('./_reminders'));

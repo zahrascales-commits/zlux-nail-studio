@@ -108,6 +108,25 @@ async function ensureTables() {
     note TEXT DEFAULT '',
     created_ts INTEGER
   )`);
+  await execute(`CREATE TABLE IF NOT EXISTS classes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    price_cents INTEGER NOT NULL DEFAULT 0,
+    description TEXT DEFAULT '',
+    active INTEGER DEFAULT 1,
+    created_ts INTEGER
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS class_purchases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    class_id INTEGER NOT NULL,
+    class_name TEXT NOT NULL,
+    price_cents INTEGER NOT NULL,
+    buyer_name TEXT DEFAULT '',
+    buyer_email TEXT DEFAULT '',
+    buyer_phone TEXT DEFAULT '',
+    payment_intent_id TEXT,
+    ts INTEGER
+  )`);
   // Columns added after launch — idempotent, ignored once they exist
   for (const sql of [
     "ALTER TABLE team_members ADD COLUMN phone TEXT DEFAULT ''",
