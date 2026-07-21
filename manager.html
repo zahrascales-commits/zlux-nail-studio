@@ -1177,10 +1177,17 @@ async function loadClassPurchases(){
   const purchases=d.purchases||[];
   if(!purchases.length){g.innerHTML='<div class="empty" style="padding:1rem">No purchases yet.</div>';return;}
   g.innerHTML=purchases.map(p=>`
-    <div style="font-size:0.85rem;padding:0.5rem 0.7rem;background:var(--bg);border:1px solid var(--border);display:flex;justify-content:space-between;gap:0.6rem;flex-wrap:wrap;">
+    <div style="font-size:0.85rem;padding:0.5rem 0.7rem;background:var(--bg);border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:0.6rem;flex-wrap:wrap;">
       <span><strong>${esc(p.buyer_name||'—')}</strong> — ${esc(p.class_name)}</span>
-      <span style="color:var(--muted)">${esc(p.buyer_email||'')} ${p.buyer_phone?'· '+esc(p.buyer_phone):''} · $${(p.price_cents/100).toFixed(2)}</span>
+      <span style="color:var(--muted);display:flex;align-items:center;gap:0.6rem;">${esc(p.buyer_email||'')} ${p.buyer_phone?'· '+esc(p.buyer_phone):''} · $${(p.price_cents/100).toFixed(2)}
+        <button class="btn btn-danger btn-sm" onclick="delClassPurchase(${p.id})">Remove</button>
+      </span>
     </div>`).join('');
+}
+async function delClassPurchase(id){
+  if(!confirm('Remove this purchase record? This does not issue a refund.'))return;
+  await api('/api/classes',{method:'DELETE',body:JSON.stringify({action:'delete_purchase',id})});
+  toast('Removed');await loadClassPurchases();
 }
 
 /* ── SCHEDULE ── */

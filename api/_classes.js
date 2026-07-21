@@ -71,6 +71,13 @@ module.exports = async function (req, res) {
       return res.json({ purchases: rows });
     }
 
+    // ── OWNER: remove a purchase record (e.g. a refund or test entry) ──
+    if (req.method === 'DELETE' && action === 'delete_purchase') {
+      if (req.headers['x-ceo-password'] !== CEO_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
+      await execute('DELETE FROM class_purchases WHERE id=?', [Number((req.body || {}).id)]);
+      return res.json({ ok: true });
+    }
+
     // ── PUBLIC: start a purchase — price always recomputed server-side ──
     if (req.method === 'POST' && action === 'purchase_intent') {
       const stripeKey = process.env.STRIPE_SECRET_KEY;
