@@ -1139,7 +1139,7 @@ function openClassModal(){
   openModal('modal-class');
 }
 function editClass(id){
-  const c=classesData.find(x=>x.id===id);if(!c)return;
+  const c=classesData.find(x=>String(x.id)===String(id));if(!c)return;
   document.getElementById('class-modal-title').textContent='Edit Class';
   document.getElementById('cl-id').value=c.id;
   document.getElementById('cl-name').value=c.name;

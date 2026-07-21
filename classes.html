@@ -147,7 +147,7 @@ async function loadClasses() {
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
 async function openCheckout(id) {
-  _activeClass = CLASSES.find(c => c.id === id);
+  _activeClass = CLASSES.find(c => String(c.id) === String(id));
   if (!_activeClass) return;
   document.getElementById('checkout-form-wrap').style.display = 'block';
   document.getElementById('checkout-success').style.display = 'none';
