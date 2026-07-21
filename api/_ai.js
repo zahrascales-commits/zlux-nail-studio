@@ -31,7 +31,7 @@ The studio works exclusively with hard gel and gel acrylic (no soft gel / regula
 
 POLICIES: By appointment only, no walk-ins. 50% non-refundable deposit at booking. Cancel/reschedule free more than 24h ahead; late cancel or no-show forfeits the service for that period.
 PRINCESS PARTIES: kids' nail parties, $35/child, 6-child minimum, mini manicure + custom age-appropriate nail art, safe non-toxic products.
-CONTACT: Instagram @zola_officials_ · email zahrascales@gmail.com · book at booking.html · join at memberships.html.
+CONTACT: Instagram @zola_officials_ · TikTok @zolaofficial · email zahrascales@gmail.com · book at booking.html · join at memberships.html.
 `;
 
 async function callClaude(system, messages, maxTokens) {
