@@ -42,8 +42,8 @@ module.exports = async function (req, res) {
 
     // ── CONNECT PROVIDERS (paste keys in Settings tab; stored write-only) ──
     if (method === 'POST' && action === 'save_keys') {
-      const { twilio_sid, twilio_token, twilio_from, resend_key } = req.body || {};
-      const pairs = { twilio_sid, twilio_token, twilio_from, resend_key };
+      const { twilio_sid, twilio_token, twilio_from, resend_key, stripe_secret, stripe_publishable } = req.body || {};
+      const pairs = { twilio_sid, twilio_token, twilio_from, resend_key, stripe_secret, stripe_publishable };
       for (const [k, v] of Object.entries(pairs)) {
         if (v !== undefined && v !== null && String(v).trim() !== '') {
           await execute(
@@ -52,8 +52,25 @@ module.exports = async function (req, res) {
         }
       }
       clearKeyCache();
+      try { require('./_pay').clearStripeKeyCache(); } catch (_) {}
       const providers = await providerStatus();
       return res.json({ ok: true, providers });
+    }
+
+    // Is Stripe connected? (env or pasted keys) — used by the Settings card
+    if (method === 'GET' && action === 'stripe_status') {
+      const sk = process.env.STRIPE_SECRET_KEY || '';
+      const pk = process.env.STRIPE_PUBLISHABLE_KEY || '';
+      let secret = sk, pub = pk;
+      if (!secret || !pub) {
+        const rows = await query("SELECT key, value FROM site_settings WHERE key IN ('stripe_secret','stripe_publishable')");
+        const db = {}; for (const r of rows) db[r.key] = r.value;
+        secret = secret || db.stripe_secret || '';
+        pub = pub || db.stripe_publishable || '';
+      }
+      const enabled = !!(secret && pub);
+      const live = /_live_/.test(pub) || /_live_/.test(secret);
+      return res.json({ enabled, mode: enabled ? (live ? 'live' : 'test') : 'off' });
     }
 
     // ── EMAIL SELF-REPAIR: register the sender with SendGrid so 403s stop ──

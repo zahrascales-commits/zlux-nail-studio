@@ -5,7 +5,30 @@
 // Card is charged automatically when the client confirms on the booking page.
 const { services, addons } = require('./_store');
 
-function stripeKey() { return process.env.STRIPE_SECRET_KEY || ''; }
+// Stripe keys come from Vercel env vars first (best practice), and fall back
+// to keys the owner pasted into Studio Manager → Settings → Connect Payments
+// (stored write-only in site_settings), so payments can go live without any
+// redeploy. Cached briefly to avoid hitting the DB on every request.
+let _sk = '', _pk = '', _keyAt = 0;
+async function loadStripeKeys() {
+  if (Date.now() - _keyAt < 60000 && (_sk || _pk)) return;
+  _sk = process.env.STRIPE_SECRET_KEY || '';
+  _pk = process.env.STRIPE_PUBLISHABLE_KEY || '';
+  if (!_sk || !_pk) {
+    try {
+      const { query, ensureTables } = require('./_team-db');
+      await ensureTables();
+      const rows = await query("SELECT key, value FROM site_settings WHERE key IN ('stripe_secret','stripe_publishable')");
+      const db = {}; for (const r of rows) db[r.key] = r.value;
+      if (!_sk) _sk = db.stripe_secret || '';
+      if (!_pk) _pk = db.stripe_publishable || '';
+    } catch (_) {}
+  }
+  _keyAt = Date.now();
+}
+function clearStripeKeyCache() { _keyAt = 0; }
+function stripeKey() { return _sk; }
+function publishableKey() { return _pk; }
 
 async function stripeApi(path, params) {
   const r = await fetch('https://api.stripe.com/v1/' + path, {
@@ -55,10 +78,11 @@ module.exports = async function (req, res) {
   const action = req.query.action || (req.body && req.body.action) || '';
 
   try {
+    await loadStripeKeys();
     if (req.method === 'GET' && action === 'config') {
       return res.json({
-        enabled: !!(stripeKey() && process.env.STRIPE_PUBLISHABLE_KEY),
-        publishable_key: process.env.STRIPE_PUBLISHABLE_KEY || null,
+        enabled: !!(stripeKey() && publishableKey()),
+        publishable_key: publishableKey() || null,
       });
     }
 
@@ -115,7 +139,9 @@ module.exports = async function (req, res) {
 };
 
 module.exports.computeDeposit = computeDeposit;
+module.exports.clearStripeKeyCache = clearStripeKeyCache;
 module.exports.verifyPaymentIntent = async function (payment_intent_id) {
+  await loadStripeKeys();
   if (!stripeKey() || !payment_intent_id) return { paid: false, why: 'not configured' };
   try {
     const r = await fetch('https://api.stripe.com/v1/payment_intents/' + encodeURIComponent(payment_intent_id), {

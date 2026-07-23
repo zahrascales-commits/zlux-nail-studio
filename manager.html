@@ -502,6 +502,17 @@
           </div>
         </div>
         <div class="site-card">
+          <h3>Connect Payments 💳</h3>
+          <div class="key-status" id="key-stripe">💳 Payments: checking…</div>
+          <p>Paste your Stripe keys (Stripe Dashboard → Developers → API keys). Use your <b>live</b> keys to take real money. Payments turn on the moment you save — no redeploy.</p>
+          <label class="fld-label">Publishable key (pk_live_… or pk_test_…)</label>
+          <input id="k-stripe-pub" placeholder="pk_live_xxxxxxxx" style="margin-bottom:0.7rem" autocomplete="off" />
+          <label class="fld-label">Secret key (sk_live_… or sk_test_…)</label>
+          <input id="k-stripe-secret" type="password" placeholder="sk_live_xxxxxxxx" style="margin-bottom:0.9rem" autocomplete="off" />
+          <button class="btn btn-gold btn-sm" onclick="saveStripeKeys()">Connect Payments</button>
+          <p style="font-size:0.72rem;color:var(--muted);margin-top:0.6rem;">Test keys let you practice with fake cards. Live keys take real payments into your bank. Your secret key is stored privately and never shown on the website.</p>
+        </div>
+        <div class="site-card">
           <h3>Calendar Preferences</h3>
           <label class="fld-label">Default calendar view</label>
           <select id="set-defview" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--cream);padding:0.7rem 0.85rem">
@@ -1868,6 +1879,27 @@ async function delClient(id){
 function renderProviderStatus(){
   document.getElementById('key-email').innerHTML='✉️ Email delivery: '+(PROVIDERS.email?'<span class="key-on">ON — sending live ✦</span>':'<span class="key-off">OFF — paste your Resend key below</span>');
   document.getElementById('key-sms').innerHTML='📱 Text delivery: '+(PROVIDERS.sms?'<span class="key-on">ON — sending live ✦</span>':'<span class="key-off">OFF — paste your Twilio values below</span>');
+  loadStripeStatus();
+}
+async function loadStripeStatus(){
+  const el=document.getElementById('key-stripe');if(!el)return;
+  try{
+    const r=await api('/api/manager?action=stripe_status');const d=await r.json();
+    if(!d.enabled)el.innerHTML='💳 Payments: <span class="key-off">OFF — paste your Stripe keys below</span>';
+    else if(d.mode==='live')el.innerHTML='💳 Payments: <span class="key-on">LIVE — taking real payments ✦</span>';
+    else el.innerHTML='💳 Payments: <span class="key-off">TEST mode — paste your LIVE keys to take real money</span>';
+  }catch{el.innerHTML='💳 Payments: —';}
+}
+async function saveStripeKeys(){
+  const stripe_publishable=document.getElementById('k-stripe-pub').value.trim();
+  const stripe_secret=document.getElementById('k-stripe-secret').value.trim();
+  if(!stripe_publishable&&!stripe_secret){toast('Paste your Stripe keys first');return;}
+  if(stripe_publishable&&!/^pk_(live|test)_/.test(stripe_publishable)){toast('Publishable key should start with pk_live_ or pk_test_');return;}
+  if(stripe_secret&&!/^sk_(live|test)_/.test(stripe_secret)){toast('Secret key should start with sk_live_ or sk_test_');return;}
+  const r=await api('/api/manager?action=save_keys',{method:'POST',body:JSON.stringify({action:'save_keys',stripe_publishable,stripe_secret})});
+  const d=await r.json();
+  if(d.ok){toast('Payments connected ✦');['k-stripe-pub','k-stripe-secret'].forEach(id=>document.getElementById(id).value='');setTimeout(loadStripeStatus,600);}
+  else toast('Save failed');
 }
 async function saveKeys(){
   const body={action:'save_keys',
