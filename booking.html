@@ -205,6 +205,9 @@
       .inspo-up img { max-width:180px; max-height:180px; object-fit:cover; margin:0.75rem auto 0; display:block; border:1px solid rgba(182,165,136,0.4); }
       @media (min-width:761px) { .sticky-book { position:static; margin-top:1rem; } }
       body.has-sticky { padding-bottom:90px; }
+      /* Spotlight a service group when arriving from a "Book This" deep-link */
+      @keyframes focusPulse { 0%,100% { box-shadow:0 0 0 0 rgba(182,165,136,0); } 50% { box-shadow:0 0 0 4px rgba(182,165,136,0.55); } }
+      .option-btn.focus-pulse { animation: focusPulse 1s ease-in-out 3; border-color: var(--champagne) !important; }
     </style>
 
     <!-- Progress: 3 steps, GlossGenius pattern -->
@@ -299,27 +302,27 @@
         <div><span class="option-name">Organic Structured Manicure</span><span class="option-sub">Healthiest option — recommended for nail growth</span></div>
         <div style="text-align:right;"><span class="option-price" id="price-0">from $90</span><div id="tag-0"></div></div>
       </button>
-      <button class="option-btn" id="svc-btn-1" onclick="toggleService('Short Gel X',95,'manicure',this)">
+      <button class="option-btn" data-group="Gel X" id="svc-btn-1" onclick="toggleService('Short Gel X',95,'manicure',this)">
         <div><span class="option-name">Short Gel X</span></div>
         <div style="text-align:right;"><span class="option-price" id="price-1">$95</span><div id="tag-1"></div></div>
       </button>
-      <button class="option-btn" id="svc-btn-2" onclick="toggleService('Medium Gel X',100,'manicure',this)">
+      <button class="option-btn" data-group="Gel X" id="svc-btn-2" onclick="toggleService('Medium Gel X',100,'manicure',this)">
         <div><span class="option-name">Medium Gel X</span></div>
         <div style="text-align:right;"><span class="option-price" id="price-2">$100</span><div id="tag-2"></div></div>
       </button>
-      <button class="option-btn" id="svc-btn-3" onclick="toggleService('Long Gel X',110,'manicure',this)">
+      <button class="option-btn" data-group="Gel X" id="svc-btn-3" onclick="toggleService('Long Gel X',110,'manicure',this)">
         <div><span class="option-name">Long Gel X</span></div>
         <div style="text-align:right;"><span class="option-price" id="price-3">$110</span><div id="tag-3"></div></div>
       </button>
-      <button class="option-btn" id="svc-btn-4" onclick="toggleService('Short Acrylic Set',95,'manicure',this)">
+      <button class="option-btn" data-group="Acrylic" id="svc-btn-4" onclick="toggleService('Short Acrylic Set',95,'manicure',this)">
         <div><span class="option-name">Short Acrylic Set</span></div>
         <div style="text-align:right;"><span class="option-price" id="price-4">$95</span><div id="tag-4"></div></div>
       </button>
-      <button class="option-btn" id="svc-btn-5" onclick="toggleService('Medium Acrylic Set',100,'manicure',this)">
+      <button class="option-btn" data-group="Acrylic" id="svc-btn-5" onclick="toggleService('Medium Acrylic Set',100,'manicure',this)">
         <div><span class="option-name">Medium Acrylic Set</span></div>
         <div style="text-align:right;"><span class="option-price" id="price-5">$100</span><div id="tag-5"></div></div>
       </button>
-      <button class="option-btn" id="svc-btn-6" onclick="toggleService('Long Acrylic Set',110,'manicure',this)">
+      <button class="option-btn" data-group="Acrylic" id="svc-btn-6" onclick="toggleService('Long Acrylic Set',110,'manicure',this)">
         <div><span class="option-name">Long Acrylic Set</span></div>
         <div style="text-align:right;"><span class="option-price" id="price-6">$110</span><div id="tag-6"></div></div>
       </button>
@@ -1462,6 +1465,22 @@ if (new URLSearchParams(location.search).get('test') === '1') {
     match.click(); // toggleService selects it + sticky bar appears
     setTimeout(() => match.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
   }
+})();
+
+// "Book This" from the Services page for a multi-length service (Gel X /
+// Acrylic): jump to the service step and spotlight that group's length
+// options with prices, so the client just taps the length they want.
+(function () {
+  const focus = new URLSearchParams(location.search).get('focus');
+  if (!focus) return;
+  goStep(2);
+  const groupBtns = [...document.querySelectorAll('#step-2 .option-btn[data-group="' + focus + '"]')];
+  if (!groupBtns.length) return;
+  setTimeout(() => {
+    groupBtns[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    groupBtns.forEach(b => b.classList.add('focus-pulse'));
+    setTimeout(() => groupBtns.forEach(b => b.classList.remove('focus-pulse')), 3200);
+  }, 300);
 })();
 
 // ── Returning client: prefill saved details so rebooking takes seconds ──
