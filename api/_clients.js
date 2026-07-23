@@ -87,12 +87,32 @@ async function handler(req, res) {
       return res.json({ ok: true });
     }
 
+    // ── OWNER: list every client for the mass-message picker ──
+    if (req.method === 'GET' && action === 'list') {
+      const rows = await query('SELECT id, name, email, phone, last_service, marketing_opt_in FROM clients ORDER BY name');
+      return res.json({ clients: rows });
+    }
+
     // ── OWNER: mass message ──
     if (req.method === 'POST' && action === 'mass') {
-      const { message, channel, audience } = req.body || {};
+      const { message, channel, audience, ids } = req.body || {};
       if (!message) return res.status(400).json({ error: 'message required' });
-      const all = await query('SELECT * FROM clients ORDER BY created_ts DESC LIMIT 500');
-      const targets = all.filter(c => audience === 'all' ? true : Number(c.marketing_opt_in) === 1);
+
+      // Build the target list from whichever audience was chosen. Tier
+      // audiences pull from the membership roster; everything else pulls from
+      // the general client list (opt-in, all, or a hand-picked selection).
+      let targets = [];
+      if (audience === 'BLACK_CARD' || audience === 'LUXE' || audience === 'SIGNATURE') {
+        targets = await query('SELECT full_name AS name, email, phone FROM members WHERE tier = ?', [audience]).catch(() => []);
+      } else if (audience === 'selected') {
+        const idList = (Array.isArray(ids) ? ids : []).map(Number).filter(Boolean);
+        if (!idList.length) return res.status(400).json({ error: 'No clients selected' });
+        const all = await query('SELECT * FROM clients ORDER BY created_ts DESC LIMIT 1000');
+        targets = all.filter(c => idList.includes(Number(c.id)));
+      } else {
+        const all = await query('SELECT * FROM clients ORDER BY created_ts DESC LIMIT 500');
+        targets = all.filter(c => audience === 'all' ? true : Number(c.marketing_opt_in) === 1);
+      }
       let sms = 0, emails = 0, skipped = 0;
       const failures = [];
       for (const c of targets) {

@@ -521,11 +521,24 @@
               <option value="sms">Text only</option>
               <option value="email">Email only</option>
             </select>
-            <select id="mass-audience" style="background:var(--bg);border:1px solid var(--border);color:var(--cream);padding:0.55rem 0.7rem">
+            <select id="mass-audience" onchange="onMassAudience()" style="background:var(--bg);border:1px solid var(--border);color:var(--cream);padding:0.55rem 0.7rem">
               <option value="optin">Signed-up list only</option>
               <option value="all">All clients</option>
+              <option value="BLACK_CARD">Everyone in Black Card</option>
+              <option value="LUXE">Everyone in Luxe</option>
+              <option value="SIGNATURE">Everyone in Signature</option>
+              <option value="selected">Pick specific people…</option>
             </select>
-            <button class="btn btn-gold btn-sm" onclick="sendMass()">Send to Everyone</button>
+            <button class="btn btn-gold btn-sm" onclick="sendMass()">Send Message</button>
+          </div>
+          <div id="mass-picker" style="display:none;margin-top:0.8rem;border:1px solid var(--border);padding:0.7rem;">
+            <input id="mass-picker-search" placeholder="Search clients…" oninput="renderMassPicker()" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--cream);padding:0.5rem 0.7rem;margin-bottom:0.5rem" />
+            <div style="display:flex;gap:0.6rem;margin-bottom:0.5rem;">
+              <button class="btn btn-ghost btn-sm" onclick="massPickAll(true)">Select all shown</button>
+              <button class="btn btn-ghost btn-sm" onclick="massPickAll(false)">Clear</button>
+              <span id="mass-pick-count" style="font-size:0.75rem;color:var(--muted);align-self:center;margin-left:auto;">0 selected</span>
+            </div>
+            <div id="mass-picker-list" style="max-height:220px;overflow-y:auto;display:grid;gap:0.3rem;"></div>
           </div>
           <p class="set-note" id="mass-result"></p>
         </div>
@@ -1937,15 +1950,47 @@ async function saveSettings(){
   const r=await api('/api/site-settings',{method:'PUT',body:JSON.stringify({settings})});
   if(r.ok)toast('Settings saved ✦');else toast('Save failed');
 }
+let massClients=[]; const massSelected=new Set();
+function onMassAudience(){
+  const aud=document.getElementById('mass-audience').value;
+  const picker=document.getElementById('mass-picker');
+  if(aud==='selected'){ picker.style.display='block'; loadMassClients(); }
+  else picker.style.display='none';
+}
+async function loadMassClients(){
+  const r=await api('/api/clients?action=list');const d=await r.json();
+  massClients=d.clients||[];renderMassPicker();
+}
+function renderMassPicker(){
+  const q=(document.getElementById('mass-picker-search').value||'').toLowerCase();
+  const list=document.getElementById('mass-picker-list');
+  const shown=massClients.filter(c=>!q||((c.name||'')+' '+(c.email||'')+' '+(c.phone||'')).toLowerCase().includes(q));
+  if(!shown.length){list.innerHTML='<div class="empty" style="padding:0.8rem">No clients yet. They appear here as people book or sign up.</div>';}
+  else list.innerHTML=shown.map(c=>`
+    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.82rem;padding:0.2rem 0;">
+      <input type="checkbox" class="mass-pick" value="${c.id}" ${massSelected.has(Number(c.id))?'checked':''} onchange="massToggle(${c.id},this.checked)" style="width:auto;" />
+      <span>${esc(c.name||'—')}${c.email?' <span style="color:var(--muted)">· '+esc(c.email)+'</span>':''}</span>
+    </label>`).join('');
+  document.getElementById('mass-pick-count').textContent=massSelected.size+' selected';
+}
+function massToggle(id,on){on?massSelected.add(Number(id)):massSelected.delete(Number(id));document.getElementById('mass-pick-count').textContent=massSelected.size+' selected';}
+function massPickAll(on){
+  const q=(document.getElementById('mass-picker-search').value||'').toLowerCase();
+  massClients.filter(c=>!q||((c.name||'')+' '+(c.email||'')+' '+(c.phone||'')).toLowerCase().includes(q)).forEach(c=>{on?massSelected.add(Number(c.id)):massSelected.delete(Number(c.id));});
+  renderMassPicker();
+}
 async function sendMass(){
   const message=document.getElementById('mass-msg').value.trim();
   if(!message){toast('Write your message first');return;}
-  if(!confirm('Send this message to your list right now?'))return;
+  const audience=document.getElementById('mass-audience').value;
+  const ids=audience==='selected'?[...massSelected]:undefined;
+  if(audience==='selected'&&(!ids||!ids.length)){toast('Pick at least one person');return;}
+  const audLabel={optin:'your signed-up list',all:'all clients','BLACK_CARD':'all Black Card members','LUXE':'all Luxe members','SIGNATURE':'all Signature members',selected:ids?ids.length+' selected people':'selected people'}[audience];
+  if(!confirm('Send this message to '+audLabel+' right now?'))return;
   const out=document.getElementById('mass-result');
   out.textContent='Sending…';
   const r=await api('/api/clients?action=mass',{method:'POST',body:JSON.stringify({action:'mass',message,
-    channel:document.getElementById('mass-channel').value,
-    audience:document.getElementById('mass-audience').value==='all'?'all':'optin'})});
+    channel:document.getElementById('mass-channel').value, audience, ids})});
   const d=await r.json();
   if(d.provider_missing){
     out.innerHTML='<span class="key-off">Reached '+d.targeted+' people on your list, but delivery keys aren\'t connected yet — add TWILIO / RESEND keys in Vercel and this button sends for real.</span>';
