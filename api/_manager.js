@@ -57,17 +57,12 @@ module.exports = async function (req, res) {
       return res.json({ ok: true, providers });
     }
 
-    // Is Stripe connected? (env or pasted keys) — used by the Settings card
+    // Is Stripe connected? (pasted keys first, then env) — for the Settings card
     if (method === 'GET' && action === 'stripe_status') {
-      const sk = process.env.STRIPE_SECRET_KEY || '';
-      const pk = process.env.STRIPE_PUBLISHABLE_KEY || '';
-      let secret = sk, pub = pk;
-      if (!secret || !pub) {
-        const rows = await query("SELECT key, value FROM site_settings WHERE key IN ('stripe_secret','stripe_publishable')");
-        const db = {}; for (const r of rows) db[r.key] = r.value;
-        secret = secret || db.stripe_secret || '';
-        pub = pub || db.stripe_publishable || '';
-      }
+      const rows = await query("SELECT key, value FROM site_settings WHERE key IN ('stripe_secret','stripe_publishable')");
+      const db = {}; for (const r of rows) db[r.key] = r.value;
+      const secret = db.stripe_secret || process.env.STRIPE_SECRET_KEY || '';
+      const pub = db.stripe_publishable || process.env.STRIPE_PUBLISHABLE_KEY || '';
       const enabled = !!(secret && pub);
       const live = /_live_/.test(pub) || /_live_/.test(secret);
       return res.json({ enabled, mode: enabled ? (live ? 'live' : 'test') : 'off' });
