@@ -85,9 +85,9 @@
 
     <!-- Team Section -->
     <div class="section-label" style="margin-bottom:2rem;margin-top:1rem;">Meet the Team</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2.5rem;text-align:center;" id="team-grid">
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:2.5rem;text-align:center;" id="about-team-grid">
 
-      <div>
+      <div style="max-width:220px;">
         <div style="width:140px;height:140px;border-radius:50%;background:var(--blush);border:2px solid rgba(182,165,136,0.3);margin:0 auto 1.25rem;display:flex;align-items:center;justify-content:center;overflow:hidden;">
           <span style="font-family:'Cinzel',serif;font-size:3rem;color:var(--latte);">Z</span>
         </div>
@@ -98,30 +98,7 @@
           <a href="memberships.html" class="btn-gold" style="animation:none;font-size:0.68rem;display:inline-block;">View Memberships</a>
         </div>
       </div>
-
-      <div>
-        <div style="width:140px;height:140px;border-radius:50%;background:var(--blush);border:2px solid rgba(182,165,136,0.3);margin:0 auto 1.25rem;display:flex;align-items:center;justify-content:center;overflow:hidden;">
-          <span style="font-family:'Cinzel',serif;font-size:3rem;color:var(--latte);">E</span>
-        </div>
-        <h3 style="font-size:1.35rem;margin-bottom:0.2rem;">Emma Magana</h3>
-        <div class="section-label" style="font-size:0.58rem;margin-bottom:0.75rem;">Nail Artist</div>
-        <span class="availability-badge available">Accepting Members</span>
-        <div style="margin-top:1.25rem;">
-          <a href="memberships.html" class="btn-outline-dark" style="font-size:0.68rem;display:inline-block;">Book with Emma</a>
-        </div>
-      </div>
-
-      <div>
-        <div style="width:140px;height:140px;border-radius:50%;background:var(--blush);border:2px solid rgba(182,165,136,0.3);margin:0 auto 1.25rem;display:flex;align-items:center;justify-content:center;overflow:hidden;">
-          <span style="font-family:'Cinzel',serif;font-size:3rem;color:var(--latte);">L</span>
-        </div>
-        <h3 style="font-size:1.35rem;margin-bottom:0.2rem;">Lily Byers</h3>
-        <div class="section-label" style="font-size:0.58rem;margin-bottom:0.75rem;">Nail Artist</div>
-        <span class="availability-badge available">Accepting Members</span>
-        <div style="margin-top:1.25rem;">
-          <a href="memberships.html" class="btn-outline-dark" style="font-size:0.68rem;display:inline-block;">Book with Lily</a>
-        </div>
-      </div>
+      <!-- Additional artists load here from Studio Manager (Team → "Show on website") -->
 
     </div>
   </div>

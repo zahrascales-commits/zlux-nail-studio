@@ -147,6 +147,9 @@ async function ensureTables() {
     "ALTER TABLE team_members ADD COLUMN phone TEXT DEFAULT ''",
     "ALTER TABLE team_members ADD COLUMN email TEXT DEFAULT ''",
     "ALTER TABLE team_members ADD COLUMN restricted INTEGER DEFAULT 0",
+    "ALTER TABLE team_members ADD COLUMN bio TEXT DEFAULT ''",
+    "ALTER TABLE team_members ADD COLUMN show_on_site INTEGER DEFAULT 0",
+    "ALTER TABLE team_members ADD COLUMN title TEXT DEFAULT ''",
   ]) { try { await execute(sql); } catch (_) {} }
   _ready = true;
 }

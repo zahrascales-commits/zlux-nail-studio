@@ -197,6 +197,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }).catch(() => {});
   }
 
+  /* ── PUBLIC TEAM ROSTER ──
+     Artists the owner flagged "Show on website" in Studio Manager appear
+     on the homepage (#home-team-grid) and About page (#about-team-grid),
+     each in that page's own card style, with the owner-written bio. */
+  const homeGrid  = document.getElementById('home-team-grid');
+  const aboutGrid = document.getElementById('about-team-grid');
+  if (homeGrid || aboutGrid) {
+    const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    fetch('/api/roster').then(r => r.json()).then(d => {
+      const team = (d && d.team) || [];
+      team.forEach(m => {
+        const first = esc((m.name || '').split(' ')[0]);
+        if (homeGrid) {
+          const card = document.createElement('div');
+          card.className = 'team-card';
+          card.style.cssText = 'text-align:center;max-width:280px;';
+          card.innerHTML =
+            '<div class="team-avatar" style="margin:0 auto 1rem;background:' + esc(m.color) + '">' + esc(m.initial) + '</div>' +
+            '<h3 style="font-size:1.3rem;margin-bottom:0.2rem;">' + esc(m.name) + '</h3>' +
+            '<div class="section-label" style="font-size:0.58rem;margin-bottom:0.5rem;">' + esc(m.title) + '</div>' +
+            '<span class="availability-badge available">Accepting Members</span>' +
+            (m.bio ? '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.82rem;color:var(--latte);margin:0.75rem 0 1rem;line-height:1.7;">' + esc(m.bio) + '</p>' : '<div style="height:0.75rem;"></div>') +
+            '<a href="memberships.html" class="btn-outline-dark" style="font-size:0.68rem;">Book a Membership</a>';
+          homeGrid.appendChild(card);
+        }
+        if (aboutGrid) {
+          const card = document.createElement('div');
+          card.style.cssText = 'max-width:220px;';
+          card.innerHTML =
+            '<div style="width:140px;height:140px;border-radius:50%;background:var(--blush);border:2px solid rgba(182,165,136,0.3);margin:0 auto 1.25rem;display:flex;align-items:center;justify-content:center;overflow:hidden;">' +
+            '<span style="font-family:\'Cinzel\',serif;font-size:3rem;color:var(--latte);">' + esc(m.initial) + '</span></div>' +
+            '<h3 style="font-size:1.35rem;margin-bottom:0.2rem;">' + esc(m.name) + '</h3>' +
+            '<div class="section-label" style="font-size:0.58rem;margin-bottom:0.75rem;">' + esc(m.title) + '</div>' +
+            '<span class="availability-badge available">Accepting Members</span>' +
+            (m.bio ? '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.82rem;color:var(--latte);margin:0.75rem 0 0;line-height:1.7;">' + esc(m.bio) + '</p>' : '') +
+            '<div style="margin-top:1.25rem;"><a href="memberships.html" class="btn-outline-dark" style="font-size:0.68rem;display:inline-block;">Book with ' + first + '</a></div>';
+          aboutGrid.appendChild(card);
+        }
+      });
+    }).catch(() => {});
+  }
+
   /* ── HERO PARTICLE CANVAS ── */
   const canvas = document.getElementById('hero-canvas');
   if (canvas) {

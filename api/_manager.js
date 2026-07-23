@@ -7,7 +7,7 @@ const { upsertClient } = require('./_clients');
 const CEO_PASSWORD = process.env.CEO_PASSWORD || 'ZOLA2026';
 
 async function membersWithSkills() {
-  const members = await query('SELECT id, name, role, pin, color, active, phone, email, restricted FROM team_members ORDER BY id');
+  const members = await query('SELECT id, name, role, pin, color, active, phone, email, restricted, bio, show_on_site, title FROM team_members ORDER BY id');
   const skillRows = await query('SELECT team_member_id, service_name FROM worker_skills');
   const skillsByMember = {};
   for (const row of skillRows) {
@@ -164,20 +164,20 @@ module.exports = async function (req, res) {
     }
 
     if (method === 'POST' && action === 'add_member') {
-      const { name, role, color, phone, email } = req.body || {};
+      const { name, role, color, phone, email, bio, title, show_on_site } = req.body || {};
       if (!name) return res.status(400).json({ error: 'Name required' });
       const pin = await uniquePin();
       const r = await execute(
-        'INSERT INTO team_members (name, role, pin, color, active, phone, email) VALUES (?,?,?,?,1,?,?)',
-        [name, role || 'Nail Artist', pin, color || '#C4A882', phone || '', email || '']
+        'INSERT INTO team_members (name, role, pin, color, active, phone, email, bio, title, show_on_site) VALUES (?,?,?,?,1,?,?,?,?,?)',
+        [name, role || 'Nail Artist', pin, color || '#C4A882', phone || '', email || '', bio || '', title || '', show_on_site ? 1 : 0]
       );
-      return res.json({ ok: true, member: { id: r.lastInsertRowid, name, role: role || 'Nail Artist', pin, color: color || '#C4A882', active: 1, phone: phone || '', email: email || '' } });
+      return res.json({ ok: true, member: { id: r.lastInsertRowid, name, role: role || 'Nail Artist', pin, color: color || '#C4A882', active: 1, phone: phone || '', email: email || '', bio: bio || '', title: title || '', show_on_site: show_on_site ? 1 : 0 } });
     }
 
     if (method === 'PUT' && action === 'update_member') {
-      const { id, name, role, color, active, phone, email } = req.body || {};
-      await execute('UPDATE team_members SET name=?, role=?, color=?, active=?, phone=?, email=? WHERE id=?',
-        [name, role, color || '#C4A882', active ? 1 : 0, phone || '', email || '', Number(id)]);
+      const { id, name, role, color, active, phone, email, bio, title, show_on_site } = req.body || {};
+      await execute('UPDATE team_members SET name=?, role=?, color=?, active=?, phone=?, email=?, bio=?, title=?, show_on_site=? WHERE id=?',
+        [name, role, color || '#C4A882', active ? 1 : 0, phone || '', email || '', bio || '', title || '', show_on_site ? 1 : 0, Number(id)]);
       return res.json({ ok: true });
     }
 

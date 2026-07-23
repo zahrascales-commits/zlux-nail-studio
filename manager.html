@@ -667,8 +667,8 @@
   <div class="modal">
     <div class="modal-title" id="member-modal-title">Add Team Member</div>
     <input type="hidden" id="m-id" />
-    <div class="field"><label class="fld-label">Full Name</label><input id="m-name" placeholder="e.g. Emma Magana" /></div>
-    <div class="field"><label class="fld-label">Role / Title</label><input id="m-role" placeholder="Nail Artist" value="Nail Artist" /></div>
+    <div class="field"><label class="fld-label">Full Name</label><input id="m-name" placeholder="e.g. Maria" /></div>
+    <div class="field"><label class="fld-label">Role / Title (shown on website)</label><input id="m-role" placeholder="Nail Artist" value="Nail Artist" /></div>
     <div class="field two">
       <div><label class="fld-label">Phone (gets booking texts)</label><input id="m-phone" placeholder="(555) 000-0000" /></div>
       <div><label class="fld-label">Email (gets booking emails)</label><input id="m-email" placeholder="artist@email.com" /></div>
@@ -682,6 +682,13 @@
         <option value="#8E9E6B">Sage</option>
         <option value="#9E6B8E">Plum</option>
       </select>
+    </div>
+    <div class="field"><label class="fld-label">Bio / Blurb (shown on the website)</label><textarea id="m-bio" rows="3" placeholder="Write a short intro — e.g. 'Trained in Zahra's exact methods. Known for clean structured sets and detail-forward nail art.'"></textarea></div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+        <input type="checkbox" id="m-show-site" style="width:auto;" />
+        <span>Show this person on the public website (homepage &amp; About page)</span>
+      </label>
     </div>
     <div class="field" id="m-active-wrap" style="display:none">
       <label class="fld-label">Status</label>
@@ -998,7 +1005,7 @@ function renderMembers(){
         <div class="avatar" style="background:${m.color}">${initials(m.name)}</div>
         <div style="flex:1">
           <div class="mc-name">${esc(m.name)}</div>
-          <div class="mc-role">${esc(m.role||'Nail Artist')}</div>
+          <div class="mc-role">${esc(m.role||'Nail Artist')}${Number(m.show_on_site)?' · <span style="color:var(--gold)">On website ✓</span>':''}</div>
         </div>
         <span class="status-pill ${Number(m.active)?'status-on':'status-off'}">${Number(m.active)?'Active':'Paused'}</span>
       </div>
@@ -1023,11 +1030,13 @@ function openMemberModal(){
   document.getElementById('m-phone').value='';
   document.getElementById('m-email').value='';
   document.getElementById('m-color').value='#B6A588';
+  document.getElementById('m-bio').value='';
+  document.getElementById('m-show-site').checked=false;
   document.getElementById('m-active-wrap').style.display='none';
   openModal('modal-member');
 }
 function editMember(id){
-  const m=members.find(x=>x.id===id);if(!m)return;
+  const m=members.find(x=>String(x.id)===String(id));if(!m)return;
   document.getElementById('member-modal-title').textContent='Edit Team Member';
   document.getElementById('m-id').value=m.id;
   document.getElementById('m-name').value=m.name;
@@ -1035,6 +1044,8 @@ function editMember(id){
   document.getElementById('m-phone').value=m.phone||'';
   document.getElementById('m-email').value=m.email||'';
   document.getElementById('m-color').value=m.color||'#B6A588';
+  document.getElementById('m-bio').value=m.bio||'';
+  document.getElementById('m-show-site').checked=!!Number(m.show_on_site);
   document.getElementById('m-active-wrap').style.display='block';
   document.getElementById('m-active').value=String(Number(m.active));
   openModal('modal-member');
@@ -1046,13 +1057,15 @@ async function saveMember(){
   const color=document.getElementById('m-color').value;
   const phone=document.getElementById('m-phone').value.trim();
   const email=document.getElementById('m-email').value.trim();
+  const bio=document.getElementById('m-bio').value.trim();
+  const show_on_site=document.getElementById('m-show-site').checked;
   if(!name){toast('Enter a name');return;}
   if(id){
     const active=document.getElementById('m-active').value;
-    await api('/api/manager',{method:'PUT',body:JSON.stringify({action:'update_member',id,name,role,color,phone,email,active:Number(active)})});
+    await api('/api/manager',{method:'PUT',body:JSON.stringify({action:'update_member',id,name,role,color,phone,email,bio,show_on_site,active:Number(active)})});
     toast('Team member updated');
   }else{
-    const r=await api('/api/manager',{method:'POST',body:JSON.stringify({action:'add_member',name,role,color,phone,email})});
+    const r=await api('/api/manager',{method:'POST',body:JSON.stringify({action:'add_member',name,role,color,phone,email,bio,show_on_site})});
     const d=await r.json();
     if(d.member)toast('Added — PIN '+d.member.pin);
   }

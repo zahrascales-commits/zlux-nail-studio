@@ -58,6 +58,7 @@ app.all('/api/pay',              require('./_pay'));
 app.all('/api/account',          require('./_account'));
 app.all('/api/photos',           require('./_photos'));
 app.all('/api/coverage',         require('./_coverage'));
+app.all('/api/roster',           require('./_roster'));
 app.all('/api/classes',          require('./_classes'));
 app.all('/api/analytics',        require('./_analytics'));
 
