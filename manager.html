@@ -460,7 +460,17 @@
               <div style="flex:1"><div style="font-size:0.66rem;color:var(--muted);margin-bottom:0.2rem;">Close</div><select id="set-book-close"></select></div>
             </div>
             <p style="font-size:0.72rem;color:var(--muted);margin-top:0.5rem;">These two are separate on purpose: the text above is just what people read, and these control the actual time slots the booking calendar offers. Set booking to open at 8 AM and no 6 AM/7 AM slots will appear.</p>
-            <button class="btn btn-gold btn-sm" style="margin-top:0.6rem" onclick="saveBookingHours()">Save Booking Hours</button>
+            <div style="margin-top:0.9rem;">
+              <label class="fld-label">Minimum advance notice <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">— how soon before an appointment people can still book</span></label>
+              <select id="set-advance">
+                <option value="0">Same-day booking allowed</option>
+                <option value="24">No bookings within 24 hours</option>
+                <option value="48">No bookings within 48 hours</option>
+                <option value="72">No bookings within 72 hours (3 days)</option>
+              </select>
+              <p style="font-size:0.72rem;color:var(--muted);margin-top:0.4rem;">Blocks times too close to now — e.g. set to 24 hours and today's/tomorrow-morning slots stop showing, so no one books last-minute.</p>
+            </div>
+            <button class="btn btn-gold btn-sm" style="margin-top:0.7rem" onclick="saveBookingHours()">Save Booking Hours</button>
           </div>
         </div>
         <div class="site-card">
@@ -1965,13 +1975,15 @@ async function loadBookingHours(){
     const r=await api('/api/manager?action=booking_hours');const d=await r.json();
     document.getElementById('set-book-open').innerHTML=timeOptions(null,d.open_time||'08:00');
     document.getElementById('set-book-close').innerHTML=timeOptions(null,d.close_time||'22:00');
+    document.getElementById('set-advance').value=String(d.min_advance_hours||0);
   }catch{}
 }
 async function saveBookingHours(){
   const open_time=document.getElementById('set-book-open').value;
   const close_time=document.getElementById('set-book-close').value;
+  const min_advance_hours=Number(document.getElementById('set-advance').value)||0;
   if(open_time>=close_time){toast('Close must be after open');return;}
-  await api('/api/manager',{method:'POST',body:JSON.stringify({action:'booking_hours',open_time,close_time})});
+  await api('/api/manager',{method:'POST',body:JSON.stringify({action:'booking_hours',open_time,close_time,min_advance_hours})});
   toast('Booking hours saved — live on the calendar now');
 }
 function pickOwnerColor(c){

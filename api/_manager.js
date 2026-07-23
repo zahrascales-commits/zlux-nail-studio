@@ -267,17 +267,24 @@ module.exports = async function (req, res) {
       return res.json({ ok: true });
     }
 
-    // ── DEFAULT BOOKING-AVAILABILITY HOURS (which slots the calendar offers) ──
+    // ── DEFAULT BOOKING-AVAILABILITY HOURS + MINIMUM ADVANCE NOTICE ──
     if (method === 'GET' && action === 'booking_hours') {
       const o = await queryOne("SELECT value FROM site_settings WHERE key='book_open_time'");
       const c = await queryOne("SELECT value FROM site_settings WHERE key='book_close_time'");
-      return res.json({ open_time: (o && o.value) || '08:00', close_time: (c && c.value) || '22:00' });
+      const adv = await queryOne("SELECT value FROM site_settings WHERE key='min_advance_hours'");
+      return res.json({
+        open_time: (o && o.value) || '08:00',
+        close_time: (c && c.value) || '22:00',
+        min_advance_hours: adv ? Number(adv.value) : 0,
+      });
     }
 
     if (method === 'POST' && action === 'booking_hours') {
-      const { open_time, close_time } = req.body || {};
-      for (const [k, v] of [['book_open_time', open_time], ['book_close_time', close_time]]) {
-        if (v) await execute('INSERT INTO site_settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', [k, String(v)]);
+      const { open_time, close_time, min_advance_hours } = req.body || {};
+      const pairs = [['book_open_time', open_time], ['book_close_time', close_time]];
+      if (min_advance_hours !== undefined) pairs.push(['min_advance_hours', String(Number(min_advance_hours) || 0)]);
+      for (const [k, v] of pairs) {
+        if (v !== undefined && v !== null && v !== '') await execute('INSERT INTO site_settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', [k, String(v)]);
       }
       return res.json({ ok: true });
     }

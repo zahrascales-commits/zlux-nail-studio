@@ -35,6 +35,12 @@ module.exports = async (req, res) => {
         // 1) Owner-booked appointments count as taken
         const appts = await query('SELECT time FROM team_appointments WHERE date=?', [date]);
         for (const r of appts) if (r.time && !booked.includes(r.time)) booked.push(r.time);
+        // Also the durable public-booking table (survives serverless cold starts)
+        try {
+          const { query: mainQuery } = require('./_db');
+          const pub = await mainQuery("SELECT appointment_time AS t FROM appointments WHERE appointment_date=? AND status != 'CANCELLED'", [date]);
+          for (const r of pub) if (r.t && !booked.includes(r.t)) booked.push(r.t);
+        } catch (_) {}
 
         // 2) Booking-availability hours: default from settings, overridden per-day
         const openRow  = await queryOne("SELECT value FROM site_settings WHERE key='book_open_time'").catch(() => null);
@@ -66,7 +72,17 @@ module.exports = async (req, res) => {
         }
       } catch (_) { /* ignore — fall back to in-memory blocks + full slots */ }
     }
-    return res.json({ blocks, booked, all_slots: allSlots });
+    // Minimum advance notice (hours) so the booking page can hide slots too
+    // close to now. Appointments are 2 hours each — the page uses this + the
+    // 2-hour rule to keep the calendar accurate.
+    let minAdvance = 0;
+    try {
+      const { queryOne, ensureTables } = require('./_team-db');
+      await ensureTables();
+      const advRow = await queryOne("SELECT value FROM site_settings WHERE key='min_advance_hours'");
+      minAdvance = advRow ? Number(advRow.value) || 0 : 0;
+    } catch (_) {}
+    return res.json({ blocks, booked, all_slots: allSlots, min_advance_hours: minAdvance, appt_hours: 2 });
   }
 
   if (!auth(req)) return res.status(401).json({ error: 'Unauthorized' });

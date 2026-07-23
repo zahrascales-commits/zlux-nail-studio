@@ -1,5 +1,5 @@
 const { services, addons, bookings, ALL_SLOTS, incId } = require('./_store');
-const { queryOne, execute } = require('./_db');
+const { queryOne, query, execute } = require('./_db');
 const { notifyNewAppointment } = require('./_notify');
 const { upsertClient } = require('./_clients');
 const teamDb = require('./_team-db');
@@ -152,6 +152,26 @@ module.exports = async (req, res) => {
     if (!customer_name || !customer_email || !customer_phone || !service_name || !date || !time_slot)
       return res.status(400).json({ error: 'All fields are required' });
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
+
+    // 2-hour spacing: every appointment occupies 2 hours, so reject a start
+    // that overlaps an existing one (within 2h). Checks the durable tables so
+    // two people can't grab the same window. Back-to-back services (exactly
+    // 2h apart) are allowed.
+    try {
+      const toMin = t => { const [h, m] = String(t).split(':').map(Number); return h * 60 + (m || 0); };
+      const newStart = toMin(time_slot);
+      const taken = [];
+      const a1 = await query("SELECT appointment_time AS t FROM appointments WHERE appointment_date=? AND status != 'CANCELLED'", [date]).catch(() => []);
+      for (const r of a1) if (r.t) taken.push(toMin(r.t));
+      try {
+        await teamDb.ensureTables();
+        const a2 = await teamDb.query('SELECT time AS t FROM team_appointments WHERE date=?', [date]);
+        for (const r of a2) if (r.t) taken.push(toMin(r.t));
+      } catch (_) {}
+      if (taken.some(e => Math.abs(e - newStart) < 120)) {
+        return res.status(409).json({ error: 'That time was just taken — please pick another open time.' });
+      }
+    } catch (_) {}
 
     // Enforce monthly service limits for members
     if (member_id && member_tier) {
