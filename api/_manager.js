@@ -163,6 +163,71 @@ module.exports = async function (req, res) {
       return res.json({ ok: true });
     }
 
+    // ── PERSONAL BLOCKS (GlossGenius-style: block time for a person) ──
+    if (method === 'GET' && action === 'blocks') {
+      const from = req.query.from || new Date().toISOString().slice(0, 10);
+      const rows = await query('SELECT * FROM personal_blocks WHERE date >= ? ORDER BY date, start_time', [from]);
+      return res.json({ blocks: rows });
+    }
+
+    if (method === 'POST' && action === 'block') {
+      const { member_id, member_name, dates, all_day, start_time, end_time, note } = req.body || {};
+      const dateList = Array.isArray(dates) ? dates : (dates ? [dates] : []);
+      if (!dateList.length) return res.status(400).json({ error: 'At least one date is required' });
+      if (!all_day && (!start_time || !end_time)) return res.status(400).json({ error: 'Start and end time required (or choose all day)' });
+      for (const date of dateList) {
+        await execute(
+          'INSERT INTO personal_blocks (member_id, member_name, date, all_day, start_time, end_time, note, created_ts) VALUES (?,?,?,?,?,?,?,?)',
+          [member_id ? Number(member_id) : null, member_name || '', date, all_day ? 1 : 0, all_day ? null : start_time, all_day ? null : end_time, note || '', Date.now()]
+        );
+      }
+      return res.json({ ok: true, count: dateList.length });
+    }
+
+    if (method === 'DELETE' && action === 'block') {
+      const { id } = req.body || {};
+      await execute('DELETE FROM personal_blocks WHERE id=?', [Number(id)]);
+      return res.json({ ok: true });
+    }
+
+    // ── PER-DAY HOURS OVERRIDE (open later / close earlier / closed one day) ──
+    if (method === 'GET' && action === 'day_hours') {
+      const from = req.query.from || new Date().toISOString().slice(0, 10);
+      const rows = await query('SELECT * FROM day_hours WHERE date >= ? ORDER BY date', [from]);
+      return res.json({ day_hours: rows });
+    }
+
+    if (method === 'POST' && action === 'day_hours') {
+      const { date, open_time, close_time, closed } = req.body || {};
+      if (!date) return res.status(400).json({ error: 'date required' });
+      await execute(
+        'INSERT INTO day_hours (date, open_time, close_time, closed) VALUES (?,?,?,?) ON CONFLICT(date) DO UPDATE SET open_time=excluded.open_time, close_time=excluded.close_time, closed=excluded.closed',
+        [date, open_time || null, close_time || null, closed ? 1 : 0]
+      );
+      return res.json({ ok: true });
+    }
+
+    if (method === 'DELETE' && action === 'day_hours') {
+      const { date } = req.body || {};
+      await execute('DELETE FROM day_hours WHERE date=?', [date]);
+      return res.json({ ok: true });
+    }
+
+    // ── DEFAULT BOOKING-AVAILABILITY HOURS (which slots the calendar offers) ──
+    if (method === 'GET' && action === 'booking_hours') {
+      const o = await queryOne("SELECT value FROM site_settings WHERE key='book_open_time'");
+      const c = await queryOne("SELECT value FROM site_settings WHERE key='book_close_time'");
+      return res.json({ open_time: (o && o.value) || '08:00', close_time: (c && c.value) || '22:00' });
+    }
+
+    if (method === 'POST' && action === 'booking_hours') {
+      const { open_time, close_time } = req.body || {};
+      for (const [k, v] of [['book_open_time', open_time], ['book_close_time', close_time]]) {
+        if (v) await execute('INSERT INTO site_settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', [k, String(v)]);
+      }
+      return res.json({ ok: true });
+    }
+
     if (method === 'POST' && action === 'add_member') {
       const { name, role, color, phone, email, bio, title, show_on_site } = req.body || {};
       if (!name) return res.status(400).json({ error: 'Name required' });

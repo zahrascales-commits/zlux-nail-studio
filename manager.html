@@ -375,7 +375,11 @@
           <div class="page-title">Calendar</div>
           <div class="page-desc">Month, week, or day — color-coded by artist. Tap any day to zoom in, tap any appointment to edit or reassign. Everything syncs to your team's portals instantly.</div>
         </div>
-        <button class="btn btn-gold" onclick="openApptModal()">+ New Appointment</button>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="openBlockModal()">⛔ Personal Block</button>
+          <button class="btn btn-ghost btn-sm" onclick="openDayHoursModal()">🕐 Day Hours</button>
+          <button class="btn btn-gold" onclick="openApptModal()">+ New Appointment</button>
+        </div>
       </div>
       <div class="cal-toolbar">
         <div class="view-switch">
@@ -402,6 +406,15 @@
       <div id="schedule-list" style="display:none"></div>
       <div id="upcoming-wrap" style="display:none"></div>
       <div class="legend" id="cal-legend"></div>
+
+      <div class="page-head" style="margin-top:2rem;">
+        <div>
+          <div class="page-title" style="font-size:1.1rem;">Personal Blocks &amp; Day Hours ⛔</div>
+          <div class="page-desc">Time you've blocked off, and days with special open/close hours. Blocked time and closed hours are hidden from the public booking calendar automatically.</div>
+        </div>
+      </div>
+      <div id="blocks-list" style="display:grid;gap:0.5rem;margin-bottom:0.8rem;"></div>
+      <div id="dayhours-list" style="display:grid;gap:0.5rem;"></div>
     </section>
 
     <!-- CLIENTS -->
@@ -438,8 +451,17 @@
           <input id="set-bizname" placeholder="ZOLA Nail Studio" style="margin-bottom:0.7rem" />
           <label class="fld-label">Location</label>
           <input id="set-bizloc" placeholder="Porterville, California" style="margin-bottom:0.7rem" />
-          <label class="fld-label">Working Hours (shown to clients)</label>
-          <input id="set-bizhours" placeholder="Tue–Sat · 9 AM – 6 PM · By appointment" />
+          <label class="fld-label">Public Working Hours <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">— the text shown on your website</span></label>
+          <input id="set-bizhours" placeholder="Mon–Sun · 6 AM – 10 PM · By appointment" />
+          <div style="margin-top:1.1rem;padding-top:0.9rem;border-top:1px solid var(--border)">
+            <label class="fld-label">Booking Hours <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">— the earliest/latest times clients can actually book</span></label>
+            <div style="display:flex;gap:0.6rem;align-items:center;">
+              <div style="flex:1"><div style="font-size:0.66rem;color:var(--muted);margin-bottom:0.2rem;">Open</div><select id="set-book-open"></select></div>
+              <div style="flex:1"><div style="font-size:0.66rem;color:var(--muted);margin-bottom:0.2rem;">Close</div><select id="set-book-close"></select></div>
+            </div>
+            <p style="font-size:0.72rem;color:var(--muted);margin-top:0.5rem;">These two are separate on purpose: the text above is just what people read, and these control the actual time slots the booking calendar offers. Set booking to open at 8 AM and no 6 AM/7 AM slots will appear.</p>
+            <button class="btn btn-gold btn-sm" style="margin-top:0.6rem" onclick="saveBookingHours()">Save Booking Hours</button>
+          </div>
         </div>
         <div class="site-card">
           <h3>Booking Policies</h3>
@@ -760,6 +782,57 @@
   </div>
 </div>
 
+<div class="overlay" id="modal-block">
+  <div class="modal">
+    <div class="modal-title">Personal Block</div>
+    <div class="field">
+      <label class="fld-label">For who?</label>
+      <select id="blk-who"><option value="">Whole studio (everyone)</option></select>
+    </div>
+    <div class="field two">
+      <div><label class="fld-label">From date</label><input type="date" id="blk-start" /></div>
+      <div><label class="fld-label">To date (same day = one day)</label><input type="date" id="blk-end" /></div>
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+        <input type="checkbox" id="blk-allday" onchange="toggleBlkTimes()" style="width:auto;" checked />
+        <span>Block the whole day</span>
+      </label>
+    </div>
+    <div class="field two" id="blk-times" style="display:none;">
+      <div><label class="fld-label">Start time</label><select id="blk-from-time"></select></div>
+      <div><label class="fld-label">End time</label><select id="blk-to-time"></select></div>
+    </div>
+    <div class="field"><label class="fld-label">Note (optional)</label><input id="blk-note" placeholder="e.g. Doctor appointment, vacation…" /></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-block')">Cancel</button>
+      <button class="btn btn-gold" onclick="saveBlock()">Block This Time</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-dayhours">
+  <div class="modal">
+    <div class="modal-title">Special Hours for a Day</div>
+    <div class="field"><label class="fld-label">Which day?</label><input type="date" id="dh-date" /></div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+        <input type="checkbox" id="dh-closed" onchange="toggleDhTimes()" style="width:auto;" />
+        <span>Closed all day (no bookings)</span>
+      </label>
+    </div>
+    <div class="field two" id="dh-times">
+      <div><label class="fld-label">Open at</label><select id="dh-open"></select></div>
+      <div><label class="fld-label">Close at</label><select id="dh-close"></select></div>
+    </div>
+    <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.6rem;">Only booking times inside these hours will show to clients for this day. Everything else stays on your normal hours.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-dayhours')">Cancel</button>
+      <button class="btn btn-gold" onclick="saveDayHours()">Save Day Hours</button>
+    </div>
+  </div>
+</div>
+
 <!-- APPT MODAL -->
 <div class="overlay" id="modal-appt">
   <div class="modal">
@@ -831,7 +904,7 @@ function showTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
-  if(name==='schedule')renderCal();
+  if(name==='schedule'){renderCal();loadBlocks();loadDayHours();}
   if(name==='messages')loadThreads();
   if(name==='team'){renderMembers();loadClientInspo();loadOverrides();}
   if(name==='inbox')loadInquiries();
@@ -1171,6 +1244,115 @@ async function delOverride(id){
   if(!confirm('Remove this coverage period? Full team availability returns immediately for those dates.'))return;
   await api('/api/manager',{method:'DELETE',body:JSON.stringify({action:'overrides',id})});
   toast('Removed');await loadOverrides();
+}
+
+/* ── PERSONAL BLOCKS & DAY HOURS ── */
+function timeOptions(sel,selected){
+  return SLOTS.concat(['22:00']).map(t=>`<option value="${t}" ${t===selected?'selected':''}>${fmtTime(t)}</option>`).join('');
+}
+function fillWhoSelect(){
+  const s=document.getElementById('blk-who');
+  s.innerHTML='<option value="">Whole studio (everyone)</option>'+members.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
+}
+function toggleBlkTimes(){document.getElementById('blk-times').style.display=document.getElementById('blk-allday').checked?'none':'grid';}
+function toggleDhTimes(){document.getElementById('dh-times').style.display=document.getElementById('dh-closed').checked?'none':'grid';}
+function openBlockModal(){
+  fillWhoSelect();
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('blk-start').value=today;
+  document.getElementById('blk-end').value=today;
+  document.getElementById('blk-allday').checked=true;
+  document.getElementById('blk-from-time').innerHTML=timeOptions(null,'12:00');
+  document.getElementById('blk-to-time').innerHTML=timeOptions(null,'13:00');
+  document.getElementById('blk-note').value='';
+  toggleBlkTimes();
+  openModal('modal-block');
+}
+function eachDate(start,end){
+  const out=[];let d=new Date(start+'T12:00:00');const e=new Date(end+'T12:00:00');
+  if(e<d)return[start];
+  while(d<=e){out.push(d.toISOString().slice(0,10));d.setDate(d.getDate()+1);}
+  return out;
+}
+async function saveBlock(){
+  const whoId=document.getElementById('blk-who').value;
+  const whoName=whoId?(members.find(m=>String(m.id)===String(whoId))||{}).name||'':'';
+  const start=document.getElementById('blk-start').value;
+  const end=document.getElementById('blk-end').value||start;
+  const all_day=document.getElementById('blk-allday').checked;
+  const start_time=document.getElementById('blk-from-time').value;
+  const end_time=document.getElementById('blk-to-time').value;
+  const note=document.getElementById('blk-note').value.trim();
+  if(!start){toast('Pick a date');return;}
+  if(!all_day&&start_time>=end_time){toast('End time must be after start time');return;}
+  const dates=eachDate(start,end);
+  await api('/api/manager',{method:'POST',body:JSON.stringify({action:'block',member_id:whoId||null,member_name:whoName,dates,all_day,start_time,end_time,note})});
+  toast('Time blocked');closeModal('modal-block');await loadBlocks();
+}
+async function loadBlocks(){
+  const r=await api('/api/manager?action=blocks');const d=await r.json();
+  const g=document.getElementById('blocks-list');if(!g)return;
+  const blocks=d.blocks||[];
+  if(!blocks.length){g.innerHTML='<div class="empty" style="padding:1rem">No personal blocks. Tap “Personal Block” to block off time.</div>';}
+  else{
+    g.innerHTML=blocks.map(b=>{
+      const when=Number(b.all_day)?'All day':fmtTime(b.start_time)+' – '+fmtTime(b.end_time);
+      const who=b.member_name?esc(b.member_name):'Whole studio';
+      return `<div class="member-card" style="--mc:#B6A588;">
+        <div class="mc-top">
+          <div style="flex:1"><div class="mc-name">${fmtDateLabel(b.date)}</div>
+          <div class="mc-role">${when} · ${who}${b.note?' · '+esc(b.note):''}</div></div>
+          <span class="status-pill status-off">Blocked</span>
+        </div>
+        <div class="mc-actions"><button class="btn btn-danger btn-sm" onclick="delBlock(${b.id})">Remove</button></div>
+      </div>`;
+    }).join('');
+  }
+}
+async function delBlock(id){
+  if(!confirm('Remove this block? That time reopens for booking.'))return;
+  await api('/api/manager',{method:'DELETE',body:JSON.stringify({action:'block',id})});
+  toast('Removed');await loadBlocks();
+}
+function openDayHoursModal(){
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('dh-date').value=today;
+  document.getElementById('dh-closed').checked=false;
+  document.getElementById('dh-open').innerHTML=timeOptions(null,'08:00');
+  document.getElementById('dh-close').innerHTML=timeOptions(null,'22:00');
+  toggleDhTimes();
+  openModal('modal-dayhours');
+}
+async function saveDayHours(){
+  const date=document.getElementById('dh-date').value;
+  const closed=document.getElementById('dh-closed').checked;
+  const open_time=document.getElementById('dh-open').value;
+  const close_time=document.getElementById('dh-close').value;
+  if(!date){toast('Pick a day');return;}
+  if(!closed&&open_time>=close_time){toast('Close time must be after open time');return;}
+  await api('/api/manager',{method:'POST',body:JSON.stringify({action:'day_hours',date,open_time,close_time,closed})});
+  toast('Day hours saved');closeModal('modal-dayhours');await loadDayHours();
+}
+async function loadDayHours(){
+  const r=await api('/api/manager?action=day_hours');const d=await r.json();
+  const g=document.getElementById('dayhours-list');if(!g)return;
+  const rows=d.day_hours||[];
+  if(!rows.length){g.innerHTML='';return;}
+  g.innerHTML=rows.map(h=>{
+    const label=Number(h.closed)?'Closed all day':(fmtTime(h.open_time)+' – '+fmtTime(h.close_time));
+    return `<div class="member-card" style="--mc:#6B8E9E;">
+      <div class="mc-top">
+        <div style="flex:1"><div class="mc-name">${fmtDateLabel(h.date)}</div>
+        <div class="mc-role">Special hours: ${label}</div></div>
+        <span class="status-pill ${Number(h.closed)?'status-off':'status-on'}">${Number(h.closed)?'Closed':'Custom'}</span>
+      </div>
+      <div class="mc-actions"><button class="btn btn-danger btn-sm" onclick="delDayHours('${h.date}')">Reset to normal</button></div>
+    </div>`;
+  }).join('');
+}
+async function delDayHours(date){
+  await api('/api/manager',{method:'DELETE',body:JSON.stringify({action:'day_hours',date})});
+  toast('Reset to normal hours');await loadDayHours();
 }
 
 /* ── CLASSES ── */
@@ -1715,6 +1897,21 @@ async function loadSettings(){
     document.getElementById('set-policy-text').value=s.policy_text||'';
     document.getElementById('set-defview').value=s.default_view||'month';
   }catch{}
+  loadBookingHours();
+}
+async function loadBookingHours(){
+  try{
+    const r=await api('/api/manager?action=booking_hours');const d=await r.json();
+    document.getElementById('set-book-open').innerHTML=timeOptions(null,d.open_time||'08:00');
+    document.getElementById('set-book-close').innerHTML=timeOptions(null,d.close_time||'22:00');
+  }catch{}
+}
+async function saveBookingHours(){
+  const open_time=document.getElementById('set-book-open').value;
+  const close_time=document.getElementById('set-book-close').value;
+  if(open_time>=close_time){toast('Close must be after open');return;}
+  await api('/api/manager',{method:'POST',body:JSON.stringify({action:'booking_hours',open_time,close_time})});
+  toast('Booking hours saved — live on the calendar now');
 }
 function pickOwnerColor(c){
   applyOwnerColor(c);

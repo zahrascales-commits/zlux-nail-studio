@@ -142,6 +142,23 @@ async function ensureTables() {
     time_on_page_ms INTEGER DEFAULT 0,
     ts INTEGER NOT NULL
   )`);
+  await execute(`CREATE TABLE IF NOT EXISTS personal_blocks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_id INTEGER,
+    member_name TEXT DEFAULT '',
+    date TEXT NOT NULL,
+    all_day INTEGER DEFAULT 0,
+    start_time TEXT,
+    end_time TEXT,
+    note TEXT DEFAULT '',
+    created_ts INTEGER
+  )`);
+  await execute(`CREATE TABLE IF NOT EXISTS day_hours (
+    date TEXT PRIMARY KEY,
+    open_time TEXT,
+    close_time TEXT,
+    closed INTEGER DEFAULT 0
+  )`);
   // Columns added after launch — idempotent, ignored once they exist
   for (const sql of [
     "ALTER TABLE team_members ADD COLUMN phone TEXT DEFAULT ''",

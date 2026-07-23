@@ -197,6 +197,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }).catch(() => {});
   }
 
+  /* ── PUBLIC WORKING HOURS ──
+     Any [data-biz-hours] element shows the hours the owner typed in
+     Studio Manager → Settings → Public Working Hours (falls back to
+     whatever text is already in the element). */
+  const hoursEls = document.querySelectorAll('[data-biz-hours]');
+  if (hoursEls.length) {
+    fetch('/api/site-settings').then(r => r.json()).then(d => {
+      const h = d && d.settings && d.settings.biz_hours;
+      if (h) hoursEls.forEach(el => { el.textContent = h; });
+    }).catch(() => {});
+  }
+
   /* ── PUBLIC TEAM ROSTER ──
      Artists the owner flagged "Show on website" in Studio Manager appear
      on the homepage (#home-team-grid) and About page (#about-team-grid),
