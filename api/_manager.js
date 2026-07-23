@@ -100,7 +100,7 @@ module.exports = async function (req, res) {
 
     // ── SET UP $1.58 TEST MEMBERSHIP PRICE IN STRIPE (one-time) ──
     if (method === 'POST' && action === 'setup_test_tier') {
-      const sk = process.env.STRIPE_SECRET_KEY;
+      const sk = await require('./_pay').getStripeSecret();
       if (!sk) return res.status(400).json({ error: 'Stripe not configured' });
       const existing = await queryOne("SELECT value FROM site_settings WHERE key='stripe_price_test'");
       if (existing && existing.value) return res.json({ ok: true, price_id: existing.value, existed: true });

@@ -67,7 +67,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+    const stripe = Stripe(await require('./_pay').getStripeSecret());
 
     const existing = await queryOne('SELECT id, stripe_subscription_id FROM members WHERE email = ?', [email.toLowerCase().trim()]);
     if (existing) {

@@ -138,6 +138,10 @@ module.exports = async function (req, res) {
 
 module.exports.computeDeposit = computeDeposit;
 module.exports.clearStripeKeyCache = clearStripeKeyCache;
+// Shared key accessors so every Stripe caller (classes, membership signup,
+// owner utilities) uses the SAME account as the booking flow + publishable key.
+module.exports.getStripeSecret = async function () { await loadStripeKeys(); return stripeKey(); };
+module.exports.getStripePublishable = async function () { await loadStripeKeys(); return publishableKey(); };
 module.exports.verifyPaymentIntent = async function (payment_intent_id) {
   await loadStripeKeys();
   if (!stripeKey() || !payment_intent_id) return { paid: false, why: 'not configured' };

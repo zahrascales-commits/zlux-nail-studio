@@ -80,7 +80,7 @@ module.exports = async function (req, res) {
 
     // ── PUBLIC: start a purchase — price always recomputed server-side ──
     if (req.method === 'POST' && action === 'purchase_intent') {
-      const stripeKey = process.env.STRIPE_SECRET_KEY;
+      const stripeKey = await require('./_pay').getStripeSecret();
       if (!stripeKey) return res.status(400).json({ error: 'Payments not configured' });
       const { class_id, buyer_name, buyer_email } = req.body || {};
       const cls = await queryOne('SELECT * FROM classes WHERE id=? AND active=1', [Number(class_id)]);
