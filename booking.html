@@ -244,19 +244,11 @@
           <span id="member-tier-tag" class="member-tier-tag"></span>
         </div>
 
-        <!-- Birthday month (shown after Luxe verified) -->
+        <!-- Birthday upgrade — auto-detected from the birthday set at signup -->
         <div id="birthday-month-row" style="display:none;margin-top:1rem;">
-          <label class="luxury-label">Birthday Month <span style="color:var(--latte);font-weight:400;text-transform:none;letter-spacing:0;font-size:0.72rem;">(for your monthly Birthday Upgrade)</span></label>
-          <select class="luxury-input" id="birthday-month" onchange="checkBirthdayMonth()" style="background:white;">
-            <option value="">— Select your birthday month —</option>
-            <option value="1">January</option><option value="2">February</option><option value="3">March</option>
-            <option value="4">April</option><option value="5">May</option><option value="6">June</option>
-            <option value="7">July</option><option value="8">August</option><option value="9">September</option>
-            <option value="10">October</option><option value="11">November</option><option value="12">December</option>
-          </select>
-          <div id="birthday-activated" style="display:none;" class="birthday-box" style="margin-top:0.75rem;">
+          <div id="birthday-activated" class="birthday-box">
             <div class="birthday-title">🎂 Birthday Month Upgrade Unlocked</div>
-            <p style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--espresso);line-height:1.7;">Your birthday upgrade is active this month. Choose one complimentary gift at checkout: <strong>free scrub, free massage, or free removal</strong>. It'll be applied automatically.</p>
+            <p style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--espresso);line-height:1.7;">Happy birthday month! Your upgrade is active. Choose one complimentary gift at checkout: <strong>free scrub, free massage, or free removal</strong>. It'll be applied automatically.</p>
           </div>
         </div>
       </div>
@@ -580,6 +572,7 @@
 
 <script src="js/main.js"></script>
 <script src="js/analytics.js"></script>
+<script src="js/confetti.js"></script>
 <script>
 // ═══════════════════════════════════════════
 // MEMBER TIER RULES
@@ -719,7 +712,7 @@ async function validateMemberId() {
       const r = await fetch('/api/member-login?id=' + encodeURIComponent(raw));
       if (r.ok) {
         const d = await r.json();
-        member = { tier: d.tier, name: d.name };
+        member = { tier: d.tier, name: d.name, birthMonth: d.birthMonth };
       }
     } catch (_) {}
   }
@@ -750,18 +743,21 @@ async function validateMemberId() {
   // Black Card: show Atelier Access note
   document.getElementById('atelier-note').style.display = member.tier === 'BLACK_CARD' ? 'block' : 'none';
 
-  // Luxe: show birthday month field
-  document.getElementById('birthday-month-row').style.display = member.tier === 'LUXE' ? 'block' : 'none';
+  // Birthday is set ONCE at signup (from date of birth) and never editable
+  // here — we just auto-activate the gift if this is their birthday month.
+  applyBirthdayFromProfile(member);
 }
 
-function checkBirthdayMonth() {
-  const val = document.getElementById('birthday-month').value;
-  if (!val) return;
-  booking.birthdayMonth = parseInt(val);
+function applyBirthdayFromProfile(member) {
+  booking.birthdayMonth = member && member.birthMonth ? Number(member.birthMonth) : null;
   const currentMonth = new Date().getMonth() + 1;
-  booking.birthdayActive = (booking.birthdayMonth === currentMonth);
-  document.getElementById('birthday-activated').style.display = booking.birthdayActive ? 'block' : 'none';
+  booking.birthdayActive = !!(booking.birthdayMonth && booking.birthdayMonth === currentMonth);
+  // The notice only appears during their actual birthday month — no manual entry
+  const row = document.getElementById('birthday-month-row');
+  if (row) row.style.display = booking.birthdayActive ? 'block' : 'none';
 }
+// Kept for any legacy calls — birthday is now profile-derived, not user-entered
+function checkBirthdayMonth() {}
 
 function selectGuest(btn) {
   booking.type = 'guest';
@@ -1440,6 +1436,7 @@ async function submitBooking() {
   }
   succ.style.display = 'block';
   succ.scrollIntoView({ behavior: 'smooth' });
+  if (window.zolaConfetti) window.zolaConfetti();
 }
 
 window.addEventListener('scroll', () => {

@@ -120,6 +120,7 @@
 <script src="js/main.js"></script>
 <script src="js/analytics.js"></script>
 <script src="js/chatbot.js"></script>
+<script src="js/confetti.js"></script>
 <script>
 let CLASSES = [];
 let _stripe = null, _elements = null, _payEnabled = false, _activeClass = null;
@@ -218,6 +219,7 @@ async function confirmClassPurchase() {
   if (!r.ok) { showCheckoutError(d.error || 'Something went wrong confirming your purchase.'); return; }
   document.getElementById('checkout-form-wrap').style.display = 'none';
   document.getElementById('checkout-success').style.display = 'block';
+  if (window.zolaConfetti) window.zolaConfetti();
 }
 
 loadClasses();

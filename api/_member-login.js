@@ -13,9 +13,16 @@ module.exports = async (req, res) => {
     const id = (req.query.id || '').toUpperCase().trim();
     if (!id) return res.status(400).json({ error: 'Member ID required.' });
     try {
-      const member = await queryOne('SELECT tier, full_name FROM members WHERE member_id = ?', [id]);
+      const member = await queryOne('SELECT tier, full_name, date_of_birth FROM members WHERE member_id = ?', [id]);
       if (!member) return res.status(404).json({ error: 'Member not found.' });
-      return res.status(200).json({ valid: true, tier: member.tier, name: member.full_name });
+      // Birthday month is derived from the date-of-birth set once at signup —
+      // never re-entered or editable, so members can't shift it around.
+      let birthMonth = null;
+      if (member.date_of_birth) {
+        const m = String(member.date_of_birth).match(/^(\d{4})-(\d{2})/);
+        if (m) birthMonth = parseInt(m[2], 10);
+      }
+      return res.status(200).json({ valid: true, tier: member.tier, name: member.full_name, birthMonth });
     } catch (err) {
       return res.status(500).json({ error: 'Lookup failed.' });
     }

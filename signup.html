@@ -352,7 +352,7 @@
       <div class="form-field">
         <label>Date of Birth</label>
         <input type="date" id="dob" />
-        <div class="hint">Used for your Birthday Month Upgrade. Never shared.</div>
+        <div class="hint">Used for your Birthday Month Upgrade — set once, applied automatically each year. Never shared.</div>
       </div>
       <div class="form-field">
         <label>Create Password <span style="color:#b43232;">*</span></label>
@@ -485,6 +485,7 @@
 
 <script src="js/main.js"></script>
 <script src="js/analytics.js"></script>
+<script src="js/confetti.js"></script>
 <script>
   // ─── State ───
   let selectedTier = '';
@@ -728,6 +729,7 @@
       else if (i === n) c.classList.add('active');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (n === 4 && signupData.memberId && window.zolaConfetti) window.zolaConfetti();
   }
 
   window.addEventListener('scroll', () => { document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60); });
