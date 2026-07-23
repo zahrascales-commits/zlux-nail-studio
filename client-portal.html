@@ -40,6 +40,13 @@
     .tier-badge.LUXE { background:rgba(182,165,136,0.12); color:var(--champagne); }
     .tier-badge.BLACK_CARD { background:var(--espresso); color:var(--champagne); }
     .p-card { background:#fff; border:1px solid rgba(182,165,136,0.15); padding:1.75rem; margin-bottom:1.25rem; }
+    .accent-dot { display:inline-block; width:20px; height:20px; border-radius:50%; cursor:pointer; margin:0 0.15rem; vertical-align:middle; border:2px solid transparent; transition:transform 0.15s; }
+    .accent-dot:hover { transform:scale(1.2); }
+    #health-stars span { transition:transform 0.1s; }
+    #health-stars span:hover { transform:scale(1.15); }
+    .health-entry { display:flex; align-items:center; gap:0.9rem; padding:0.75rem 0; border-bottom:1px solid rgba(182,165,136,0.12); }
+    .health-entry:last-child { border-bottom:none; }
+    .health-stars-sm { color:var(--champagne); font-size:0.95rem; letter-spacing:0.05em; }
     .p-card-title { font-family:'Josefin Sans',sans-serif; font-size:0.65rem; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--latte); margin-bottom:1rem; }
     .stat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:1rem; margin-bottom:1.5rem; }
     .stat-box { background:var(--soft-white); border:1px solid rgba(182,165,136,0.12); padding:1.25rem; text-align:center; }
@@ -120,6 +127,7 @@
         <button onclick="showTab('tab-book')" id="nav-book">Book</button>
         <button onclick="showTab('tab-qr')" id="nav-qr">My QR</button>
         <button onclick="showTab('tab-history')" id="nav-history">History</button>
+        <button onclick="showTab('tab-health')" id="nav-health" style="display:none;">Nail Health</button>
         <button onclick="showTab('tab-messages')" id="nav-messages">Messages</button>
         <button onclick="showTab('tab-profile')" id="nav-profile">Profile</button>
         <button onclick="doLogout()" style="color:rgba(140,122,94,0.5);">Sign Out</button>
@@ -130,15 +138,27 @@
   <div class="portal-content">
 
     <div class="portal-tab active" id="tab-home">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:2rem;">
-        <div>
-          <div style="font-family:'Cinzel',serif;font-size:2rem;color:var(--espresso);">Welcome back, <span id="member-first-name">—</span>.</div>
-          <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.35rem;">
+      <!-- Social-profile-style header -->
+      <div id="profile-hero" style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;margin-bottom:1.75rem;padding:1.5rem;background:linear-gradient(135deg,rgba(182,165,136,0.10),rgba(182,165,136,0.02));border:1px solid rgba(182,165,136,0.2);">
+        <div id="profile-avatar" style="width:78px;height:78px;border-radius:50%;background:linear-gradient(135deg,#C9B896,#8C7A5E);display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:2rem;color:#1A140C;flex-shrink:0;">—</div>
+        <div style="flex:1;min-width:180px;">
+          <div style="font-family:'Cinzel',serif;font-size:1.7rem;color:var(--espresso);line-height:1.1;"><span id="member-first-name">—</span></div>
+          <div style="display:flex;align-items:center;gap:0.6rem;margin-top:0.4rem;flex-wrap:wrap;">
             <span id="member-id-badge" style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:var(--latte);"></span>
             <span id="tier-badge" class="tier-badge"></span>
+            <span id="member-since-badge" style="font-family:'Josefin Sans',sans-serif;font-size:0.68rem;color:var(--latte);"></span>
           </div>
         </div>
         <a href="booking.html" style="background:var(--champagne);color:var(--espresso);font-family:'Josefin Sans',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;padding:0.7rem 1.25rem;text-decoration:none;">Book Appointment</a>
+      </div>
+      <div id="bc-customize" style="display:none;margin:-0.75rem 0 1.5rem;font-family:'Josefin Sans',sans-serif;font-size:0.75rem;color:var(--latte);">
+        <span style="margin-right:0.5rem;">Make it yours:</span>
+        <span class="accent-dot" onclick="setAccent('#B6A588')" style="background:#B6A588"></span>
+        <span class="accent-dot" onclick="setAccent('#B5838D')" style="background:#B5838D"></span>
+        <span class="accent-dot" onclick="setAccent('#6B8E9E')" style="background:#6B8E9E"></span>
+        <span class="accent-dot" onclick="setAccent('#9E6B8E')" style="background:#9E6B8E"></span>
+        <span class="accent-dot" onclick="setAccent('#8E9E6B')" style="background:#8E9E6B"></span>
+        <span class="accent-dot" onclick="setAccent('#C98B6B')" style="background:#C98B6B"></span>
       </div>
       <div class="countdown-strip" id="countdown-strip" style="display:none;">
         <div>
@@ -154,6 +174,15 @@
         <div class="stat-box"><div class="stat-num" id="stat-upcoming">—</div><div class="stat-label">Upcoming Appointments</div></div>
         <div class="stat-box"><div class="stat-num" id="stat-next-billing-day">—</div><div class="stat-label">Next Billing Date</div></div>
         <div class="stat-box" style="cursor:pointer;" onclick="showTab('tab-profile')"><div class="stat-num" id="stat-referrals">0</div><div class="stat-label">Referrals Made</div></div>
+      </div>
+      <!-- "Last service → what's next" prompt (all tiers) -->
+      <div class="p-card" id="last-service-card" style="display:none;background:linear-gradient(135deg,rgba(182,165,136,0.08),transparent);">
+        <div class="p-card-title">Ready for next month?</div>
+        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.86rem;color:var(--latte);line-height:1.7;margin-bottom:1rem;">Last time you had <strong id="last-service-name" style="color:var(--espresso);">—</strong><span id="last-service-when"></span>. Keep the momentum on your nail health — book your next visit.</div>
+        <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+          <a id="book-again-btn" href="booking.html" style="background:var(--champagne);color:var(--espresso);font-family:'Josefin Sans',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;padding:0.7rem 1.25rem;text-decoration:none;">Book this again</a>
+          <a href="booking.html" style="border:1px solid rgba(182,165,136,0.4);color:var(--latte);font-family:'Josefin Sans',sans-serif;font-size:0.7rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;padding:0.7rem 1.25rem;text-decoration:none;">Book something new</a>
+        </div>
       </div>
       <div class="p-card">
         <div class="p-card-title">Upcoming Appointments</div>
@@ -200,6 +229,25 @@
       <div class="p-card">
         <div class="p-card-title">All Appointments</div>
         <div id="history-list"><div style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);">No history yet.</div></div>
+      </div>
+    </div>
+
+    <div class="portal-tab" id="tab-health">
+      <h2 style="font-family:'Cinzel',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:0.4rem;">Your Nail Health</h2>
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:var(--latte);margin-bottom:1.5rem;max-width:560px;">A little journal, just for you. Log how your nails feel each visit and watch them get stronger over time — the whole point of the ZOLA method.</p>
+      <div id="health-trend" class="p-card" style="display:none;text-align:center;background:linear-gradient(135deg,rgba(182,165,136,0.12),transparent);"></div>
+      <div class="p-card">
+        <div class="p-card-title">How are your nails feeling today?</div>
+        <div id="health-stars" style="display:flex;gap:0.35rem;margin:0.5rem 0 1rem;font-size:2rem;cursor:pointer;">
+          <span data-r="1">☆</span><span data-r="2">☆</span><span data-r="3">☆</span><span data-r="4">☆</span><span data-r="5">☆</span>
+        </div>
+        <textarea id="health-note" rows="2" placeholder="Optional — stronger this month? less breakage? longer? Note anything you notice." style="width:100%;background:var(--soft-white);border:1px solid rgba(182,165,136,0.25);padding:0.75rem 1rem;font-family:'Josefin Sans',sans-serif;font-size:0.85rem;outline:none;resize:vertical;"></textarea>
+        <button class="btn-login" style="margin-top:0.75rem;" onclick="logHealth()">Log this check-in</button>
+        <div id="health-msg" style="display:none;font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:#3c8c50;margin-top:0.5rem;"></div>
+      </div>
+      <div class="p-card">
+        <div class="p-card-title">Your journey</div>
+        <div id="health-timeline"><div style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);">No check-ins yet. Your first one starts the story ✦</div></div>
       </div>
     </div>
 
@@ -284,11 +332,25 @@ async function loadDashboard(member) {
   document.getElementById('portal-login').style.display = 'none';
   document.getElementById('portal-dashboard').style.display = 'block';
   profileData = member;
-  document.getElementById('member-first-name').textContent = member.fullName.split(' ')[0];
-  document.getElementById('member-id-badge').textContent = member.memberId;
+  const first = member.fullName.split(' ')[0];
+  document.getElementById('member-first-name').textContent = first;
+  document.getElementById('member-id-badge').textContent = '@' + member.memberId;
+  document.getElementById('profile-avatar').textContent = (first[0] || '?').toUpperCase();
   const tb = document.getElementById('tier-badge');
   tb.textContent = { SIGNATURE:'Signature Club', LUXE:'Luxe Club', BLACK_CARD:'Black Card' }[member.tier] || member.tier;
   tb.className = 'tier-badge ' + member.tier;
+  if (member.memberSince) {
+    document.getElementById('member-since-badge').textContent = '· Member since ' + new Date(member.memberSince).toLocaleDateString('en-US',{month:'short',year:'numeric'});
+  }
+
+  // Black Card perks: Nail Health tab + portal customization
+  if (member.tier === 'BLACK_CARD') {
+    document.getElementById('nav-health').style.display = '';
+    document.getElementById('bc-customize').style.display = 'block';
+    const saved = localStorage.getItem('zlux_accent_' + member.memberId);
+    if (saved) applyAccent(saved);
+    loadHealth();
+  }
 
   try {
     const r = await fetch('/api/member-profile', { headers: {'Authorization':'Bearer '+authToken} });
@@ -353,6 +415,14 @@ function populatePortal(d) {
   const hl = document.getElementById('history-list');
   if (history.length) {
     hl.innerHTML = history.map(h=>`<div class="appt-row"><div class="appt-date">${new Date(h.created_at).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</div><div class="appt-detail">${[h.service,h.shape,h.length,h.color].filter(Boolean).join(' · ')}</div></div>`).join('');
+    // "Last service → what's next" prompt on the home tab
+    const last = history[0];
+    if (last && last.service) {
+      document.getElementById('last-service-card').style.display = 'block';
+      document.getElementById('last-service-name').textContent = last.service;
+      document.getElementById('last-service-when').textContent = ' on ' + new Date(last.created_at).toLocaleDateString('en-US',{month:'long',day:'numeric'});
+      document.getElementById('book-again-btn').href = 'booking.html?rebook=' + encodeURIComponent(last.service);
+    }
   }
 
   if (announcements.length) {
@@ -386,9 +456,86 @@ function showTab(id) {
   document.querySelectorAll('.portal-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.querySelectorAll('.portal-nav-links button').forEach(b=>b.classList.remove('active'));
-  const map = {'tab-home':'nav-home','tab-book':'nav-book','tab-qr':'nav-qr','tab-history':'nav-history','tab-messages':'nav-messages','tab-profile':'nav-profile'};
+  const map = {'tab-home':'nav-home','tab-book':'nav-book','tab-qr':'nav-qr','tab-history':'nav-history','tab-health':'nav-health','tab-messages':'nav-messages','tab-profile':'nav-profile'};
   if (map[id]) document.getElementById(map[id]).classList.add('active');
   if (id === 'tab-qr') startQrCycle();
+  if (id === 'tab-health') loadHealth();
+}
+
+// ── Portal customization (Black Card) ──
+function applyAccent(color) {
+  document.documentElement.style.setProperty('--champagne', color);
+  const av = document.getElementById('profile-avatar');
+  if (av) av.style.background = 'linear-gradient(135deg,' + color + ',#8C7A5E)';
+  const hero = document.getElementById('profile-hero');
+  if (hero) hero.style.background = 'linear-gradient(135deg,' + color + '22,' + color + '05)';
+}
+function setAccent(color) {
+  applyAccent(color);
+  if (profileData && profileData.memberId) localStorage.setItem('zlux_accent_' + profileData.memberId, color);
+}
+
+// ── Nail Health tracker (Black Card) ──
+let healthRating = 0;
+document.addEventListener('click', e => {
+  const s = e.target.closest && e.target.closest('#health-stars span');
+  if (!s) return;
+  healthRating = Number(s.dataset.r);
+  document.querySelectorAll('#health-stars span').forEach(x => { x.textContent = Number(x.dataset.r) <= healthRating ? '★' : '☆'; });
+});
+async function loadHealth() {
+  if (!authToken) return;
+  try {
+    const r = await fetch('/api/nail-health', { headers:{'Authorization':'Bearer '+authToken} });
+    if (!r.ok) return;
+    const d = await r.json();
+    renderHealth(d);
+  } catch (_) {}
+}
+function starStr(n) { return '★★★★★☆☆☆☆☆'.slice(5 - n, 10 - n); }
+function renderHealth(d) {
+  const entries = d.entries || [];
+  const tl = document.getElementById('health-timeline');
+  const trendBox = document.getElementById('health-trend');
+  if (!entries.length) {
+    tl.innerHTML = '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.85rem;color:var(--latte);">No check-ins yet. Your first one starts the story ✦</div>';
+    trendBox.style.display = 'none';
+    return;
+  }
+  if (entries.length > 1) {
+    trendBox.style.display = 'block';
+    const t = d.trend;
+    const msg = t > 0 ? `Your nails are <strong style="color:var(--champagne);">healthier</strong> than when you started — up ${t} point${t!==1?'s':''} ✦ Keep going.`
+      : t === 0 ? 'Holding steady — consistency is how nails truly grow. ✦'
+      : 'A dip this stretch — let\'s talk about it at your next visit so we can adjust.';
+    trendBox.innerHTML = `<div style="font-family:'Cinzel',serif;font-size:1.1rem;color:var(--espresso);margin-bottom:0.35rem;">${entries.length} check-ins logged</div><div style="font-family:'Josefin Sans',sans-serif;font-size:0.86rem;color:var(--latte);line-height:1.6;">${msg}</div>`;
+  } else {
+    trendBox.style.display = 'none';
+  }
+  tl.innerHTML = entries.slice().reverse().map(e => `
+    <div class="health-entry">
+      <div class="health-stars-sm">${starStr(e.rating)}</div>
+      <div style="flex:1;">
+        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.75rem;color:var(--latte);">${new Date(e.created_at.replace(' ','T')+'Z').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</div>
+        ${e.note ? `<div style="font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:var(--espresso);margin-top:0.15rem;">${e.note.replace(/</g,'&lt;')}</div>` : ''}
+      </div>
+    </div>`).join('');
+}
+async function logHealth() {
+  if (!healthRating) { const m=document.getElementById('health-msg'); m.style.display='block'; m.style.color='#b43232'; m.textContent='Tap a star first — how do your nails feel?'; return; }
+  const note = document.getElementById('health-note').value.trim();
+  try {
+    const r = await fetch('/api/nail-health', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+authToken}, body: JSON.stringify({ rating: healthRating, note }) });
+    const d = await r.json();
+    const m = document.getElementById('health-msg');
+    m.style.display = 'block';
+    if (r.ok) {
+      m.style.color = '#3c8c50'; m.textContent = 'Logged ✦ Your journey is updating.';
+      healthRating = 0; document.getElementById('health-note').value = '';
+      document.querySelectorAll('#health-stars span').forEach(x => x.textContent = '☆');
+      loadHealth();
+    } else { m.style.color = '#b43232'; m.textContent = d.error || 'Could not save — try again.'; }
+  } catch (_) {}
 }
 
 function startQrCycle() {
