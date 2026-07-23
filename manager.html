@@ -186,16 +186,17 @@
   .view-switch{display:flex;border:1px solid var(--border);overflow:hidden}
   .view-switch button{background:transparent;border:none;color:var(--muted);padding:0.5rem 1rem;font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;transition:all 0.2s}
   .view-switch button.on{background:var(--gold);color:#0B0B0B;font-weight:700}
-  .cal-month{background:var(--card);border:1px solid var(--border);animation:fadeUp 0.35s ease}
-  .cal-dows{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border)}
-  .cal-dows div{padding:0.6rem 0.4rem;text-align:center;font-size:0.56rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted)}
+  .cal-month{background:var(--surface);border:1px solid var(--border-hi);border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.45);animation:fadeUp 0.35s ease}
+  .cal-dows{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border-hi);background:var(--card-hi)}
+  .cal-dows div{padding:0.6rem 0.4rem;text-align:center;font-size:0.58rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--latte);font-weight:600}
   .cal-cells{display:grid;grid-template-columns:repeat(7,1fr)}
-  .cal-cell{min-height:96px;border-right:1px solid rgba(182,165,136,0.07);border-bottom:1px solid rgba(182,165,136,0.07);padding:0.35rem;cursor:pointer;transition:background 0.15s;position:relative}
+  .cal-cell{min-height:96px;border-right:1px solid rgba(182,165,136,0.12);border-bottom:1px solid rgba(182,165,136,0.12);padding:0.35rem;cursor:pointer;transition:background 0.15s;position:relative}
   .cal-cell:hover{background:var(--gold-faint)}
-  .cal-cell.off{opacity:0.32}
+  .cal-cell.off{opacity:0.28}
+  .cal-cell.today{background:rgba(182,165,136,0.10)}
   .cal-cell.today .cal-num{background:var(--gold);color:#0B0B0B;font-weight:700}
-  .cal-cell.sel{outline:1px solid var(--gold);outline-offset:-1px}
-  .cal-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:0.7rem;color:var(--cream);margin-bottom:0.25rem}
+  .cal-cell.sel{outline:2px solid var(--gold);outline-offset:-2px}
+  .cal-num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:0.74rem;color:var(--cream);font-weight:500;margin-bottom:0.25rem}
   .cal-chip{display:block;font-size:0.6rem;line-height:1.35;padding:0.12rem 0.35rem;margin-bottom:2px;color:#0B0B0B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:2px;font-weight:600}
   .cal-more{font-size:0.56rem;color:var(--gold)}
   .cal-week{display:grid;grid-template-columns:52px repeat(7,1fr);background:var(--card);border:1px solid var(--border);animation:fadeUp 0.35s ease;overflow-x:auto}
@@ -286,15 +287,45 @@
 
   @media(max-width:760px){
     .inbox-layout,.site-grid,.set-grid{grid-template-columns:1fr}
-    .cal-cell{min-height:64px}
     .bell-drop{width:280px}
-  }
-
-  @media(max-width:760px){
     .msg-layout{grid-template-columns:1fr}
     .thread-list{max-height:220px}
     .appt{flex-wrap:wrap}
     .brand small{display:none}
+
+    /* ── Mobile app polish: fit the phone, make everything pop ── */
+    .wrap{padding:1.1rem 0.9rem 5rem}
+    /* Tabs: one tidy scrolling row instead of 3 wrapping lines */
+    .tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:0.15rem;padding:0.5rem 0.9rem 0;scrollbar-width:none}
+    .tabs::-webkit-scrollbar{display:none}
+    .tab{white-space:nowrap;padding:0.6rem 0.8rem;font-size:0.66rem;letter-spacing:0.1em}
+    /* Cards become clearly elevated surfaces so they stop blending in */
+    .site-card,.member-card,.panel .empty,.inq-detail,.thread-list,#blocks-list>div,#dayhours-list>div,#overrides-list>div,#classes-list>div{
+      background:var(--card-hi)!important;border:1px solid var(--border-hi)!important;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,0.4)}
+    .stat-card{background:var(--card-hi);border:1px solid var(--border-hi);border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,0.35)}
+    /* Calendar: bigger, brighter, unmistakably a calendar */
+    .cal-cell{min-height:52px;padding:0.2rem}
+    .cal-num{width:26px;height:26px;font-size:0.8rem}
+    .cal-chip{font-size:0.54rem}
+    .cal-week{overflow-x:auto}
+    /* Page headers stack cleanly; action buttons go full width and tappable */
+    .page-head{flex-direction:column;align-items:stretch;gap:0.7rem}
+    .page-head>div:first-child{min-width:0}
+    .page-head>button,.page-head>.btn{width:100%}
+    .page-head>div:last-child{display:flex;flex-wrap:wrap;gap:0.5rem}
+    .page-head>div:last-child>.btn,.page-head>div:last-child>button{flex:1 1 130px}
+    /* Toolbar controls fill the width and wrap nicely */
+    .cal-toolbar{gap:0.5rem}
+    .view-switch{width:100%;border-radius:10px}
+    .view-switch button{flex:1;padding:0.6rem 0.4rem}
+    .date-nav{flex:1;justify-content:space-between}
+    .cal-toolbar .btn,.cal-toolbar .mini-select,.cal-toolbar label{min-height:42px;display:flex;align-items:center;justify-content:center}
+    /* Comfortable tap targets everywhere */
+    .btn{min-height:42px}
+    .field input,.field select,.field textarea,.site-card input,.site-card select,.site-card textarea{padding:0.8rem 0.85rem;font-size:16px}
+    select,input{font-size:16px} /* stops iOS zoom-on-focus */
+    .modal{width:calc(100vw - 1.4rem);max-width:100%;margin:0 0.7rem;border-radius:14px}
+    .page-title{font-size:1.35rem}
   }
 </style>
 </head>
