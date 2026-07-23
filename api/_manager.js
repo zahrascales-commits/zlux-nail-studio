@@ -217,6 +217,23 @@ module.exports = async function (req, res) {
       return res.json({ ok: true });
     }
 
+    // ── WHERE PEOPLE HEARD ABOUT US (from membership signups) ──
+    if (method === 'GET' && action === 'heard_about') {
+      const LABELS = { instagram: 'Instagram', friend: 'Friend or family', google: 'Google', tiktok: 'TikTok', celebrity: 'Saw a celebrity client', other: 'Other', '': 'Not specified' };
+      let rows = [];
+      try { rows = await query('SELECT heard_about, COUNT(*) AS n FROM members GROUP BY heard_about'); } catch (_) {}
+      const counts = {};
+      let total = 0;
+      for (const r of rows) {
+        const key = (r.heard_about || '').toLowerCase();
+        const label = LABELS[key] || (r.heard_about || 'Not specified');
+        counts[label] = (counts[label] || 0) + Number(r.n);
+        total += Number(r.n);
+      }
+      const sources = Object.entries(counts).map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count);
+      return res.json({ sources, total });
+    }
+
     // ── PERSONAL BLOCKS (GlossGenius-style: block time for a person) ──
     if (method === 'GET' && action === 'blocks') {
       const from = req.query.from || new Date().toISOString().slice(0, 10);

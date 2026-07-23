@@ -160,6 +160,14 @@
         <span class="accent-dot" onclick="setAccent('#8E9E6B')" style="background:#8E9E6B"></span>
         <span class="accent-dot" onclick="setAccent('#C98B6B')" style="background:#C98B6B"></span>
       </div>
+      <!-- Appointments-left notification -->
+      <div id="appts-left-banner" style="display:none;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:1rem 1.25rem;margin-bottom:1.25rem;border:1px solid rgba(182,165,136,0.3);">
+        <div>
+          <div id="appts-left-headline" style="font-family:'Cinzel',serif;font-size:1.25rem;color:var(--espresso);"></div>
+          <div id="appts-left-sub" style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--latte);margin-top:0.15rem;"></div>
+        </div>
+        <a id="appts-left-cta" href="booking.html" style="background:var(--champagne);color:var(--espresso);font-family:'Josefin Sans',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;padding:0.65rem 1.15rem;text-decoration:none;white-space:nowrap;">Book Now</a>
+      </div>
       <div class="countdown-strip" id="countdown-strip" style="display:none;">
         <div>
           <div class="countdown-label">Your Booking Window Opens In</div>
@@ -386,7 +394,29 @@ async function loadDashboard(member) {
 function populatePortal(d) {
   const { member, preferences, history, upcoming, announcements, messages, usage } = d;
   const tierMax = { SIGNATURE:1, LUXE:2, BLACK_CARD:2 }[member.tier] || 1;
-  document.getElementById('stat-services-left').textContent = Math.max(0, tierMax - (usage.services_used || 0));
+  const left = Math.max(0, tierMax - (usage.services_used || 0));
+  document.getElementById('stat-services-left').textContent = left;
+
+  // Prominent appointments-left notification
+  const banner = document.getElementById('appts-left-banner');
+  const cta = document.getElementById('appts-left-cta');
+  banner.style.display = 'flex';
+  if (left > 0) {
+    banner.style.background = 'linear-gradient(135deg,rgba(182,165,136,0.14),transparent)';
+    document.getElementById('appts-left-headline').textContent =
+      left + ' appointment' + (left === 1 ? '' : 's') + ' left this month';
+    document.getElementById('appts-left-sub').textContent =
+      'Your ' + ({SIGNATURE:'Signature',LUXE:'Luxe',BLACK_CARD:'Black Card'}[member.tier] || '') + ' membership includes ' + tierMax + ' service' + (tierMax === 1 ? '' : 's') + ' a month. Use ' + (left === 1 ? 'it' : 'them') + ' before they reset.';
+    cta.style.display = 'inline-block';
+    cta.textContent = 'Book Now';
+  } else {
+    banner.style.background = 'rgba(140,122,94,0.08)';
+    document.getElementById('appts-left-headline').textContent = '0 appointments left this month';
+    document.getElementById('appts-left-sub').textContent =
+      'You\'ve used all ' + tierMax + ' included service' + (tierMax === 1 ? '' : 's') + ' this month. Extra visits are available at the regular price, and your services reset next billing date.';
+    cta.style.display = 'inline-block';
+    cta.textContent = 'Book Extra';
+  }
   document.getElementById('stat-upcoming').textContent = upcoming.length;
   document.getElementById('stat-next-billing-day').textContent = member.nextBilling ? new Date(member.nextBilling).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
 

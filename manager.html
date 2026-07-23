@@ -691,6 +691,11 @@
           <p>How far people scroll on average before stopping, per page. A low number on a page with real content below the fold means people are giving up early — that's the page to fix first.</p>
           <div id="tr-scroll-pages" style="display:grid;gap:0.4rem;margin-top:0.8rem;"></div>
         </div>
+        <div class="site-card" style="grid-column:1/-1;">
+          <h3>Where People Found Us 📣</h3>
+          <p>What new members picked for "How did you hear about us?" when they signed up — so you know which marketing is actually working.</p>
+          <div id="tr-heard-about" style="display:grid;gap:0.4rem;margin-top:0.8rem;"></div>
+        </div>
       </div>
     </section>
 
@@ -1493,6 +1498,22 @@ async function loadTraffic(){
   renderTrafficRows('tr-top-pages',d.top_pages,'count',Math.max(1,(d.top_pages&&d.top_pages[0]?d.top_pages[0].count:1)));
   renderTrafficRows('tr-exit-pages',d.top_exit_pages,'count',Math.max(1,(d.top_exit_pages&&d.top_exit_pages[0]?d.top_exit_pages[0].count:1)));
   renderScrollRows('tr-scroll-pages',d.scroll_by_page);
+  loadHeardAbout();
+}
+async function loadHeardAbout(){
+  const el=document.getElementById('tr-heard-about');if(!el)return;
+  try{
+    const r=await api('/api/manager?action=heard_about');const d=await r.json();
+    const sources=d.sources||[];
+    if(!sources.length){el.innerHTML='<div class="empty" style="padding:1rem">No signups yet — this fills in as people join.</div>';return;}
+    const max=Math.max(1,sources[0].count);
+    el.innerHTML=sources.map(s=>`
+      <div class="tr-row">
+        <span>${esc(s.label)}</span>
+        <span class="tr-bar"><span class="tr-bar-fill" style="width:${Math.round((s.count/max)*100)}%"></span></span>
+        <strong>${s.count}</strong>
+      </div>`).join('');
+  }catch{el.innerHTML='';}
 }
 function renderTrafficRows(elId,rows,valueKey,maxVal){
   const el=document.getElementById(elId);

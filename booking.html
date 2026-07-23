@@ -1038,6 +1038,8 @@ function loadTimeslots() {
   } else {
     note.style.display = 'none';
   }
+  // Show the back-to-back / separate choice right away for multi-service
+  document.getElementById('spacing-toggle').style.display = unitCount() > 1 ? 'block' : 'none';
   if (booking.date) renderTimeslots(booking.date);
 }
 
