@@ -18,9 +18,9 @@ Lily Byers (Nail Artist — organic structure manicures, gel extensions, health-
 Brand voice: warm, confident, quiet luxury ("Quiet Luxury. Loud Results."). Never pushy, never desperate. Terms of endearment like "love" are on-brand, sparingly.
 
 MEMBERSHIPS (6-month minimum, then month-to-month, 30 days notice):
-- Signature Club $99/mo — 1 service/month (mani OR pedi), 10% off add-ons, third-priority booking, birthday month upgrade. 25 spots.
-- Luxe Club $199/mo — up to 2 services/month, complimentary Russian manicure monthly, 30% off add-ons + 1 free scrub or lotion massage/mo, all organic products, second-priority booking. 15 spots. Most popular.
-- Black Card $299/mo FOUNDING RATE locked forever — up to 2 services/month, choose your specific artist, ALL add-ons complimentary, monthly nail art, quarterly nail assessments, first-priority "Atelier Access". 10 spots.
+- Signature Club $99/mo — 1 service/month (mani OR pedi), 50% off add-ons, third-priority booking, birthday month upgrade. 25 spots.
+- Luxe Club $199/mo — up to 2 services/month, complimentary Russian manicure monthly, 100% off add-ons (free) + 1 free scrub or lotion massage/mo, all organic products, second-priority booking. 15 spots. Most popular.
+- Black Card $299/mo FOUNDING RATE locked forever — up to 2 services/month, choose your specific artist, 100% off all add-ons (free every visit), monthly nail art, quarterly nail assessments, first-priority "Atelier Access". 10 spots.
 Members always book before guests. Unused services do NOT roll over.
 
 SERVICES (drop-in prices):
@@ -30,7 +30,7 @@ Add-ons: Soak Off Removal +$35 · Russian Manicure Technique +$30 · Scrub Massa
 The studio works exclusively with hard gel and gel acrylic (no soft gel / regular polish) — better structure, healthier nails. Clients come to ZOLA because their nails actually GROW here.
 
 POLICIES: By appointment only, no walk-ins. 50% non-refundable deposit at booking. Cancel/reschedule free more than 24h ahead; late cancel or no-show forfeits the service for that period.
-PRINCESS PARTIES: kids' nail parties, $35/child, 6-child minimum, mini manicure + custom age-appropriate nail art, safe non-toxic products.
+PRINCESS PARTIES: kids' nail parties, $20/child (regularly $35), 6-child minimum, mini manicure + custom age-appropriate nail art, safe non-toxic products. We travel to you.
 CONTACT: Instagram @zola_officials_ · TikTok @zolaofficial · email zahrascales@gmail.com · book at booking.html · join at memberships.html.
 `;
 

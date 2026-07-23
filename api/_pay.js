@@ -21,7 +21,7 @@ async function stripeApi(path, params) {
   return data;
 }
 
-const ADDON_DISCOUNT = { SIGNATURE: 0.10, LUXE: 0.30, BLACK_CARD: 0.75 };
+const ADDON_DISCOUNT = { SIGNATURE: 0.50, LUXE: 1.00, BLACK_CARD: 1.00 };
 
 // The booking page says "Short Acrylic Set", the menu says "Short Acrylic",
 // add-ons vary too — normalize so every spelling finds its price.

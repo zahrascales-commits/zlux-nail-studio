@@ -20,6 +20,9 @@
   body{background:var(--bg);color:var(--text);font-family:'Josefin Sans',sans-serif;font-size:0.92rem;line-height:1.6;min-height:100vh}
   a{color:inherit;text-decoration:none}
   input,select,textarea,button{font-family:inherit;font-size:inherit;color:inherit}
+  /* Defensive: selects/options must never be light-text-on-white in this dark theme */
+  select{background:var(--card);color:var(--cream)}
+  option{background:#1C1815;color:#F5EEE8}
   ::-webkit-scrollbar{width:8px;height:8px}
   ::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:4px}
   ::-webkit-scrollbar-track{background:transparent}
@@ -596,10 +599,10 @@
           <div class="page-desc">How many people visit, where they tend to stop scrolling, and which page they're on when they leave the site — so you know exactly what to fix.</div>
         </div>
         <div style="display:flex;gap:0.6rem;align-items:center;">
-          <select id="traffic-days" onchange="loadTraffic()" style="max-width:160px;">
-            <option value="7">Last 7 days</option>
-            <option value="30" selected>Last 30 days</option>
-            <option value="90">Last 90 days</option>
+          <select id="traffic-days" onchange="loadTraffic()" style="max-width:160px;background:var(--card);color:var(--cream);border:1px solid var(--border);padding:0.45rem 0.6rem;outline:none;cursor:pointer;">
+            <option value="7" style="background:#1C1815;color:#F5EEE8;">Last 7 days</option>
+            <option value="30" selected style="background:#1C1815;color:#F5EEE8;">Last 30 days</option>
+            <option value="90" style="background:#1C1815;color:#F5EEE8;">Last 90 days</option>
           </select>
           <button class="btn btn-ghost btn-sm" onclick="resetTraffic()">Reset Data</button>
         </div>

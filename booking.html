@@ -591,8 +591,8 @@ const TIER_RULES = {
     freeServiceCount: null,
     freeAddonNames: [],
     freeAddonCount: 0,
-    addonDiscountPct: 10,
-    reminderText: 'Signature: 1 manicure + 1 pedicure included this month. Add-ons at 10% off.',
+    addonDiscountPct: 50,
+    reminderText: 'Signature: 1 manicure + 1 pedicure included this month. Add-ons at 50% off.',
     priorityText: '✦  Signature members book before guests — priority slots shown below.'
   },
   LUXE: {
@@ -604,9 +604,9 @@ const TIER_RULES = {
     freeServiceCount: null,
     freeAddonNames: [],
     freeAddonCount: 0,
-    addonDiscountPct: 30,
+    addonDiscountPct: 100,
     hasBirthdayUpgrade: true,
-    reminderText: 'Luxe: Up to 2 manicures + 1 pedicure included this month. All add-ons at 30% off.',
+    reminderText: 'Luxe: Up to 2 manicures + 1 pedicure included this month. All add-ons 100% off — free.',
     priorityText: '✦  Luxe members have priority access — most slots reserved for you.'
   },
   BLACK_CARD: {
@@ -618,8 +618,8 @@ const TIER_RULES = {
     freeServiceCount: 2,
     freeAddonNames: [],
     freeAddonCount: 0,
-    addonDiscountPct: 75,
-    reminderText: 'Black Card: 2 services a month included. All add-ons at 75% off automatically.',
+    addonDiscountPct: 100,
+    reminderText: 'Black Card: 2 services a month included. All add-ons 100% off — free, every visit.',
     priorityText: '✦  Atelier Access — first selection of every available slot before the calendar opens.'
   }
 };
@@ -874,17 +874,18 @@ function updateAddonPriceTags() {
     const tagEl   = document.getElementById('addon-tag-' + a.id);
     if (!priceEl || !tagEl) return;
 
+    const pct = rules.addonDiscountPct || 0;
     if (rules.freeAddonNames.includes(a.name) && rules.freeAddonCount > 0) {
       priceEl.textContent = '$0.00';
       priceEl.style.color = 'var(--champagne)';
       tagEl.innerHTML = '<span class="addon-free-tag" style="margin-top:0.2rem;">Complimentary</span>';
-    } else if (rules.addonDiscountPct === 75) {
-      const disc = Math.ceil(a.base * 0.25);
+    } else if (pct >= 100) {
+      priceEl.innerHTML = `<span style="text-decoration:line-through;opacity:0.5;font-size:0.78rem;">+$${a.base}</span> <span style="color:var(--champagne);font-weight:700;">FREE</span>`;
+      tagEl.innerHTML = '<span class="addon-free-tag" style="margin-top:0.2rem;">100% off</span>';
+    } else if (pct > 0) {
+      const disc = Math.ceil(a.base * (1 - pct / 100));
       priceEl.innerHTML = `<span style="text-decoration:line-through;opacity:0.5;font-size:0.78rem;">+$${a.base}</span> <span style="color:var(--champagne);">+$${disc}</span>`;
-      tagEl.innerHTML = '<span class="addon-free-tag" style="margin-top:0.2rem;">75% off</span>';
-    } else if (rules.addonDiscountPct === 10) {
-      const disc = Math.ceil(a.base * 0.9);
-      priceEl.innerHTML = `<span style="text-decoration:line-through;opacity:0.5;font-size:0.78rem;">+$${a.base}</span> +$${disc}`;
+      tagEl.innerHTML = `<span class="addon-free-tag" style="margin-top:0.2rem;">${pct}% off</span>`;
     } else {
       priceEl.textContent = '+$' + a.base;
       tagEl.innerHTML = '';
