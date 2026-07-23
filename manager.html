@@ -511,6 +511,12 @@
           <input id="k-stripe-secret" type="password" placeholder="sk_live_xxxxxxxx" style="margin-bottom:0.9rem" autocomplete="off" />
           <button class="btn btn-gold btn-sm" onclick="saveStripeKeys()">Connect Payments</button>
           <p style="font-size:0.72rem;color:var(--muted);margin-top:0.6rem;">Test keys let you practice with fake cards. Live keys take real payments into your bank. Your secret key is stored privately and never shown on the website.</p>
+          <div style="margin-top:1rem;padding-top:0.9rem;border-top:1px solid var(--border)">
+            <label class="fld-label">Membership billing</label>
+            <p style="font-size:0.72rem;color:var(--muted);margin:0 0 0.5rem;">Sets up the $99 / $199 / $299 monthly plans on your connected Stripe account. Run this once after connecting keys (and again if you switch to live keys).</p>
+            <button class="btn btn-ghost btn-sm" onclick="setupMembershipPrices()">Set up membership billing</button>
+            <p class="set-note" id="memberprice-result"></p>
+          </div>
         </div>
         <div class="site-card">
           <h3>Calendar Preferences</h3>
@@ -1889,6 +1895,16 @@ async function loadStripeStatus(){
     else if(d.mode==='live')el.innerHTML='💳 Payments: <span class="key-on">LIVE — taking real payments ✦</span>';
     else el.innerHTML='💳 Payments: <span class="key-off">TEST mode — paste your LIVE keys to take real money</span>';
   }catch{el.innerHTML='💳 Payments: —';}
+}
+async function setupMembershipPrices(){
+  const out=document.getElementById('memberprice-result');
+  out.textContent='Setting up your membership plans…';
+  try{
+    const r=await api('/api/manager?action=setup_membership_prices',{method:'POST',body:JSON.stringify({action:'setup_membership_prices'})});
+    const d=await r.json();
+    if(d.ok){out.innerHTML='<span class="key-on">Membership billing ready ✦ Signature, Luxe, and Black Card monthly plans are live on your account.</span>';}
+    else out.innerHTML='<span class="key-off">'+(d.error||'Could not set up — make sure your Stripe keys are connected above.')+'</span>';
+  }catch{out.textContent='Something went wrong — try again.';}
 }
 async function saveStripeKeys(){
   const stripe_publishable=document.getElementById('k-stripe-pub').value.trim();
