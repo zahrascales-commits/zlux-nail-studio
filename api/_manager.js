@@ -123,6 +123,48 @@ module.exports = async function (req, res) {
       return res.json({ ok: true, price_id: price.id });
     }
 
+    // ── SET UP THE THREE MEMBERSHIP PRICES ON THE CONNECTED STRIPE ACCOUNT ──
+    // Idempotent: creates a monthly recurring Price per tier only if one isn't
+    // already stored. Run once after connecting a Stripe account so membership
+    // subscriptions charge correctly ($99 / $199 / $299 a month).
+    if (method === 'POST' && action === 'setup_membership_prices') {
+      const sk = await require('./_pay').getStripeSecret();
+      if (!sk) return res.status(400).json({ error: 'Stripe not configured — connect your keys first.' });
+      const call = async (path, params) => {
+        const r = await fetch('https://api.stripe.com/v1/' + path, {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + sk, 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams(params).toString(),
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error && d.error.message || ('stripe ' + r.status));
+        return d;
+      };
+      const tiers = [
+        { tier: 'SIGNATURE', key: 'stripe_price_signature', name: 'ZOLA Signature Club', cents: 9900 },
+        { tier: 'LUXE', key: 'stripe_price_luxe', name: 'ZOLA Luxe Club', cents: 19900 },
+        { tier: 'BLACK_CARD', key: 'stripe_price_black_card', name: 'ZOLA Black Card', cents: 29900 },
+      ];
+      const out = {};
+      for (const t of tiers) {
+        const existing = await queryOne('SELECT value FROM site_settings WHERE key=?', [t.key]);
+        // Verify the stored price still exists on the CURRENT account; if not, recreate
+        let valid = false;
+        if (existing && existing.value) {
+          try {
+            const chk = await fetch('https://api.stripe.com/v1/prices/' + existing.value, { headers: { Authorization: 'Bearer ' + sk } });
+            valid = chk.ok;
+          } catch (_) {}
+        }
+        if (valid) { out[t.tier] = { price_id: existing.value, existed: true }; continue; }
+        const product = await call('products', { name: t.name });
+        const price = await call('prices', { product: product.id, currency: 'usd', unit_amount: String(t.cents), 'recurring[interval]': 'month' });
+        await execute('INSERT INTO site_settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', [t.key, price.id]);
+        out[t.tier] = { price_id: price.id, created: true };
+      }
+      return res.json({ ok: true, prices: out });
+    }
+
     // ── TEST DELIVERY (send a real test to Zahra) ──
     if (method === 'POST' && action === 'test_notify') {
       const { phone, email } = req.body || {};

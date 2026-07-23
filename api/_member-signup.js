@@ -87,14 +87,17 @@ module.exports = async (req, res) => {
     await stripe.paymentMethods.attach(stripePaymentMethodId, { customer: customer.id });
     await stripe.customers.update(customer.id, { invoice_settings: { default_payment_method: stripePaymentMethodId } });
 
-    // Resolve the Stripe price: env var, else owner-created test price in settings
-    let priceId = process.env[`STRIPE_PRICE_${tier}`] || null;
-    if (!priceId && tier === 'TEST') {
-      try {
-        const row = await require('./_team-db').queryOne("SELECT value FROM site_settings WHERE key='stripe_price_test'");
-        priceId = row && row.value;
-      } catch (_) {}
-    }
+    // Resolve the Stripe price: owner-created prices in Settings first (these
+    // live on the owner's connected Stripe account), then env var, then a
+    // last-resort placeholder. Settings-first means switching Stripe accounts
+    // just works once the prices are set up for that account.
+    let priceId = null;
+    try {
+      const key = tier === 'TEST' ? 'stripe_price_test' : 'stripe_price_' + tier.toLowerCase();
+      const row = await require('./_team-db').queryOne('SELECT value FROM site_settings WHERE key=?', [key]);
+      priceId = row && row.value;
+    } catch (_) {}
+    if (!priceId) priceId = process.env[`STRIPE_PRICE_${tier}`] || null;
     if (!priceId) priceId = TIER_PRICES[tier];
 
     const subscription = await stripe.subscriptions.create({
