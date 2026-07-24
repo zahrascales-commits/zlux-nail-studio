@@ -231,10 +231,10 @@
         <div class="section-label" style="font-size:0.6rem;margin-bottom:0.75rem;">Member Login</div>
         <label class="luxury-label">Member ID</label>
         <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;">
-          <input class="luxury-input" id="member-id-input" placeholder="e.g. SIG-1234, LUX-5678, BLK-9999" style="flex:1;" />
-          <button class="btn-gold" onclick="validateMemberId()" style="animation:none;white-space:nowrap;padding:0.875rem 1.25rem;">Verify</button>
+          <input class="luxury-input" id="member-id-input" placeholder="ZL-XXXXXX" style="flex:1;text-transform:uppercase;" onkeydown="if(event.key==='Enter')validateMemberId()" />
+          <button class="btn-gold" id="member-verify-btn" onclick="validateMemberId()" style="animation:none;white-space:nowrap;padding:0.875rem 1.25rem;">Verify</button>
         </div>
-        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:var(--latte);">Your Member ID is in your welcome email. Demo IDs: SIG-1234 · LUX-5678 · BLK-9999</p>
+        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:var(--latte);">Your Member ID is in your welcome email — it starts with ZL-.</p>
         <div id="member-id-error" style="display:none;color:#c0524a;font-family:'Josefin Sans',sans-serif;font-size:0.8rem;margin-top:0.5rem;"></div>
         <div id="member-verified-banner" style="display:none;" class="member-id-banner" style="margin-top:0.75rem;">
           <div style="flex:1;">
@@ -519,11 +519,11 @@
       </div>
       <div style="margin:1.25rem 0;">
         <label class="luxury-label">Full Name</label>
-        <input class="luxury-input" id="client-name" placeholder="Your name" style="margin-bottom:0.75rem;" />
+        <input class="luxury-input" id="client-name" placeholder="Your name" autocomplete="name" autocapitalize="words" style="margin-bottom:0.75rem;" />
         <label class="luxury-label">Phone Number</label>
-        <input class="luxury-input" id="client-phone" placeholder="+1 (555) 000-0000" style="margin-bottom:0.75rem;" />
+        <input class="luxury-input" id="client-phone" type="tel" inputmode="tel" placeholder="+1 (555) 000-0000" autocomplete="tel" style="margin-bottom:0.75rem;" />
         <label class="luxury-label">Email</label>
-        <input class="luxury-input" id="client-email" placeholder="your@email.com" style="margin-bottom:0.75rem;" />
+        <input class="luxury-input" id="client-email" type="email" inputmode="email" placeholder="your@email.com" autocomplete="email" autocapitalize="off" style="margin-bottom:0.75rem;" />
         <label class="luxury-label" style="margin-bottom:0.5rem;">Notes for Your Artist (optional)</label>
         <textarea class="luxury-input" id="client-notes" rows="2" placeholder="Nail shape, current nails on, inspiration photo link…" style="resize:vertical;"></textarea>
       </div>
@@ -642,13 +642,6 @@ const TIER_RULES = {
   }
 };
 
-// Demo Member IDs
-const DEMO_MEMBERS = {
-  'SIG-1234': { tier: 'SIGNATURE', name: 'Signature Member' },
-  'LUX-5678': { tier: 'LUXE', name: 'Luxe Member' },
-  'BLK-9999': { tier: 'BLACK_CARD', name: 'Black Card Member' },
-};
-
 // ═══════════════════════════════════════════
 // BOOKING STATE
 // ═══════════════════════════════════════════
@@ -718,29 +711,21 @@ async function validateMemberId() {
   const errEl = document.getElementById('member-id-error');
   errEl.style.display = 'none';
 
-  // Check demo IDs first
-  let member = DEMO_MEMBERS[raw];
-
-  // Accept legacy prefix formats
-  if (!member) {
-    if (raw.startsWith('SIG')) member = { tier: 'SIGNATURE', name: 'Signature Member' };
-    else if (raw.startsWith('LUX')) member = { tier: 'LUXE', name: 'Luxe Member' };
-    else if (raw.startsWith('BLK') || raw.startsWith('BLACK')) member = { tier: 'BLACK_CARD', name: 'Black Card Member' };
-  }
-
-  // Live DB lookup for real ZL- IDs
-  if (!member && raw.startsWith('ZL-')) {
-    try {
-      const r = await fetch('/api/member-login?id=' + encodeURIComponent(raw));
-      if (r.ok) {
-        const d = await r.json();
-        member = { tier: d.tier, name: d.name, birthMonth: d.birthMonth };
-      }
-    } catch (_) {}
-  }
+  // Only genuine member IDs verified against the database unlock benefits.
+  let member = null;
+  const verifyBtn = document.getElementById('member-verify-btn');
+  if (verifyBtn) { verifyBtn.disabled = true; verifyBtn.dataset.label = verifyBtn.textContent; verifyBtn.textContent = 'Checking…'; }
+  try {
+    const r = await fetch('/api/member-login?id=' + encodeURIComponent(raw));
+    if (r.ok) {
+      const d = await r.json();
+      member = { tier: d.tier, name: d.name, birthMonth: d.birthMonth };
+    }
+  } catch (_) {}
+  if (verifyBtn) { verifyBtn.disabled = false; verifyBtn.textContent = verifyBtn.dataset.label || 'Verify'; }
 
   if (!member) {
-    errEl.textContent = 'Member ID not found. Check your welcome email or continue as a guest below.';
+    errEl.textContent = 'That Member ID wasn\'t found. Double-check your welcome email, or continue as a guest below.';
     errEl.style.display = 'block';
     return;
   }
@@ -749,6 +734,8 @@ async function validateMemberId() {
   booking.type = 'member';
   booking.memberTier = member.tier;
   booking.memberLabel = rules.label;
+  // Remember the verified ID so members don't retype it next visit
+  try { localStorage.setItem('zola_member_id', raw); } catch (_) {}
 
   // Show verified banner
   const banner = document.getElementById('member-verified-banner');
@@ -1715,7 +1702,13 @@ function clearSavedClient() {
 (function () {
   try {
     const saved = JSON.parse(localStorage.getItem('zola_client') || 'null');
-    if (saved) { applySavedClient(saved); return; }
+    if (saved) { applySavedClient(saved); }
+  } catch (_) {}
+  // Prefill a returning member's ID so they can verify in one tap
+  try {
+    const savedId = localStorage.getItem('zola_member_id');
+    const input = document.getElementById('member-id-input');
+    if (savedId && input) input.value = savedId;
   } catch (_) {}
 })();
 // If they type an email/phone we already know (booked on another device), autofill the rest

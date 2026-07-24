@@ -169,10 +169,12 @@ ul { list-style: none; }
   font-size: 0.9rem;
   padding: 0.875rem 1.25rem;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
-.luxury-input:focus { border-color: var(--champagne); }
+.luxury-input:focus { border-color: var(--champagne); box-shadow: 0 0 0 3px rgba(182,165,136,0.16); background: #fff; }
 .luxury-input::placeholder { color: var(--latte); opacity: 0.6; }
+/* On phones, 16px inputs stop iOS from zooming in on focus */
+@media (max-width: 600px) { .luxury-input, .luxury-input::placeholder { font-size: 16px; } }
 .luxury-label {
   display: block;
   font-family: 'Josefin Sans', sans-serif;

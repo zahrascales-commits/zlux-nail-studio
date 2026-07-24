@@ -192,9 +192,7 @@
 <script>
   window.addEventListener('scroll', () => { document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60); });
   // Hamburger toggle handled by js/main.js (avoids double-toggle bug)
-  if (window.innerWidth < 700) {
-    document.getElementById('team-grid').style.gridTemplateColumns = '1fr';
-  }
+  // (team grid is now a responsive flex layout — no manual column override needed)
 </script>
 </body>
 </html>
