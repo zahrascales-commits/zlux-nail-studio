@@ -217,6 +217,39 @@ module.exports = async function (req, res) {
       return res.json({ ok: true });
     }
 
+    // ── NOTIFICATION SETTINGS (worker + client + inventory reminders) ──
+    if (method === 'GET' && action === 'notif_settings') {
+      const rows = await query("SELECT key, value FROM site_settings WHERE key LIKE 'notif_%' OR key='owner_phone'");
+      const s = {}; for (const r of rows) s[r.key] = r.value;
+      const on = (k, d) => s[k] === undefined ? d : String(s[k]) === '1';
+      const num = (k, d) => s[k] === undefined ? d : (Number(s[k]) || d);
+      return res.json({
+        worker_pre_on: on('notif_worker_pre_on', true), worker_pre_min: num('notif_worker_pre_min', 10),
+        worker_checkin_on: on('notif_worker_checkin_on', true), worker_checkin_min: num('notif_worker_checkin_min', 120),
+        worker_overrun_on: on('notif_worker_overrun_on', true),
+        client_24h_on: on('notif_client_24h_on', true), client_1h_on: on('notif_client_1h_on', true), client_post_on: on('notif_client_post_on', true),
+        inv_daily_on: on('notif_inv_daily_on', true), inv_daily_time: s['notif_inv_daily_time'] || '18:00',
+        inv_lowstock_on: on('notif_inv_lowstock_on', true),
+        owner_phone: s['owner_phone'] || '',
+      });
+    }
+    if (method === 'POST' && action === 'notif_settings') {
+      const b = req.body || {};
+      const map = {
+        notif_worker_pre_on: b.worker_pre_on ? '1' : '0', notif_worker_pre_min: String(Number(b.worker_pre_min) || 10),
+        notif_worker_checkin_on: b.worker_checkin_on ? '1' : '0', notif_worker_checkin_min: String(Number(b.worker_checkin_min) || 120),
+        notif_worker_overrun_on: b.worker_overrun_on ? '1' : '0',
+        notif_client_24h_on: b.client_24h_on ? '1' : '0', notif_client_1h_on: b.client_1h_on ? '1' : '0', notif_client_post_on: b.client_post_on ? '1' : '0',
+        notif_inv_daily_on: b.inv_daily_on ? '1' : '0', notif_inv_daily_time: String(b.inv_daily_time || '18:00'),
+        notif_inv_lowstock_on: b.inv_lowstock_on ? '1' : '0',
+        owner_phone: String(b.owner_phone || ''),
+      };
+      for (const [k, v] of Object.entries(map)) {
+        await execute('INSERT INTO site_settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', [k, v]);
+      }
+      return res.json({ ok: true });
+    }
+
     // ── MEMBERSHIP SALES STATS (real counts + revenue by tier) ──
     if (method === 'GET' && action === 'membership_stats') {
       const PRICE = { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900 };

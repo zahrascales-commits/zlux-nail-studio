@@ -164,6 +164,7 @@
   </div>
   <div class="wrap">
     <section class="panel active" id="panel-schedule">
+      <div id="team-checkins"></div>
       <div class="mini-cal" id="mini-cal"></div>
       <div class="label-sm" id="sched-label">Upcoming Appointments</div>
       <div id="sched"><div class="loading">Loading…</div></div>
@@ -305,11 +306,33 @@ function showTab(t){
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.t===t));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+t).classList.add('active');
-  if(t==='schedule')loadSchedule();
+  if(t==='schedule'){loadSchedule();loadCheckins();}
   if(t==='chats')loadChats();
   if(t==='clients')loadTeamClients();
   if(t==='inspo')loadTeamInspo();
   if(t==='inventory')loadTeamInv();
+}
+
+/* ── POST-APPOINTMENT CHECK-INS ("how did it go?" + notes) ── */
+async function loadCheckins(){
+  const el=document.getElementById('team-checkins');if(!el)return;
+  try{
+    const r=await fetch('/api/team?action=checkins&member_id='+MID+'&pin='+PIN);
+    const d=await r.json();const cks=d.checkins||[];
+    if(!cks.length){el.innerHTML='';return;}
+    el.innerHTML='<div class="label-sm" style="color:#e0b060;">How did these go? ✦</div>'+cks.map(c=>`
+      <div style="background:linear-gradient(135deg,rgba(182,165,136,0.12),transparent);border:1px solid rgba(182,165,136,0.35);border-radius:12px;padding:1rem;margin-bottom:0.7rem;">
+        <div style="font-family:'Cinzel',serif;font-size:1rem;color:#F5EEE8;">${tesc(c.client_name||'Client')} — ${tesc(c.service||'')}</div>
+        <div style="font-size:0.72rem;color:var(--muted,#8B7355);margin-bottom:0.6rem;">${tesc(c.date)} · ${tesc(c.time)}</div>
+        <textarea id="ck-note-${c.id}" placeholder="How did it go? Anything to remember for next time…" style="width:100%;background:var(--bg,#0e0b09);border:1px solid rgba(182,165,136,0.25);color:#F5EEE8;border-radius:8px;padding:0.6rem 0.75rem;font-family:'Josefin Sans',sans-serif;font-size:0.85rem;resize:vertical;min-height:56px;"></textarea>
+        <button onclick="respondCheckin(${c.id})" style="margin-top:0.5rem;background:#B6A588;color:#0B0B0B;border:none;padding:0.55rem 1.1rem;font-size:0.7rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;border-radius:8px;">Save Note</button>
+      </div>`).join('');
+  }catch{ el.innerHTML=''; }
+}
+async function respondCheckin(id){
+  const note=(document.getElementById('ck-note-'+id)||{}).value||'';
+  await fetch('/api/team?action=checkin_respond',{method:'POST',headers:hdr(),body:JSON.stringify({action:'checkin_respond',id,note})});
+  loadCheckins();
 }
 
 /* ── INVENTORY (workers update counts) ── */

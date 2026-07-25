@@ -169,6 +169,25 @@ async function ensureTables() {
     updated_ts INTEGER,
     created_ts INTEGER
   )`);
+  // Idempotency log for the reminder engine — one row per reminder actually sent
+  await execute(`CREATE TABLE IF NOT EXISTS reminder_log (
+    rkey TEXT PRIMARY KEY,
+    ts INTEGER
+  )`);
+  // Worker post-appointment check-in responses ("how did it go" + notes)
+  await execute(`CREATE TABLE IF NOT EXISTS visit_checkins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    appt_key TEXT,
+    team_member_id INTEGER,
+    client_name TEXT,
+    service TEXT,
+    date TEXT,
+    time TEXT,
+    status TEXT DEFAULT 'pending',
+    note TEXT DEFAULT '',
+    responded_ts INTEGER,
+    created_ts INTEGER
+  )`);
   // Columns added after launch — idempotent, ignored once they exist
   for (const sql of [
     "ALTER TABLE team_members ADD COLUMN phone TEXT DEFAULT ''",

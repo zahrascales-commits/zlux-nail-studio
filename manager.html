@@ -236,6 +236,10 @@
   .site-card h3{font-family:'Cinzel', serif;font-size:0.95rem;color:var(--gold);margin-bottom:0.4rem}
   .site-card p{font-size:0.74rem;color:var(--muted);margin-bottom:0.9rem;line-height:1.6}
   .site-card textarea,.site-card input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--cream);padding:0.7rem 0.85rem;outline:none;font-family:inherit;font-size:0.85rem}
+  .ntf-row{display:flex;align-items:flex-start;gap:0.55rem;font-size:0.85rem;color:var(--cream);margin:0.5rem 0;cursor:pointer;line-height:1.4}
+  .ntf-row input{width:auto;margin-top:0.15rem}
+  .ntf-sub{font-size:0.76rem;color:var(--muted);margin:0 0 0.6rem 1.6rem}
+  .ntf-sub select,.ntf-sub input{width:auto;display:inline-block;padding:0.3rem 0.5rem;font-size:0.78rem}
   .site-card textarea:focus,.site-card input:focus{border-color:var(--gold)}
 
   /* ── TRAFFIC / STAT CARDS ── */
@@ -636,6 +640,36 @@
           <input id="set-cancel-hours" type="number" min="0" placeholder="24" style="margin-bottom:0.7rem" />
           <label class="fld-label">Cancellation policy text (shown at checkout)</label>
           <textarea id="set-policy-text" rows="3" placeholder="Deposits are non-refundable. With 48+ hours notice…"></textarea>
+        </div>
+        <div class="site-card" style="grid-column:1/-1;">
+          <h3>Notifications &amp; Reminders 🔔</h3>
+          <p>Automatic texts, emails, and in-app alerts for your team and clients. Toggle each one and set the timing — takes effect immediately.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-top:0.5rem;">
+            <div>
+              <div class="ai-tag">Your team</div>
+              <label class="ntf-row"><input type="checkbox" id="ntf-wpre" /> <span>Remind before each appointment</span></label>
+              <div class="ntf-sub">Lead time: <select id="ntf-wpre-min"><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="30">30 min</option></select></div>
+              <label class="ntf-row"><input type="checkbox" id="ntf-wchk" /> <span>Check in after a visit — "how did that client go?"</span></label>
+              <div class="ntf-sub">After: <select id="ntf-wchk-min"><option value="60">1 hour</option><option value="120">2 hours</option><option value="180">3 hours</option></select> (they can add notes)</div>
+              <label class="ntf-row"><input type="checkbox" id="ntf-wover" /> <span>Alert if they run past the scheduled end time</span></label>
+            </div>
+            <div>
+              <div class="ai-tag">Your clients</div>
+              <label class="ntf-row"><input type="checkbox" id="ntf-c24" /> <span>Remind 24 hours before (night before)</span></label>
+              <label class="ntf-row"><input type="checkbox" id="ntf-c1" /> <span>Remind 1 hour before</span></label>
+              <label class="ntf-row"><input type="checkbox" id="ntf-cpost" /> <span>Thank-you note after the appointment</span></label>
+              <div class="ai-tag" style="margin-top:1rem;">Inventory</div>
+              <label class="ntf-row"><input type="checkbox" id="ntf-invday" /> <span>Daily reminder for team to update counts</span></label>
+              <div class="ntf-sub">Time: <input type="time" id="ntf-invday-time" style="width:auto;display:inline-block;" /></div>
+              <label class="ntf-row"><input type="checkbox" id="ntf-invlow" /> <span>Alert me when an item hits its low-stock number</span></label>
+            </div>
+          </div>
+          <div style="margin-top:1rem;padding-top:0.9rem;border-top:1px solid var(--border)">
+            <label class="fld-label">Your mobile number for alerts (optional — for text alerts once texting is connected)</label>
+            <input id="ntf-owner-phone" placeholder="+15597…" style="max-width:240px" />
+          </div>
+          <button class="btn btn-gold btn-sm" style="margin-top:0.9rem" onclick="saveNotifSettings()">Save Notification Settings</button>
+          <p class="set-note" id="ntf-result"></p>
         </div>
         <div class="site-card">
           <h3>Connect Texting 📱</h3>
@@ -2356,6 +2390,33 @@ async function loadSettings(){
     document.getElementById('set-defview').value=s.default_view||'month';
   }catch{}
   loadBookingHours();
+  loadNotifSettings();
+}
+async function loadNotifSettings(){
+  try{
+    const r=await api('/api/manager?action=notif_settings');const d=await r.json();
+    const set=(id,v)=>{const el=document.getElementById(id);if(el){if(el.type==='checkbox')el.checked=!!v;else el.value=v;}};
+    set('ntf-wpre',d.worker_pre_on); set('ntf-wpre-min',String(d.worker_pre_min));
+    set('ntf-wchk',d.worker_checkin_on); set('ntf-wchk-min',String(d.worker_checkin_min));
+    set('ntf-wover',d.worker_overrun_on);
+    set('ntf-c24',d.client_24h_on); set('ntf-c1',d.client_1h_on); set('ntf-cpost',d.client_post_on);
+    set('ntf-invday',d.inv_daily_on); set('ntf-invday-time',d.inv_daily_time||'18:00');
+    set('ntf-invlow',d.inv_lowstock_on); set('ntf-owner-phone',d.owner_phone||'');
+  }catch{}
+}
+async function saveNotifSettings(){
+  const g=id=>document.getElementById(id);
+  const body={
+    worker_pre_on:g('ntf-wpre').checked, worker_pre_min:Number(g('ntf-wpre-min').value),
+    worker_checkin_on:g('ntf-wchk').checked, worker_checkin_min:Number(g('ntf-wchk-min').value),
+    worker_overrun_on:g('ntf-wover').checked,
+    client_24h_on:g('ntf-c24').checked, client_1h_on:g('ntf-c1').checked, client_post_on:g('ntf-cpost').checked,
+    inv_daily_on:g('ntf-invday').checked, inv_daily_time:g('ntf-invday-time').value||'18:00',
+    inv_lowstock_on:g('ntf-invlow').checked, owner_phone:g('ntf-owner-phone').value.trim(),
+  };
+  await api('/api/manager',{method:'POST',body:JSON.stringify({action:'notif_settings',...body})});
+  g('ntf-result').innerHTML='<span class="key-on">Saved ✦ Reminders are live.</span>';
+  toast('Notification settings saved');
 }
 async function loadBookingHours(){
   try{

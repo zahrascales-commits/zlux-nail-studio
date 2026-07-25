@@ -73,6 +73,24 @@ module.exports = async function (req, res) {
       return res.json({ schedule: rows });
     }
 
+    // ── Post-appointment check-ins ("how did it go?" + notes) for this worker ──
+    if (method === 'GET' && action === 'checkins') {
+      const rows = await query(
+        `SELECT id, client_name, service, date, time, status, note FROM visit_checkins
+         WHERE team_member_id=? AND status='pending' ORDER BY created_ts DESC LIMIT 30`, [member.id]);
+      return res.json({ checkins: rows });
+    }
+    if (method === 'POST' && action === 'checkin_respond') {
+      const { id, note } = req.body || {};
+      const row = await queryOne('SELECT id FROM visit_checkins WHERE id=? AND team_member_id=?', [Number(id), member.id]);
+      if (!row) return res.status(404).json({ error: 'Not found' });
+      await execute('UPDATE visit_checkins SET status=?, note=?, responded_ts=? WHERE id=?',
+        ['done', String(note || '').slice(0, 800), Date.now(), Number(id)]);
+      // Let the owner see the note too
+      try { await require('./_notify').notifyInApp('owner', null, 'Visit note from ' + member.name, String(note || '').slice(0, 200)); } catch (_) {}
+      return res.json({ ok: true });
+    }
+
     if (method === 'GET' && action === 'chat') {
       const appointment_id = Number(req.query.appointment_id);
       const owns = await queryOne('SELECT id FROM team_appointments WHERE id=? AND team_member_id=?', [appointment_id, member.id]);
