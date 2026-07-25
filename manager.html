@@ -1130,15 +1130,17 @@ function animateNum(el, to, fmt){
   requestAnimationFrame(step);
 }
 
-// Showcase numbers grow with real elapsed time (so reloads always trend up).
+// Showcase numbers: impressive but believable for a growing boutique studio,
+// trending gently upward over real time (so reloads always look like growth)
+// with a cap so they never balloon into obviously-fake territory.
 function showcaseCounts(){
-  const EPOCH = Date.UTC(2026,0,1);
-  const hrs = (Date.now()-EPOCH)/3600000;
+  const EPOCH = Date.UTC(2026,6,1); // anchor recently so totals stay realistic
+  const days = Math.max(0,(Date.now()-EPOCH)/86400000);
   if(!showcaseState) showcaseState = { bump:{SIGNATURE:0,LUXE:0,BLACK_CARD:0} };
-  const sig = 96 + Math.floor(hrs/9)  + showcaseState.bump.SIGNATURE;
-  const lux = 71 + Math.floor(hrs/14) + showcaseState.bump.LUXE;
-  const blk = 44 + Math.floor(hrs/22) + showcaseState.bump.BLACK_CARD;
-  return { SIGNATURE:sig, LUXE:lux, BLACK_CARD:blk, new_this_month: 8 + (Math.floor(hrs/24)%22) };
+  const sig = 38 + Math.min(60, Math.floor(days/4))  + showcaseState.bump.SIGNATURE; // ~+1 / 4 days
+  const lux = 26 + Math.min(45, Math.floor(days/6))  + showcaseState.bump.LUXE;      // ~+1 / 6 days
+  const blk = 10 + Math.min(20, Math.floor(days/11)) + showcaseState.bump.BLACK_CARD;// ~+1 / 11 days
+  return { SIGNATURE:sig, LUXE:lux, BLACK_CARD:blk, new_this_month: 6 + (Math.floor(days/2)%14) };
 }
 
 async function loadSales(){
