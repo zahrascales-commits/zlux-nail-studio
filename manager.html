@@ -398,6 +398,7 @@
   <div class="tabs">
     <button class="tab active" data-tab="schedule" onclick="showTab('schedule')">Calendar</button>
     <button class="tab" data-tab="sales" onclick="showTab('sales')">Sales</button>
+    <button class="tab" data-tab="inventory" onclick="showTab('inventory')">Inventory <span class="dot" id="inv-dot" style="display:none">0</span></button>
     <button class="tab" data-tab="inbox" onclick="showTab('inbox')">Inbox <span class="dot" id="inq-dot" style="display:none">0</span></button>
     <button class="tab" data-tab="messages" onclick="showTab('messages')">Messages <span class="dot" id="msg-dot" style="display:none">0</span></button>
     <button class="tab" data-tab="team" onclick="showTab('team')">Team</button>
@@ -478,6 +479,19 @@
         <div class="mix-bar" id="mix-bar"></div>
         <div class="mix-legend" id="mix-legend"></div>
       </div>
+    </section>
+
+    <!-- INVENTORY -->
+    <section class="panel" id="panel-inventory">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Inventory</div>
+          <div class="page-desc">Track what's in stock. You and your team can update counts anytime; items at or below their low-stock number are flagged so you can reorder in time.</div>
+        </div>
+        <button class="btn btn-gold" onclick="openInvModal()">+ Add Item</button>
+      </div>
+      <div id="inv-lowbar" style="display:none;background:linear-gradient(135deg,rgba(214,102,102,0.16),transparent);border:1px solid rgba(214,102,102,0.4);border-radius:12px;padding:0.85rem 1.1rem;margin-bottom:1rem;font-size:0.86rem;color:#f0b8b8;"></div>
+      <div id="inv-list" style="display:grid;gap:0.6rem;"></div>
     </section>
 
     <!-- TEAM -->
@@ -1044,6 +1058,23 @@
   </div>
 </div>
 
+<div class="overlay" id="modal-inv">
+  <div class="modal">
+    <div class="modal-title" id="inv-modal-title">Add Item</div>
+    <input type="hidden" id="inv-id" />
+    <div class="field"><label class="fld-label">Item name</label><input id="inv-name" placeholder="e.g. Gel X tips — medium, Acetone, Top coat" /></div>
+    <div class="field two">
+      <div><label class="fld-label">Quantity on hand</label><input id="inv-qty" type="number" min="0" placeholder="0" /></div>
+      <div><label class="fld-label">Unit (optional)</label><input id="inv-unit" placeholder="bottles, boxes, packs" /></div>
+    </div>
+    <div class="field"><label class="fld-label">Alert me at this count or lower</label><input id="inv-low" type="number" min="0" placeholder="2" /></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-inv')">Cancel</button>
+      <button class="btn btn-gold" onclick="saveInvItem()">Save</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1092,6 +1123,7 @@ function showTab(name){
   document.getElementById('panel-'+name).classList.add('active');
   if(name==='schedule'){renderCal();loadBlocks();loadDayHours();}
   if(name==='sales'){loadSales();startSalesLive();} else stopSalesLive();
+  if(name==='inventory')loadInventory();
   if(name==='messages')loadThreads();
   if(name==='team'){renderMembers();loadClientInspo();loadOverrides();}
   if(name==='inbox')loadInquiries();
@@ -1099,6 +1131,90 @@ function showTab(name){
   if(name==='traffic')loadTraffic();
   if(name==='clients')loadClients();
   if(name==='settings')loadSettings();
+}
+
+/* ── INVENTORY ── */
+let invItems=[];
+async function loadInventory(){
+  try{
+    const r=await api('/api/inventory?action=list');const d=await r.json();
+    invItems=d.items||[];renderInventory(d.low_count||0);
+  }catch{ document.getElementById('inv-list').innerHTML='<div class="empty" style="padding:1.5rem">Could not load inventory.</div>'; }
+}
+function renderInventory(lowCount){
+  const g=document.getElementById('inv-list');
+  const bar=document.getElementById('inv-lowbar');
+  const dot=document.getElementById('inv-dot');
+  if(lowCount>0){ bar.style.display='block'; bar.innerHTML='⚠️ <strong>'+lowCount+' item'+(lowCount>1?'s':'')+' low or out</strong> — time to reorder. They\'re listed at the top.'; dot.style.display='inline-block'; dot.textContent=lowCount; }
+  else { bar.style.display='none'; dot.style.display='none'; }
+  if(!invItems.length){ g.innerHTML='<div class="empty" style="padding:1.5rem"><div class="big">📦</div>No items yet.<br>Tap “Add Item” to start your inventory list.</div>'; return; }
+  g.innerHTML=invItems.map(it=>{
+    const low=Number(it.qty)<=Number(it.low_threshold);
+    return `<div class="member-card" style="--mc:${low?'#d66':'#B6A588'};">
+      <div class="mc-top">
+        <div style="flex:1">
+          <div class="mc-name">${esc(it.name)} ${low?'<span style="color:#e88;font-size:0.72rem;">· LOW</span>':''}</div>
+          <div class="mc-role">Alert at ${it.low_threshold}${it.unit?' '+esc(it.unit):''} or lower${it.updated_by?' · last by '+esc(it.updated_by):''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <button class="btn btn-ghost btn-sm" onclick="adjustInv(${it.id},-1)" style="min-width:38px;">−</button>
+          <span style="font-family:'Cinzel',serif;font-size:1.5rem;color:${low?'#e88':'var(--gold)'};min-width:2ch;text-align:center;">${it.qty}</span>
+          <button class="btn btn-ghost btn-sm" onclick="adjustInv(${it.id},1)" style="min-width:38px;">+</button>
+        </div>
+      </div>
+      <div class="mc-actions">
+        <button class="btn btn-ghost btn-sm" onclick="setInvQty(${it.id})">Set exact count</button>
+        <button class="btn btn-ghost btn-sm" onclick="editInvItem(${it.id})">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="delInvItem(${it.id},'${esc(it.name)}')">Remove</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function adjustInv(id,delta){
+  await api('/api/inventory',{method:'PUT',body:JSON.stringify({action:'adjust',id,delta})});
+  await loadInventory();
+}
+async function setInvQty(id){
+  const it=invItems.find(x=>String(x.id)===String(id));if(!it)return;
+  const v=prompt('Set exact count for '+it.name+':', it.qty);
+  if(v===null)return;
+  await api('/api/inventory',{method:'PUT',body:JSON.stringify({action:'update',id,qty:Number(v)||0})});
+  await loadInventory();
+}
+function openInvModal(){
+  document.getElementById('inv-modal-title').textContent='Add Item';
+  document.getElementById('inv-id').value='';
+  document.getElementById('inv-name').value='';
+  document.getElementById('inv-qty').value='';
+  document.getElementById('inv-unit').value='';
+  document.getElementById('inv-low').value='2';
+  openModal('modal-inv');
+}
+function editInvItem(id){
+  const it=invItems.find(x=>String(x.id)===String(id));if(!it)return;
+  document.getElementById('inv-modal-title').textContent='Edit Item';
+  document.getElementById('inv-id').value=it.id;
+  document.getElementById('inv-name').value=it.name;
+  document.getElementById('inv-qty').value=it.qty;
+  document.getElementById('inv-unit').value=it.unit||'';
+  document.getElementById('inv-low').value=it.low_threshold;
+  openModal('modal-inv');
+}
+async function saveInvItem(){
+  const id=document.getElementById('inv-id').value;
+  const name=document.getElementById('inv-name').value.trim();
+  const qty=Number(document.getElementById('inv-qty').value)||0;
+  const unit=document.getElementById('inv-unit').value.trim();
+  const low_threshold=Number(document.getElementById('inv-low').value)||0;
+  if(!name){toast('Enter an item name');return;}
+  if(id) await api('/api/inventory',{method:'PUT',body:JSON.stringify({action:'update',id,name,qty,unit,low_threshold})});
+  else await api('/api/inventory',{method:'POST',body:JSON.stringify({action:'add',name,qty,unit,low_threshold})});
+  toast('Saved');closeModal('modal-inv');await loadInventory();
+}
+async function delInvItem(id,name){
+  if(!confirm('Remove '+name+' from inventory?'))return;
+  await api('/api/inventory',{method:'DELETE',body:JSON.stringify({id})});
+  toast('Removed');await loadInventory();
 }
 
 /* ── MEMBERSHIP SALES DASHBOARD ──

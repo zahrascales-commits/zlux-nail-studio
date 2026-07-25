@@ -160,6 +160,7 @@
     <button class="tab" data-t="chats" onclick="showTab('chats')">Client Chats</button>
     <button class="tab" data-t="clients" onclick="showTab('clients')">Clients</button>
     <button class="tab" data-t="inspo" onclick="showTab('inspo')">Inspo</button>
+    <button class="tab" data-t="inventory" onclick="showTab('inventory')">Inventory</button>
   </div>
   <div class="wrap">
     <section class="panel active" id="panel-schedule">
@@ -170,6 +171,11 @@
     <section class="panel" id="panel-chats">
       <div class="label-sm">Your Client Conversations</div>
       <div id="chats"><div class="loading">Loading…</div></div>
+    </section>
+    <section class="panel" id="panel-inventory">
+      <div class="label-sm">Studio Inventory</div>
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.76rem;color:var(--muted);margin-bottom:1rem;line-height:1.7;">Keep counts up to date — tap − when you use something. Low items are flagged so Zahra can reorder in time.</p>
+      <div id="team-inv"><div class="loading">Loading…</div></div>
     </section>
     <section class="panel" id="panel-clients">
       <div class="label-sm">Every Client — Full Context</div>
@@ -303,6 +309,41 @@ function showTab(t){
   if(t==='chats')loadChats();
   if(t==='clients')loadTeamClients();
   if(t==='inspo')loadTeamInspo();
+  if(t==='inventory')loadTeamInv();
+}
+
+/* ── INVENTORY (workers update counts) ── */
+let _teamInv=[];
+async function loadTeamInv(){
+  const el=document.getElementById('team-inv');
+  try{
+    const r=await fetch('/api/inventory?action=list&member_id='+MID+'&pin='+PIN);
+    const d=await r.json(); _teamInv=d.items||[]; renderTeamInv(d.low_count||0);
+  }catch{ el.innerHTML='<div class="loading">Could not load inventory.</div>'; }
+}
+function tesc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function renderTeamInv(lowCount){
+  const el=document.getElementById('team-inv');
+  if(!_teamInv.length){ el.innerHTML='<div class="loading">No items yet. Zahra adds items from Studio Manager.</div>'; return; }
+  const head = lowCount>0 ? '<div style="background:rgba(214,102,102,0.14);border:1px solid rgba(214,102,102,0.4);padding:0.7rem 0.9rem;border-radius:10px;margin-bottom:0.9rem;font-size:0.82rem;color:#f0b8b8;">⚠️ '+lowCount+' item'+(lowCount>1?'s':'')+' running low — keep counts accurate so we reorder in time.</div>' : '';
+  el.innerHTML = head + _teamInv.map(it=>{
+    const low=Number(it.qty)<=Number(it.low_threshold);
+    return `<div style="background:var(--card,#1a1512);border:1px solid ${low?'rgba(214,102,102,0.4)':'rgba(182,165,136,0.18)'};border-radius:12px;padding:0.9rem 1rem;margin-bottom:0.6rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;">
+      <div style="min-width:0;">
+        <div style="font-family:'Cinzel',serif;font-size:1rem;color:#F5EEE8;">${tesc(it.name)} ${low?'<span style="color:#e88;font-size:0.7rem;">· LOW</span>':''}</div>
+        <div style="font-size:0.72rem;color:var(--muted,#8B7355);">${it.unit?tesc(it.unit)+' · ':''}alert at ${it.low_threshold}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
+        <button onclick="adjTeamInv(${it.id},-1)" style="width:40px;height:40px;border:1px solid rgba(182,165,136,0.3);background:none;color:#B6A588;font-size:1.2rem;cursor:pointer;border-radius:8px;">−</button>
+        <span style="font-family:'Cinzel',serif;font-size:1.5rem;color:${low?'#e88':'#B6A588'};min-width:2ch;text-align:center;">${it.qty}</span>
+        <button onclick="adjTeamInv(${it.id},1)" style="width:40px;height:40px;border:1px solid rgba(182,165,136,0.3);background:none;color:#B6A588;font-size:1.2rem;cursor:pointer;border-radius:8px;">+</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function adjTeamInv(id,delta){
+  await fetch('/api/inventory',{method:'PUT',headers:hdrN(),body:JSON.stringify({action:'adjust',id,delta})});
+  await loadTeamInv();
 }
 
 /* ── ALL CLIENTS (studio-wide visibility, incl. Black Card profiles) ── */

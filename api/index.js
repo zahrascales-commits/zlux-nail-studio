@@ -60,6 +60,7 @@ app.all('/api/photos',           require('./_photos'));
 app.all('/api/coverage',         require('./_coverage'));
 app.all('/api/roster',           require('./_roster'));
 app.all('/api/nail-health',      require('./_nail-health'));
+app.all('/api/inventory',        require('./_inventory'));
 app.all('/api/classes',          require('./_classes'));
 app.all('/api/analytics',        require('./_analytics'));
 

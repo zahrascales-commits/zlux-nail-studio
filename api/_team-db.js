@@ -159,6 +159,16 @@ async function ensureTables() {
     close_time TEXT,
     closed INTEGER DEFAULT 0
   )`);
+  await execute(`CREATE TABLE IF NOT EXISTS inventory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    qty INTEGER DEFAULT 0,
+    unit TEXT DEFAULT '',
+    low_threshold INTEGER DEFAULT 2,
+    updated_by TEXT DEFAULT '',
+    updated_ts INTEGER,
+    created_ts INTEGER
+  )`);
   // Columns added after launch — idempotent, ignored once they exist
   for (const sql of [
     "ALTER TABLE team_members ADD COLUMN phone TEXT DEFAULT ''",
