@@ -1143,7 +1143,9 @@ function showcaseCounts(){
   return { SIGNATURE:sig, LUXE:lux, BLACK_CARD:blk, new_this_month: 6 + (Math.floor(days/2)%14) };
 }
 
+let salesToken = 0;
 async function loadSales(){
+  const my = ++salesToken; // last call wins — a late live fetch can't clobber a newer showcase render
   document.getElementById('sales-mode-toggle').checked = salesMode==='showcase';
   document.getElementById('sales-mode-label').textContent = salesMode==='showcase' ? 'Preview' : 'Live';
   let counts, newM;
@@ -1155,6 +1157,7 @@ async function loadSales(){
       counts = d.counts || {SIGNATURE:0,LUXE:0,BLACK_CARD:0}; newM = d.new_this_month||0;
     }catch{ counts={SIGNATURE:0,LUXE:0,BLACK_CARD:0}; newM=0; }
   }
+  if(my !== salesToken) return; // superseded by a newer loadSales — don't render stale data
   renderSales(counts, newM);
 }
 
