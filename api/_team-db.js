@@ -159,7 +159,7 @@ async function ensureTables() {
     close_time TEXT,
     closed INTEGER DEFAULT 0
   )`);
-  await execute(`CREATE TABLE IF NOT EXISTS inventory (
+  await execute(`CREATE TABLE IF NOT EXISTS studio_inventory (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     qty INTEGER DEFAULT 0,

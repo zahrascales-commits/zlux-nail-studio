@@ -31,7 +31,7 @@ module.exports = async function (req, res) {
 
     // ── LIST (owner or worker) ──
     if (req.method === 'GET' && (!action || action === 'list')) {
-      const items = await query('SELECT * FROM inventory ORDER BY (qty <= low_threshold) DESC, name');
+      const items = await query('SELECT * FROM studio_inventory ORDER BY (qty <= low_threshold) DESC, name');
       const low = items.filter(i => Number(i.qty) <= Number(i.low_threshold));
       return res.json({ items, low_count: low.length, role: who.role });
     }
@@ -42,7 +42,7 @@ module.exports = async function (req, res) {
       const { name, qty, unit, low_threshold } = req.body || {};
       if (!name) return res.status(400).json({ error: 'Name required' });
       const r = await execute(
-        'INSERT INTO inventory (name, qty, unit, low_threshold, updated_by, updated_ts, created_ts) VALUES (?,?,?,?,?,?,?)',
+        'INSERT INTO studio_inventory (name, qty, unit, low_threshold, updated_by, updated_ts, created_ts) VALUES (?,?,?,?,?,?,?)',
         [name, Math.max(0, Number(qty) || 0), unit || '', Math.max(0, Number(low_threshold) || 2), who.name, Date.now(), Date.now()]);
       return res.json({ ok: true, id: r.lastInsertRowid });
     }
@@ -52,7 +52,7 @@ module.exports = async function (req, res) {
       const b = req.body || {};
       const id = Number(b.id);
       if (!id) return res.status(400).json({ error: 'id required' });
-      const cur = await queryOne('SELECT * FROM inventory WHERE id=?', [id]);
+      const cur = await queryOne('SELECT * FROM studio_inventory WHERE id=?', [id]);
       if (!cur) return res.status(404).json({ error: 'Item not found' });
       let qty = cur.qty;
       if (action === 'adjust') qty = Math.max(0, Number(cur.qty) + Number(b.delta || 0));
@@ -61,7 +61,7 @@ module.exports = async function (req, res) {
       const name = (who.role === 'owner' && b.name !== undefined) ? b.name : cur.name;
       const unit = (who.role === 'owner' && b.unit !== undefined) ? b.unit : cur.unit;
       const low = (who.role === 'owner' && b.low_threshold !== undefined) ? Math.max(0, Number(b.low_threshold)) : cur.low_threshold;
-      await execute('UPDATE inventory SET name=?, qty=?, unit=?, low_threshold=?, updated_by=?, updated_ts=? WHERE id=?',
+      await execute('UPDATE studio_inventory SET name=?, qty=?, unit=?, low_threshold=?, updated_by=?, updated_ts=? WHERE id=?',
         [name, qty, unit, low, who.name, Date.now(), id]);
       return res.json({ ok: true, qty });
     }
@@ -69,7 +69,7 @@ module.exports = async function (req, res) {
     // ── DELETE (owner only) ──
     if (req.method === 'DELETE') {
       if (who.role !== 'owner') return res.status(403).json({ error: 'Only the owner can remove items' });
-      await execute('DELETE FROM inventory WHERE id=?', [Number((req.body || {}).id)]);
+      await execute('DELETE FROM studio_inventory WHERE id=?', [Number((req.body || {}).id)]);
       return res.json({ ok: true });
     }
 
