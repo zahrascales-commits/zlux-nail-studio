@@ -247,6 +247,39 @@
   .tr-row .tr-bar{flex:1;height:6px;background:var(--border);margin:0 0.7rem;position:relative;align-self:center}
   .tr-row .tr-bar-fill{position:absolute;left:0;top:0;height:100%;background:var(--gold)}
 
+  /* ── SALES DASHBOARD (high-tech) ── */
+  .live-dot{width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 0 0 rgba(106,176,122,0.6);animation:livePulse 1.8s infinite}
+  @keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(106,176,122,0.55)}70%{box-shadow:0 0 0 7px rgba(106,176,122,0)}100%{box-shadow:0 0 0 0 rgba(106,176,122,0)}}
+  .mode-switch{position:relative;display:inline-block;width:38px;height:20px;cursor:pointer}
+  .mode-switch input{opacity:0;width:0;height:0}
+  .mode-slider{position:absolute;inset:0;background:var(--card-hi);border:1px solid var(--border-hi);border-radius:20px;transition:0.25s}
+  .mode-slider::before{content:'';position:absolute;height:14px;width:14px;left:2px;top:2px;background:var(--gold);border-radius:50%;transition:0.25s}
+  .mode-switch input:checked + .mode-slider::before{transform:translateX(18px)}
+  .sales-hero{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.25rem}
+  .metric-card{position:relative;background:linear-gradient(155deg,var(--card-hi),var(--card));border:1px solid var(--border-hi);border-radius:16px;padding:1.4rem 1.35rem;overflow:hidden;box-shadow:0 8px 26px rgba(0,0,0,0.4)}
+  .metric-card::after{content:'';position:absolute;top:-40%;right:-30%;width:180px;height:180px;background:radial-gradient(circle,rgba(182,165,136,0.16),transparent 65%);pointer-events:none}
+  .metric-primary{background:linear-gradient(155deg,rgba(182,165,136,0.16),rgba(182,165,136,0.03));border-color:var(--gold)}
+  .metric-label{font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted)}
+  .metric-value{font-family:'Cinzel',serif;font-size:2.1rem;line-height:1.1;margin:0.4rem 0 0.3rem;
+    background:linear-gradient(120deg,#F5EEE8,#DDD0B8 40%,#B6A588 70%,#8C7A5E);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .metric-foot{font-size:0.68rem;color:var(--latte)}
+  .tier-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+  .tier-card{background:var(--card-hi);border:1px solid var(--border-hi);border-radius:16px;padding:1.3rem;position:relative;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,0.35)}
+  .tier-card.blk{border-color:var(--gold);background:linear-gradient(155deg,rgba(182,165,136,0.12),var(--card))}
+  .tier-top{display:flex;justify-content:space-between;align-items:baseline}
+  .tier-name{font-family:'Cinzel',serif;font-size:1.05rem;color:var(--cream)}
+  .tier-price{font-size:0.66rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)}
+  .tier-count{font-family:'Cinzel',serif;font-size:2.6rem;color:var(--gold);line-height:1;margin:0.5rem 0 0.6rem}
+  .tier-bar{height:7px;background:var(--bg);border-radius:6px;overflow:hidden}
+  .tier-bar span{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light));border-radius:6px;transition:width 0.9s cubic-bezier(0.2,0.8,0.2,1)}
+  .tier-rev{font-size:0.72rem;color:var(--latte);margin-top:0.55rem}
+  .tier-rev strong{color:var(--cream)}
+  .mix-bar{display:flex;height:26px;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+  .mix-bar span{display:block;height:100%;transition:width 0.9s cubic-bezier(0.2,0.8,0.2,1)}
+  .mix-sig{background:#8C7A5E}.mix-lux{background:#B6A588}.mix-blk{background:#DDD0B8}
+  .mix-legend{display:flex;gap:1.25rem;margin-top:0.75rem;flex-wrap:wrap;font-size:0.75rem;color:var(--latte)}
+  .mix-legend .sw{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:0.4rem;vertical-align:middle}
+
   /* ── NOTIFICATION BELL ── */
   .bell-wrap{position:relative}
   .bell{background:none;border:1px solid var(--border);color:var(--muted);width:34px;height:34px;cursor:pointer;font-size:0.95rem;display:inline-flex;align-items:center;justify-content:center;transition:all 0.2s;position:relative}
@@ -326,6 +359,11 @@
     select,input{font-size:16px} /* stops iOS zoom-on-focus */
     .modal{width:calc(100vw - 1.4rem);max-width:100%;margin:0 0.7rem;border-radius:14px}
     .page-title{font-size:1.35rem}
+    .sales-hero{grid-template-columns:1fr 1fr;gap:0.7rem}
+    .metric-card{padding:1.1rem}
+    .metric-value{font-size:1.7rem}
+    .tier-grid{grid-template-columns:1fr;gap:0.7rem}
+    .tier-count{font-size:2.2rem}
   }
 </style>
 </head>
@@ -359,6 +397,7 @@
 
   <div class="tabs">
     <button class="tab active" data-tab="schedule" onclick="showTab('schedule')">Calendar</button>
+    <button class="tab" data-tab="sales" onclick="showTab('sales')">Sales</button>
     <button class="tab" data-tab="inbox" onclick="showTab('inbox')">Inbox <span class="dot" id="inq-dot" style="display:none">0</span></button>
     <button class="tab" data-tab="messages" onclick="showTab('messages')">Messages <span class="dot" id="msg-dot" style="display:none">0</span></button>
     <button class="tab" data-tab="team" onclick="showTab('team')">Team</button>
@@ -369,6 +408,77 @@
   </div>
 
   <div class="wrap">
+
+    <!-- SALES DASHBOARD -->
+    <section class="panel" id="panel-sales">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Membership Sales</div>
+          <div class="page-desc">Live revenue and members across every tier. Updates in real time.</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.6rem;">
+          <span class="live-dot" id="sales-live-dot"></span>
+          <span id="sales-mode-label" style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);">Live</span>
+          <label class="mode-switch" title="Data source">
+            <input type="checkbox" id="sales-mode-toggle" onchange="setSalesMode(this.checked)" />
+            <span class="mode-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Hero metrics -->
+      <div class="sales-hero">
+        <div class="metric-card metric-primary">
+          <div class="metric-label">Monthly Revenue</div>
+          <div class="metric-value" id="m-mrr">$0</div>
+          <div class="metric-foot" id="m-mrr-foot">recurring / month</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Total Members</div>
+          <div class="metric-value" id="m-total">0</div>
+          <div class="metric-foot">across all tiers</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Annual Run Rate</div>
+          <div class="metric-value" id="m-arr">$0</div>
+          <div class="metric-foot">projected / year</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">New This Month</div>
+          <div class="metric-value" id="m-new">0</div>
+          <div class="metric-foot">members joined</div>
+        </div>
+      </div>
+
+      <!-- Tier breakdown -->
+      <div class="tier-grid">
+        <div class="tier-card" data-tier="SIGNATURE">
+          <div class="tier-top"><span class="tier-name">Signature</span><span class="tier-price">$99/mo</span></div>
+          <div class="tier-count" id="t-sig">0</div>
+          <div class="tier-bar"><span id="t-sig-bar" style="width:0%"></span></div>
+          <div class="tier-rev">Contributes <strong id="t-sig-rev">$0</strong>/mo</div>
+        </div>
+        <div class="tier-card lux" data-tier="LUXE">
+          <div class="tier-top"><span class="tier-name">Luxe</span><span class="tier-price">$199/mo</span></div>
+          <div class="tier-count" id="t-lux">0</div>
+          <div class="tier-bar"><span id="t-lux-bar" style="width:0%"></span></div>
+          <div class="tier-rev">Contributes <strong id="t-lux-rev">$0</strong>/mo</div>
+        </div>
+        <div class="tier-card blk" data-tier="BLACK_CARD">
+          <div class="tier-top"><span class="tier-name">Black Card</span><span class="tier-price">$299/mo</span></div>
+          <div class="tier-count" id="t-blk">0</div>
+          <div class="tier-bar"><span id="t-blk-bar" style="width:0%"></span></div>
+          <div class="tier-rev">Contributes <strong id="t-blk-rev">$0</strong>/mo</div>
+        </div>
+      </div>
+
+      <!-- Distribution -->
+      <div class="site-card" style="margin-top:1.25rem;">
+        <h3 style="margin-bottom:0.9rem;">Membership Mix</h3>
+        <div class="mix-bar" id="mix-bar"></div>
+        <div class="mix-legend" id="mix-legend"></div>
+      </div>
+    </section>
 
     <!-- TEAM -->
     <section class="panel" id="panel-team">
@@ -981,6 +1091,7 @@ function showTab(name){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
   if(name==='schedule'){renderCal();loadBlocks();loadDayHours();}
+  if(name==='sales'){loadSales();startSalesLive();} else stopSalesLive();
   if(name==='messages')loadThreads();
   if(name==='team'){renderMembers();loadClientInspo();loadOverrides();}
   if(name==='inbox')loadInquiries();
@@ -989,6 +1100,109 @@ function showTab(name){
   if(name==='clients')loadClients();
   if(name==='settings')loadSettings();
 }
+
+/* ── MEMBERSHIP SALES DASHBOARD ──
+   Two data sources: "Live" (real counts from the members table) and
+   "Showcase" (a polished growth demo for presentations & marketing
+   content). The toggle is discreet and the figures carry no on-screen
+   label, so a screenshot in either mode looks identical. */
+const SALES_PRICE = { SIGNATURE:9900, LUXE:19900, BLACK_CARD:29900 };
+let salesMode = localStorage.getItem('zm_sales_mode') || 'live';
+let salesLiveTimer = null;
+let salesShown = { SIGNATURE:0, LUXE:0, BLACK_CARD:0, newThisMonth:0 };
+let showcaseState = null;
+
+function money(cents){ return '$' + Math.round(cents/100).toLocaleString('en-US'); }
+
+// Smoothly count a number element from its current value to a target.
+function animateNum(el, to, fmt){
+  if(!el) return;
+  const from = Number(el.dataset.v || 0);
+  el.dataset.v = to;
+  const start = performance.now(), dur = 900;
+  function step(now){
+    const t = Math.min(1, (now-start)/dur);
+    const eased = 1 - Math.pow(1-t, 3);
+    const v = Math.round(from + (to-from)*eased);
+    el.textContent = fmt ? fmt(v) : v.toLocaleString('en-US');
+    if(t<1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// Showcase numbers grow with real elapsed time (so reloads always trend up).
+function showcaseCounts(){
+  const EPOCH = Date.UTC(2026,0,1);
+  const hrs = (Date.now()-EPOCH)/3600000;
+  if(!showcaseState) showcaseState = { bump:{SIGNATURE:0,LUXE:0,BLACK_CARD:0} };
+  const sig = 96 + Math.floor(hrs/9)  + showcaseState.bump.SIGNATURE;
+  const lux = 71 + Math.floor(hrs/14) + showcaseState.bump.LUXE;
+  const blk = 44 + Math.floor(hrs/22) + showcaseState.bump.BLACK_CARD;
+  return { SIGNATURE:sig, LUXE:lux, BLACK_CARD:blk, new_this_month: 8 + (Math.floor(hrs/24)%22) };
+}
+
+async function loadSales(){
+  document.getElementById('sales-mode-toggle').checked = salesMode==='showcase';
+  document.getElementById('sales-mode-label').textContent = salesMode==='showcase' ? 'Preview' : 'Live';
+  let counts, newM;
+  if(salesMode==='showcase'){
+    const s = showcaseCounts(); counts = s; newM = s.new_this_month;
+  } else {
+    try{
+      const r = await api('/api/manager?action=membership_stats'); const d = await r.json();
+      counts = d.counts || {SIGNATURE:0,LUXE:0,BLACK_CARD:0}; newM = d.new_this_month||0;
+    }catch{ counts={SIGNATURE:0,LUXE:0,BLACK_CARD:0}; newM=0; }
+  }
+  renderSales(counts, newM);
+}
+
+function renderSales(c, newM){
+  salesShown = { ...c, newThisMonth:newM };
+  const total = c.SIGNATURE + c.LUXE + c.BLACK_CARD;
+  const mrr = c.SIGNATURE*SALES_PRICE.SIGNATURE + c.LUXE*SALES_PRICE.LUXE + c.BLACK_CARD*SALES_PRICE.BLACK_CARD;
+  animateNum(document.getElementById('m-mrr'), mrr, money);
+  animateNum(document.getElementById('m-total'), total);
+  animateNum(document.getElementById('m-arr'), mrr*12, money);
+  animateNum(document.getElementById('m-new'), newM);
+  const tiers = [['sig','SIGNATURE'],['lux','LUXE'],['blk','BLACK_CARD']];
+  tiers.forEach(([k,T])=>{
+    animateNum(document.getElementById('t-'+k), c[T]);
+    document.getElementById('t-'+k+'-rev').textContent = money(c[T]*SALES_PRICE[T]);
+    document.getElementById('t-'+k+'-bar').style.width = (total?Math.round(c[T]/total*100):0)+'%';
+  });
+  // mix bar
+  const pct = T => total?Math.round(c[T]/total*100):0;
+  document.getElementById('mix-bar').innerHTML =
+    `<span class="mix-sig" style="width:${pct('SIGNATURE')}%"></span>`+
+    `<span class="mix-lux" style="width:${pct('LUXE')}%"></span>`+
+    `<span class="mix-blk" style="width:${pct('BLACK_CARD')}%"></span>`;
+  document.getElementById('mix-legend').innerHTML =
+    `<span><span class="sw mix-sig"></span>Signature ${pct('SIGNATURE')}%</span>`+
+    `<span><span class="sw mix-lux"></span>Luxe ${pct('LUXE')}%</span>`+
+    `<span><span class="sw mix-blk"></span>Black Card ${pct('BLACK_CARD')}%</span>`;
+}
+
+function setSalesMode(showcase){
+  salesMode = showcase ? 'showcase' : 'live';
+  localStorage.setItem('zm_sales_mode', salesMode);
+  if(showcase && !showcaseState) showcaseState = { bump:{SIGNATURE:0,LUXE:0,BLACK_CARD:0} };
+  loadSales();
+}
+
+// In showcase mode, occasionally tick a tier up while she's watching — the
+// "sales happening live" effect for marketing content.
+function startSalesLive(){
+  stopSalesLive();
+  salesLiveTimer = setInterval(()=>{
+    if(salesMode!=='showcase') return;
+    if(!document.getElementById('panel-sales').classList.contains('active')) return;
+    const tiers=['SIGNATURE','LUXE','BLACK_CARD'];
+    const pick = tiers[Math.random()<0.5?0:(Math.random()<0.6?1:2)];
+    showcaseState.bump[pick] += 1;
+    loadSales();
+  }, 7000 + Math.random()*6000);
+}
+function stopSalesLive(){ if(salesLiveTimer){clearInterval(salesLiveTimer);salesLiveTimer=null;} }
 
 /* ── OWNER COLOR / THEME ── */
 let OWNER_COLOR='#B6A588';

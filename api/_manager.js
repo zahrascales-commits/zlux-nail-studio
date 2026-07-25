@@ -217,6 +217,25 @@ module.exports = async function (req, res) {
       return res.json({ ok: true });
     }
 
+    // ── MEMBERSHIP SALES STATS (real counts + revenue by tier) ──
+    if (method === 'GET' && action === 'membership_stats') {
+      const PRICE = { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900 };
+      const counts = { SIGNATURE: 0, LUXE: 0, BLACK_CARD: 0 };
+      try {
+        const rows = await query("SELECT tier, COUNT(*) AS n FROM members WHERE tier IN ('SIGNATURE','LUXE','BLACK_CARD') GROUP BY tier");
+        for (const r of rows) if (counts[r.tier] !== undefined) counts[r.tier] = Number(r.n);
+      } catch (_) {}
+      const total = counts.SIGNATURE + counts.LUXE + counts.BLACK_CARD;
+      const mrr = counts.SIGNATURE * PRICE.SIGNATURE + counts.LUXE * PRICE.LUXE + counts.BLACK_CARD * PRICE.BLACK_CARD;
+      let newThisMonth = 0;
+      try {
+        const monthPrefix = new Date().toISOString().slice(0, 7);
+        const nr = await query("SELECT COUNT(*) AS n FROM members WHERE substr(membership_started_at,1,7)=? AND tier IN ('SIGNATURE','LUXE','BLACK_CARD')", [monthPrefix]);
+        newThisMonth = nr[0] ? Number(nr[0].n) : 0;
+      } catch (_) {}
+      return res.json({ counts, total, mrr_cents: mrr, arr_cents: mrr * 12, new_this_month: newThisMonth, prices: PRICE });
+    }
+
     // ── WHERE PEOPLE HEARD ABOUT US (from membership signups) ──
     if (method === 'GET' && action === 'heard_about') {
       const LABELS = { instagram: 'Instagram', friend: 'Friend or family', google: 'Google', tiktok: 'TikTok', celebrity: 'Saw a celebrity client', other: 'Other', '': 'Not specified' };
