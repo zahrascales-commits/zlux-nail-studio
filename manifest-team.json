@@ -1,0 +1,14 @@
+{
+  "name": "ZOLA Team",
+  "short_name": "ZOLA Team",
+  "description": "Your ZOLA schedule, clients, inventory, and check-ins.",
+  "start_url": "/team.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B0B0B",
+  "theme_color": "#140d07",
+  "icons": [
+    { "src": "/img/zola-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

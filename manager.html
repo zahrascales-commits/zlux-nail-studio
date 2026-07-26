@@ -4,6 +4,14 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>ZOLA — Studio Manager</title>
+<link rel="manifest" href="/manifest.json" />
+<link rel="apple-touch-icon" href="/img/zola-icon.png" />
+<link rel="icon" href="/img/zola-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="ZOLA Manager" />
+<meta name="theme-color" content="#140d07" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
@@ -2575,5 +2583,6 @@ async function copy(text,msg){try{await navigator.clipboard.writeText(text);toas
 /* ── INIT ── */
 (function(){const saved=sessionStorage.getItem('zm_pwd');if(saved){document.getElementById('pwd').value=saved;login();}})();
 </script>
+<script src="js/pwa.js"></script>
 </body>
 </html>

@@ -1,0 +1,14 @@
+{
+  "name": "ZOLA Studio Manager",
+  "short_name": "ZOLA Manager",
+  "description": "Run your ZOLA studio — calendar, sales, inventory, team, and clients.",
+  "start_url": "/manager.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B0B0B",
+  "theme_color": "#140d07",
+  "icons": [
+    { "src": "/img/zola-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

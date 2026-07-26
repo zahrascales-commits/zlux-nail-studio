@@ -4,6 +4,14 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>ZOLA — Team Portal</title>
+<link rel="manifest" href="/manifest-team.json" />
+<link rel="apple-touch-icon" href="/img/zola-icon.png" />
+<link rel="icon" href="/img/zola-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="ZOLA Team" />
+<meta name="theme-color" content="#140d07" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
@@ -530,5 +538,6 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 
 (function(){const s=sessionStorage.getItem('zt');if(s){try{const o=JSON.parse(s);MID=o.MID;PIN=o.PIN;NAME=o.NAME;COLOR=o.COLOR||'#B6A588';enter();}catch{}}})();
 </script>
+<script src="js/pwa.js"></script>
 </body>
 </html>
