@@ -235,9 +235,10 @@ module.exports = async (req, res) => {
         if (staffRow) staffId = staffRow.id;
       }
       const isMember = !!member_id;
+      try { await execute('ALTER TABLE appointments ADD COLUMN deposit_paid INTEGER DEFAULT 0'); } catch (_) {}
       await execute(
-        `INSERT INTO appointments (member_id, guest_name, guest_email, staff_id, service, addons, appointment_date, appointment_time, status, total_cents, deposit_cents)
-         VALUES (?,?,?,?,?,?,?,?,'SCHEDULED',?,?)`,
+        `INSERT INTO appointments (member_id, guest_name, guest_email, staff_id, service, addons, appointment_date, appointment_time, status, total_cents, deposit_cents, deposit_paid)
+         VALUES (?,?,?,?,?,?,?,?,'SCHEDULED',?,?,?)`,
         [
           isMember ? member_id : null,
           isMember ? null : customer_name,
@@ -249,6 +250,7 @@ module.exports = async (req, res) => {
           time_slot,
           total_cents,
           deposit_cents,
+          depositPaid ? 1 : 0,
         ]
       );
     } catch (_) {}

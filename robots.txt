@@ -7,5 +7,6 @@ Disallow: /ceo.html
 Disallow: /team.html
 Disallow: /worker.html
 Disallow: /chat.html
+Disallow: /checkin.html
 
 Sitemap: https://zlux-github.vercel.app/sitemap.xml

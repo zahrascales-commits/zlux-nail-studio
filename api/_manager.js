@@ -217,6 +217,58 @@ module.exports = async function (req, res) {
       return res.json({ ok: true });
     }
 
+    // ── DEPOSITS: who has paid vs not, mark-paid, and 24-hour notice ──
+    async function depositRows() {
+      const { query: mainQuery, execute: mainExec } = require('./_db');
+      try { await mainExec('ALTER TABLE appointments ADD COLUMN deposit_paid INTEGER DEFAULT 0'); } catch (_) {}
+      const today = new Date().toISOString().slice(0, 10);
+      const rows = await mainQuery(
+        `SELECT a.id, a.appointment_date AS date, a.appointment_time AS time, a.service,
+                a.total_cents, a.deposit_cents, a.deposit_paid,
+                m.full_name, m.phone AS mphone, m.email AS memail, a.guest_name, a.guest_email
+         FROM appointments a LEFT JOIN members m ON a.member_id = m.member_id
+         WHERE a.status = 'SCHEDULED' AND a.appointment_date >= ?
+         ORDER BY a.appointment_date, a.appointment_time`, [today]).catch(() => []);
+      const clients = await query('SELECT email, phone FROM clients').catch(() => []);
+      const pmap = {}; for (const c of clients) if (c.email) pmap[String(c.email).toLowerCase()] = c.phone;
+      return rows.map(r => ({
+        id: r.id, date: r.date, time: r.time, service: r.service,
+        total_cents: Number(r.total_cents) || 0, deposit_cents: Number(r.deposit_cents) || 0,
+        deposit_paid: Number(r.deposit_paid) ? 1 : 0,
+        name: r.full_name || r.guest_name || 'Client',
+        phone: r.mphone || pmap[String(r.guest_email || '').toLowerCase()] || '',
+        email: r.memail || r.guest_email || '',
+      }));
+    }
+
+    if (method === 'GET' && action === 'deposits') {
+      return res.json({ appointments: await depositRows() });
+    }
+
+    if (method === 'POST' && action === 'deposit_mark') {
+      const { id, paid } = req.body || {};
+      const { execute: mainExec } = require('./_db');
+      try { await mainExec('ALTER TABLE appointments ADD COLUMN deposit_paid INTEGER DEFAULT 0'); } catch (_) {}
+      await mainExec('UPDATE appointments SET deposit_paid=? WHERE id=?', [paid ? 1 : 0, Number(id)]);
+      return res.json({ ok: true });
+    }
+
+    if (method === 'POST' && action === 'request_deposit') {
+      const { id } = req.body || {};
+      const row = (await depositRows()).find(r => String(r.id) === String(id));
+      if (!row) return res.status(404).json({ error: 'Appointment not found' });
+      const first = row.name.split(' ')[0];
+      const dep = '$' + Math.round(row.deposit_cents / 100);
+      const when = row.date + ' at ' + row.time;
+      const sms = `ZOLA Nail Studio: Hi ${first} — your ${dep} deposit for ${row.service} on ${when} is still due. Please send it within 24 hours or your appointment will be cancelled. Questions? Just reply here. ✦`;
+      const html = `<p>Hi ${first},</p><p>Your <strong>${dep} deposit</strong> for <strong>${row.service}</strong> on ${when} is still due. Please send it within <strong>24 hours</strong> or your appointment will be cancelled.</p><p>Questions? Reply to this email or DM @zola_officials_.</p><p>— ZOLA Nail Studio ✦</p>`;
+      const out = {};
+      if (row.phone) out.sms = await sendSMS(row.phone, sms);
+      if (row.email) out.email = await sendEmail(row.email, 'Deposit needed within 24 hours — ZOLA', html);
+      try { await require('./_notify').notifyInApp('owner', null, 'Deposit notice sent', `24-hour deposit notice sent to ${row.name} (${row.service}, ${when}).`); } catch (_) {}
+      return res.json({ ok: true, ...out });
+    }
+
     // ── NOTIFICATION SETTINGS (worker + client + inventory reminders) ──
     if (method === 'GET' && action === 'notif_settings') {
       const rows = await query("SELECT key, value FROM site_settings WHERE key LIKE 'notif_%' OR key='owner_phone'");

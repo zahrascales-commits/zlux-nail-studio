@@ -410,6 +410,7 @@
   <div class="tabs">
     <button class="tab active" data-tab="schedule" onclick="showTab('schedule')">Calendar</button>
     <button class="tab" data-tab="sales" onclick="showTab('sales')">Sales</button>
+    <button class="tab" data-tab="deposits" onclick="showTab('deposits')">Deposits <span class="dot" id="dep-dot" style="display:none">0</span></button>
     <button class="tab" data-tab="inventory" onclick="showTab('inventory')">Inventory <span class="dot" id="inv-dot" style="display:none">0</span></button>
     <button class="tab" data-tab="inbox" onclick="showTab('inbox')">Inbox <span class="dot" id="inq-dot" style="display:none">0</span></button>
     <button class="tab" data-tab="messages" onclick="showTab('messages')">Messages <span class="dot" id="msg-dot" style="display:none">0</span></button>
@@ -491,6 +492,21 @@
         <div class="mix-bar" id="mix-bar"></div>
         <div class="mix-legend" id="mix-legend"></div>
       </div>
+    </section>
+
+    <!-- DEPOSITS -->
+    <section class="panel" id="panel-deposits">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Deposits</div>
+          <div class="page-desc">Every upcoming appointment, split by who has sent their deposit and who hasn't. One tap sends a "24 hours or it's cancelled" notice.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadDeposits()">↻ Refresh</button>
+      </div>
+      <div class="ai-tag" style="margin-bottom:0.6rem;">⚠ No deposit yet</div>
+      <div id="dep-unpaid" style="display:grid;gap:0.6rem;margin-bottom:1.5rem;"></div>
+      <div class="ai-tag" style="margin-bottom:0.6rem;">✓ Deposit received</div>
+      <div id="dep-paid" style="display:grid;gap:0.6rem;"></div>
     </section>
 
     <!-- INVENTORY -->
@@ -1165,6 +1181,7 @@ function showTab(name){
   document.getElementById('panel-'+name).classList.add('active');
   if(name==='schedule'){renderCal();loadBlocks();loadDayHours();}
   if(name==='sales'){loadSales();startSalesLive();} else stopSalesLive();
+  if(name==='deposits')loadDeposits();
   if(name==='inventory')loadInventory();
   if(name==='messages')loadThreads();
   if(name==='team'){renderMembers();loadClientInspo();loadOverrides();}
@@ -1173,6 +1190,50 @@ function showTab(name){
   if(name==='traffic')loadTraffic();
   if(name==='clients')loadClients();
   if(name==='settings')loadSettings();
+}
+
+/* ── DEPOSITS ── */
+let depData=[];
+async function loadDeposits(){
+  try{
+    const r=await api('/api/manager?action=deposits');const d=await r.json();
+    depData=d.appointments||[];renderDeposits();
+  }catch{document.getElementById('dep-unpaid').innerHTML='<div class="empty" style="padding:1.5rem">Could not load.</div>';}
+}
+function depCard(a,unpaid){
+  const dep='$'+Math.round(a.deposit_cents/100), tot='$'+Math.round(a.total_cents/100);
+  return `<div class="member-card" style="--mc:${unpaid?'#d66':'#6ab07a'};">
+    <div class="mc-top">
+      <div style="flex:1">
+        <div class="mc-name">${esc(a.name)}</div>
+        <div class="mc-role">${esc(a.service)} · ${fmtDateLabel(a.date)} at ${fmtTime(a.time)} · deposit ${dep} of ${tot}</div>
+      </div>
+      <span class="status-pill ${unpaid?'status-off':'status-on'}">${unpaid?'Unpaid':'Paid ✓'}</span>
+    </div>
+    <div class="mc-actions">
+      ${unpaid?`<button class="btn btn-gold btn-sm" onclick="requestDeposit(${a.id})">Send 24-hour notice</button>
+      <button class="btn btn-ghost btn-sm" onclick="markDeposit(${a.id},1)">Mark as paid</button>`
+      :`<button class="btn btn-ghost btn-sm" onclick="markDeposit(${a.id},0)">Mark as unpaid</button>`}
+    </div>
+  </div>`;
+}
+function renderDeposits(){
+  const un=depData.filter(a=>!a.deposit_paid), pd=depData.filter(a=>a.deposit_paid);
+  const dot=document.getElementById('dep-dot');
+  if(un.length){dot.style.display='inline-block';dot.textContent=un.length;}else dot.style.display='none';
+  document.getElementById('dep-unpaid').innerHTML=un.length?un.map(a=>depCard(a,true)).join(''):'<div class="empty" style="padding:1rem">Everyone upcoming has paid ✓</div>';
+  document.getElementById('dep-paid').innerHTML=pd.length?pd.map(a=>depCard(a,false)).join(''):'<div class="empty" style="padding:1rem">No paid deposits yet.</div>';
+}
+async function markDeposit(id,paid){
+  await api('/api/manager',{method:'POST',body:JSON.stringify({action:'deposit_mark',id,paid:!!paid})});
+  toast(paid?'Marked paid ✓':'Marked unpaid');await loadDeposits();
+}
+async function requestDeposit(id){
+  const a=depData.find(x=>String(x.id)===String(id));
+  if(!confirm('Send '+(a?a.name:'this client')+' the 24-hour deposit notice now?'))return;
+  const r=await api('/api/manager',{method:'POST',body:JSON.stringify({action:'request_deposit',id})});
+  const d=await r.json();
+  toast(d.ok?'Notice sent ✦':'Could not send');
 }
 
 /* ── INVENTORY ── */

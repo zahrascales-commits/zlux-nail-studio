@@ -586,6 +586,14 @@
         <div id="booking-conf-num" style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--champagne);margin-bottom:0.75rem;"></div>
         <p style="font-family:'Josefin Sans',sans-serif;font-size:0.88rem;color:var(--latte);line-height:1.8;">A confirmation text and email is on its way. We can't wait to see you.<br>Questions? DM us <strong>@zola_officials_</strong> or text us directly.</p>
 
+        <!-- One-tap reminders opt-in — uses the phone they already entered -->
+        <div id="notif-optin" style="background:rgba(182,165,136,0.08);border:1px solid rgba(182,165,136,0.25);padding:1.1rem 1.25rem;margin-top:1.25rem;">
+          <div style="font-family:'Cinzel',serif;font-size:1.05rem;color:var(--espresso);margin-bottom:0.3rem;">Want appointment reminders? 🔔</div>
+          <p style="font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:var(--latte);line-height:1.6;margin-bottom:0.75rem;">We'll text the number you just used — a heads-up the night before and an hour before, so you never miss your spot.</p>
+          <button class="btn-gold" style="animation:none;font-size:0.7rem;" onclick="optInReminders()">Yes — text me ✓</button>
+          <div id="notif-optin-done" style="display:none;font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:#4e8e5e;margin-top:0.5rem;">You're set ✦ Reminders are on.</div>
+        </div>
+
         <!-- Inspo photo upload — goes straight to Zahra + every artist -->
         <div class="inspo-up" id="inspo-up">
           <div style="font-family:'Cinzel',serif;font-size:1.2rem;color:var(--espresso);">Have inspo? Show us 💅</div>
@@ -871,6 +879,25 @@ async function submitInspo() {
 
 function selectBirthdayGift(gift) {
   booking.birthdayGift = gift;
+}
+
+// One tap: opt this client into reminders using the phone/email they
+// already entered at checkout — no re-asking, no extra steps.
+async function optInReminders() {
+  try {
+    await fetch('/api/clients?action=signup', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'signup',
+        name: document.getElementById('client-name').value.trim(),
+        phone: document.getElementById('client-phone').value.trim(),
+        email: document.getElementById('client-email').value.trim(),
+      })
+    });
+  } catch (_) {}
+  const btn = document.querySelector('#notif-optin .btn-gold');
+  if (btn) btn.style.display = 'none';
+  document.getElementById('notif-optin-done').style.display = 'block';
 }
 
 // ═══════════════════════════════════════════

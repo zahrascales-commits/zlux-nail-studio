@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Welcome — ZOLA Nail Studio</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" href="/img/zola-icon.png" />
+<link rel="apple-touch-icon" href="/img/zola-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#140d07" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=Josefin+Sans:wght@300;400;600&display=swap" rel="stylesheet" />
+<script src="https://js.stripe.com/v3/"></script>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:'Josefin Sans',sans-serif;color:#F2ECE1;overflow:hidden;
+    background:radial-gradient(1200px 900px at 50% 20%,#241a10 0%,#140d07 55%,#0b0705 100%)}
+  .frame{position:fixed;inset:22px;border:1px solid rgba(182,165,136,0.30);pointer-events:none;z-index:1}
+  .stage{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center}
+  .kicker{font-size:0.8rem;letter-spacing:0.42em;text-transform:uppercase;color:#B6A588;margin-bottom:0.9rem}
+  .logo{font-family:'Cinzel',serif;font-size:clamp(3.2rem,9vw,5.5rem);letter-spacing:0.12em;color:#F2ECE1;line-height:1}
+  .logo b{color:#C9B896;font-weight:800}
+  h2{font-family:'Cinzel',serif;font-weight:400;font-size:clamp(1.6rem,4.5vw,2.4rem);color:#DDD0B8;margin:1.2rem 0 0.4rem}
+  .sub{font-size:1rem;color:#B6A588;max-width:480px;line-height:1.7}
+  .name-input{margin-top:2rem;width:min(520px,90vw);background:rgba(245,238,232,0.06);border:1px solid rgba(182,165,136,0.4);
+    color:#F2ECE1;font-family:'Josefin Sans',sans-serif;font-size:1.6rem;text-align:center;padding:1.1rem 1rem;outline:none;border-radius:14px}
+  .name-input:focus{border-color:#C9B896;box-shadow:0 0 0 4px rgba(182,165,136,0.15)}
+  .name-input::placeholder{color:rgba(182,165,136,0.5)}
+  .row{display:flex;gap:1rem;margin-top:1.6rem;flex-wrap:wrap;justify-content:center}
+  .big-btn{min-width:220px;padding:1.2rem 2.2rem;font-size:0.95rem;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;
+    border:none;cursor:pointer;border-radius:14px;transition:transform 0.15s, box-shadow 0.15s;font-family:'Josefin Sans',sans-serif}
+  .big-btn:active{transform:scale(0.97)}
+  .gold{background:linear-gradient(135deg,#C9B896,#B6A588);color:#140d07;box-shadow:0 14px 40px rgba(182,165,136,0.25)}
+  .ghost{background:none;border:1px solid rgba(182,165,136,0.45);color:#DDD0B8}
+  .stars{display:flex;gap:1rem;font-size:3.4rem;margin:1.6rem 0 0.4rem;cursor:pointer;user-select:none}
+  .stars span{transition:transform 0.12s}
+  .stars span:active{transform:scale(1.2)}
+  textarea.note{margin-top:1rem;width:min(560px,90vw);min-height:110px;background:rgba(245,238,232,0.06);border:1px solid rgba(182,165,136,0.35);
+    color:#F2ECE1;font-family:'Josefin Sans',sans-serif;font-size:1.05rem;padding:1rem;border-radius:14px;outline:none;resize:none}
+  .balance{font-family:'Cinzel',serif;font-size:3.4rem;margin:1rem 0 0.4rem;
+    background:linear-gradient(120deg,#F5EEE8,#DDD0B8 45%,#B6A588);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  #pay-el{margin-top:1.4rem;width:min(520px,90vw);background:#fff;border-radius:14px;padding:1rem;text-align:left}
+  .err{color:#e79090;font-size:0.95rem;margin-top:1rem;min-height:1.3em}
+  .screen{display:none;flex-direction:column;align-items:center}
+  .screen.on{display:flex;animation:fadeUp 0.5s ease}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  .checkmark{font-size:4.5rem;margin-bottom:0.6rem}
+  .home-link{position:fixed;bottom:34px;left:0;right:0;text-align:center;z-index:2;font-size:0.66rem;letter-spacing:0.3em;text-transform:uppercase;color:rgba(182,165,136,0.45)}
+</style>
+</head>
+<body>
+<div class="frame"></div>
+
+<div class="stage">
+
+  <!-- HOME -->
+  <div class="screen on" id="s-home">
+    <div class="kicker">Porterville, California</div>
+    <div class="logo">ZO<b>LA</b></div>
+    <h2>Welcome, beautiful ✦</h2>
+    <p class="sub">Tap below to check in for your appointment — or check out when you're all finished.</p>
+    <div class="row">
+      <button class="big-btn gold" onclick="go('in')">Check In</button>
+      <button class="big-btn ghost" onclick="go('out')">Check Out</button>
+    </div>
+  </div>
+
+  <!-- NAME (shared) -->
+  <div class="screen" id="s-name">
+    <h2 id="name-title">What's your name?</h2>
+    <input class="name-input" id="kname" placeholder="First & last name" autocomplete="off" onkeydown="if(event.key==='Enter')nameNext()" />
+    <div class="err" id="name-err"></div>
+    <div class="row">
+      <button class="big-btn ghost" onclick="reset()">Back</button>
+      <button class="big-btn gold" onclick="nameNext()">Continue</button>
+    </div>
+  </div>
+
+  <!-- CHECKED IN -->
+  <div class="screen" id="s-in-done">
+    <div class="checkmark">✦</div>
+    <h2 id="in-msg">You're checked in</h2>
+    <p class="sub" id="in-sub">Relax — we'll be right with you.</p>
+  </div>
+
+  <!-- CHECKOUT: BALANCE -->
+  <div class="screen" id="s-balance">
+    <h2 id="bal-title">All finished ✦</h2>
+    <p class="sub" id="bal-svc"></p>
+    <div class="balance" id="bal-amt">$0</div>
+    <p class="sub">How would you like to pay the remainder?</p>
+    <div class="row">
+      <button class="big-btn gold" onclick="payCard()">💳 &nbsp;Card / Apple Pay</button>
+      <button class="big-btn ghost" onclick="payCash()">💵 &nbsp;Cash</button>
+    </div>
+    <div class="err" id="bal-err"></div>
+  </div>
+
+  <!-- CHECKOUT: CARD -->
+  <div class="screen" id="s-card">
+    <h2>Card payment</h2>
+    <p class="sub" id="card-amt"></p>
+    <div id="pay-el"></div>
+    <div class="err" id="card-err"></div>
+    <div class="row">
+      <button class="big-btn ghost" onclick="show('s-balance')">Back</button>
+      <button class="big-btn gold" id="card-pay-btn" onclick="confirmCard()">Pay Now</button>
+    </div>
+  </div>
+
+  <!-- REVIEW -->
+  <div class="screen" id="s-review">
+    <h2>How was everything?</h2>
+    <p class="sub">Tap the stars — it means the world to us.</p>
+    <div class="stars" id="kstars">
+      <span data-r="1">☆</span><span data-r="2">☆</span><span data-r="3">☆</span><span data-r="4">☆</span><span data-r="5">☆</span>
+    </div>
+    <textarea class="note" id="kreview" placeholder="Anything you'd like us to know? (optional)"></textarea>
+    <div class="row">
+      <button class="big-btn ghost" onclick="finish()">Skip</button>
+      <button class="big-btn gold" onclick="sendReview()">Submit</button>
+    </div>
+  </div>
+
+  <!-- THANK YOU -->
+  <div class="screen" id="s-bye">
+    <div class="checkmark">✦</div>
+    <h2>Thank you, <span id="bye-name">love</span></h2>
+    <p class="sub">We can't wait to see you again. Tag us <strong>@zola_officials_</strong> ✦</p>
+  </div>
+
+</div>
+<div class="home-link">ZOLA Nail Studio ✦ Check-In</div>
+
+<script>
+let MODE='in', KNAME='', KSTARS=0, _st=null, _el=null, _pi=null, resetTimer=null;
+
+function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); document.getElementById(id).classList.add('on'); }
+function reset(){ clearTimeout(resetTimer); MODE='in';KNAME='';KSTARS=0;_pi=null;
+  document.getElementById('kname').value=''; document.getElementById('kreview').value='';
+  document.querySelectorAll('#kstars span').forEach(s=>s.textContent='☆');
+  ['name-err','bal-err','card-err'].forEach(i=>document.getElementById(i).textContent='');
+  show('s-home'); }
+function autoReset(ms){ clearTimeout(resetTimer); resetTimer=setTimeout(reset, ms); }
+
+function go(mode){ MODE=mode;
+  document.getElementById('name-title').textContent = mode==='in' ? 'Welcome ✦ What\'s your name?' : 'What\'s your name?';
+  show('s-name'); setTimeout(()=>document.getElementById('kname').focus(),150); }
+
+async function nameNext(){
+  const name=document.getElementById('kname').value.trim();
+  const err=document.getElementById('name-err'); err.textContent='';
+  if(!name){ err.textContent='Please type your name ✦'; return; }
+  KNAME=name;
+  if(MODE==='in'){
+    try{
+      const r=await fetch('/api/kiosk?action=checkin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'checkin',name})});
+      const d=await r.json();
+      document.getElementById('in-msg').textContent='You\'re checked in, '+ (d.first||name.split(' ')[0]) +' ✦';
+      document.getElementById('in-sub').textContent = d.matched ? ('We have you down for '+d.service+' — relax, we\'ll be right with you.') : 'Relax — we\'ll be right with you.';
+      show('s-in-done'); autoReset(6000);
+    }catch{ err.textContent='Hmm, try that once more ✦'; }
+  } else {
+    try{
+      const r=await fetch('/api/kiosk?action=balance&name='+encodeURIComponent(name));
+      const d=await r.json();
+      if(!d.found){ // no appointment — go straight to review
+        show('s-review'); return;
+      }
+      const bal=d.balance_cents||0;
+      if(bal<50){ show('s-review'); return; } // nothing owed (members) — straight to review
+      document.getElementById('bal-svc').textContent=d.service+' · remaining balance';
+      document.getElementById('bal-amt').textContent='$'+(bal/100).toFixed(2);
+      show('s-balance');
+    }catch{ err.textContent='Hmm, try that once more ✦'; }
+  }
+}
+
+async function payCard(){
+  const err=document.getElementById('bal-err'); err.textContent='';
+  try{
+    const cfg=await (await fetch('/api/pay?action=config')).json();
+    if(!cfg.enabled||typeof Stripe==='undefined'){ err.textContent='Card isn\'t available right now — please pay cash at the desk ✦'; return; }
+    const r=await fetch('/api/kiosk?action=pay_intent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'pay_intent',name:KNAME})});
+    const d=await r.json();
+    if(!d.client_secret){ err.textContent=d.error||'Could not start payment.'; return; }
+    _pi=d.payment_intent_id;
+    document.getElementById('card-amt').textContent='Paying $'+(d.balance_cents/100).toFixed(2);
+    _st=Stripe(cfg.publishable_key);
+    _el=_st.elements({clientSecret:d.client_secret,appearance:{theme:'flat',variables:{colorPrimary:'#B6A588'}}});
+    document.getElementById('pay-el').innerHTML='';
+    _el.create('payment',{wallets:{applePay:'auto',googlePay:'auto'},layout:'tabs'}).mount('#pay-el');
+    show('s-card');
+  }catch{ err.textContent='Connection hiccup — try again ✦'; }
+}
+
+async function confirmCard(){
+  const btn=document.getElementById('card-pay-btn'), err=document.getElementById('card-err');
+  err.textContent=''; btn.disabled=true; btn.textContent='Charging…';
+  const {error,paymentIntent}=await _st.confirmPayment({elements:_el,redirect:'if_required'});
+  btn.disabled=false; btn.textContent='Pay Now';
+  if(error){ err.textContent=error.message||'Card declined — try again.'; return; }
+  await fetch('/api/kiosk?action=checkout',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'checkout',name:KNAME,method:'card',payment_intent_id:(paymentIntent&&paymentIntent.id)||_pi})});
+  show('s-review');
+}
+
+async function payCash(){
+  const bal=document.getElementById('bal-amt').textContent.replace(/[^0-9.]/g,'');
+  await fetch('/api/kiosk?action=checkout',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'checkout',name:KNAME,method:'cash',amount_cents:Math.round(Number(bal)*100)})});
+  show('s-review');
+}
+
+document.getElementById('kstars').addEventListener('click',e=>{
+  const s=e.target.closest('span'); if(!s)return;
+  KSTARS=Number(s.dataset.r);
+  document.querySelectorAll('#kstars span').forEach(x=>x.textContent=Number(x.dataset.r)<=KSTARS?'★':'☆');
+});
+
+async function sendReview(){
+  if(KSTARS){
+    await fetch('/api/kiosk?action=review',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'review',name:KNAME,stars:KSTARS,text:document.getElementById('kreview').value.trim()})}).catch(()=>{});
+  }
+  finish();
+}
+function finish(){
+  document.getElementById('bye-name').textContent=(KNAME||'love').split(' ')[0];
+  show('s-bye'); autoReset(6000);
+}
+</script>
+</body>
+</html>
