@@ -76,9 +76,11 @@ async function handler(req, res) {
     }
 
     if (req.method === 'PUT' && action === 'update') {
-      const { id, name, email, phone, likes, dislikes, notes, marketing_opt_in } = req.body || {};
+      const { id, name, email, phone, likes, dislikes, notes, marketing_opt_in, sizes } = req.body || {};
+      try { await execute("ALTER TABLE clients ADD COLUMN sizes TEXT DEFAULT ''"); } catch (_) {}
       await execute('UPDATE clients SET name=?,email=?,phone=?,likes=?,dislikes=?,notes=?,marketing_opt_in=? WHERE id=?',
         [name || '', email || '', phone || '', likes || '', dislikes || '', notes || '', marketing_opt_in ? 1 : 0, Number(id)]);
+      if (sizes !== undefined) await execute('UPDATE clients SET sizes=? WHERE id=?', [String(sizes || ''), Number(id)]);
       return res.json({ ok: true });
     }
 

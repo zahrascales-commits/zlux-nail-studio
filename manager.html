@@ -854,6 +854,27 @@
             <div id="class-purchases-list" style="display:grid;gap:0.4rem;margin-top:0.6rem;"></div>
           </div>
         </div>
+        <div class="site-card" style="grid-column:1/-1;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+            <div>
+              <h3>Press-Ons Shop 💅</h3>
+              <p>Your sets, categories, photos, and pricing — everything on pressons.html. Flag sets as New Drop or Most Loved and they get their own spotlight section.</p>
+            </div>
+            <button class="btn btn-gold" onclick="openPoModal()">+ Add Set</button>
+          </div>
+          <div class="ai-tag" style="margin-top:0.6rem;">Categories</div>
+          <div id="po-admin-cats" style="display:flex;gap:0.4rem;flex-wrap:wrap;margin:0.5rem 0 0.8rem;"></div>
+          <div style="display:flex;gap:0.5rem;max-width:340px;">
+            <input id="po-newcat" placeholder="e.g. Wedding Nails, Birthday Nails" style="flex:1" />
+            <button class="btn btn-ghost btn-sm" onclick="addPoCat()">Add</button>
+          </div>
+          <div class="ai-tag" style="margin-top:1.1rem;">Sets</div>
+          <div id="po-admin-products" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:0.8rem;margin-top:0.6rem;"></div>
+          <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--border)">
+            <div class="ai-tag">Orders</div>
+            <div id="po-admin-orders" style="display:grid;gap:0.4rem;margin-top:0.6rem;"></div>
+          </div>
+        </div>
         <div class="site-card">
           <h3>Announcement (optional)</h3>
           <p>A one-line notice pinned at the top of the homepage — sales, closures, holidays. Leave empty for none.</p>
@@ -1116,6 +1137,32 @@
   </div>
 </div>
 
+<div class="overlay" id="modal-po">
+  <div class="modal">
+    <div class="modal-title" id="po-modal-title">Add Press-On Set</div>
+    <input type="hidden" id="pom-id" />
+    <div class="field"><label class="fld-label">Set name</label><input id="pom-name" placeholder="e.g. Pearl Bride — Almond" /></div>
+    <div class="field two">
+      <div><label class="fld-label">Price ($)</label><input id="pom-price" type="number" min="0" step="0.01" placeholder="45" /></div>
+      <div><label class="fld-label">Category</label><select id="pom-cat"></select></div>
+    </div>
+    <div class="field">
+      <label class="fld-label">Photo</label>
+      <div id="pom-photo-preview" style="width:110px;height:110px;border:1px dashed var(--border-hi);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:1.6rem;cursor:pointer;overflow:hidden;background:var(--bg)" onclick="document.getElementById('pom-file').click()">+</div>
+      <input type="file" id="pom-file" accept="image/*" style="display:none" onchange="pomPickPhoto(this)" />
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="pom-drop" style="width:auto" /> <span>✦ New Drop (spotlight at the top)</span></label>
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;margin-top:0.4rem;"><input type="checkbox" id="pom-love" style="width:auto" /> <span>♥ Most Loved / highly requested</span></label>
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;margin-top:0.4rem;"><input type="checkbox" id="pom-active" style="width:auto" checked /> <span>Visible in the shop</span></label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-po')">Cancel</button>
+      <button class="btn btn-gold" onclick="savePoProduct()">Save</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="modal-inv">
   <div class="modal">
     <div class="modal-title" id="inv-modal-title">Add Item</div>
@@ -1190,6 +1237,115 @@ function showTab(name){
   if(name==='traffic')loadTraffic();
   if(name==='clients')loadClients();
   if(name==='settings')loadSettings();
+}
+
+/* ── PRESS-ONS ADMIN ── */
+let poAdmin={categories:[],products:[],orders:[]};
+let _pomPhoto='';
+async function loadPressons(){
+  try{
+    const r=await api('/api/pressons?action=admin');const d=await r.json();
+    poAdmin={categories:d.categories||[],products:d.products||[],orders:d.orders||[]};
+    renderPoAdmin();
+  }catch{}
+}
+function renderPoAdmin(){
+  const catEl=document.getElementById('po-admin-cats');if(!catEl)return;
+  catEl.innerHTML=poAdmin.categories.length?poAdmin.categories.map(c=>
+    `<span style="display:inline-flex;align-items:center;gap:0.4rem;border:1px solid var(--border-hi);border-radius:999px;padding:0.3rem 0.4rem 0.3rem 0.8rem;font-size:0.75rem;color:var(--cream)">${esc(c.name)}
+      <button onclick="delPoCat(${c.id})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:0.85rem;line-height:1;">×</button></span>`).join('')
+    :'<span style="font-size:0.78rem;color:var(--muted)">No categories yet — add Wedding Nails, Birthday Nails, Back to School…</span>';
+  const prodEl=document.getElementById('po-admin-products');
+  prodEl.innerHTML=poAdmin.products.length?poAdmin.products.map(p=>`
+    <div style="border:1px solid var(--border-hi);border-radius:12px;overflow:hidden;background:var(--card)">
+      <div style="aspect-ratio:1.4;background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--muted);overflow:hidden">
+        ${p.photo?`<img src="${p.photo}" style="width:100%;height:100%;object-fit:cover">`:'💅'}
+      </div>
+      <div style="padding:0.7rem 0.8rem">
+        <div style="font-family:'Cinzel',serif;font-size:0.9rem;color:var(--cream)">${esc(p.name)} ${Number(p.active)?'':'<span style="color:var(--muted);font-size:0.65rem">· hidden</span>'}</div>
+        <div style="font-size:0.72rem;color:var(--gold)">$${(p.price_cents/100).toFixed(2)}${p.category?' · '+esc(p.category):''}${Number(p.new_drop)?' · ✦ Drop':''}${Number(p.best_seller)?' · ♥':''}</div>
+        <div style="display:flex;gap:0.35rem;margin-top:0.5rem">
+          <button class="btn btn-ghost btn-sm" onclick="editPoProduct(${p.id})">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="delPoProduct(${p.id},'${esc(p.name)}')">Del</button>
+        </div>
+      </div>
+    </div>`).join(''):'<div class="empty" style="grid-column:1/-1;padding:1.2rem">No sets yet — tap “+ Add Set”.</div>';
+  const ordEl=document.getElementById('po-admin-orders');
+  ordEl.innerHTML=poAdmin.orders.length?poAdmin.orders.map(o=>`
+    <div style="font-size:0.82rem;padding:0.5rem 0.7rem;background:var(--bg);border:1px solid var(--border);display:flex;justify-content:space-between;gap:0.6rem;flex-wrap:wrap;">
+      <span><strong>${esc(o.buyer_name||'—')}</strong> — ${esc(o.product_name)} ${Number(o.kit)?'<span style="color:var(--gold)">+ sizing kit</span>':''}</span>
+      <span style="color:var(--muted)">${esc(o.buyer_email||'')} · $${(o.price_cents/100).toFixed(2)}${o.sizes?' · sizes: '+esc(String(o.sizes).slice(0,40)):' · no sizes yet'}</span>
+    </div>`).join(''):'<div class="empty" style="padding:0.8rem">No orders yet.</div>';
+}
+async function addPoCat(){
+  const name=document.getElementById('po-newcat').value.trim();
+  if(!name){toast('Type a category name');return;}
+  await api('/api/pressons?action=category_add',{method:'POST',body:JSON.stringify({action:'category_add',name})});
+  document.getElementById('po-newcat').value='';toast('Category added');await loadPressons();
+}
+async function delPoCat(id){
+  if(!confirm('Remove this category? Sets keep their label until you edit them.'))return;
+  await api('/api/pressons?action=category',{method:'DELETE',body:JSON.stringify({action:'category',id})});
+  await loadPressons();
+}
+function pomFillCats(sel){
+  const s=document.getElementById('pom-cat');
+  s.innerHTML='<option value="">— none —</option>'+poAdmin.categories.map(c=>`<option value="${esc(c.name)}" ${c.name===sel?'selected':''}>${esc(c.name)}</option>`).join('');
+}
+function openPoModal(){
+  document.getElementById('po-modal-title').textContent='Add Press-On Set';
+  document.getElementById('pom-id').value='';document.getElementById('pom-name').value='';
+  document.getElementById('pom-price').value='';_pomPhoto='';
+  document.getElementById('pom-photo-preview').innerHTML='+';
+  document.getElementById('pom-drop').checked=true;document.getElementById('pom-love').checked=false;
+  document.getElementById('pom-active').checked=true;
+  pomFillCats('');openModal('modal-po');
+}
+function editPoProduct(id){
+  const p=poAdmin.products.find(x=>String(x.id)===String(id));if(!p)return;
+  document.getElementById('po-modal-title').textContent='Edit Set';
+  document.getElementById('pom-id').value=p.id;document.getElementById('pom-name').value=p.name;
+  document.getElementById('pom-price').value=(p.price_cents/100).toFixed(2);
+  _pomPhoto=p.photo||'';
+  document.getElementById('pom-photo-preview').innerHTML=_pomPhoto?`<img src="${_pomPhoto}" style="width:100%;height:100%;object-fit:cover">`:'+';
+  document.getElementById('pom-drop').checked=!!Number(p.new_drop);
+  document.getElementById('pom-love').checked=!!Number(p.best_seller);
+  document.getElementById('pom-active').checked=!!Number(p.active);
+  pomFillCats(p.category||'');openModal('modal-po');
+}
+function pomPickPhoto(input){
+  const file=input.files&&input.files[0];if(!file)return;
+  const img=new Image();const reader=new FileReader();
+  reader.onload=e=>{img.src=e.target.result;};
+  img.onload=()=>{
+    const scale=Math.min(1,1000/Math.max(img.width,img.height));
+    const cv=document.createElement('canvas');cv.width=Math.round(img.width*scale);cv.height=Math.round(img.height*scale);
+    cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+    let q=0.8,url=cv.toDataURL('image/jpeg',q);
+    while(url.length>820000&&q>0.3){q-=0.12;url=cv.toDataURL('image/jpeg',q);}
+    _pomPhoto=url;
+    document.getElementById('pom-photo-preview').innerHTML=`<img src="${url}" style="width:100%;height:100%;object-fit:cover">`;
+  };
+  reader.readAsDataURL(file);
+}
+async function savePoProduct(){
+  const id=document.getElementById('pom-id').value;
+  const name=document.getElementById('pom-name').value.trim();
+  const price_cents=Math.round(Number(document.getElementById('pom-price').value||0)*100);
+  const category=document.getElementById('pom-cat').value;
+  const new_drop=document.getElementById('pom-drop').checked;
+  const best_seller=document.getElementById('pom-love').checked;
+  const active=document.getElementById('pom-active').checked;
+  if(!name){toast('Name the set');return;}
+  const body={name,price_cents,category,photo:_pomPhoto,new_drop,best_seller,active};
+  if(id) await api('/api/pressons?action=product_update',{method:'PUT',body:JSON.stringify({action:'product_update',id,...body})});
+  else await api('/api/pressons?action=product_add',{method:'POST',body:JSON.stringify({action:'product_add',...body})});
+  toast('Saved ✦');closeModal('modal-po');await loadPressons();
+}
+async function delPoProduct(id,name){
+  if(!confirm('Remove '+name+' from the shop?'))return;
+  await api('/api/pressons?action=product',{method:'DELETE',body:JSON.stringify({action:'product',id})});
+  toast('Removed');await loadPressons();
 }
 
 /* ── DEPOSITS ── */
@@ -2281,6 +2437,7 @@ async function loadSite(){
   loadSitePhotos();
   loadClasses();
   loadClassPurchases();
+  loadPressons();
   try{
     const r=await fetch('/api/site-settings');const d=await r.json();const s=d.settings||{};
     document.getElementById('site-ticker').value=s.ticker_facts||'';
@@ -2353,6 +2510,7 @@ function renderClients(){
         <div><label class="fld-label">🚫 Dislikes / avoid</label><textarea id="cl-dislikes" rows="2">${esc(c.dislikes||'')}</textarea></div>
       </div>
       <div class="field"><label class="fld-label">Notes (allergies, preferences, anything)</label><textarea id="cl-notes" rows="2">${esc(c.notes||'')}</textarea></div>
+      <div class="field"><label class="fld-label">💅 Press-on sizes (saved forever — auto-applied to every order)</label><input id="cl-sizes" value="${esc(c.sizes||'')}" placeholder="e.g. Thumb 3 · Index 6 · Middle 5 · Ring 6 · Pinky 9" />${Number(c.sizing_kit_claimed)?'<div style="font-size:0.7rem;color:var(--gold);margin-top:0.25rem;">Sizing kit already claimed ✓ (they can never claim another)</div>':''}</div>
       <label style="display:flex;gap:0.5rem;align-items:center;font-size:0.78rem;color:var(--muted);margin-bottom:0.9rem"><input type="checkbox" id="cl-optin" ${Number(c.marketing_opt_in)?'checked':''}/> Gets mass messages</label>
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
         <button class="btn btn-gold btn-sm" onclick="saveClient(${c.id})">Save Profile</button>
@@ -2371,6 +2529,7 @@ async function saveClient(id){
     likes:document.getElementById('cl-likes').value.trim(),
     dislikes:document.getElementById('cl-dislikes').value.trim(),
     notes:document.getElementById('cl-notes').value.trim(),
+    sizes:document.getElementById('cl-sizes').value.trim(),
     marketing_opt_in:document.getElementById('cl-optin').checked?1:0})});
   toast('Client profile saved — the system will remember ✦');
   openClientId=null;await loadClients();

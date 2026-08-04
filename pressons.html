@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Press-Ons — ZOLA Nail Studio</title>
+  <meta name="description" content="Hand-crafted ZOLA press-on nails — wedding sets, birthday sets, everyday luxe. New drops monthly. Free sizing kit with your first order." />
+  <link rel="icon" href="/img/zola-icon.png" />
+  <link rel="apple-touch-icon" href="/img/zola-icon.png" />
+  <meta name="theme-color" content="#140d07" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="ZOLA Nail Studio" />
+  <meta property="og:title" content="ZOLA Press-Ons — Hand-Crafted Sets" />
+  <meta property="og:description" content="Wedding sets, birthday sets, everyday luxe. New drops monthly. Free sizing kit with your first order." />
+  <meta property="og:image" content="https://zlux-github.vercel.app/img/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@200;300;400;600;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" /><link rel="stylesheet" href="css/styles.css" />
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    .po-chips { display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center; margin:1.5rem 0 0.5rem; }
+    .po-chip { font-family:'Josefin Sans',sans-serif; font-size:0.7rem; letter-spacing:0.12em; text-transform:uppercase; padding:0.5rem 1rem; border:1px solid rgba(182,165,136,0.35); color:var(--latte); cursor:pointer; border-radius:999px; transition:all 0.2s; background:none; }
+    .po-chip.on { background:var(--champagne); color:var(--espresso); border-color:var(--champagne); font-weight:700; }
+    .po-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:1.5rem; margin-top:1.75rem; }
+    .po-card { background:#fff; border:1px solid rgba(182,165,136,0.22); overflow:hidden; display:flex; flex-direction:column; transition:transform 0.25s, box-shadow 0.25s; }
+    .po-card:hover { transform:translateY(-4px); box-shadow:0 18px 44px rgba(13,13,13,0.10); }
+    .po-photo { aspect-ratio:1; background:var(--blush); display:flex; align-items:center; justify-content:center; font-size:2rem; color:rgba(140,122,94,0.4); position:relative; overflow:hidden; }
+    .po-photo img { width:100%; height:100%; object-fit:cover; display:block; }
+    .po-flag { position:absolute; top:0.6rem; left:0.6rem; font-family:'Josefin Sans',sans-serif; font-size:0.56rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; padding:0.25rem 0.6rem; background:var(--espresso); color:var(--champagne); }
+    .po-flag.love { background:var(--champagne); color:var(--espresso); }
+    .po-body { padding:1.1rem 1.2rem 1.3rem; display:flex; flex-direction:column; gap:0.35rem; flex:1; }
+    .po-name { font-family:'Cinzel',serif; font-size:1.05rem; color:var(--espresso); }
+    .po-price { font-family:'Cinzel',serif; font-size:1.25rem; color:var(--champagne); }
+    .po-empty { grid-column:1/-1; text-align:center; padding:3rem 1rem; font-family:'Josefin Sans',sans-serif; color:var(--latte); }
+    .section-label-strip { font-family:'Josefin Sans',sans-serif; font-size:0.68rem; letter-spacing:0.3em; text-transform:uppercase; color:var(--champagne); margin:2.5rem 0 0; text-align:center; }
+    .kit-banner { max-width:640px; margin:2rem auto 0; background:rgba(182,165,136,0.08); border:1px solid rgba(182,165,136,0.3); padding:1.1rem 1.4rem; text-align:center; font-family:'Josefin Sans',sans-serif; font-size:0.85rem; color:var(--espresso); line-height:1.7; }
+    .checkout-overlay { display:none; position:fixed; inset:0; background:rgba(30,20,15,0.55); z-index:200; align-items:flex-start; justify-content:center; padding:5vh 1rem; overflow-y:auto; }
+    .checkout-overlay.open { display:flex; }
+    .checkout-box { background:#fff; max-width:460px; width:100%; padding:2.25rem 2rem; }
+    .checkout-box .luxury-input { margin-bottom:0.9rem; }
+    #po-payment-el { margin:1rem 0 1.25rem; }
+    .kit-check { display:flex; gap:0.6rem; align-items:flex-start; background:rgba(182,165,136,0.08); border:1px solid rgba(182,165,136,0.3); padding:0.85rem 1rem; margin:0.5rem 0 1rem; font-family:'Josefin Sans',sans-serif; font-size:0.82rem; color:var(--espresso); cursor:pointer; line-height:1.5; }
+    .sizes-note { display:none; font-family:'Josefin Sans',sans-serif; font-size:0.8rem; color:#4e8e5e; margin:0.25rem 0 0.9rem; }
+  </style>
+</head>
+<body>
+
+<nav class="nav" id="nav">
+  <a href="index.html" class="nav-logo"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span></a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="services.html">Services</a>
+    <a href="memberships.html">Memberships</a>
+    <a href="pressons.html" style="color:var(--champagne)">Press-Ons</a>
+    <a href="classes.html">Classes</a>
+    <a href="about.html">About</a>
+    <a href="contact.html">Contact</a>
+    <a href="booking.html" class="btn-gold" style="animation:none;">Book Now</a>
+  </div>
+  <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
+</nav>
+<div class="nav-mobile" id="nav-mobile">
+  <a href="index.html">Home</a>
+  <a href="services.html">Services</a>
+  <a href="memberships.html">Memberships</a>
+  <a href="pressons.html">Press-Ons</a>
+  <a href="classes.html">Classes</a>
+  <a href="about.html">About</a>
+  <a href="contact.html">Contact</a>
+  <a href="booking.html" class="nav-cta">Book Now</a>
+</div>
+
+<div style="padding-top:8rem;background:var(--espresso);padding-bottom:4rem;text-align:center;">
+  <div class="section-label" style="color:rgba(182,165,136,0.6);">Hand-Crafted by ZOLA</div>
+  <h1 style="color:var(--cream);font-size:clamp(2.5rem,5vw,4rem);margin:0.75rem 0 1rem;">Press-Ons</h1>
+  <p style="font-family:'Josefin Sans',sans-serif;font-size:0.95rem;color:var(--latte);max-width:440px;margin:0 auto;">Salon-quality sets you can wear anywhere — crafted with the same precision as the chair.</p>
+</div>
+
+<section class="section section-soft">
+  <div class="container" style="max-width:1050px;">
+
+    <div class="kit-banner">🎁 <strong>First order?</strong> Add your <strong>free sizing kit</strong> at checkout. Send us your sizes once and we keep them on file forever — you'll never size again.</div>
+
+    <div class="po-chips" id="po-chips"></div>
+
+    <div id="po-newdrops-wrap" style="display:none;">
+      <div class="section-label-strip">✦ New Drops ✦</div>
+      <div class="po-grid" id="po-newdrops"></div>
+    </div>
+    <div id="po-loved-wrap" style="display:none;">
+      <div class="section-label-strip">Most Loved</div>
+      <div class="po-grid" id="po-loved"></div>
+    </div>
+    <div class="section-label-strip" id="po-all-label">The Collection</div>
+    <div class="po-grid" id="po-all"><div class="po-empty">Loading the collection…</div></div>
+  </div>
+</section>
+
+<!-- CHECKOUT -->
+<div class="checkout-overlay" id="po-overlay">
+  <div class="checkout-box">
+    <div id="po-form">
+      <div style="font-family:'Cinzel',serif;font-size:1.4rem;color:var(--espresso);" id="po-co-name"></div>
+      <div style="font-family:'Cinzel',serif;font-size:1.5rem;color:var(--champagne);margin-bottom:1.1rem;" id="po-co-price"></div>
+      <label class="luxury-label">Full Name</label>
+      <input class="luxury-input" id="po-name" placeholder="Your name" autocomplete="name" />
+      <label class="luxury-label">Email</label>
+      <input class="luxury-input" id="po-email" type="email" placeholder="you@email.com" autocomplete="email" onblur="poCheckMe()" />
+      <label class="luxury-label">Phone</label>
+      <input class="luxury-input" id="po-phone" type="tel" placeholder="(555) 000-0000" autocomplete="tel" />
+      <div class="sizes-note" id="po-sizes-note">✓ We have your sizes on file — they'll be applied to this order automatically.</div>
+      <label class="kit-check" id="po-kit-row">
+        <input type="checkbox" id="po-kit" style="width:auto;margin-top:0.15rem;" />
+        <span><strong>Add my FREE sizing kit</strong> — first order only. Message us your sizes when it arrives and we'll save them forever.</span>
+      </label>
+      <div id="po-payment-el"></div>
+      <div id="po-err" style="display:none;color:#b43232;font-family:'Josefin Sans',sans-serif;font-size:0.82rem;margin-bottom:1rem;"></div>
+      <button class="btn-gold" style="width:100%;animation:none;" id="po-pay-btn" onclick="poConfirm()">Pay &amp; Order</button>
+      <button class="btn" style="width:100%;margin-top:0.6rem;background:none;border:1px solid rgba(182,165,136,0.3);color:var(--latte);" onclick="poClose()">Cancel</button>
+    </div>
+    <div id="po-success" style="display:none;text-align:center;padding:1rem 0;">
+      <div style="font-family:'Cinzel',serif;font-size:1.7rem;color:var(--espresso);margin-bottom:0.5rem;">Order Placed ✦</div>
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:var(--latte);line-height:1.8;" id="po-success-msg">Your set is on the way. A confirmation email is coming.</p>
+      <button class="btn-gold" style="margin-top:1.25rem;animation:none;" onclick="poClose()">Done</button>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div><div class="footer-logo">ZOLA</div><p class="footer-desc">Porterville's luxury nail membership studio.</p></div>
+      <div><div class="footer-heading">Studio</div><div class="footer-links"><a href="services.html">Services</a><a href="memberships.html">Memberships</a><a href="pressons.html">Press-Ons</a><a href="classes.html">Classes</a><a href="booking.html">Book Now</a></div></div>
+      <div><div class="footer-heading">Portals</div><div class="footer-links"><a href="client-portal.html">Client Portal</a><a href="team.html">Team Portal</a></div></div>
+      <div><div class="footer-heading">Contact</div><div class="footer-links"><a href="contact.html">Get in Touch</a><a href="https://instagram.com/zola_officials_" target="_blank">Instagram</a><a href="https://tiktok.com/@zolaofficial" target="_blank">TikTok</a></div></div>
+    </div>
+    <div class="footer-bottom">© 2026 ZOLA Nail Studio · Porterville, CA</div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+<script src="js/analytics.js"></script>
+<script src="js/confetti.js"></script>
+<script>
+let PO_PRODUCTS=[], PO_CATS=[], PO_FILTER='', PO_ACTIVE=null;
+let _pst=null,_pel=null,_ppi=null;
+const pesc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const pomoney=c=>'$'+(c/100).toFixed(2);
+
+async function poLoad(){
+  try{
+    const r=await fetch('/api/pressons?action=catalog'); const d=await r.json();
+    PO_CATS=d.categories||[]; PO_PRODUCTS=(d.products||[]).filter(p=>Number(p.price_cents)>0);
+    poRenderChips(); poRender();
+  }catch{ document.getElementById('po-all').innerHTML='<div class="po-empty">Couldn\'t load — refresh to try again.</div>'; }
+}
+function poRenderChips(){
+  const el=document.getElementById('po-chips');
+  el.innerHTML='<button class="po-chip'+(PO_FILTER===''?' on':'')+'" onclick="poFilter(\'\')">All</button>'+
+    PO_CATS.map(c=>'<button class="po-chip'+(PO_FILTER===c.name?' on':'')+'" onclick="poFilter(\''+pesc(c.name).replace(/'/g,"\\'")+'\')">'+pesc(c.name)+'</button>').join('');
+}
+function poFilter(c){ PO_FILTER=c; poRenderChips(); poRender(); }
+function poCard(p){
+  return `<div class="po-card">
+    <div class="po-photo">${p.photo?`<img src="${p.photo}" alt="${pesc(p.name)}" loading="lazy">`:'💅'}
+      ${Number(p.new_drop)?'<span class="po-flag">New Drop</span>':(Number(p.best_seller)?'<span class="po-flag love">Most Loved</span>':'')}
+    </div>
+    <div class="po-body">
+      <div class="po-name">${pesc(p.name)}</div>
+      <div class="po-price">${pomoney(p.price_cents)}</div>
+      ${p.category?`<div style="font-family:'Josefin Sans',sans-serif;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--latte);">${pesc(p.category)}</div>`:''}
+      <button class="btn-gold" style="animation:none;margin-top:auto;font-size:0.68rem;" onclick="poOpen(${p.id})">Add to Order</button>
+    </div>
+  </div>`;
+}
+function poRender(){
+  const list=PO_FILTER?PO_PRODUCTS.filter(p=>p.category===PO_FILTER):PO_PRODUCTS;
+  const drops=list.filter(p=>Number(p.new_drop));
+  const loved=list.filter(p=>Number(p.best_seller)&&!Number(p.new_drop));
+  const rest=list.filter(p=>!Number(p.new_drop)&&!Number(p.best_seller));
+  document.getElementById('po-newdrops-wrap').style.display=drops.length?'block':'none';
+  document.getElementById('po-newdrops').innerHTML=drops.map(poCard).join('');
+  document.getElementById('po-loved-wrap').style.display=loved.length?'block':'none';
+  document.getElementById('po-loved').innerHTML=loved.map(poCard).join('');
+  document.getElementById('po-all-label').style.display=rest.length?'block':'none';
+  document.getElementById('po-all').innerHTML=rest.length?rest.map(poCard).join(''):
+    (list.length?'':'<div class="po-empty">New sets are dropping soon — follow @zola_officials_ to be first ✦</div>');
+}
+
+async function poCheckMe(){
+  const email=document.getElementById('po-email').value.trim();
+  if(!email||!email.includes('@'))return;
+  try{
+    const r=await fetch('/api/pressons?action=me&email='+encodeURIComponent(email)); const d=await r.json();
+    document.getElementById('po-sizes-note').style.display=d.has_sizes?'block':'none';
+    // Kit already claimed → hide the offer entirely (one per person, ever)
+    document.getElementById('po-kit-row').style.display=d.kit_claimed?'none':'flex';
+    if(d.kit_claimed)document.getElementById('po-kit').checked=false;
+  }catch{}
+}
+
+async function poOpen(id){
+  PO_ACTIVE=PO_PRODUCTS.find(p=>String(p.id)===String(id)); if(!PO_ACTIVE)return;
+  document.getElementById('po-form').style.display='block';
+  document.getElementById('po-success').style.display='none';
+  document.getElementById('po-co-name').textContent=PO_ACTIVE.name;
+  document.getElementById('po-co-price').textContent=pomoney(PO_ACTIVE.price_cents);
+  document.getElementById('po-err').style.display='none';
+  document.getElementById('po-overlay').classList.add('open');
+  try{
+    const cfg=await (await fetch('/api/pay?action=config')).json();
+    if(!cfg.enabled||typeof Stripe==='undefined'){ poErr('Card payments aren\'t available right now — DM us to order.'); return; }
+    const intent=await (await fetch('/api/pressons?action=purchase_intent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'purchase_intent',product_id:PO_ACTIVE.id})})).json();
+    if(!intent.client_secret){ poErr(intent.error||'Could not start checkout.'); return; }
+    _ppi=intent.payment_intent_id;
+    _pst=Stripe(cfg.publishable_key);
+    _pel=_pst.elements({clientSecret:intent.client_secret,appearance:{theme:'flat',variables:{colorPrimary:'#B6A588',fontFamily:'Josefin Sans, sans-serif'}}});
+    document.getElementById('po-payment-el').innerHTML='';
+    _pel.create('payment',{wallets:{applePay:'auto',googlePay:'auto'},layout:'tabs'}).mount('#po-payment-el');
+  }catch{ poErr('Connection hiccup — close and try again.'); }
+}
+function poClose(){ document.getElementById('po-overlay').classList.remove('open'); document.getElementById('po-payment-el').innerHTML=''; _pst=null;_pel=null;_ppi=null; }
+function poErr(m){ const e=document.getElementById('po-err'); e.textContent=m; e.style.display='block'; }
+
+async function poConfirm(){
+  const name=document.getElementById('po-name').value.trim();
+  const email=document.getElementById('po-email').value.trim();
+  const phone=document.getElementById('po-phone').value.trim();
+  if(!name||!email){ poErr('Please fill in your name and email.'); return; }
+  if(!_pst||!_pel){ poErr('Checkout isn\'t ready — give it a second.'); return; }
+  const btn=document.getElementById('po-pay-btn'); btn.disabled=true; btn.textContent='Charging…';
+  const {error,paymentIntent}=await _pst.confirmPayment({elements:_pel,redirect:'if_required',confirmParams:{payment_method_data:{billing_details:{name,email,phone}}}});
+  if(error){ btn.disabled=false; btn.textContent='Pay & Order'; poErr(error.message||'Card declined — you have not been charged.'); return; }
+  const r=await fetch('/api/pressons?action=confirm',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'confirm',product_id:PO_ACTIVE.id,payment_intent_id:(paymentIntent&&paymentIntent.id)||_ppi,buyer_name:name,buyer_email:email,buyer_phone:phone,want_kit:document.getElementById('po-kit').checked})});
+  const d=await r.json();
+  btn.disabled=false; btn.textContent='Pay & Order';
+  if(!r.ok){ poErr(d.error||'Something went wrong confirming your order.'); return; }
+  let msg='Your set is on the way ✦ A confirmation email is coming.';
+  if(d.kit) msg='Your set — plus your FREE sizing kit — is on the way ✦ Send us your sizes when it arrives and we\'ll keep them forever.';
+  else if(d.kit_note==='kit_already_claimed') msg='Your set is on the way ✦ (Your sizing kit was already sent with a previous order — your sizes are safe with us.)';
+  else if(d.had_sizes) msg='Your set is on the way ✦ Your saved sizes were applied automatically.';
+  document.getElementById('po-success-msg').textContent=msg;
+  document.getElementById('po-form').style.display='none';
+  document.getElementById('po-success').style.display='block';
+  if(window.zolaConfetti)window.zolaConfetti();
+}
+
+poLoad();
+</script>
+</body>
+</html>
