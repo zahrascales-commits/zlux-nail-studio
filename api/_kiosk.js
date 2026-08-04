@@ -74,44 +74,53 @@ module.exports = async function (req, res) {
       return res.json({ found: true, service: appt.service, time: appt.time, balance_cents: balance, ref: appt.src + appt.id, name: appt.name });
     }
 
-    // Card: create a PaymentIntent for the remaining balance (server-priced)
+    // Card: PaymentIntent for the remaining balance + optional tip. Members
+    // with a $0 balance can still leave a tip-only payment.
     if (req.method === 'POST' && action === 'pay_intent') {
-      const appt = await findToday((req.body || {}).name);
-      if (!appt) return res.status(404).json({ error: 'No appointment found for today' });
-      const balance = Math.max(0, appt.total_cents - (appt.deposit_paid ? appt.deposit_cents : 0));
-      if (balance < 50) return res.status(400).json({ error: 'Nothing left to pay ✦' });
+      const body = req.body || {};
+      const appt = await findToday(body.name);
+      const tip = Math.max(0, Math.round(Number(body.tip_cents) || 0));
+      const balance = appt ? Math.max(0, appt.total_cents - (appt.deposit_paid ? appt.deposit_cents : 0)) : 0;
+      const amount = balance + tip;
+      if (amount < 50) return res.status(400).json({ error: 'Nothing to charge ✦' });
       const pay = require('./_pay');
       const sk = await pay.getStripeSecret();
       if (!sk) return res.status(400).json({ error: 'Card payments not configured' });
+      const who = appt ? appt.name : (body.name || 'Guest');
+      const what = balance > 0 ? ('balance' + (tip ? ' + tip' : '')) : 'tip';
       const resp = await fetch('https://api.stripe.com/v1/payment_intents', {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + sk, 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
-          amount: String(balance), currency: 'usd', 'automatic_payment_methods[enabled]': 'true',
-          description: ('ZOLA checkout balance — ' + appt.name + ' (' + appt.service + ')').slice(0, 300),
+          amount: String(amount), currency: 'usd', 'automatic_payment_methods[enabled]': 'true',
+          description: ('ZOLA checkout ' + what + ' — ' + who + (appt ? ' (' + appt.service + ')' : '')).slice(0, 300),
+          'metadata[tip_cents]': String(tip),
         }).toString(),
       });
       const pi = await resp.json();
       if (!resp.ok) return res.status(400).json({ error: pi.error && pi.error.message || 'Stripe error' });
-      return res.json({ client_secret: pi.client_secret, payment_intent_id: pi.id, balance_cents: balance });
+      return res.json({ client_secret: pi.client_secret, payment_intent_id: pi.id, balance_cents: balance, tip_cents: tip, amount_cents: amount });
     }
 
     if (req.method === 'POST' && action === 'checkout') {
-      const { name, method: payMethod, payment_intent_id, amount_cents } = req.body || {};
+      const { name, method: payMethod, payment_intent_id, amount_cents, tip_cents } = req.body || {};
       if (!name) return res.status(400).json({ error: 'Name required' });
       let amount = Number(amount_cents) || 0;
+      const tip = Math.max(0, Math.round(Number(tip_cents) || 0));
       if (payMethod === 'card' && payment_intent_id) {
         const v = await require('./_pay').verifyPaymentIntent(payment_intent_id);
         if (!v.paid) return res.status(402).json({ error: 'Card payment did not go through — please try again.' });
         amount = v.amount || amount;
       }
-      await execute('INSERT INTO kiosk_log (type, name, method, amount_cents, ts) VALUES (?,?,?,?,?)',
-        ['checkout', String(name).trim().slice(0, 80), payMethod === 'card' ? 'card' : 'cash', amount, Date.now()]);
+      await execute('INSERT INTO kiosk_log (type, name, method, amount_cents, detail, ts) VALUES (?,?,?,?,?,?)',
+        ['checkout', String(name).trim().slice(0, 80), payMethod === 'card' ? 'card' : 'cash', amount,
+         tip ? ('tip $' + (tip / 100).toFixed(2)) : '', Date.now()]);
       const amt = '$' + (amount / 100).toFixed(2);
+      const tipNote = tip ? (' · includes a $' + (tip / 100).toFixed(2) + ' tip 💛') : '';
       try {
         await notify.notifyInApp('owner', null,
           payMethod === 'card' ? ('💳 ' + name + ' paid ' + amt + ' by card') : ('💵 Collect ' + amt + ' cash from ' + name),
-          'Checked out at the kiosk.');
+          'Checked out at the kiosk.' + tipNote);
       } catch (_) {}
       return res.json({ ok: true });
     }

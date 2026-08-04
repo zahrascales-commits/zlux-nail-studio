@@ -86,12 +86,25 @@
     <p class="sub" id="in-sub">Relax — we'll be right with you.</p>
   </div>
 
-  <!-- CHECKOUT: BALANCE -->
+  <!-- CHECKOUT: TIP (everyone, including members with $0 balance) -->
+  <div class="screen" id="s-tip">
+    <h2 id="tip-title">Add a tip?</h2>
+    <p class="sub" id="tip-sub">100% goes straight to your artist 💛</p>
+    <div class="row" id="tip-choices"></div>
+    <div class="row" style="margin-top:0.6rem;">
+      <button class="big-btn ghost" onclick="setTip(0)">No tip</button>
+      <button class="big-btn ghost" onclick="customTip()">Other amount</button>
+    </div>
+    <p class="sub" id="tip-total" style="margin-top:1.4rem;"></p>
+  </div>
+
+  <!-- CHECKOUT: BALANCE / PAY METHOD -->
   <div class="screen" id="s-balance">
     <h2 id="bal-title">All finished ✦</h2>
     <p class="sub" id="bal-svc"></p>
     <div class="balance" id="bal-amt">$0</div>
-    <p class="sub">How would you like to pay the remainder?</p>
+    <p class="sub" id="bal-breakdown" style="margin-top:-0.4rem;"></p>
+    <p class="sub" style="margin-top:0.8rem;">How would you like to pay?</p>
     <div class="row">
       <button class="big-btn gold" onclick="payCard()">💳 &nbsp;Card / Apple Pay</button>
       <button class="big-btn ghost" onclick="payCash()">💵 &nbsp;Cash</button>
@@ -137,9 +150,10 @@
 
 <script>
 let MODE='in', KNAME='', KSTARS=0, _st=null, _el=null, _pi=null, resetTimer=null;
+let BAL=0, TIP=0, SVC='';   // balance owed, tip chosen, service name
 
 function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); document.getElementById(id).classList.add('on'); }
-function reset(){ clearTimeout(resetTimer); MODE='in';KNAME='';KSTARS=0;_pi=null;
+function reset(){ clearTimeout(resetTimer); MODE='in';KNAME='';KSTARS=0;_pi=null;BAL=0;TIP=0;SVC='';
   document.getElementById('kname').value=''; document.getElementById('kreview').value='';
   document.querySelectorAll('#kstars span').forEach(s=>s.textContent='☆');
   ['name-err','bal-err','card-err'].forEach(i=>document.getElementById(i).textContent='');
@@ -167,16 +181,51 @@ async function nameNext(){
     try{
       const r=await fetch('/api/kiosk?action=balance&name='+encodeURIComponent(name));
       const d=await r.json();
-      if(!d.found){ // no appointment — go straight to review
-        show('s-review'); return;
-      }
-      const bal=d.balance_cents||0;
-      if(bal<50){ show('s-review'); return; } // nothing owed (members) — straight to review
-      document.getElementById('bal-svc').textContent=d.service+' · remaining balance';
-      document.getElementById('bal-amt').textContent='$'+(bal/100).toFixed(2);
-      show('s-balance');
+      BAL = d.found ? (d.balance_cents||0) : 0;
+      SVC = d.found ? (d.service||'') : '';
+      TIP = 0;
+      // Everyone sees the tip screen — including members who owe $0
+      showTipScreen();
     }catch{ err.textContent='Hmm, try that once more ✦'; }
   }
+}
+
+// ── TIP ──
+function showTipScreen(){
+  const owes = BAL >= 50;
+  document.getElementById('tip-title').textContent = owes ? 'Add a tip?' : 'Would you like to leave a tip?';
+  document.getElementById('tip-sub').textContent = owes
+    ? '100% goes straight to your artist 💛'
+    : 'Your services are covered by your membership — a tip is never expected, always appreciated 💛';
+  // Percentages off the service value when known; friendly flat amounts otherwise
+  const base = BAL >= 50 ? BAL : 0;
+  const choices = base ? [[18,'18%'],[20,'20%'],[25,'25%']].map(([p,l])=>({label:l+' · $'+((base*p/100)/100).toFixed(2), cents:Math.round(base*p/100)}))
+                       : [5,10,20].map(d=>({label:'$'+d, cents:d*100}));
+  document.getElementById('tip-choices').innerHTML = choices.map(c=>
+    `<button class="big-btn gold" onclick="setTip(${c.cents})">${c.label}</button>`).join('');
+  document.getElementById('tip-total').textContent = owes ? ('Balance due: $'+(BAL/100).toFixed(2)) : '';
+  show('s-tip');
+}
+function setTip(cents){
+  TIP = Math.max(0, Math.round(cents));
+  goToPay();
+}
+function customTip(){
+  const v = prompt('Tip amount (dollars):', '10');
+  if(v===null) return;
+  const cents = Math.round((Number(v)||0)*100);
+  if(cents < 0) return;
+  setTip(cents);
+}
+function goToPay(){
+  const total = BAL + TIP;
+  if(total < 50){ show('s-review'); return; }   // nothing owed, no tip → straight to review
+  document.getElementById('bal-svc').textContent = SVC ? (SVC + (BAL>=50?' · remaining balance':' · tip')) : 'Tip';
+  document.getElementById('bal-amt').textContent = '$'+(total/100).toFixed(2);
+  document.getElementById('bal-breakdown').textContent = (BAL>=50 && TIP)
+    ? ('$'+(BAL/100).toFixed(2)+' balance + $'+(TIP/100).toFixed(2)+' tip')
+    : (TIP && BAL<50 ? 'Thank you so much 💛' : '');
+  show('s-balance');
 }
 
 async function payCard(){
@@ -184,11 +233,11 @@ async function payCard(){
   try{
     const cfg=await (await fetch('/api/pay?action=config')).json();
     if(!cfg.enabled||typeof Stripe==='undefined'){ err.textContent='Card isn\'t available right now — please pay cash at the desk ✦'; return; }
-    const r=await fetch('/api/kiosk?action=pay_intent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'pay_intent',name:KNAME})});
+    const r=await fetch('/api/kiosk?action=pay_intent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'pay_intent',name:KNAME,tip_cents:TIP})});
     const d=await r.json();
     if(!d.client_secret){ err.textContent=d.error||'Could not start payment.'; return; }
     _pi=d.payment_intent_id;
-    document.getElementById('card-amt').textContent='Paying $'+(d.balance_cents/100).toFixed(2);
+    document.getElementById('card-amt').textContent='Paying $'+((d.amount_cents||0)/100).toFixed(2)+(TIP?(' (includes $'+(TIP/100).toFixed(2)+' tip)'):'');
     _st=Stripe(cfg.publishable_key);
     _el=_st.elements({clientSecret:d.client_secret,appearance:{theme:'flat',variables:{colorPrimary:'#B6A588'}}});
     document.getElementById('pay-el').innerHTML='';
@@ -204,14 +253,13 @@ async function confirmCard(){
   btn.disabled=false; btn.textContent='Pay Now';
   if(error){ err.textContent=error.message||'Card declined — try again.'; return; }
   await fetch('/api/kiosk?action=checkout',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action:'checkout',name:KNAME,method:'card',payment_intent_id:(paymentIntent&&paymentIntent.id)||_pi})});
+    body:JSON.stringify({action:'checkout',name:KNAME,method:'card',payment_intent_id:(paymentIntent&&paymentIntent.id)||_pi,tip_cents:TIP})});
   show('s-review');
 }
 
 async function payCash(){
-  const bal=document.getElementById('bal-amt').textContent.replace(/[^0-9.]/g,'');
   await fetch('/api/kiosk?action=checkout',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action:'checkout',name:KNAME,method:'cash',amount_cents:Math.round(Number(bal)*100)})});
+    body:JSON.stringify({action:'checkout',name:KNAME,method:'cash',amount_cents:BAL+TIP,tip_cents:TIP})});
   show('s-review');
 }
 

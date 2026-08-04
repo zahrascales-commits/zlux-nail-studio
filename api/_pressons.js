@@ -99,7 +99,7 @@ module.exports = async function (req, res) {
 
     // ── PUBLIC: confirm after Stripe charges — sizing-kit rule enforced HERE ──
     if (req.method === 'POST' && action === 'confirm') {
-      const { product_id, payment_intent_id, buyer_name, buyer_email, buyer_phone, want_kit } = req.body || {};
+      const { product_id, payment_intent_id, buyer_name, buyer_email, buyer_phone, want_kit, sizes: providedSizes } = req.body || {};
       const p = await queryOne('SELECT * FROM presson_products WHERE id=?', [Number(product_id)]);
       if (!p) return res.status(404).json({ error: 'Set not found' });
       const v = await require('./_pay').verifyPaymentIntent(payment_intent_id);
@@ -126,7 +126,13 @@ module.exports = async function (req, res) {
         }
       }
 
-      const sizes = client && client.sizes ? String(client.sizes) : '';
+      // Sizes: if the buyer typed sizes at checkout, save them to their file
+      // FOREVER (client record) — from then on every order auto-attaches them.
+      const typedSizes = String(providedSizes || '').trim().slice(0, 300);
+      if (typedSizes && client) {
+        await execute('UPDATE clients SET sizes=? WHERE id=?', [typedSizes, client.id]);
+      }
+      const sizes = typedSizes || (client && client.sizes ? String(client.sizes) : '');
       await execute(
         'INSERT INTO presson_orders (product_id, product_name, price_cents, buyer_name, buyer_email, buyer_phone, sizes, kit, payment_intent_id, ts) VALUES (?,?,?,?,?,?,?,?,?,?)',
         [p.id, p.name, p.price_cents, String(buyer_name || '').slice(0, 120), email, String(buyer_phone || '').slice(0, 40), sizes, kitGranted ? 1 : 0, payment_intent_id || null, Date.now()]);
@@ -135,14 +141,15 @@ module.exports = async function (req, res) {
         await notify.notifyInApp('owner', null, '💅 Press-on order: ' + p.name,
           (buyer_name || 'A client') + ' — $' + (p.price_cents / 100).toFixed(2)
           + (kitGranted ? ' + FREE sizing kit (first order)' : '')
-          + (sizes ? ' · sizes on file: ' + sizes.slice(0, 60) : ' · no sizes on file yet'));
+          + (sizes ? ' · sizes: ' + sizes.slice(0, 60) : ' · ⚠ NO SIZES YET — collect their sizes before making this set'));
         if (email) await notify.sendEmail(email, 'Your ZOLA press-ons are on the way ✦',
           '<p>Thank you for your order — <strong>' + p.name + '</strong>!</p>'
+          + (typedSizes ? '<p>Your sizes are saved with us <strong>forever</strong> — you\'ll never need to enter them again. ✦</p>' : '')
           + (kitGranted ? '<p>Your <strong>free sizing kit</strong> is included. Message us your sizes when it arrives and we\'ll keep them on file forever — you\'ll never need to size again.</p>' : '')
-          + (sizes ? '<p>We have your sizes on file and they\'re applied to this order automatically. ✦</p>' : '')
+          + (!typedSizes && sizes ? '<p>We have your sizes on file and they\'re applied to this order automatically. ✦</p>' : '')
           + '<p>— ZOLA ✦</p>');
       } catch (_) {}
-      return res.json({ ok: true, kit: kitGranted, kit_note: kitNote, had_sizes: !!sizes });
+      return res.json({ ok: true, kit: kitGranted, kit_note: kitNote, had_sizes: !!sizes, sizes_saved: !!typedSizes });
     }
 
     // ── OWNER: everything below ──

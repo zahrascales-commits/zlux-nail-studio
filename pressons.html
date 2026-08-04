@@ -110,6 +110,14 @@
       <label class="luxury-label">Phone</label>
       <input class="luxury-input" id="po-phone" type="tel" placeholder="(555) 000-0000" autocomplete="tel" />
       <div class="sizes-note" id="po-sizes-note">✓ We have your sizes on file — they'll be applied to this order automatically.</div>
+
+      <!-- Sizes: shown only when we don't already have them on file -->
+      <div id="po-sizes-block">
+        <label class="luxury-label">Your nail sizes <span style="text-transform:none;letter-spacing:0;color:var(--latte);font-weight:400;">— if you know them</span></label>
+        <input class="luxury-input" id="po-sizes" placeholder="e.g. Thumb 3 · Index 6 · Middle 5 · Ring 6 · Pinky 9" />
+        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.74rem;color:var(--latte);margin:-0.5rem 0 0.9rem;line-height:1.5;">We save these to your account <strong>forever</strong> — you'll never enter them again. Don't know your sizes? Grab the free kit below.</p>
+      </div>
+
       <label class="kit-check" id="po-kit-row">
         <input type="checkbox" id="po-kit" style="width:auto;margin-top:0.15rem;" />
         <span><strong>Add my FREE sizing kit</strong> — first order only. Message us your sizes when it arrives and we'll save them forever.</span>
@@ -194,6 +202,8 @@ async function poCheckMe(){
   try{
     const r=await fetch('/api/pressons?action=me&email='+encodeURIComponent(email)); const d=await r.json();
     document.getElementById('po-sizes-note').style.display=d.has_sizes?'block':'none';
+    // Already on file → don't ask again. Otherwise show the sizes field.
+    document.getElementById('po-sizes-block').style.display=d.has_sizes?'none':'block';
     // Kit already claimed → hide the offer entirely (one per person, ever)
     document.getElementById('po-kit-row').style.display=d.kit_claimed?'none':'flex';
     if(d.kit_claimed)document.getElementById('po-kit').checked=false;
@@ -233,12 +243,14 @@ async function poConfirm(){
   const {error,paymentIntent}=await _pst.confirmPayment({elements:_pel,redirect:'if_required',confirmParams:{payment_method_data:{billing_details:{name,email,phone}}}});
   if(error){ btn.disabled=false; btn.textContent='Pay & Order'; poErr(error.message||'Card declined — you have not been charged.'); return; }
   const r=await fetch('/api/pressons?action=confirm',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action:'confirm',product_id:PO_ACTIVE.id,payment_intent_id:(paymentIntent&&paymentIntent.id)||_ppi,buyer_name:name,buyer_email:email,buyer_phone:phone,want_kit:document.getElementById('po-kit').checked})});
+    body:JSON.stringify({action:'confirm',product_id:PO_ACTIVE.id,payment_intent_id:(paymentIntent&&paymentIntent.id)||_ppi,buyer_name:name,buyer_email:email,buyer_phone:phone,
+      want_kit:document.getElementById('po-kit').checked,sizes:document.getElementById('po-sizes').value.trim()})});
   const d=await r.json();
   btn.disabled=false; btn.textContent='Pay & Order';
   if(!r.ok){ poErr(d.error||'Something went wrong confirming your order.'); return; }
   let msg='Your set is on the way ✦ A confirmation email is coming.';
-  if(d.kit) msg='Your set — plus your FREE sizing kit — is on the way ✦ Send us your sizes when it arrives and we\'ll keep them forever.';
+  if(d.sizes_saved) msg='Your set is on the way ✦ Your sizes are saved forever — you\'ll never enter them again.';
+  else if(d.kit) msg='Your set — plus your FREE sizing kit — is on the way ✦ Send us your sizes when it arrives and we\'ll keep them forever.';
   else if(d.kit_note==='kit_already_claimed') msg='Your set is on the way ✦ (Your sizing kit was already sent with a previous order — your sizes are safe with us.)';
   else if(d.had_sizes) msg='Your set is on the way ✦ Your saved sizes were applied automatically.';
   document.getElementById('po-success-msg').textContent=msg;
