@@ -302,6 +302,38 @@ module.exports = async function (req, res) {
       return res.json({ ok: true });
     }
 
+    // ── MEMBERS: list + remove (cancels their Stripe subscription first) ──
+    if (method === 'GET' && action === 'members_list') {
+      const { query: mainQuery } = require('./_db');
+      const rows = await mainQuery(
+        'SELECT member_id, full_name, email, tier, membership_started_at, stripe_subscription_id FROM members ORDER BY membership_started_at DESC'
+      ).catch(() => []);
+      return res.json({ members: rows });
+    }
+
+    if (method === 'DELETE' && action === 'member_record') {
+      const memberId = String((req.body || {}).member_id || '').trim();
+      if (!memberId) return res.status(400).json({ error: 'member_id required' });
+      const { queryOne: mainOne, execute: mainExec } = require('./_db');
+      const m = await mainOne('SELECT member_id, full_name, stripe_subscription_id FROM members WHERE member_id=?', [memberId]);
+      if (!m) return res.status(404).json({ error: 'Member not found' });
+      // Cancel their subscription so they're never billed again
+      let cancelled = null;
+      if (m.stripe_subscription_id) {
+        try {
+          const sk = await require('./_pay').getStripeSecret();
+          if (sk) {
+            const r = await fetch('https://api.stripe.com/v1/subscriptions/' + encodeURIComponent(m.stripe_subscription_id), {
+              method: 'DELETE', headers: { Authorization: 'Bearer ' + sk },
+            });
+            cancelled = r.ok;
+          }
+        } catch (_) { cancelled = false; }
+      }
+      await mainExec('DELETE FROM members WHERE member_id=?', [memberId]);
+      return res.json({ ok: true, removed: m.full_name || memberId, subscription_cancelled: cancelled });
+    }
+
     // ── MEMBERSHIP SALES STATS (real counts + revenue by tier) ──
     if (method === 'GET' && action === 'membership_stats') {
       const PRICE = { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900 };
