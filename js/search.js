@@ -334,7 +334,7 @@
       const b = document.createElement('button');
       b.className = 'zs-trigger';
       b.type = 'button';
-      b.innerHTML = '⌕ Search';
+      b.innerHTML = '⌕<span class="zs-trigger-label">&nbsp;Search</span>';
       b.addEventListener('click', open);
       const cta = links.querySelector('.btn-gold');
       links.insertBefore(b, cta || null);

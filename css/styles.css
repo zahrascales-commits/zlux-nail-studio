@@ -225,6 +225,7 @@ ul { list-style: none; }
   text-transform: uppercase;
   color: var(--latte);
   transition: color 0.2s;
+  white-space: nowrap;
 }
 .nav-links a:hover { color: var(--champagne); }
 .nav-hamburger {
@@ -1467,6 +1468,163 @@ ul { list-style: none; }
   .back-to-top { bottom: 1.25rem; left: 1.25rem; }
   .btn-gold, .btn-outline, .btn-outline-dark { min-height: 44px; }
   .faq-question { min-height: 48px; }
+}
+
+/* ── Mid-width nav ───────────────────────────────────────────────────────
+   Between the mobile breakpoint (900px) and ~1400px the nav had more
+   content than room, so "Buy a Membership" was being clipped off the
+   right edge. The nav is position:fixed, so this never showed up as page
+   scroll — it just silently cut the button in half. Tighten spacing as
+   the window narrows, and drop the search trigger to its icon. */
+@media (min-width: 901px) and (max-width: 1400px) {
+  .nav { padding: 1.25rem 1.75rem; }
+  .nav-links { gap: 1.5rem; }
+  .nav-links a { font-size: 0.68rem; letter-spacing: 0.1em; }
+  .nav-links .btn-gold { padding: 0.8rem 1.35rem; }
+}
+@media (min-width: 901px) and (max-width: 1200px) {
+  .nav { padding: 1.25rem 1.25rem; }
+  .nav-links { gap: 1rem; }
+  .nav-links a { font-size: 0.63rem; letter-spacing: 0.06em; }
+  .nav-links .btn-gold { padding: 0.75rem 1rem; }
+  .zs-trigger { padding: 0.45rem 0.6rem; font-size: 0.63rem; }
+  .zs-trigger .zs-trigger-label { display: none; }
+}
+
+/* ══════════════════════════════════════════════════
+   PRESS-ONS ENTRY POINTS
+══════════════════════════════════════════════════ */
+
+/* Hero pill — sits under the membership CTAs, above the fold */
+.hero-presson {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+  padding: 0.8rem 1.5rem;
+  min-height: 48px;
+  border: 1px solid rgba(182,165,136,0.45);
+  border-radius: 999px;
+  background: rgba(182,165,136,0.10);
+  backdrop-filter: blur(6px);
+  text-decoration: none;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cream);
+  transition: all 0.28s ease;
+}
+.hero-presson:hover {
+  background: rgba(182,165,136,0.24);
+  border-color: var(--champagne);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 34px rgba(182,165,136,0.22);
+}
+.hero-presson-ico { font-size: 1rem; }
+.hero-presson-txt { white-space: nowrap; }
+@media (max-width: 430px) {
+  /* keep it to a single line on small phones so it doesn't collide
+     with the scroll indicator underneath */
+  .hero-presson { padding: 0.75rem 1.1rem; gap: 0.45rem; font-size: 0.7rem; letter-spacing: 0.1em; }
+  .hero-presson-badge { font-size: 0.5rem; padding: 0.18rem 0.42rem; }
+}
+.hero-presson-badge {
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: var(--champagne);
+  color: var(--espresso);
+}
+.hero-presson-go { color: var(--champagne); transition: transform 0.28s ease; }
+.hero-presson:hover .hero-presson-go { transform: translateX(4px); }
+
+/* Full-width band below the hero — the entire block is tappable */
+.po-band {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  text-decoration: none;
+  padding: 2.5rem 1.5rem;
+  background: radial-gradient(900px 420px at 22% 12%, #241a10 0%, #170f08 55%, #0d0906 100%);
+  border-top: 1px solid rgba(182,165,136,0.18);
+  border-bottom: 1px solid rgba(182,165,136,0.18);
+  transition: background 0.4s ease;
+}
+.po-band:hover { background: radial-gradient(900px 420px at 22% 12%, #2c2014 0%, #1b120a 55%, #100b07 100%); }
+.po-band-orb { position: absolute; border-radius: 50%; filter: blur(64px); pointer-events: none; }
+.po-band-orb-1 { width: 300px; height: 300px; top: -110px; left: -50px; background: rgba(182,165,136,0.17); }
+.po-band-orb-2 { width: 240px; height: 240px; bottom: -100px; right: -40px; background: rgba(201,184,150,0.13); }
+.po-band-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.75rem;
+  flex-wrap: wrap;
+}
+.po-band-left { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
+.po-band-kicker {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--champagne);
+}
+.po-band-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1.7rem, 4.5vw, 2.6rem);
+  line-height: 1.1;
+  background: linear-gradient(115deg, #F5EEE8 0%, #DDD0B8 38%, #B6A588 62%, #8C7A5E 100%);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: soonShimmer 7s linear infinite;
+}
+@keyframes soonShimmer { 0% { background-position: 0% center; } 100% { background-position: 220% center; } }
+.po-band-sub {
+  font-family: 'Josefin Sans', sans-serif;
+  font-weight: 300;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: rgba(221,208,184,0.8);
+  max-width: 460px;
+}
+.po-band-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 0.95rem 2rem;
+  background: var(--champagne);
+  color: var(--espresso);
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  white-space: nowrap;
+  transition: all 0.28s ease;
+}
+.po-band:hover .po-band-btn {
+  background: var(--cream);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 36px rgba(182,165,136,0.32);
+}
+@media (max-width: 720px) {
+  .po-band { padding: 2.25rem 1.25rem; }
+  .po-band-inner { flex-direction: column; align-items: flex-start; gap: 1.35rem; }
+  .po-band-btn { width: 100%; }
+  .po-band-sub { font-size: 0.85rem; }
 }
 
 /* ── Mobile overflow fixes ───────────────────────────────────────────────
