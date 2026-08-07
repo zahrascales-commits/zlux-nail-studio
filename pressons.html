@@ -42,6 +42,77 @@
     #po-payment-el { margin:1rem 0 1.25rem; }
     .kit-check { display:flex; gap:0.6rem; align-items:flex-start; background:rgba(182,165,136,0.08); border:1px solid rgba(182,165,136,0.3); padding:0.85rem 1rem; margin:0.5rem 0 1rem; font-family:'Josefin Sans',sans-serif; font-size:0.82rem; color:var(--espresso); cursor:pointer; line-height:1.5; }
     .sizes-note { display:none; font-family:'Josefin Sans',sans-serif; font-size:0.8rem; color:#4e8e5e; margin:0.25rem 0 0.9rem; }
+
+    /* ══════════ COMING SOON ══════════ */
+    .soon-stage {
+      position:relative; overflow:hidden; padding:5.5rem 1.5rem 6rem; text-align:center;
+      background:radial-gradient(1100px 700px at 50% 8%, #241a10 0%, #170f08 52%, #0d0906 100%);
+    }
+    .soon-inner { position:relative; z-index:2; max-width:620px; margin:0 auto; }
+    /* soft drifting gold orbs for depth */
+    .soon-orb { position:absolute; border-radius:50%; filter:blur(70px); pointer-events:none; z-index:1; }
+    .soon-orb-1 { width:380px; height:380px; top:-90px; left:-60px; background:rgba(182,165,136,0.16); animation:soonFloat 16s ease-in-out infinite alternate; }
+    .soon-orb-2 { width:300px; height:300px; bottom:-70px; right:-50px; background:rgba(201,184,150,0.13); animation:soonFloat 20s ease-in-out infinite alternate-reverse; }
+    @keyframes soonFloat { from { transform:translate(0,0) scale(1); } to { transform:translate(36px,-26px) scale(1.12); } }
+
+    .soon-kicker { font-family:'Josefin Sans',sans-serif; font-size:0.66rem; letter-spacing:0.42em; text-transform:uppercase; color:var(--champagne); margin-bottom:1.1rem; }
+    .soon-title {
+      font-family:'Cinzel',serif; font-weight:400; font-size:clamp(2.9rem,9vw,5rem); line-height:1.02; letter-spacing:0.02em; margin:0;
+      background:linear-gradient(115deg,#F5EEE8 0%,#DDD0B8 38%,#B6A588 62%,#8C7A5E 100%);
+      background-size:220% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+      animation:soonShimmer 7s linear infinite;
+    }
+    @keyframes soonShimmer { 0%{background-position:0% center} 100%{background-position:220% center} }
+    .soon-lede { font-family:'Josefin Sans',sans-serif; font-weight:300; font-size:1rem; line-height:1.95; color:rgba(221,208,184,0.82); max-width:470px; margin:1.4rem auto 0; }
+
+    .soon-rule { display:flex; align-items:center; gap:1rem; max-width:280px; margin:2.4rem auto; }
+    .soon-rule::before, .soon-rule::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,transparent,rgba(182,165,136,0.5),transparent); }
+    .soon-rule span { color:var(--champagne); font-size:0.72rem; }
+
+    .soon-cats-label { font-family:'Josefin Sans',sans-serif; font-size:0.6rem; letter-spacing:0.32em; text-transform:uppercase; color:rgba(182,165,136,0.62); margin-bottom:1rem; }
+    .soon-cats { display:flex; flex-wrap:wrap; gap:0.55rem; justify-content:center; margin-bottom:3rem; }
+    .soon-cat {
+      font-family:'Josefin Sans',sans-serif; font-size:0.72rem; letter-spacing:0.14em; text-transform:uppercase;
+      color:rgba(242,236,225,0.9); border:1px solid rgba(182,165,136,0.34); border-radius:999px; padding:0.55rem 1.15rem;
+      background:rgba(182,165,136,0.07); animation:soonRise 0.7s ease both;
+    }
+    @keyframes soonRise { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+    .soon-card {
+      background:linear-gradient(160deg,rgba(245,238,232,0.07),rgba(245,238,232,0.02));
+      border:1px solid rgba(182,165,136,0.28); border-radius:18px; padding:2.2rem 1.9rem;
+      backdrop-filter:blur(6px); box-shadow:0 22px 60px rgba(0,0,0,0.42);
+    }
+    .soon-card-title { font-family:'Cinzel',serif; font-size:1.45rem; color:var(--cream); }
+    .soon-card-sub { font-family:'Josefin Sans',sans-serif; font-weight:300; font-size:0.87rem; line-height:1.8; color:rgba(221,208,184,0.72); margin:0.6rem auto 1.5rem; max-width:400px; }
+    .soon-form { display:flex; flex-direction:column; gap:0.6rem; max-width:370px; margin:0 auto; }
+    .soon-input {
+      width:100%; background:rgba(13,9,6,0.5); border:1px solid rgba(182,165,136,0.32); border-radius:11px;
+      color:var(--cream); font-family:'Josefin Sans',sans-serif; font-size:0.95rem; padding:0.95rem 1.1rem; outline:none;
+      transition:border-color 0.22s, box-shadow 0.22s;
+    }
+    .soon-input::placeholder { color:rgba(182,165,136,0.48); }
+    .soon-input:focus { border-color:var(--champagne); box-shadow:0 0 0 3px rgba(182,165,136,0.14); }
+    .soon-btn {
+      width:100%; border:none; border-radius:11px; cursor:pointer; padding:1rem 1.2rem; margin-top:0.15rem;
+      font-family:'Josefin Sans',sans-serif; font-size:0.74rem; font-weight:700; letter-spacing:0.24em; text-transform:uppercase;
+      color:#17100a; background:linear-gradient(135deg,#DDD0B8,#B6A588 55%,#C9B896);
+      box-shadow:0 12px 30px rgba(182,165,136,0.26); transition:transform 0.18s, box-shadow 0.18s;
+    }
+    .soon-btn:hover { transform:translateY(-2px); box-shadow:0 16px 38px rgba(182,165,136,0.34); }
+    .soon-btn:active { transform:translateY(0); }
+    .soon-err { display:none; font-family:'Josefin Sans',sans-serif; font-size:0.82rem; color:#e79090; margin-top:0.85rem; }
+    .soon-done { display:none; animation:soonRise 0.55s ease both; }
+    .soon-done-mark { font-size:2.1rem; color:var(--champagne); }
+    .soon-done-title { font-family:'Cinzel',serif; font-size:1.3rem; color:var(--cream); margin-top:0.3rem; }
+    .soon-done-sub { font-family:'Josefin Sans',sans-serif; font-weight:300; font-size:0.87rem; color:rgba(221,208,184,0.72); margin-top:0.4rem; }
+    .soon-perk { font-family:'Josefin Sans',sans-serif; font-size:0.78rem; color:rgba(221,208,184,0.62); margin-top:1.5rem; padding-top:1.2rem; border-top:1px solid rgba(182,165,136,0.16); line-height:1.7; }
+    .soon-perk strong { color:var(--champagne); }
+    .soon-follow { font-family:'Josefin Sans',sans-serif; font-size:0.78rem; color:rgba(182,165,136,0.6); margin-top:2.6rem; letter-spacing:0.04em; }
+    .soon-follow a { color:var(--champagne); border-bottom:1px solid rgba(182,165,136,0.35); padding-bottom:1px; }
+    .soon-follow span { margin:0 0.5rem; opacity:0.5; }
+    @media (max-width:600px) { .soon-stage { padding:4rem 1.2rem 4.5rem; } .soon-card { padding:1.8rem 1.3rem; } }
+    @media (prefers-reduced-motion: reduce) { .soon-orb, .soon-title { animation:none; } }
   </style>
 </head>
 <body>
@@ -77,7 +148,53 @@
   <p style="font-family:'Josefin Sans',sans-serif;font-size:0.95rem;color:var(--latte);max-width:440px;margin:0 auto;">Salon-quality sets you can wear anywhere — crafted with the same precision as the chair.</p>
 </div>
 
-<section class="section section-soft">
+<!-- ══ COMING SOON — shown until the first set is added in Studio Manager ══ -->
+<section id="po-soon" style="display:none;">
+  <div class="soon-stage">
+    <div class="soon-orb soon-orb-1"></div>
+    <div class="soon-orb soon-orb-2"></div>
+    <div class="soon-inner">
+      <div class="soon-kicker">The First Drop</div>
+      <h2 class="soon-title">Coming Soon</h2>
+      <p class="soon-lede">
+        Hand-crafted press-on sets, built with the same precision as the chair —
+        sculpted, shaped, and finished by Zahra herself.
+      </p>
+
+      <div class="soon-rule"><span>✦</span></div>
+
+      <div class="soon-cats-label">The first collections</div>
+      <div class="soon-cats" id="soon-cats"></div>
+
+      <div class="soon-card">
+        <div class="soon-card-title">Be first to shop the drop</div>
+        <p class="soon-card-sub">Sets are made in small batches and go fast. Join the list and you'll know the moment they're live — before anyone else.</p>
+        <div class="soon-form" id="soon-form">
+          <input class="soon-input" id="soon-name" placeholder="Your name" autocomplete="name" />
+          <input class="soon-input" id="soon-contact" placeholder="Email or phone" autocomplete="email" onkeydown="if(event.key==='Enter')joinWaitlist()" />
+          <button class="soon-btn" onclick="joinWaitlist()">Notify Me ✦</button>
+        </div>
+        <div class="soon-err" id="soon-err"></div>
+        <div class="soon-done" id="soon-done">
+          <div class="soon-done-mark">✦</div>
+          <div class="soon-done-title">You're on the list</div>
+          <div class="soon-done-sub">We'll reach out the second the first drop goes live.</div>
+        </div>
+        <div class="soon-perk">🎁 Everyone on the list gets a <strong>free sizing kit</strong> with their first order.</div>
+      </div>
+
+      <div class="soon-follow">
+        Follow the making-of
+        <a href="https://instagram.com/zola_officials_" target="_blank">@zola_officials_</a>
+        <span>·</span>
+        <a href="https://tiktok.com/@zolaofficial" target="_blank">@zolaofficial</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ THE SHOP — appears automatically once sets exist ══ -->
+<section class="section section-soft" id="po-shop" style="display:none;">
   <div class="container" style="max-width:1050px;">
 
     <div class="kit-banner">🎁 <strong>First order?</strong> Add your <strong>free sizing kit</strong> at checkout. Send us your sizes once and we keep them on file forever — you'll never size again.</div>
@@ -160,8 +277,49 @@ async function poLoad(){
   try{
     const r=await fetch('/api/pressons?action=catalog'); const d=await r.json();
     PO_CATS=d.categories||[]; PO_PRODUCTS=(d.products||[]).filter(p=>Number(p.price_cents)>0);
-    poRenderChips(); poRender();
-  }catch{ document.getElementById('po-all').innerHTML='<div class="po-empty">Couldn\'t load — refresh to try again.</div>'; }
+  }catch{ PO_CATS=[]; PO_PRODUCTS=[]; }
+
+  // No sets priced yet → show the Coming Soon page. The moment Zahra adds
+  // her first set in Studio Manager, the shop takes over automatically.
+  if(!PO_PRODUCTS.length){ showComingSoon(); return; }
+
+  document.getElementById('po-soon').style.display='none';
+  document.getElementById('po-shop').style.display='';
+  poRenderChips(); poRender();
+}
+
+function showComingSoon(){
+  document.getElementById('po-shop').style.display='none';
+  document.getElementById('po-soon').style.display='block';
+  // Tease the collections she's already set up
+  const el=document.getElementById('soon-cats');
+  const names=PO_CATS.map(c=>c.name);
+  el.innerHTML = names.length
+    ? names.map((n,i)=>`<span class="soon-cat" style="animation-delay:${0.06*i}s">${pesc(n)}</span>`).join('')
+    : ['Wedding','Birthday','Everyday Luxe'].map((n,i)=>`<span class="soon-cat" style="animation-delay:${0.06*i}s">${n}</span>`).join('');
+}
+
+async function joinWaitlist(){
+  const name=document.getElementById('soon-name').value.trim();
+  const contact=document.getElementById('soon-contact').value.trim();
+  const err=document.getElementById('soon-err');
+  err.style.display='none';
+  if(!contact){ err.textContent='Add your email or phone so we can reach you ✦'; err.style.display='block'; return; }
+  const isEmail=contact.includes('@');
+  if(!isEmail && contact.replace(/\D/g,'').length<10){ err.textContent='That doesn\'t look like a full email or phone number ✦'; err.style.display='block'; return; }
+  const btn=document.querySelector('.soon-btn');
+  btn.disabled=true; btn.textContent='Adding you…';
+  try{
+    await fetch('/api/clients?action=signup',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'signup',name:name||'Press-on waitlist',
+        email:isEmail?contact:'', phone:isEmail?'':contact})});
+    document.getElementById('soon-form').style.display='none';
+    document.getElementById('soon-done').style.display='block';
+    if(window.zolaConfetti)window.zolaConfetti();
+  }catch{
+    btn.disabled=false; btn.textContent='Notify Me ✦';
+    err.textContent='Connection hiccup — tap to try again ✦'; err.style.display='block';
+  }
 }
 function poRenderChips(){
   const el=document.getElementById('po-chips');
