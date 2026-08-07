@@ -1468,3 +1468,17 @@ ul { list-style: none; }
   .btn-gold, .btn-outline, .btn-outline-dark { min-height: 44px; }
   .faq-question { min-height: 48px; }
 }
+
+/* ── Mobile overflow fixes ───────────────────────────────────────────────
+   Flex/grid children default to min-width:auto, so they refuse to shrink
+   below their content and push the whole page wider than the screen. That
+   was dragging the nav (and the hamburger) off to the right on phones. */
+.member-save-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; max-width: 700px; margin: 0 auto; }
+.member-save-grid > * { min-width: 0; }
+.team-card > * { min-width: 0; }
+@media (max-width: 700px) {
+  .member-save-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .team-card { flex-direction: column; align-items: center; text-align: center; gap: 1rem; padding: 1.75rem 1.25rem; }
+}

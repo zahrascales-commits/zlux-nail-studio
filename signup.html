@@ -87,6 +87,12 @@
     }
     .step-panel { display: none; }
     .step-panel.active { display: block; }
+    @media (max-width: 420px) {
+      /* the four labels are just wide enough to push the page past the
+         viewport on small phones, which shifts the nav off-screen */
+      .step-label { font-size: 0.52rem; letter-spacing: 0.06em; text-align: center; }
+      .step-circle { width: 32px; height: 32px; font-size: 0.9rem; }
+    }
     .signup-card {
       background: #fff;
       border: 1px solid rgba(182,165,136,0.15);
@@ -500,6 +506,7 @@
 </div><!-- /signup-wrap -->
 
 <script src="js/main.js"></script>
+<script src="js/search.js"></script>
 <script src="js/analytics.js"></script>
 <script src="js/confetti.js"></script>
 <script>
