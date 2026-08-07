@@ -166,7 +166,7 @@
       <div class="soon-cats-label">The first collections</div>
       <div class="soon-cats" id="soon-cats"></div>
 
-      <div class="soon-card">
+      <div class="soon-card" id="drop-list">
         <div class="soon-card-title">Be first to shop the drop</div>
         <p class="soon-card-sub">Sets are made in small batches and go fast. Join the list and you'll know the moment they're live — before anyone else.</p>
         <div class="soon-form" id="soon-form">
@@ -298,6 +298,22 @@ function showComingSoon(){
   el.innerHTML = names.length
     ? names.map((n,i)=>`<span class="soon-cat" style="animation-delay:${0.06*i}s">${pesc(n)}</span>`).join('')
     : ['Wedding','Birthday','Everyday Luxe'].map((n,i)=>`<span class="soon-cat" style="animation-delay:${0.06*i}s">${n}</span>`).join('');
+  jumpToDropList();
+}
+
+// "Join Drop List" links here with #drop-list, but this section is hidden
+// until the catalog loads — so the browser's own anchor jump fires against
+// a display:none target and does nothing. Scroll it ourselves once it's up.
+function jumpToDropList(){
+  if (location.hash !== '#drop-list') return;
+  const card = document.getElementById('drop-list');
+  if (!card) return;
+  requestAnimationFrame(() => {
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const n = document.getElementById('soon-name');
+    // don't steal focus on touch devices — it yanks the keyboard open
+    if (n && !matchMedia('(pointer: coarse)').matches) setTimeout(() => n.focus(), 500);
+  });
 }
 
 async function joinWaitlist(){
