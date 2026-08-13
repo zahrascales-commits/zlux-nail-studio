@@ -101,6 +101,12 @@
   .btn-danger:hover{background:rgba(200,80,80,0.2)}
   .btn-sm{padding:0.4rem 0.7rem;font-size:0.6rem}
   /* ── SCHEDULING ── */
+  .mk-stages{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.6rem}
+  .mk-stage{text-align:left;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 0.95rem;cursor:pointer;display:flex;flex-direction:column;gap:0.25rem;transition:all 0.18s;min-height:64px}
+  .mk-stage:hover{border-color:var(--gold)}
+  .mk-stage.on{border-color:var(--gold);background:var(--card-hi);box-shadow:0 0 0 1px var(--gold) inset}
+  .mk-stage-t{font-size:0.82rem;color:var(--cream)}
+  .mk-stage-s{font-size:0.66rem;color:var(--muted)}
   .sched-step{display:flex;align-items:center;gap:0.7rem;margin:1.6rem 0 0.8rem}
   .sched-step-n{width:26px;height:26px;border-radius:50%;background:var(--gold);color:#0B0B0B;
     display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;flex-shrink:0}
@@ -482,6 +488,7 @@
     <button class="tab" data-tab="inbox" onclick="showTab('inbox')">Inbox <span class="dot" id="inq-dot" style="display:none">0</span></button>
     <button class="tab" data-tab="messages" onclick="showTab('messages')">Messages <span class="dot" id="msg-dot" style="display:none">0</span></button>
     <button class="tab" data-tab="scheduling" onclick="showTab('scheduling')">Scheduling <span class="dot" id="sched-dot" style="display:none">!</span></button>
+    <button class="tab" data-tab="marketing" onclick="showTab('marketing')">Emails</button>
     <button class="tab" data-tab="team" onclick="showTab('team')">Team</button>
     <button class="tab" data-tab="clients" onclick="showTab('clients')">Clients</button>
     <button class="tab" data-tab="site" onclick="showTab('site')">Site</button>
@@ -591,6 +598,60 @@
     </section>
 
     <!-- TEAM -->
+    <!-- EMAIL MARKETING -->
+    <section class="panel" id="panel-marketing">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Emails</div>
+          <div class="page-desc">Write once, everyone gets it with their own name at the top. Pick where you are in a drop, edit the words, send.</div>
+        </div>
+      </div>
+
+      <div class="cards" style="margin-bottom:1.5rem;">
+        <div class="stat"><div class="stat-num" id="mk-count">—</div><div class="stat-lbl">On your list</div></div>
+        <div class="stat"><div class="stat-num" id="mk-sent">—</div><div class="stat-lbl">Emails sent</div></div>
+        <div class="stat"><div class="stat-num" id="mk-code">—</div><div class="stat-lbl">Welcome code</div></div>
+      </div>
+
+      <div id="mk-warn" style="display:none;background:rgba(200,120,60,0.12);border:1px solid rgba(200,120,60,0.4);padding:0.9rem 1.1rem;margin-bottom:1.25rem;border-radius:10px;font-size:0.84rem;line-height:1.6;"></div>
+
+      <div class="sched-step"><div class="sched-step-n">1</div><div class="sched-step-t">Where are you in the drop?</div></div>
+      <div class="mk-stages" id="mk-stages"></div>
+
+      <div class="sched-step"><div class="sched-step-n">2</div><div class="sched-step-t">Your email</div></div>
+      <div class="sched-card">
+        <label class="fld-label">Subject</label>
+        <input id="mk-subject" placeholder="something is coming ✦" style="margin-bottom:0.8rem" />
+        <label class="fld-label">Message — type <strong>{{name}}</strong> anywhere and it becomes each person's first name</label>
+        <textarea id="mk-body" rows="12" style="font-family:inherit;line-height:1.7"></textarea>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.8rem;align-items:center">
+          <button class="btn btn-ghost btn-sm" onclick="mkPreview()">Preview</button>
+          <button class="btn btn-ghost btn-sm" onclick="mkTest()">Send me a test</button>
+          <span id="mk-status" style="font-size:0.75rem;color:var(--muted);margin-left:auto"></span>
+        </div>
+        <div id="mk-preview" style="display:none;margin-top:1rem;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff"></div>
+      </div>
+
+      <div class="sched-step"><div class="sched-step-n">3</div><div class="sched-step-t">Send it</div></div>
+      <div class="sched-card">
+        <div style="font-size:0.84rem;color:var(--cream);line-height:1.7;margin-bottom:0.9rem">
+          This goes to <strong id="mk-send-count">0</strong> people, one personal email each — nobody sees anyone else's address.
+        </div>
+        <button class="btn btn-gold" id="mk-send" onclick="mkSend()">Send to everyone</button>
+      </div>
+
+      <div class="page-head" style="margin-top:2rem;">
+        <div><div class="page-title" style="font-size:1.15rem;">Already sent</div></div>
+      </div>
+      <div id="mk-history" style="display:grid;gap:0.6rem;"></div>
+
+      <div class="page-head" style="margin-top:2rem;">
+        <div><div class="page-title" style="font-size:1.15rem;">Your list</div>
+        <div class="page-desc">Everyone who signed up for 10% off.</div></div>
+      </div>
+      <div id="mk-subs" style="display:grid;gap:0.4rem;"></div>
+    </section>
+
     <!-- SCHEDULING — pick an artist, tick her services, tick her days -->
     <section class="panel" id="panel-scheduling">
       <div class="page-head">
@@ -1419,6 +1480,7 @@ function showTab(name){
   if(name==='inventory')loadInventory();
   if(name==='messages')loadThreads();
   if(name==='scheduling')loadScheduling();
+  if(name==='marketing')loadMarketing();
   if(name==='team'){renderMembers();loadClientInspo();loadOverrides();}
   if(name==='inbox')loadInquiries();
   if(name==='site')loadSite();
@@ -2924,6 +2986,114 @@ async function delClientInspo(id){
   if(!confirm('Delete this inspo photo?'))return;
   await api('/api/photos?action=inspo',{method:'DELETE',body:JSON.stringify({action:'inspo',id})});
   loadClientInspo();
+}
+
+/* ══════════════ EMAIL MARKETING ══════════════
+   She writes one email; each recipient gets their own name merged in. The
+   four stages are starting points she edits, not fixed templates. */
+let mkData={subscribers:[],campaigns:[],stages:[],count:0,welcome_code:'ZOLA10'};
+let mkStage='idea';
+
+async function loadMarketing(){
+  try{
+    const r=await api('/api/marketing?action=overview');const d=await r.json();
+    mkData=d;
+  }catch{ mkData={subscribers:[],campaigns:[],stages:[],count:0,welcome_code:'ZOLA10'}; }
+  document.getElementById('mk-count').textContent=mkData.count||0;
+  document.getElementById('mk-send-count').textContent=mkData.count||0;
+  document.getElementById('mk-code').textContent=mkData.welcome_code||'ZOLA10';
+  document.getElementById('mk-sent').textContent=
+    (mkData.campaigns||[]).reduce((s,c)=>s+Number(c.sent_count||0),0);
+  renderMkStages();renderMkHistory();renderMkSubs();
+  // Emails silently fail if SendGrid's sender was never verified — say so
+  // here rather than letting her think a send worked.
+  const w=document.getElementById('mk-warn');
+  if(!PROVIDERS||!PROVIDERS.email){
+    w.style.display='block';
+    w.innerHTML='⚠️ Email sending is not switched on yet. Until it is, sends will fail — check <strong>Settings → Email</strong> and click the SendGrid verification link.';
+  } else if(!(mkData.count>0)){
+    w.style.display='block';
+    w.innerHTML='Nobody has joined your list yet. The <strong>10% off</strong> box on your homepage is what fills it.';
+  } else w.style.display='none';
+  if(!document.getElementById('mk-body').value)mkPickStage(mkStage);
+}
+function renderMkStages(){
+  const g=document.getElementById('mk-stages');
+  g.innerHTML=(mkData.stages||[]).map(s=>
+    '<button class="mk-stage'+(mkStage===s.stage?' on':'')+'" onclick="mkPickStage(\''+s.stage+'\')">'
+    +'<span class="mk-stage-t">'+esc(s.label)+'</span>'
+    +'<span class="mk-stage-s">'+esc(s.subject)+'</span></button>').join('');
+}
+function mkPickStage(stage){
+  const s=(mkData.stages||[]).find(x=>x.stage===stage);if(!s)return;
+  const body=document.getElementById('mk-body');
+  const dirty=body.value && body.value!==((mkData.stages.find(x=>x.stage===mkStage)||{}).body||'');
+  if(dirty && !confirm('Replace what you\'ve written with the '+s.label+' starting text?'))return;
+  mkStage=stage;
+  document.getElementById('mk-subject').value=s.subject;
+  body.value=s.body;
+  document.getElementById('mk-preview').style.display='none';
+  renderMkStages();
+}
+async function mkPreview(){
+  const subject=document.getElementById('mk-subject').value;
+  const body=document.getElementById('mk-body').value;
+  const r=await api('/api/marketing?action=preview',{method:'POST',body:JSON.stringify({subject,body,name:(mkData.subscribers[0]||{}).name||'Maria'})});
+  const d=await r.json();
+  const box=document.getElementById('mk-preview');
+  box.style.display='block';
+  box.innerHTML='<div style="padding:0.6rem 0.8rem;background:var(--surface);border-bottom:1px solid var(--border);font-size:0.75rem;color:var(--muted)">Subject: <span style="color:var(--cream)">'+esc(d.subject)+'</span></div>'+d.html;
+}
+async function mkTest(){
+  const to=prompt('Send a test to which email address?', 'zahrascales@gmail.com');
+  if(!to)return;
+  const st=document.getElementById('mk-status');st.textContent='Sending test…';
+  const r=await api('/api/marketing?action=send',{method:'POST',body:JSON.stringify({
+    test_to:to,subject:document.getElementById('mk-subject').value,body:document.getElementById('mk-body').value})});
+  const d=await r.json();
+  st.innerHTML=d.ok?'<span style="color:#7ec98a">Test sent to '+esc(to)+' ✓</span>'
+    :'<span style="color:#e08a8a">'+esc(d.error||'Test failed — check Settings → Email')+'</span>';
+}
+async function mkSend(){
+  const n=mkData.count||0;
+  if(!n){alert('Nobody has joined your list yet.');return;}
+  const subject=document.getElementById('mk-subject').value.trim();
+  const body=document.getElementById('mk-body').value.trim();
+  if(!subject||!body){alert('Add a subject and a message first.');return;}
+  if(!confirm('Send this to all '+n+' people on your list?\n\nThis cannot be undone.'))return;
+  const btn=document.getElementById('mk-send'),st=document.getElementById('mk-status');
+  btn.disabled=true;st.textContent='Sending to '+n+' people…';
+  try{
+    const r=await api('/api/marketing?action=send',{method:'POST',body:JSON.stringify({stage:mkStage,subject,body})});
+    const d=await r.json();
+    if(!r.ok){st.innerHTML='<span style="color:#e08a8a">'+esc(d.error||'Send failed')+'</span>';return;}
+    st.innerHTML='<span style="color:#7ec98a">Sent to '+d.sent+' of '+d.total+' ✓</span>'
+      +(d.failed?' <span style="color:#e08a8a">('+d.failed+' failed)</span>':'');
+    await loadMarketing();
+  }finally{ btn.disabled=false; }
+}
+function renderMkHistory(){
+  const g=document.getElementById('mk-history');
+  const c=mkData.campaigns||[];
+  if(!c.length){g.innerHTML='<div style="color:var(--muted);font-size:0.8rem">Nothing sent yet.</div>';return;}
+  g.innerHTML=c.map(x=>'<div class="member-card" style="--mc:#B6A588"><div class="mc-top"><div style="flex:1">'
+    +'<div class="mc-name">'+esc(x.subject)+'</div>'
+    +'<div class="mc-role">'+esc(x.stage)+' · '+(x.sent_ts?new Date(Number(x.sent_ts)).toLocaleDateString():'')+'</div></div>'
+    +'<span class="status-pill status-on">'+x.sent_count+' sent</span></div></div>').join('');
+}
+function renderMkSubs(){
+  const g=document.getElementById('mk-subs');
+  const s=mkData.subscribers||[];
+  if(!s.length){g.innerHTML='<div style="color:var(--muted);font-size:0.8rem">No signups yet.</div>';return;}
+  g.innerHTML=s.map(x=>'<div style="display:flex;align-items:center;gap:0.7rem;padding:0.6rem 0.8rem;border:1px solid var(--border);border-radius:8px;background:var(--card)">'
+    +'<div style="flex:1;min-width:0"><div style="font-size:0.82rem;color:var(--cream)">'+esc(x.name||'—')+'</div>'
+    +'<div style="font-size:0.68rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis">'+esc(x.email)+'</div></div>'
+    +'<button class="btn btn-danger btn-sm" onclick="mkRemove('+x.id+')">Remove</button></div>').join('');
+}
+async function mkRemove(id){
+  if(!confirm('Take this person off your list?'))return;
+  await api('/api/marketing?action=subscriber',{method:'DELETE',body:JSON.stringify({id})});
+  await loadMarketing();
 }
 
 /* ── SHOP MY IG ──
