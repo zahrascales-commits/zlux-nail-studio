@@ -256,6 +256,67 @@ document.addEventListener('DOMContentLoaded', () => {
     }).catch(() => {});
   }
 
+  /* ── SHOP MY IG ──
+     Real posts, tagged with what's in them. Tapping a photo opens a sheet
+     listing those exact products — services go to booking preselected,
+     press-ons go to their checkout. The whole section stays hidden until
+     she has posted something, so the page never shows an empty row. */
+  const igGrid = document.getElementById('ig-grid');
+  if (igGrid) {
+    const sheet = document.getElementById('ig-sheet');
+    const esc = s => String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+    const closeSheet = () => {
+      sheet.classList.remove('open');
+      sheet.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    };
+    const openSheet = (post) => {
+      document.getElementById('ig-sheet-photo').style.backgroundImage = 'url(' + post.photo + ')';
+      document.getElementById('ig-sheet-cap').textContent = post.caption || '';
+      const items = document.getElementById('ig-sheet-items');
+      if (!post.tags.length) {
+        items.innerHTML = '<a class="ig-buy" href="booking.html">Book an appointment <span>→</span></a>';
+      } else {
+        items.innerHTML = post.tags.map(t => {
+          const href = t.type === 'presson'
+            ? 'pressons.html?product=' + encodeURIComponent(t.name)
+            : 'booking.html?rebook=' + encodeURIComponent(t.name);
+          const cta = t.type === 'presson' ? 'Add to Cart' : 'Book This';
+          return '<a class="ig-buy" href="' + href + '">' +
+            '<span class="ig-buy-n">' + esc(t.name) + (t.price ? ' <em>' + esc(t.price) + '</em>' : '') + '</span>' +
+            '<span class="ig-buy-b">' + cta + '</span></a>';
+        }).join('');
+      }
+      sheet.classList.add('open');
+      sheet.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    };
+
+    document.getElementById('ig-sheet-x').addEventListener('click', closeSheet);
+    sheet.addEventListener('click', e => { if (e.target === sheet) closeSheet(); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && sheet.classList.contains('open')) closeSheet();
+    });
+
+    fetch('/api/shopig').then(r => r.json()).then(d => {
+      const posts = (d && d.posts) || [];
+      if (!posts.length) return; // section stays hidden
+      document.getElementById('shop-ig').style.display = '';
+      igGrid.innerHTML = posts.map((p, i) =>
+        '<button class="ig-cell" data-i="' + i + '" aria-label="Shop this photo"' +
+        ' style="background-image:url(' + p.photo + ')">' +
+          '<span class="ig-cell-veil"><span class="ig-cell-cta">Shop Now</span>' +
+          (p.tags.length ? '<span class="ig-cell-n">' + p.tags.length + ' item' + (p.tags.length === 1 ? '' : 's') + '</span>' : '') +
+          '</span></button>').join('');
+      igGrid.querySelectorAll('.ig-cell').forEach(btn => {
+        btn.addEventListener('click', () => openSheet(posts[Number(btn.dataset.i)]));
+      });
+    }).catch(() => {});
+  }
+
   /* ── PUBLIC WORKING HOURS ──
      Any [data-biz-hours] element shows the hours the owner typed in
      Studio Manager → Settings → Public Working Hours (falls back to

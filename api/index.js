@@ -63,6 +63,7 @@ app.all('/api/nail-health',      require('./_nail-health'));
 app.all('/api/inventory',        require('./_inventory'));
 app.all('/api/kiosk',            require('./_kiosk'));
 app.all('/api/pressons',         require('./_pressons'));
+app.all('/api/shopig',           require('./_shopig'));
 app.all('/api/classes',          require('./_classes'));
 app.all('/api/analytics',        require('./_analytics'));
 

@@ -1492,6 +1492,81 @@ ul { list-style: none; }
 }
 
 /* ══════════════════════════════════════════════════
+   SHOP MY IG
+══════════════════════════════════════════════════ */
+.shop-ig { background: var(--soft-white); }
+.ig-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; }
+.ig-cell {
+  position: relative; aspect-ratio: 1; border: none; padding: 0; cursor: pointer;
+  background-size: cover; background-position: center; background-color: var(--blush);
+  overflow: hidden; display: block;
+}
+.ig-cell-veil {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 0.4rem;
+  background: rgba(13,9,6,0.5); opacity: 0; transition: opacity 0.28s ease;
+}
+.ig-cell:hover .ig-cell-veil, .ig-cell:focus-visible .ig-cell-veil { opacity: 1; }
+.ig-cell-cta {
+  font-family: 'Josefin Sans', sans-serif; font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--espresso);
+  background: var(--champagne); padding: 0.55rem 1.1rem; border-radius: 999px;
+}
+.ig-cell-n {
+  font-family: 'Josefin Sans', sans-serif; font-size: 0.62rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--cream);
+}
+/* Touch devices get no hover, so the call to action is always visible */
+@media (hover: none) {
+  .ig-cell-veil { opacity: 1; background: linear-gradient(to top, rgba(13,9,6,0.72) 0%, transparent 55%); justify-content: flex-end; padding-bottom: 0.8rem; }
+  .ig-cell-cta { font-size: 0.58rem; padding: 0.4rem 0.8rem; }
+}
+
+.ig-sheet {
+  position: fixed; inset: 0; z-index: 9990; display: none;
+  background: rgba(13,9,6,0.72); backdrop-filter: blur(6px);
+  align-items: center; justify-content: center; padding: 1rem;
+}
+.ig-sheet.open { display: flex; animation: zsFade 0.2s ease; }
+.ig-sheet-box {
+  position: relative; background: var(--soft-white); max-width: 720px; width: 100%;
+  max-height: 88vh; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr;
+  animation: zsUp 0.28s cubic-bezier(.2,.8,.2,1);
+}
+.ig-sheet-x {
+  position: absolute; top: 0.5rem; right: 0.6rem; z-index: 2;
+  background: rgba(255,255,255,0.9); border: none; border-radius: 50%;
+  width: 34px; height: 34px; font-size: 1.3rem; line-height: 1; cursor: pointer; color: var(--espresso);
+}
+.ig-sheet-photo { background-size: cover; background-position: center; background-color: var(--blush); min-height: 280px; }
+.ig-sheet-body { padding: 1.6rem 1.5rem; }
+.ig-sheet-cap { font-family: 'Josefin Sans', sans-serif; font-size: 0.88rem; line-height: 1.7; color: var(--latte); margin-bottom: 1.2rem; }
+.ig-sheet-label {
+  font-family: 'Josefin Sans', sans-serif; font-size: 0.6rem; letter-spacing: 0.24em;
+  text-transform: uppercase; color: var(--champagne); margin-bottom: 0.8rem;
+}
+.ig-sheet-items { display: flex; flex-direction: column; gap: 0.6rem; }
+.ig-buy {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.8rem;
+  padding: 0.85rem 1rem; min-height: 52px; background: #fff;
+  border: 1px solid rgba(182,165,136,0.3); text-decoration: none; transition: all 0.2s;
+}
+.ig-buy:hover { border-color: var(--champagne); box-shadow: 0 8px 22px rgba(13,13,13,0.07); }
+.ig-buy-n { font-family: 'Cinzel', serif; font-size: 0.9rem; color: var(--espresso); line-height: 1.3; }
+.ig-buy-n em { font-style: normal; color: var(--champagne); }
+.ig-buy-b {
+  flex-shrink: 0; font-family: 'Josefin Sans', sans-serif; font-size: 0.6rem; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--espresso);
+  background: var(--champagne); padding: 0.5rem 0.85rem; border-radius: 999px; white-space: nowrap;
+}
+@media (max-width: 700px) {
+  .ig-sheet { padding: 0; align-items: flex-end; }
+  .ig-sheet-box { grid-template-columns: 1fr; max-height: 92vh; }
+  .ig-sheet-photo { min-height: 220px; max-height: 34vh; }
+  .ig-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+}
+
+/* ══════════════════════════════════════════════════
    SHOP THE LOOK — hover photo swap
 ══════════════════════════════════════════════════ */
 .shop-look { background: var(--soft-white); }

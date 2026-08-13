@@ -1001,6 +1001,12 @@
           <textarea id="site-hero-sub" rows="2" placeholder="A private membership studio where your dream nails come true…"></textarea>
         </div>
         <div class="site-card" style="grid-column:1/-1;">
+          <h3>Shop My IG 📱</h3>
+          <p>Upload a photo you posted, tick what's in it, and clients can tap it on your homepage and go straight to booking that exact service — or buy that press-on set. Photos with nothing ticked still work; they just link to booking.</p>
+          <button class="btn btn-gold" onclick="igPick()">+ Add a Photo</button>
+          <div id="ig-admin" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:0.9rem;margin-top:1rem;"></div>
+        </div>
+        <div class="site-card" style="grid-column:1/-1;">
           <h3>Site Photos 📸</h3>
           <p>Tap any slot to upload a photo from your phone — it appears on the live website in seconds. Photos are auto-compressed for you.</p>
           <div id="photo-slots" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.8rem;"></div>
@@ -1125,6 +1131,18 @@
       </div>
     </section>
 
+  </div>
+</div>
+
+<!-- GENERIC MODAL — content injected by openSheetModal() -->
+<div class="overlay" id="modal-generic">
+  <div class="modal">
+    <div class="modal-title" id="gm-title"></div>
+    <div id="gm-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-generic')">Cancel</button>
+      <button class="btn btn-gold" id="gm-save">Save</button>
+    </div>
   </div>
 </div>
 
@@ -2908,8 +2926,106 @@ async function delClientInspo(id){
   loadClientInspo();
 }
 
+/* ── SHOP MY IG ──
+   Upload a post, tick what's in it. Tags carry the name and price so the
+   storefront can render and link a product without a second lookup. */
+let igPosts=[],igPressons=[];
+const IG_PRICES={'Organic Structured Manicure':'$90','Short Gel X':'$95','Medium Gel X':'$100',
+  'Long Gel X':'$110','Short Acrylic Set':'$95','Medium Acrylic Set':'$100','Long Acrylic Set':'$110',
+  'Russian Dry Pedicure':'$95','Russian Dry Pedicure — Full Correction':'$125'};
+
+async function loadShopIg(){
+  try{
+    const r=await api('/api/shopig?action=admin');const d=await r.json();
+    igPosts=d.posts||[];igPressons=d.pressons||[];
+  }catch{igPosts=[];igPressons=[];}
+  renderIgAdmin();
+}
+function renderIgAdmin(){
+  const g=document.getElementById('ig-admin');if(!g)return;
+  if(!igPosts.length){
+    g.innerHTML='<div style="grid-column:1/-1;color:var(--muted);font-size:0.8rem;line-height:1.6">No photos yet. Add one and it appears on your homepage under <strong>Shop My IG</strong>.</div>';
+    return;
+  }
+  g.innerHTML=igPosts.map((p,i)=>{
+    const tags=p.tags||[];
+    return '<div style="border:1px solid var(--border);background:var(--bg);border-radius:9px;overflow:hidden">'
+      +'<img src="'+p.data_url+'" style="width:100%;height:150px;object-fit:cover;display:block'+(Number(p.active)?'':';opacity:0.35')+'" alt="">'
+      +'<div style="padding:0.6rem">'
+        +'<div style="font-size:0.68rem;color:var(--muted);min-height:1.6em;line-height:1.4;margin-bottom:0.45rem">'
+          +(tags.length?tags.map(t=>esc(t.name)).join(' · '):'<em>nothing tagged yet</em>')+'</div>'
+        +'<div style="display:flex;gap:0.3rem;flex-wrap:wrap">'
+          +'<button class="btn btn-ghost btn-sm" onclick="igTag('+p.id+')">Tag items</button>'
+          +'<button class="btn btn-ghost btn-sm" onclick="igMove('+p.id+',\'up\')" '+(i===0?'disabled':'')+'>↑</button>'
+          +'<button class="btn btn-ghost btn-sm" onclick="igMove('+p.id+',\'down\')" '+(i===igPosts.length-1?'disabled':'')+'>↓</button>'
+          +'<button class="btn btn-ghost btn-sm" onclick="igToggle('+p.id+','+(Number(p.active)?0:1)+')">'+(Number(p.active)?'Hide':'Show')+'</button>'
+          +'<button class="btn btn-danger btn-sm" onclick="igDelete('+p.id+')">Delete</button>'
+        +'</div>'
+      +'</div></div>';
+  }).join('');
+}
+function igPick(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+  inp.onchange=()=>{
+    const file=inp.files&&inp.files[0];if(!file)return;
+    const img=new Image(),reader=new FileReader();
+    reader.onload=e=>{img.src=e.target.result;};
+    img.onload=async()=>{
+      const scale=Math.min(1,1200/Math.max(img.width,img.height));
+      const cv=document.createElement('canvas');
+      cv.width=Math.round(img.width*scale);cv.height=Math.round(img.height*scale);
+      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      let du=cv.toDataURL('image/jpeg',0.8);
+      if(du.length>850000)du=cv.toDataURL('image/jpeg',0.55);
+      toast('Uploading…');
+      const r=await api('/api/shopig?action=add',{method:'POST',body:JSON.stringify({data_url:du,caption:'',tags:[]})});
+      if(r.ok){toast('Added ✦ now tag what\'s in it');await loadShopIg();}
+      else toast(((await r.json().catch(()=>({}))).error)||'Upload failed');
+    };
+    reader.readAsDataURL(file);
+  };
+  inp.click();
+}
+function igTag(id){
+  const p=igPosts.find(x=>Number(x.id)===Number(id));if(!p)return;
+  const chosen=new Set((p.tags||[]).map(t=>t.type+'|'+t.name));
+  const svc=SERVICES.map(s=>({type:'service',name:s,price:IG_PRICES[s]||''}));
+  const po=igPressons.map(x=>({type:'presson',name:x.name,price:'$'+(Number(x.price_cents)/100).toFixed(0),id:x.id}));
+  const all=svc.concat(po);
+  const rows=all.map((t,i)=>
+    '<label style="display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0.7rem;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:0.8rem;color:var(--cream);min-height:46px">'
+    +'<input type="checkbox" data-i="'+i+'" '+(chosen.has(t.type+'|'+t.name)?'checked':'')+' style="accent-color:var(--gold);width:17px;height:17px">'
+    +'<span>'+esc(t.name)+(t.price?' <span style="color:var(--gold)">'+esc(t.price)+'</span>':'')
+    +(t.type==='presson'?' <span style="font-size:0.6rem;color:var(--muted)">press-on</span>':'')+'</span></label>').join('');
+  openSheetModal('What\'s in this photo?',
+    '<div style="max-height:52vh;overflow-y:auto;display:grid;gap:0.4rem" id="ig-tag-list">'+rows+'</div>'
+    +'<label class="fld-label" style="margin-top:0.9rem">Caption (optional)</label>'
+    +'<input id="ig-tag-cap" value="'+esc(p.caption||'')+'" placeholder="Medium Gel X in soft almond ✦" />'
+    +(po.length?'':'<div style="font-size:0.72rem;color:var(--muted);margin-top:0.7rem;line-height:1.5">You have no press-on sets yet — once you add them under Press-Ons they show up here too.</div>'),
+    async()=>{
+      const tags=[...document.querySelectorAll('#ig-tag-list input:checked')].map(i=>all[Number(i.dataset.i)]);
+      const caption=document.getElementById('ig-tag-cap').value;
+      const r=await api('/api/shopig?action=update',{method:'PUT',body:JSON.stringify({id,tags,caption})});
+      if(r.ok){toast('Saved ✦');await loadShopIg();}else toast('Save failed');
+    });
+}
+async function igMove(id,dir){
+  await api('/api/shopig?action=reorder',{method:'PUT',body:JSON.stringify({id,dir})});
+  await loadShopIg();
+}
+async function igToggle(id,active){
+  await api('/api/shopig?action=update',{method:'PUT',body:JSON.stringify({id,active})});
+  await loadShopIg();
+}
+async function igDelete(id){
+  if(!confirm('Delete this photo from Shop My IG?'))return;
+  await api('/api/shopig?action=post',{method:'DELETE',body:JSON.stringify({id})});
+  await loadShopIg();
+}
+
 /* ── SITE EDITOR ── */
 async function loadSite(){
+  loadShopIg();
   loadSitePhotos();
   loadClasses();
   loadClassPurchases();
@@ -3277,6 +3393,21 @@ async function refreshThreadDot(){
 
 /* ── UTIL ── */
 function openModal(id){document.getElementById(id).classList.add('open');}
+// Reusable modal for one-off forms. Replaces the Save handler each time so a
+// previous caller's listener can never fire against the new form.
+function openSheetModal(title,html,onSave){
+  document.getElementById('gm-title').textContent=title;
+  document.getElementById('gm-body').innerHTML=html;
+  const old=document.getElementById('gm-save');
+  const btn=old.cloneNode(true);
+  old.parentNode.replaceChild(btn,old);
+  btn.addEventListener('click',async()=>{
+    btn.disabled=true;
+    try{ await onSave(); closeModal('modal-generic'); }
+    finally{ btn.disabled=false; }
+  });
+  openModal('modal-generic');
+}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2600);}

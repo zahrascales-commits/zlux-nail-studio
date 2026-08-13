@@ -114,6 +114,33 @@
   </div>
 </section>
 
+<!-- SHOP MY IG — tap a real post, see exactly what's in it, book or buy.
+     Hidden entirely until Zahra has posted something, so the homepage never
+     shows an empty row. -->
+<section class="section shop-ig" id="shop-ig" style="display:none;">
+  <div class="container">
+    <div class="section-label" style="text-align:center;">Shop My IG</div>
+    <h2 class="shop-look-h">Tap a photo. Get the exact set.</h2>
+    <div class="ig-grid" id="ig-grid"></div>
+    <div style="text-align:center;margin-top:2rem;">
+      <a href="https://instagram.com/zola_officials_" target="_blank" rel="noopener" class="btn-outline-dark" style="font-size:0.68rem;">Follow @zola_officials_</a>
+    </div>
+  </div>
+</section>
+
+<!-- Product sheet that slides up when a post is tapped -->
+<div class="ig-sheet" id="ig-sheet" aria-hidden="true">
+  <div class="ig-sheet-box" role="dialog" aria-label="Shop this photo">
+    <button class="ig-sheet-x" id="ig-sheet-x" aria-label="Close">&times;</button>
+    <div class="ig-sheet-photo" id="ig-sheet-photo"></div>
+    <div class="ig-sheet-body">
+      <div class="ig-sheet-cap" id="ig-sheet-cap"></div>
+      <div class="ig-sheet-label">In this photo</div>
+      <div class="ig-sheet-items" id="ig-sheet-items"></div>
+    </div>
+  </div>
+</div>
+
 <!-- SHOP THE LOOK — product grid with hover photo swap.
      Each card carries two owner-uploaded photos: the nail set on its own,
      and the same set worn. Hovering (or scrolling past, on a phone) swaps

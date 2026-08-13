@@ -286,6 +286,7 @@ async function poLoad(){
 
   document.getElementById('po-soon').style.display='none';
   document.getElementById('po-shop').style.display='';
+  jumpToProduct();
   poRenderChips(); poRender();
 }
 
@@ -299,6 +300,17 @@ function showComingSoon(){
     ? names.map((n,i)=>`<span class="soon-cat" style="animation-delay:${0.06*i}s">${pesc(n)}</span>`).join('')
     : ['Wedding','Birthday','Everyday Luxe'].map((n,i)=>`<span class="soon-cat" style="animation-delay:${0.06*i}s">${n}</span>`).join('');
   jumpToDropList();
+}
+
+// Shop My IG links here as ?product=<name> when a photo is tagged with a
+// press-on set. Open that set's order sheet straight away so the tap that
+// started on a photo ends on a checkout, not a search.
+function jumpToProduct(){
+  const want=new URLSearchParams(location.search).get('product');
+  if(!want)return;
+  const hit=(PO_PRODUCTS||[]).find(p=>p.name===want);
+  if(!hit)return; // set was removed or renamed — leave them on the shop
+  setTimeout(()=>poOpen(hit.id),200);
 }
 
 // "Join Drop List" links here with #drop-list, but this section is hidden
