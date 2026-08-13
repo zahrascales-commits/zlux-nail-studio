@@ -68,6 +68,82 @@ module.exports = async function (req, res) {
       return res.json({ enabled, mode: enabled ? (live ? 'live' : 'test') : 'off' });
     }
 
+    // ── STRIPE HEALTH: can money actually reach her bank? ──
+    // Asks Stripe directly rather than guessing from whether keys exist. The
+    // secret never leaves the server; only status flags and a masked last4
+    // come back. "Charges enabled" and "payouts enabled" are separate switches
+    // — an account can take cards for weeks while the money silently piles up
+    // undeposited because identity or bank details were never finished.
+    if (method === 'GET' && action === 'stripe_health') {
+      const rows = await query("SELECT key, value FROM site_settings WHERE key IN ('stripe_secret','stripe_publishable')");
+      const db = {}; for (const r of rows) db[r.key] = r.value;
+      const secret = db.stripe_secret || process.env.STRIPE_SECRET_KEY || '';
+      if (!secret) return res.json({ ok: false, reason: 'no_key' });
+
+      const sget = async (p) => {
+        const r = await fetch('https://api.stripe.com/v1/' + p, {
+          headers: { Authorization: 'Bearer ' + secret },
+        });
+        return { status: r.status, body: await r.json() };
+      };
+
+      const acct = await sget('account');
+      if (acct.status !== 200) {
+        return res.json({ ok: false, reason: 'bad_key', detail: (acct.body.error || {}).message || '' });
+      }
+      const A = acct.body;
+      const reqs = A.requirements || {};
+
+      let bank = [];
+      try {
+        const ext = await sget('accounts/' + A.id + '/external_accounts?limit=5');
+        if (ext.status === 200) {
+          bank = (ext.body.data || []).map(b => ({
+            type: b.object, name: b.bank_name || b.brand || '', last4: b.last4 || '',
+            status: b.status || '', default: !!b.default_for_currency,
+          }));
+        }
+      } catch (_) {}
+
+      let balance = null, payouts = [];
+      try {
+        const b = await sget('balance');
+        if (b.status === 200) {
+          const sum = a => (a || []).reduce((s, x) => s + x.amount, 0) / 100;
+          balance = { available: sum(b.body.available), pending: sum(b.body.pending) };
+        }
+      } catch (_) {}
+      try {
+        const p = await sget('payouts?limit=5');
+        if (p.status === 200) {
+          payouts = (p.body.data || []).map(x => ({
+            date: new Date(x.created * 1000).toISOString().slice(0, 10),
+            amount: x.amount / 100, status: x.status, failure: x.failure_message || '',
+          }));
+        }
+      } catch (_) {}
+
+      return res.json({
+        ok: true,
+        livemode: !!A.charges_enabled && /_live_/.test(secret),
+        mode: /_live_/.test(secret) ? 'live' : 'test',
+        account_id: A.id,
+        country: A.country,
+        currency: A.default_currency,
+        business_name: (A.business_profile || {}).name || '',
+        charges_enabled: !!A.charges_enabled,
+        payouts_enabled: !!A.payouts_enabled,
+        details_submitted: !!A.details_submitted,
+        disabled_reason: reqs.disabled_reason || null,
+        currently_due: reqs.currently_due || [],
+        past_due: reqs.past_due || [],
+        eventually_due: reqs.eventually_due || [],
+        payout_schedule: ((A.settings || {}).payouts || {}).schedule || null,
+        statement_descriptor: ((A.settings || {}).payments || {}).statement_descriptor || '',
+        bank, balance, payouts,
+      });
+    }
+
     // ── EMAIL SELF-REPAIR: register the sender with SendGrid so 403s stop ──
     // SendGrid rejects mail from unverified senders (the silent bug that ate
     // every email). This asks SendGrid to email a verification link to the
