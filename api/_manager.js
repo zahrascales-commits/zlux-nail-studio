@@ -94,16 +94,23 @@ module.exports = async function (req, res) {
       const A = acct.body;
       const reqs = A.requirements || {};
 
-      let bank = [];
+      // Track whether we could actually read the bank list. An empty array
+      // because the call failed means something very different from an empty
+      // array because no bank is attached, and confusing the two would tell
+      // her payouts are broken when they aren't (or worse, the reverse).
+      let bank = [], bank_checked = false, bank_error = '';
       try {
-        const ext = await sget('accounts/' + A.id + '/external_accounts?limit=5');
+        const ext = await sget('accounts/' + A.id + '/external_accounts?object=bank_account&limit=5');
         if (ext.status === 200) {
+          bank_checked = true;
           bank = (ext.body.data || []).map(b => ({
             type: b.object, name: b.bank_name || b.brand || '', last4: b.last4 || '',
             status: b.status || '', default: !!b.default_for_currency,
           }));
+        } else {
+          bank_error = (ext.body.error || {}).message || ('HTTP ' + ext.status);
         }
-      } catch (_) {}
+      } catch (e) { bank_error = e.message; }
 
       let balance = null, payouts = [];
       try {
@@ -140,7 +147,7 @@ module.exports = async function (req, res) {
         eventually_due: reqs.eventually_due || [],
         payout_schedule: ((A.settings || {}).payouts || {}).schedule || null,
         statement_descriptor: ((A.settings || {}).payments || {}).statement_descriptor || '',
-        bank, balance, payouts,
+        bank, bank_checked, bank_error, balance, payouts,
       });
     }
 
