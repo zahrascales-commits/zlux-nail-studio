@@ -990,6 +990,16 @@
           <label class="fld-label">Banner Text</label>
           <textarea id="site-banner-text" rows="3" placeholder="The founding rate locks in at $299/mo forever…"></textarea>
         </div>
+        <div class="site-card">
+          <h3>Homepage Quote ✦</h3>
+          <p>The big words over your hero photo. Use <strong>&lt;br&gt;</strong> to break a line and wrap words in <strong>&lt;span class="gold-text"&gt;…&lt;/span&gt;</strong> to make them gold.</p>
+          <label class="fld-label">Small line above</label>
+          <input id="site-hero-kicker" placeholder="Porterville, California" style="margin-bottom:0.7rem" />
+          <label class="fld-label">The quote</label>
+          <textarea id="site-hero-quote" rows="3" placeholder="Nails That Speak&lt;br&gt;&lt;span class=&quot;gold-text&quot;&gt;Before You Do&lt;/span&gt;" style="margin-bottom:0.7rem"></textarea>
+          <label class="fld-label">Line underneath</label>
+          <textarea id="site-hero-sub" rows="2" placeholder="A private membership studio where your dream nails come true…"></textarea>
+        </div>
         <div class="site-card" style="grid-column:1/-1;">
           <h3>Site Photos 📸</h3>
           <p>Tap any slot to upload a photo from your phone — it appears on the live website in seconds. Photos are auto-compressed for you.</p>
@@ -2788,15 +2798,37 @@ async function deleteInq(){
 }
 
 /* ── SITE PHOTOS (owner uploads into any image slot on the site) ── */
-const PHOTO_SLOTS=[
-  {slot:'home-hero',label:'Homepage Hero'},
-  {slot:'princess-party',label:'Princess Party'},
-  {slot:'about-portrait',label:'About — Zahra'},
-  {slot:'services-header',label:'Services Header'},
-  {slot:'insta-1',label:'Instagram 1'},{slot:'insta-2',label:'Instagram 2'},
-  {slot:'insta-3',label:'Instagram 3'},{slot:'insta-4',label:'Instagram 4'},
-  {slot:'insta-5',label:'Instagram 5'},{slot:'insta-6',label:'Instagram 6'},
+// Grouped so the Site tab reads as sections rather than one long wall of
+// thumbnails. Each "Shop the Look" service takes two photos: the set on its
+// own, and the same set worn — the homepage swaps between them on hover.
+const LOOK_SERVICES=[
+  {key:'organic-manicure',label:'Organic Manicure'},
+  {key:'short-gelx',label:'Short Gel X'},
+  {key:'medium-gelx',label:'Medium Gel X'},
+  {key:'long-gelx',label:'Long Gel X'},
+  {key:'short-acrylic',label:'Short Acrylic'},
+  {key:'medium-acrylic',label:'Medium Acrylic'},
+  {key:'long-acrylic',label:'Long Acrylic'},
+  {key:'pedicure',label:'Dry Pedicure'},
 ];
+const PHOTO_GROUPS=[
+  {title:'Homepage & Pages', hint:'The big photos across your site. Tap any tile to swap it.', slots:[
+    {slot:'home-hero',label:'Homepage Hero'},
+    {slot:'princess-party',label:'Princess Party'},
+    {slot:'about-portrait',label:'About — Zahra'},
+    {slot:'services-header',label:'Services Header'},
+  ]},
+  {title:'Shop the Look — the set', hint:'The nails on their own. This is what shows first.', slots:
+    LOOK_SERVICES.map(s=>({slot:'look-'+s.key,label:s.label}))},
+  {title:'Shop the Look — worn', hint:'The same set on a hand or model. This fades in when someone hovers.', slots:
+    LOOK_SERVICES.map(s=>({slot:'look-'+s.key+'-alt',label:s.label+' (worn)'}))},
+  {title:'Instagram Strip', hint:'The six-photo row near the bottom of the homepage.', slots:[
+    {slot:'insta-1',label:'Instagram 1'},{slot:'insta-2',label:'Instagram 2'},
+    {slot:'insta-3',label:'Instagram 3'},{slot:'insta-4',label:'Instagram 4'},
+    {slot:'insta-5',label:'Instagram 5'},{slot:'insta-6',label:'Instagram 6'},
+  ]},
+];
+const PHOTO_SLOTS=PHOTO_GROUPS.flatMap(g=>g.slots);
 let sitePhotos={};
 async function loadSitePhotos(){
   try{const r=await fetch('/api/photos');const d=await r.json();sitePhotos=d.photos||{};}catch{sitePhotos={};}
@@ -2804,13 +2836,26 @@ async function loadSitePhotos(){
 }
 function renderPhotoSlots(){
   const grid=document.getElementById('photo-slots');
-  grid.innerHTML=PHOTO_SLOTS.map(p=>{
-    const has=sitePhotos[p.slot];
-    return '<div style="border:1px '+(has?'solid':'dashed')+' var(--border-hi);padding:0.5rem;text-align:center;cursor:pointer;background:var(--bg)" onclick="pickSlotPhoto(\''+p.slot+'\')">'
-      +(has?'<img src="'+has+'" style="width:100%;height:90px;object-fit:cover;display:block;margin-bottom:0.4rem" alt="">':'<div style="height:90px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;color:var(--muted)">+</div>')
-      +'<div style="font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold)">'+p.label+'</div>'
-      +(has?'<button class="btn btn-danger btn-sm" style="margin-top:0.35rem" onclick="event.stopPropagation();clearSlotPhoto(\''+p.slot+'\')">Remove</button>':'')
-      +'</div>';
+  // the container is itself a grid, so each group spans the full row
+  grid.style.display='block';
+  grid.innerHTML=PHOTO_GROUPS.map(g=>{
+    const done=g.slots.filter(s=>sitePhotos[s.slot]).length;
+    return '<div style="margin-bottom:1.6rem">'
+      +'<div style="display:flex;align-items:baseline;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.15rem">'
+        +'<div style="font-family:\'Cinzel\',serif;font-size:0.98rem;color:var(--cream)">'+esc(g.title)+'</div>'
+        +'<div style="font-size:0.65rem;color:'+(done===g.slots.length?'#7ec98a':'var(--muted)')+'">'+done+' of '+g.slots.length+'</div>'
+      +'</div>'
+      +'<div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.7rem;line-height:1.5">'+esc(g.hint)+'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.8rem">'
+      +g.slots.map(p=>{
+        const has=sitePhotos[p.slot];
+        return '<div style="border:1px '+(has?'solid':'dashed')+' var(--border-hi);padding:0.5rem;text-align:center;cursor:pointer;background:var(--bg);border-radius:8px" onclick="pickSlotPhoto(\''+p.slot+'\')">'
+          +(has?'<img src="'+has+'" style="width:100%;height:90px;object-fit:cover;display:block;margin-bottom:0.4rem;border-radius:5px" alt="">':'<div style="height:90px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;color:var(--muted)">+</div>')
+          +'<div style="font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold)">'+esc(p.label)+'</div>'
+          +(has?'<button class="btn btn-danger btn-sm" style="margin-top:0.35rem" onclick="event.stopPropagation();clearSlotPhoto(\''+p.slot+'\')">Remove</button>':'')
+          +'</div>';
+      }).join('')
+      +'</div></div>';
   }).join('');
 }
 function pickSlotPhoto(slot){
@@ -2875,6 +2920,9 @@ async function loadSite(){
     document.getElementById('site-sig').value=s.spots_sig??'';
     document.getElementById('site-luxe').value=s.spots_luxe??'';
     document.getElementById('site-black').value=s.spots_black??'';
+    document.getElementById('site-hero-kicker').value=s.hero_kicker||'';
+    document.getElementById('site-hero-quote').value=s.hero_quote||'';
+    document.getElementById('site-hero-sub').value=s.hero_sub||'';
     document.getElementById('site-banner-title').value=s.banner_title||'';
     document.getElementById('site-banner-text').value=s.banner_text||'';
     document.getElementById('site-announcement').value=s.announcement||'';
@@ -2889,6 +2937,9 @@ async function saveSite(){
     banner_title:document.getElementById('site-banner-title').value,
     banner_text:document.getElementById('site-banner-text').value,
     announcement:document.getElementById('site-announcement').value,
+    hero_kicker:document.getElementById('site-hero-kicker').value,
+    hero_quote:document.getElementById('site-hero-quote').value,
+    hero_sub:document.getElementById('site-hero-sub').value,
   };
   const r=await api('/api/site-settings',{method:'PUT',body:JSON.stringify({settings})});
   if(r.ok)toast('Published — live on the site now ✦');else toast('Save failed');

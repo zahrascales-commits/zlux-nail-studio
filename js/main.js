@@ -197,6 +197,65 @@ document.addEventListener('DOMContentLoaded', () => {
     }).catch(() => {});
   }
 
+  /* ── OWNER-EDITABLE COPY ──
+     [data-site-text="key"] takes the plain text she typed in Studio Manager
+     → Site; [data-site-html="key"] allows the line break and gold span the
+     hero quote is built around. Whatever is already in the element is the
+     default, so an empty setting never blanks the page. */
+  const textEls = document.querySelectorAll('[data-site-text],[data-site-html]');
+  if (textEls.length) {
+    fetch('/api/site-settings').then(r => r.json()).then(d => {
+      const s = (d && d.settings) || {};
+      textEls.forEach(el => {
+        const tk = el.dataset.siteText, hk = el.dataset.siteHtml;
+        if (tk && s[tk]) el.textContent = s[tk];
+        else if (hk && s[hk]) el.innerHTML = s[hk];
+      });
+    }).catch(() => {});
+  }
+
+  /* ── SHOP THE LOOK GRID ──
+     Cards come from the same service names the booking page uses, each with
+     two photo slots so hovering swaps the set on its own for the worn shot.
+     Tapping a card lands on booking with that service already selected. */
+  const lookGrid = document.getElementById('look-grid');
+  if (lookGrid) {
+    const LOOKS = [
+      { key: 'organic-manicure', name: 'Organic Structured Manicure', price: '$90' },
+      { key: 'short-gelx', name: 'Short Gel X', price: '$95' },
+      { key: 'medium-gelx', name: 'Medium Gel X', price: '$100' },
+      { key: 'long-gelx', name: 'Long Gel X', price: '$110' },
+      { key: 'short-acrylic', name: 'Short Acrylic Set', price: '$95' },
+      { key: 'medium-acrylic', name: 'Medium Acrylic Set', price: '$100' },
+      { key: 'long-acrylic', name: 'Long Acrylic Set', price: '$110' },
+      { key: 'pedicure', name: 'Russian Dry Pedicure', price: '$95' },
+    ];
+    lookGrid.innerHTML = LOOKS.map(l =>
+      '<a class="look-card" href="booking.html?rebook=' + encodeURIComponent(l.name) + '">' +
+        '<span class="look-ph">' +
+          '<span class="look-img" data-look-slot="look-' + l.key + '"></span>' +
+          '<span class="look-img look-img-alt" data-look-slot="look-' + l.key + '-alt"></span>' +
+          '<span class="look-fallback">◆</span>' +
+        '</span>' +
+        '<span class="look-meta">' +
+          '<span class="look-name">' + l.name + '</span>' +
+          '<span class="look-price">' + l.price + '</span>' +
+        '</span>' +
+        '<span class="look-cta">Book this ✦</span>' +
+      '</a>').join('');
+    fetch('/api/photos').then(r => r.json()).then(d => {
+      const photos = (d && d.photos) || {};
+      lookGrid.querySelectorAll('[data-look-slot]').forEach(el => {
+        const url = photos[el.dataset.lookSlot];
+        if (!url) return;
+        el.style.backgroundImage = 'url(' + url + ')';
+        el.classList.add('has-photo');
+        const ph = el.closest('.look-ph');
+        if (ph) ph.classList.add(el.classList.contains('look-img-alt') ? 'has-alt' : 'has-main');
+      });
+    }).catch(() => {});
+  }
+
   /* ── PUBLIC WORKING HOURS ──
      Any [data-biz-hours] element shows the hours the owner typed in
      Studio Manager → Settings → Public Working Hours (falls back to

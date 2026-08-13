@@ -1492,6 +1492,68 @@ ul { list-style: none; }
 }
 
 /* ══════════════════════════════════════════════════
+   SHOP THE LOOK — hover photo swap
+══════════════════════════════════════════════════ */
+.shop-look { background: var(--soft-white); }
+.shop-look-h {
+  font-family: 'Cinzel', serif;
+  font-weight: 300;
+  font-size: clamp(1.6rem, 3.6vw, 2.5rem);
+  color: var(--espresso);
+  text-align: center;
+  margin: 0.6rem 0 2.5rem;
+  line-height: 1.25;
+}
+.look-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 1.5rem; }
+.look-card {
+  display: block;
+  text-decoration: none;
+  background: #fff;
+  border: 1px solid rgba(182,165,136,0.2);
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.look-card:hover { transform: translateY(-5px); box-shadow: 0 20px 48px rgba(13,13,13,0.12); border-color: rgba(182,165,136,0.5); }
+.look-ph { position: relative; display: block; aspect-ratio: 1; background: var(--blush); overflow: hidden; }
+.look-img {
+  position: absolute; inset: 0; display: block;
+  background-size: cover; background-position: center;
+  opacity: 0; transition: opacity 0.45s ease, transform 0.7s ease;
+}
+.look-img.has-photo { opacity: 1; }
+/* the worn shot sits on top and only fades in on hover */
+.look-img-alt.has-photo { opacity: 0; }
+.look-card:hover .look-img-alt.has-photo { opacity: 1; }
+.look-card:hover .look-img.has-photo { transform: scale(1.04); }
+.look-fallback {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; color: rgba(140,122,94,0.35);
+}
+.look-ph.has-main .look-fallback { display: none; }
+.look-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; padding: 1rem 1.1rem 0.35rem; }
+.look-name { font-family: 'Cinzel', serif; font-size: 0.95rem; color: var(--espresso); line-height: 1.3; }
+.look-price { font-family: 'Cinzel', serif; font-size: 1rem; color: var(--champagne); flex-shrink: 0; }
+.look-cta {
+  display: block; padding: 0 1.1rem 1.1rem;
+  font-family: 'Josefin Sans', sans-serif; font-size: 0.66rem; font-weight: 600;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--latte);
+  transition: color 0.25s ease;
+}
+.look-card:hover .look-cta { color: var(--champagne); }
+@media (hover: none) {
+  /* No hover on a phone — cross-fade the two shots on a slow loop instead,
+     so the worn photo still gets seen. */
+  .look-img-alt.has-photo { animation: lookSwap 7s ease-in-out infinite; }
+  @keyframes lookSwap { 0%,42% { opacity: 0; } 55%,92% { opacity: 1; } 100% { opacity: 0; } }
+}
+@media (max-width: 600px) {
+  .look-grid { grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+  .look-meta { flex-direction: column; gap: 0.15rem; padding: 0.8rem 0.75rem 0.3rem; }
+  .look-name { font-size: 0.82rem; }
+  .look-cta { padding: 0 0.75rem 0.9rem; font-size: 0.6rem; }
+}
+
+/* ══════════════════════════════════════════════════
    PRESS-ONS ENTRY POINTS
 ══════════════════════════════════════════════════ */
 
