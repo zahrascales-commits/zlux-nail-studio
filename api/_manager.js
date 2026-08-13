@@ -193,6 +193,64 @@ module.exports = async function (req, res) {
       return res.json({ ok: true });
     }
 
+    // ── TECH SHIFTS (which dates + hours each artist actually works) ──
+    // Read a whole month at once so the scheduling calendar paints in one call.
+    if (method === 'GET' && action === 'shifts') {
+      const from = req.query.from || '0000-00-00';
+      const to = req.query.to || '9999-12-31';
+      const mid = req.query.member_id;
+      const rows = mid
+        ? await query('SELECT * FROM tech_shifts WHERE member_id=? AND date>=? AND date<=? ORDER BY date', [Number(mid), from, to])
+        : await query('SELECT * FROM tech_shifts WHERE date>=? AND date<=? ORDER BY date', [from, to]);
+      // How far ahead each artist is scheduled, so the UI can warn her before a
+      // calendar quietly runs dry and clients start seeing "Fully Booked".
+      const today = new Date().toISOString().slice(0, 10);
+      const last = await query(
+        'SELECT member_id, MAX(date) AS last_date, COUNT(*) AS upcoming FROM tech_shifts WHERE date>=? GROUP BY member_id',
+        [today]
+      );
+      const coverage = {};
+      for (const r of last) coverage[r.member_id] = { last_date: r.last_date, upcoming: Number(r.upcoming) };
+      return res.json({ shifts: rows, coverage });
+    }
+
+    // Apply a set of dates in one shot — the calendar sends every date that
+    // should be ON for this artist in the given range, and we make the table
+    // match exactly. One call covers ticking, unticking and bulk fills alike.
+    if (method === 'PUT' && action === 'shifts') {
+      const { member_id, from, to, dates, start_time, end_time } = req.body || {};
+      if (!member_id) return res.status(400).json({ error: 'member_id required' });
+      if (!from || !to) return res.status(400).json({ error: 'from and to required' });
+      const st = start_time || '09:00';
+      const et = end_time || '18:00';
+      if (et <= st) return res.status(400).json({ error: 'End time must be after start time' });
+      const want = Array.isArray(dates) ? dates.filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)) : [];
+      const mid = Number(member_id);
+      // Replace the window rather than diff it — the payload is one month of
+      // dates at most, and this can't drift out of sync with what she sees.
+      await execute('DELETE FROM tech_shifts WHERE member_id=? AND date>=? AND date<=?', [mid, from, to]);
+      for (const d of want) {
+        await execute(
+          'INSERT OR REPLACE INTO tech_shifts (member_id, date, start_time, end_time, created_ts) VALUES (?,?,?,?,?)',
+          [mid, d, st, et, Date.now()]
+        );
+      }
+      return res.json({ ok: true, saved: want.length });
+    }
+
+    // Per-date hours, for when one day runs different from the rest
+    if (method === 'PUT' && action === 'shift_hours') {
+      const { member_id, date, start_time, end_time } = req.body || {};
+      if (!member_id || !date) return res.status(400).json({ error: 'member_id and date required' });
+      if (!start_time || !end_time) return res.status(400).json({ error: 'start_time and end_time required' });
+      if (end_time <= start_time) return res.status(400).json({ error: 'End time must be after start time' });
+      await execute(
+        'INSERT OR REPLACE INTO tech_shifts (member_id, date, start_time, end_time, created_ts) VALUES (?,?,?,?,?)',
+        [Number(member_id), date, start_time, end_time, Date.now()]
+      );
+      return res.json({ ok: true });
+    }
+
     // ── SCHEDULE COVERAGE OVERRIDES (e.g. "only Maria working July 21–Aug 2") ──
     if (method === 'GET' && action === 'overrides') {
       const overrides = await query('SELECT * FROM schedule_overrides ORDER BY start_date DESC');

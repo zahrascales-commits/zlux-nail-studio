@@ -159,6 +159,17 @@ async function ensureTables() {
     close_time TEXT,
     closed INTEGER DEFAULT 0
   )`);
+  // One row per artist per working date. No row means she isn't working that
+  // day — so the booking page can answer "is anyone who does this service in
+  // on the 14th?" with a single lookup instead of walking exception rules.
+  await execute(`CREATE TABLE IF NOT EXISTS tech_shifts (
+    member_id INTEGER NOT NULL,
+    date TEXT NOT NULL,
+    start_time TEXT NOT NULL,
+    end_time TEXT NOT NULL,
+    created_ts INTEGER,
+    PRIMARY KEY (member_id, date)
+  )`);
   await execute(`CREATE TABLE IF NOT EXISTS studio_inventory (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,

@@ -82,6 +82,32 @@ module.exports = async (req, res) => {
       const advRow = await queryOne("SELECT value FROM site_settings WHERE key='min_advance_hours'");
       minAdvance = advRow ? Number(advRow.value) || 0 : 0;
     } catch (_) {}
+
+    // Narrow to hours a qualified artist is actually on shift. The booking page
+    // passes the services the client already picked (pipe-separated), so the
+    // times offered are only ones somebody trained on that service can work.
+    // Until any shifts exist at all this is skipped and studio hours stand.
+    if (date) {
+      try {
+        const { shiftCoverage, hourCapacity, usageByHour, openHours } = require('./_shifts');
+        const services = String(req.query.services || '')
+          .split('|').map(s => s.trim()).filter(Boolean);
+        const { configured, byDate } = await shiftCoverage(date, date, services);
+        if (configured) {
+          const onShift = byDate[date] || [];
+          if (!onShift.length) {
+            allSlots = [];
+            blocks.push({ date, slot: 'ALL', note: 'No artist in for this service' });
+          } else {
+            // Hand back open *hours* — the page walks each hour of the 2-hour
+            // block itself, so trimming to start times here would kill the last
+            // valid start of every shift.
+            allSlots = openHours(allSlots, hourCapacity(onShift, allSlots), usageByHour(booked));
+          }
+        }
+      } catch (_) { /* availability is additive — never break the booking page */ }
+    }
+
     return res.json({ blocks, booked, all_slots: allSlots, min_advance_hours: minAdvance, appt_hours: 2 });
   }
 

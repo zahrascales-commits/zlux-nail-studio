@@ -100,6 +100,73 @@
   .btn-danger{background:rgba(200,80,80,0.12);color:#e08a8a;border:1px solid rgba(200,80,80,0.25)}
   .btn-danger:hover{background:rgba(200,80,80,0.2)}
   .btn-sm{padding:0.4rem 0.7rem;font-size:0.6rem}
+  /* ── SCHEDULING ── */
+  .sched-step{display:flex;align-items:center;gap:0.7rem;margin:1.6rem 0 0.8rem}
+  .sched-step-n{width:26px;height:26px;border-radius:50%;background:var(--gold);color:#0B0B0B;
+    display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;flex-shrink:0}
+  .sched-step-t{font-family:'Cinzel',serif;font-size:1.05rem;color:var(--cream)}
+  .sched-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.15rem}
+  .sched-people{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0.65rem}
+  .sched-person{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:0.9rem;
+    cursor:pointer;display:flex;align-items:center;gap:0.65rem;transition:all 0.18s;text-align:left;width:100%}
+  .sched-person:hover{border-color:var(--gold)}
+  .sched-person.on{border-color:var(--gold);background:var(--card-hi);box-shadow:0 0 0 1px var(--gold) inset}
+  .sched-person .av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:0.72rem;font-weight:700;color:#0B0B0B;flex-shrink:0}
+  .sched-person>span:last-child{display:flex;flex-direction:column;min-width:0}
+  .sched-person .nm{display:block;font-size:0.82rem;color:var(--cream);line-height:1.3}
+  .sched-person .sub{display:block;font-size:0.62rem;color:var(--muted);margin-top:0.1rem}
+  .sched-svc-tools{display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.85rem}
+  .sched-count{font-size:0.68rem;color:var(--muted);margin-left:auto}
+  .sched-svc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:0.5rem}
+  .sched-svc{display:flex;align-items:center;gap:0.6rem;background:var(--surface);border:1px solid var(--border);
+    border-radius:9px;padding:0.7rem 0.85rem;cursor:pointer;font-size:0.78rem;color:var(--cream);
+    min-height:46px;transition:all 0.15s}
+  .sched-svc:hover{border-color:var(--gold)}
+  .sched-svc.on{border-color:var(--gold);background:var(--gold-faint)}
+  .sched-svc input{accent-color:var(--gold);width:17px;height:17px;flex-shrink:0}
+  .sched-hours{display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;padding-bottom:1rem;
+    margin-bottom:1rem;border-bottom:1px solid var(--border)}
+  .sched-hours label{font-size:0.66rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted)}
+  /* min-width so the native time control shows the whole value — squeezed
+     narrow it renders as a bare "0" and reads broken */
+  .sched-hours input{background:var(--surface);border:1px solid var(--border-hi);color:var(--cream);
+    padding:0.55rem 0.7rem;border-radius:8px;font-size:0.85rem;min-height:44px;color-scheme:dark;
+    min-width:125px;box-sizing:border-box}
+  .sched-hours-note{font-size:0.66rem;color:var(--muted)}
+  .sched-cal-head{display:flex;align-items:center;justify-content:space-between;gap:0.75rem;margin-bottom:0.8rem}
+  .sched-cal-label{font-family:'Cinzel',serif;font-size:1rem;color:var(--cream);flex:1;text-align:center}
+  .sched-bulk{display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.9rem}
+  .sched-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:0.3rem;margin-bottom:0.35rem}
+  .sched-dow span{text-align:center;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)}
+  .sched-cells{display:grid;grid-template-columns:repeat(7,1fr);gap:0.3rem}
+  .sched-day{aspect-ratio:1;min-height:42px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--muted);
+    font-size:0.82rem;cursor:pointer;transition:all 0.14s;padding:0}
+  .sched-day:hover{border-color:var(--gold)}
+  .sched-day.on{background:var(--gold);color:#0B0B0B;border-color:var(--gold);font-weight:700}
+  .sched-day.on .hh{color:rgba(11,11,11,0.72)}
+  .sched-day .hh{font-size:0.5rem;line-height:1;margin-top:2px;color:transparent}
+  .sched-day.pastday{opacity:0.3;cursor:default}
+  .sched-day.blank{border:none;background:none;cursor:default}
+  .sched-legend{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:0.9rem;font-size:0.68rem;color:var(--muted)}
+  .sched-legend i.sw{display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid var(--border-hi);
+    background:var(--surface);vertical-align:-2px;margin-right:0.3rem}
+  .sched-legend i.sw.on{background:var(--gold);border-color:var(--gold)}
+  .sched-legend-hint{margin-left:auto}
+  .sched-save-bar{position:sticky;bottom:0;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;
+    background:var(--bg);border-top:1px solid var(--border);padding:0.9rem 0;margin-top:1.25rem;z-index:5}
+  .sched-status{font-size:0.75rem;color:var(--muted);flex:1;min-width:120px}
+  @media(max-width:640px){
+    .sched-people{grid-template-columns:1fr 1fr}
+    .sched-svc-grid{grid-template-columns:1fr}
+    .sched-legend-hint{margin-left:0;width:100%}
+    .sched-save-bar .btn{width:100%}
+    .sched-hours{gap:0.45rem}
+    .sched-hours label{width:100%}
+    .sched-hours input{flex:1}
+    .sched-hours-note{width:100%}
+  }
   .icon-btn{background:none;border:1px solid var(--border);color:var(--muted);width:32px;height:32px;cursor:pointer;
     display:inline-flex;align-items:center;justify-content:center;transition:all 0.2s;font-size:0.9rem}
   .icon-btn:hover{border-color:var(--gold);color:var(--gold)}
@@ -414,6 +481,7 @@
     <button class="tab" data-tab="inventory" onclick="showTab('inventory')">Inventory <span class="dot" id="inv-dot" style="display:none">0</span></button>
     <button class="tab" data-tab="inbox" onclick="showTab('inbox')">Inbox <span class="dot" id="inq-dot" style="display:none">0</span></button>
     <button class="tab" data-tab="messages" onclick="showTab('messages')">Messages <span class="dot" id="msg-dot" style="display:none">0</span></button>
+    <button class="tab" data-tab="scheduling" onclick="showTab('scheduling')">Scheduling <span class="dot" id="sched-dot" style="display:none">!</span></button>
     <button class="tab" data-tab="team" onclick="showTab('team')">Team</button>
     <button class="tab" data-tab="clients" onclick="showTab('clients')">Clients</button>
     <button class="tab" data-tab="site" onclick="showTab('site')">Site</button>
@@ -523,6 +591,88 @@
     </section>
 
     <!-- TEAM -->
+    <!-- SCHEDULING — pick an artist, tick her services, tick her days -->
+    <section class="panel" id="panel-scheduling">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Scheduling</div>
+          <div class="page-desc">Pick an artist, tick what she does, tick the days she works. Clients pick their service first, so the calendar only offers them days someone can actually take.</div>
+        </div>
+      </div>
+
+      <div id="sched-warn" style="display:none;background:rgba(200,120,60,0.12);border:1px solid rgba(200,120,60,0.4);padding:0.9rem 1.1rem;margin-bottom:1.25rem;border-radius:10px;font-size:0.85rem;line-height:1.6;"></div>
+
+      <div id="sched-first" style="display:none;background:var(--gold-faint);border:1px solid var(--border-hi);padding:0.9rem 1.1rem;margin-bottom:1.25rem;border-radius:10px;font-size:0.83rem;line-height:1.7;color:var(--cream);">
+        <strong style="color:var(--gold)">Nothing is scheduled yet — so right now every day is bookable.</strong><br>
+        The moment you save your first day, that flips: clients can then <em>only</em> book days you've ticked. Tick a full month before you save so the calendar doesn't go quiet on you.
+      </div>
+
+      <!-- STEP 1 -->
+      <div class="sched-step">
+        <div class="sched-step-n">1</div>
+        <div class="sched-step-t">Who are you scheduling?</div>
+      </div>
+      <div id="sched-people" class="sched-people"></div>
+
+      <div id="sched-body" style="display:none;">
+        <!-- STEP 2 -->
+        <div class="sched-step">
+          <div class="sched-step-n">2</div>
+          <div class="sched-step-t">What does <span id="sched-name-1"></span> do?</div>
+        </div>
+        <div class="sched-card">
+          <div class="sched-svc-tools">
+            <button class="btn btn-ghost btn-sm" onclick="schedAllSvc(true)">Select all</button>
+            <button class="btn btn-ghost btn-sm" onclick="schedAllSvc(false)">Clear</button>
+            <span id="sched-svc-count" class="sched-count"></span>
+          </div>
+          <div id="sched-services" class="sched-svc-grid"></div>
+        </div>
+
+        <!-- STEP 3 -->
+        <div class="sched-step">
+          <div class="sched-step-n">3</div>
+          <div class="sched-step-t">When is <span id="sched-name-2"></span> in?</div>
+        </div>
+        <div class="sched-card">
+          <div class="sched-hours">
+            <label>Hours</label>
+            <input type="time" id="sched-start" value="09:00" />
+            <span>to</span>
+            <input type="time" id="sched-end" value="18:00" />
+            <span class="sched-hours-note">applied to days you tick</span>
+          </div>
+
+          <div class="sched-cal-head">
+            <button class="btn btn-ghost btn-sm" onclick="schedNav(-1)">‹</button>
+            <div class="sched-cal-label" id="sched-cal-label"></div>
+            <button class="btn btn-ghost btn-sm" onclick="schedNav(1)">›</button>
+          </div>
+
+          <div class="sched-bulk">
+            <button class="btn btn-ghost btn-sm" onclick="schedBulkWeekdays()">Mon–Fri</button>
+            <button class="btn btn-ghost btn-sm" onclick="schedBulkAll()">Whole month</button>
+            <button class="btn btn-ghost btn-sm" onclick="schedBulkDow()">Same weekdays as now</button>
+            <button class="btn btn-ghost btn-sm" onclick="schedCopyPrev()">Copy last month</button>
+            <button class="btn btn-ghost btn-sm" onclick="schedBulkClear()">Clear month</button>
+          </div>
+
+          <div class="sched-dow"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+          <div class="sched-cells" id="sched-cells"></div>
+          <div class="sched-legend">
+            <span><i class="sw on"></i> Working</span>
+            <span><i class="sw"></i> Off</span>
+            <span class="sched-legend-hint">Tap a date to flip it. Tap the hours above first to change what gets applied.</span>
+          </div>
+        </div>
+
+        <div class="sched-save-bar">
+          <div id="sched-status" class="sched-status"></div>
+          <button class="btn btn-gold" id="sched-save" onclick="schedSave()">Save schedule</button>
+        </div>
+      </div>
+    </section>
+
     <section class="panel" id="panel-team">
       <div class="page-head">
         <div>
@@ -541,14 +691,19 @@
       </div>
       <div id="client-inspo-feed" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.8rem;"></div>
 
-      <div class="page-head" style="margin-top:2rem;">
-        <div>
-          <div class="page-title" style="font-size:1.15rem;">Coverage Periods 📅</div>
-          <div class="page-desc">When you're out, tell it who's covering — the booking page automatically hides any service that artist can't do, only for those dates. Everything reverts to normal the day after it ends.</div>
+      <!-- Coverage Periods is superseded by the Scheduling tab, which handles
+           the same thing day to day instead of only during special windows.
+           Kept visible only while old windows still exist, so nothing you
+           previously set up can silently stop applying. -->
+      <div id="overrides-legacy" style="display:none;">
+        <div class="page-head" style="margin-top:2rem;">
+          <div>
+            <div class="page-title" style="font-size:1.15rem;">Coverage Periods 📅 <span style="font-size:0.65rem;color:var(--muted);letter-spacing:0.12em;">OLD</span></div>
+            <div class="page-desc">Replaced by the <strong>Scheduling</strong> tab. These still apply until you delete them — once the list is empty this section disappears.</div>
+          </div>
         </div>
-        <button class="btn btn-gold" onclick="openOverrideModal()">+ Add Coverage Period</button>
+        <div id="overrides-list" style="display:grid;gap:0.6rem;"></div>
       </div>
-      <div id="overrides-list" style="display:grid;gap:0.6rem;"></div>
     </section>
 
     <!-- CALENDAR / SCHEDULE -->
@@ -1183,7 +1338,11 @@
 <div id="toast"></div>
 
 <script>
-const SERVICES = ['Organic Structured Manicure','Short Gel X','Medium Gel X','Long Gel X','Short Acrylic','Medium Acrylic','Long Acrylic','Russian Dry Pedicure','Russian Dry Pedicure — Full Correction'];
+// These must match exactly what booking.html sends to toggleService() — worker
+// skills are matched by name, so "Short Acrylic" vs "Short Acrylic Set" would
+// silently mean no artist is ever qualified and every day would read as fully
+// booked. Rename a service on the booking page and rename it here too.
+const SERVICES = ['Organic Structured Manicure','Short Gel X','Medium Gel X','Long Gel X','Short Acrylic Set','Medium Acrylic Set','Long Acrylic Set','Russian Dry Pedicure','Russian Dry Pedicure — Full Correction'];
 const SLOTS = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'];
 let PWD='';
 let members=[];
@@ -1231,12 +1390,281 @@ function showTab(name){
   if(name==='deposits')loadDeposits();
   if(name==='inventory')loadInventory();
   if(name==='messages')loadThreads();
+  if(name==='scheduling')loadScheduling();
   if(name==='team'){renderMembers();loadClientInspo();loadOverrides();}
   if(name==='inbox')loadInquiries();
   if(name==='site')loadSite();
   if(name==='traffic')loadTraffic();
   if(name==='clients')loadClients();
   if(name==='settings')loadSettings();
+}
+
+/* ══════════════ SCHEDULING ══════════════
+   Three steps on one screen: pick the artist, tick her services, tick her
+   days. Shifts are held in memory for the visible month and written in one
+   PUT that replaces that month — so unticking is just as easy as ticking and
+   the saved state always matches exactly what she sees. */
+// Local calendar dates — toISOString() is UTC and would drop a day for her
+// every evening (California is UTC-7/8).
+function localDsM(d){d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function todayDs(){return localDsM();}
+let schedMember = null;          // currently selected artist id
+let schedSkills = new Set();     // services she does
+let schedShifts = {};            // 'YYYY-MM-DD' -> {start,end} for visible month
+let schedCursor = todayDs();
+let schedCoverage = {};          // per-member: how far ahead she's scheduled
+let schedDirty = false;
+
+function schedMonthRange(ds){
+  const d=new Date(ds+'T12:00:00'), y=d.getFullYear(), m=d.getMonth();
+  const pad=n=>String(n).padStart(2,'0');
+  return {y,m,
+    from:`${y}-${pad(m+1)}-01`,
+    to:`${y}-${pad(m+1)}-${pad(new Date(y,m+1,0).getDate())}`};
+}
+function schedDs(y,m,day){const pad=n=>String(n).padStart(2,'0');return `${y}-${pad(m+1)}-${pad(day)}`;}
+
+async function loadScheduling(){
+  renderSchedPeople();
+  try{
+    const {from,to}=schedMonthRange(schedCursor);
+    const r=await api(`/api/manager?action=shifts&from=${from}&to=${to}`);
+    const d=await r.json();
+    schedCoverage=d.coverage||{};
+  }catch{ schedCoverage={}; }
+  renderSchedPeople();
+  renderSchedWarning();
+}
+
+// Warn before a calendar quietly runs out — an artist with no upcoming dates
+// means clients see nothing but "fully booked" for everything only she does.
+function renderSchedWarning(){
+  const box=document.getElementById('sched-warn');
+  const dot=document.getElementById('sched-dot');
+  const today=todayDs();
+
+  // Before the first save the site is still wide open — say so plainly, since
+  // that first save is the one that changes how the whole booking page behaves.
+  const nothingYet=!Object.keys(schedCoverage).length;
+  const firstBox=document.getElementById('sched-first');
+  if(firstBox)firstBox.style.display=nothingYet?'block':'none';
+  if(nothingYet){box.style.display='none';if(dot)dot.style.display='none';return;}
+
+  const soon=localDsM(new Date(Date.now()+14*86400000));
+  const problems=[];
+  for(const m of members.filter(x=>Number(x.active))){
+    const c=schedCoverage[m.id];
+    if(!c||!c.last_date||c.last_date<today) problems.push(`<strong>${esc(m.name)}</strong> has no upcoming days scheduled`);
+    else if(c.last_date<soon) problems.push(`<strong>${esc(m.name)}</strong> is only scheduled through ${fmtDs(c.last_date)}`);
+  }
+  if(!problems.length){box.style.display='none';if(dot)dot.style.display='none';return;}
+  box.style.display='block';
+  box.innerHTML='⚠️ '+problems.join('<br>')+'<br><span style="color:var(--muted);font-size:0.78rem;">Clients can only book days you\'ve ticked. Add more dates below so the calendar doesn\'t run dry.</span>';
+  if(dot){dot.style.display='';dot.textContent=String(problems.length);}
+}
+function fmtDs(ds){
+  try{return new Date(ds+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});}catch{return ds;}
+}
+
+function renderSchedPeople(){
+  const g=document.getElementById('sched-people');
+  const active=members.filter(m=>Number(m.active));
+  if(!active.length){g.innerHTML='<div class="empty">No active team members yet — add one on the Team tab first.</div>';return;}
+  const today=todayDs();
+  g.innerHTML=active.map(m=>{
+    const c=schedCoverage[m.id];
+    const noDays=!c||!c.last_date||c.last_date<today;
+    const sub=noDays
+      ? '<span style="color:#e0a06a">no days set</span>'
+      : 'through '+esc(fmtDs(c.last_date));
+    return `<button class="sched-person${schedMember===m.id?' on':''}" onclick="pickSchedMember(${m.id})">
+      <span class="av" style="background:${m.color}">${initials(m.name)}</span>
+      <span><span class="nm">${esc(m.name)}</span><span class="sub">${sub}</span></span>
+    </button>`;
+  }).join('');
+}
+
+async function pickSchedMember(id){
+  if(schedDirty && !confirm('You have unsaved changes. Switch artist and lose them?')) return;
+  schedMember=id;schedDirty=false;
+  const m=members.find(x=>Number(x.id)===Number(id));
+  schedSkills=new Set(m&&m.skills?m.skills:[]);
+  document.getElementById('sched-name-1').textContent=m?m.name.split(' ')[0]:'';
+  document.getElementById('sched-name-2').textContent=m?m.name.split(' ')[0]:'';
+  document.getElementById('sched-body').style.display='';
+  renderSchedPeople();renderSchedServices();
+  await loadSchedMonth();
+}
+
+function renderSchedServices(){
+  const g=document.getElementById('sched-services');
+  g.innerHTML=SERVICES.map(s=>`
+    <label class="sched-svc${schedSkills.has(s)?' on':''}">
+      <input type="checkbox" ${schedSkills.has(s)?'checked':''} onchange="toggleSchedSvc(this,${JSON.stringify(s).replace(/"/g,'&quot;')})" />
+      <span>${esc(s)}</span>
+    </label>`).join('');
+  document.getElementById('sched-svc-count').textContent=
+    schedSkills.size===SERVICES.length?'Does everything':`${schedSkills.size} of ${SERVICES.length}`;
+}
+function toggleSchedSvc(el,name){
+  if(el.checked)schedSkills.add(name);else schedSkills.delete(name);
+  schedDirty=true;renderSchedServices();markSchedDirty();
+}
+function schedAllSvc(on){
+  schedSkills=on?new Set(SERVICES):new Set();
+  schedDirty=true;renderSchedServices();markSchedDirty();
+}
+function markSchedDirty(){
+  document.getElementById('sched-status').innerHTML='<span style="color:#e0a06a">Unsaved changes</span>';
+}
+
+async function loadSchedMonth(){
+  if(!schedMember)return;
+  const {from,to}=schedMonthRange(schedCursor);
+  schedShifts={};
+  try{
+    const r=await api(`/api/manager?action=shifts&member_id=${schedMember}&from=${from}&to=${to}`);
+    const d=await r.json();
+    for(const s of (d.shifts||[])) schedShifts[s.date]={start:s.start_time,end:s.end_time};
+    schedCoverage=d.coverage||schedCoverage;
+  }catch{}
+  renderSchedCal();renderSchedWarning();
+}
+
+function schedNav(dir){
+  const go=()=>{const d=new Date(schedCursor+'T12:00:00');d.setMonth(d.getMonth()+dir);
+    schedCursor=localDsM(d);schedDirty=false;loadSchedMonth();
+    document.getElementById('sched-status').textContent='';};
+  if(schedDirty && !confirm('You have unsaved changes for this month. Leave without saving?'))return;
+  go();
+}
+
+function renderSchedCal(){
+  const {y,m}=schedMonthRange(schedCursor);
+  const d=new Date(y,m,1);
+  document.getElementById('sched-cal-label').textContent=
+    d.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const first=d.getDay(), days=new Date(y,m+1,0).getDate();
+  const today=todayDs();
+  let html='';
+  for(let i=0;i<first;i++)html+='<div class="sched-day blank"></div>';
+  for(let day=1;day<=days;day++){
+    const ds=schedDs(y,m,day);
+    const on=!!schedShifts[ds];
+    const past=ds<today;
+    const hh=on?`${schedShifts[ds].start}–${schedShifts[ds].end}`:'';
+    html+=`<button class="sched-day${on?' on':''}${past?' pastday':''}" ${past?'disabled':`onclick="toggleSchedDay('${ds}')"`}>
+      <span>${day}</span><span class="hh">${hh}</span></button>`;
+  }
+  document.getElementById('sched-cells').innerHTML=html;
+}
+
+function schedHours(){
+  const s=document.getElementById('sched-start').value||'09:00';
+  const e=document.getElementById('sched-end').value||'18:00';
+  return {start:s,end:e};
+}
+function toggleSchedDay(ds){
+  if(schedShifts[ds])delete schedShifts[ds];
+  else schedShifts[ds]=schedHours();
+  schedDirty=true;renderSchedCal();markSchedDirty();
+}
+
+// ── bulk helpers ──
+function schedEachDay(fn){
+  const {y,m}=schedMonthRange(schedCursor);
+  const days=new Date(y,m+1,0).getDate();
+  const today=todayDs();
+  for(let day=1;day<=days;day++){
+    const ds=schedDs(y,m,day);
+    if(ds<today)continue;
+    fn(ds,new Date(y,m,day).getDay());
+  }
+}
+function schedBulkWeekdays(){
+  const h=schedHours();
+  schedEachDay((ds,dow)=>{if(dow>=1&&dow<=5)schedShifts[ds]=h;});
+  schedDirty=true;renderSchedCal();markSchedDirty();
+}
+function schedBulkAll(){
+  const h=schedHours();
+  schedEachDay(ds=>{schedShifts[ds]=h;});
+  schedDirty=true;renderSchedCal();markSchedDirty();
+}
+// Take whichever weekdays are already ticked and fill the rest of the month
+// with them — the fastest way to turn one good week into a full month.
+function schedBulkDow(){
+  const dows=new Set();
+  for(const ds of Object.keys(schedShifts)){
+    const p=ds.split('-');dows.add(new Date(+p[0],+p[1]-1,+p[2]).getDay());
+  }
+  if(!dows.size){alert('Tick a few days first — then this repeats those same weekdays across the month.');return;}
+  const h=schedHours();
+  schedEachDay((ds,dow)=>{if(dows.has(dow))schedShifts[ds]=schedShifts[ds]||h;});
+  schedDirty=true;renderSchedCal();markSchedDirty();
+}
+async function schedCopyPrev(){
+  const d=new Date(schedCursor+'T12:00:00');d.setMonth(d.getMonth()-1);
+  const prev=schedMonthRange(localDsM(d));
+  try{
+    const r=await api(`/api/manager?action=shifts&member_id=${schedMember}&from=${prev.from}&to=${prev.to}`);
+    const j=await r.json();
+    const rows=j.shifts||[];
+    if(!rows.length){alert('Nothing scheduled last month to copy.');return;}
+    // Map by weekday position so a Tuesday stays a Tuesday
+    const byDow={};
+    for(const s of rows){
+      const p=s.date.split('-');
+      const dow=new Date(+p[0],+p[1]-1,+p[2]).getDay();
+      (byDow[dow]=byDow[dow]||[]).push({start:s.start_time,end:s.end_time});
+    }
+    schedEachDay((ds,dow)=>{const c=byDow[dow];if(c&&c.length)schedShifts[ds]={start:c[0].start,end:c[0].end};});
+    schedDirty=true;renderSchedCal();markSchedDirty();
+  }catch{alert('Could not read last month.');}
+}
+function schedBulkClear(){
+  if(!confirm('Clear every day this month for this artist?'))return;
+  schedEachDay(ds=>{delete schedShifts[ds];});
+  schedDirty=true;renderSchedCal();markSchedDirty();
+}
+
+async function schedSave(){
+  if(!schedMember)return;
+  const btn=document.getElementById('sched-save');
+  const status=document.getElementById('sched-status');
+  const h=schedHours();
+  if(h.end<=h.start){status.innerHTML='<span style="color:#e08a8a">End time must be after start time.</span>';return;}
+  btn.disabled=true;status.textContent='Saving…';
+  try{
+    // Skills. "Ticked everything" is stored as unrestricted so adding a new
+    // service later doesn't silently exclude her from it.
+    const all=schedSkills.size===SERVICES.length;
+    const r1=await api('/api/manager?action=worker_skills',{method:'PUT',
+      body:JSON.stringify({id:schedMember,restricted:all?0:1,services:Array.from(schedSkills)})});
+    if(!r1.ok)throw new Error((await r1.json().catch(()=>({}))).error||'Could not save services');
+
+    const {from,to}=schedMonthRange(schedCursor);
+    const dates=Object.keys(schedShifts).sort();
+    // Per-date hours are preserved by sending each date's own times
+    const r2=await api('/api/manager?action=shifts',{method:'PUT',
+      body:JSON.stringify({member_id:schedMember,from,to,dates,start_time:h.start,end_time:h.end})});
+    if(!r2.ok)throw new Error((await r2.json().catch(()=>({}))).error||'Could not save days');
+    for(const ds of dates){
+      const s=schedShifts[ds];
+      if(s.start!==h.start||s.end!==h.end){
+        await api('/api/manager?action=shift_hours',{method:'PUT',
+          body:JSON.stringify({member_id:schedMember,date:ds,start_time:s.start,end_time:s.end})});
+      }
+    }
+    // keep the in-memory roster in step so the Team tab agrees
+    const m=members.find(x=>Number(x.id)===Number(schedMember));
+    if(m){m.skills=Array.from(schedSkills);m.restricted=all?0:1;}
+    schedDirty=false;
+    status.innerHTML='<span style="color:#7ec98a">Saved ✓ '+dates.length+' day'+(dates.length===1?'':'s')+' this month</span>';
+    await loadSchedMonth();
+  }catch(e){
+    status.innerHTML='<span style="color:#e08a8a">'+esc(e.message||'Save failed')+'</span>';
+  }finally{ btn.disabled=false; }
 }
 
 /* ── PRESS-ONS ADMIN ── */
@@ -1869,7 +2297,10 @@ async function loadOverrides(){
 }
 function renderOverrides(){
   const g=document.getElementById('overrides-list');if(!g)return;
-  if(!overrides.length){g.innerHTML='<div class="empty"><div class="big">📅</div>No coverage periods set.<br>Everything stays open to your full team.</div>';return;}
+  // Hide the whole legacy section once there's nothing left in it
+  const legacy=document.getElementById('overrides-legacy');
+  if(legacy)legacy.style.display=overrides.length?'':'none';
+  if(!overrides.length){g.innerHTML='';return;}
   const today=new Date().toISOString().slice(0,10);
   g.innerHTML=overrides.map(o=>{
     const names=o.team_member_ids.map(id=>{const m=members.find(x=>x.id===id);return m?m.name:'—';}).join(', ');

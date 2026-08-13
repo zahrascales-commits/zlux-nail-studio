@@ -202,6 +202,10 @@
       .bk-day { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-family:'Josefin Sans',sans-serif; font-size:0.9rem; color:var(--espresso); cursor:pointer; border:1px solid transparent; transition:all 0.15s; }
       .bk-day:hover { border-color:rgba(182,165,136,0.5); }
       .bk-day.off { opacity:0.25; cursor:default; }
+      .bk-day:hover.off { border-color:transparent; }
+      /* Fully booked reads as struck through rather than merely faint, so it's
+         clearly "taken" and not "still loading". */
+      .bk-day.full { opacity:0.32; text-decoration:line-through; text-decoration-thickness:1px; }
       .bk-day.sel { background:var(--espresso); color:var(--champagne); font-weight:700; }
       .bk-day.today { border-color:var(--champagne); }
 
@@ -450,7 +454,7 @@
         <div class="bk-dows"><div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div></div>
         <div class="bk-cells" id="bk-cells"></div>
       </div>
-      <div id="bk-coverage-note" style="display:none;font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);background:rgba(182,165,136,0.08);border:1px solid rgba(182,165,136,0.2);padding:0.7rem 0.9rem;margin:-0.75rem 0 1.25rem;">Some days above are grayed out because one or more of your selected services needs an artist who isn't in on those dates.</div>
+      <div id="bk-coverage-note" style="display:none;font-family:'Josefin Sans',sans-serif;font-size:0.76rem;color:var(--latte);text-align:center;margin:-0.5rem 0 1.25rem;letter-spacing:0.04em;">Greyed dates are fully booked ✦</div>
 
       <!-- Multi-service: back-to-back or separate times -->
       <div id="spacing-toggle" style="display:none;margin-bottom:1rem;">
@@ -720,6 +724,56 @@ function coverageBlockFor(ds) {
     if (selected.some(s => !w.allowed_services.includes(s))) return w;
   }
   return null;
+}
+
+// ── Service-first availability ──
+// They already chose the service, so the calendar answers a narrower question:
+// is anyone who does it working that day, with room left? Days that fail read
+// as fully booked with no explanation — the reason is never the client's
+// problem to solve. Keyed by service set so switching services refetches.
+let bkDayAvail = { key: null, configured: false, days: {} };
+let _availToken = 0;
+function serviceKey() {
+  return booking.items.map(it => it.service).sort().join('|');
+}
+async function loadMonthAvailability(cursorDs) {
+  const key = serviceKey();
+  const d = new Date(cursorDs + 'T12:00:00');
+  const y = d.getFullYear(), mo = d.getMonth();
+  const from = y + '-' + String(mo + 1).padStart(2, '0') + '-01';
+  const to = y + '-' + String(mo + 1).padStart(2, '0') + '-' + String(new Date(y, mo + 1, 0).getDate()).padStart(2, '0');
+  const cacheKey = key + '@' + from;
+  if (bkDayAvail.key === cacheKey) return;
+  const my = ++_availToken;
+  try {
+    const r = await fetch('/api/coverage?action=service_days&services=' + encodeURIComponent(key)
+      + '&from=' + from + '&to=' + to);
+    const j = await r.json();
+    if (my !== _availToken) return; // a newer month/service won the race
+    bkDayAvail = { key: cacheKey, configured: !!j.configured, days: j.days || {} };
+  } catch (_) {
+    if (my !== _availToken) return;
+    // Never strand a client on a blank calendar because a request failed
+    bkDayAvail = { key: cacheKey, configured: false, days: {} };
+  }
+  // If they changed services after picking a day, that day may no longer have
+  // anyone qualified — drop it rather than carry a dead date into checkout.
+  if (booking.date && dayFullyBooked(booking.date)) {
+    booking.date = null;
+    booking.time = null;
+    booking.unitTimes = [];
+    const hidden = document.getElementById('booking-date');
+    if (hidden) hidden.value = '';
+    const grid = document.getElementById('timeslots');
+    if (grid) grid.innerHTML = '<p style="color:var(--latte);font-size:0.82rem;grid-column:1/-1;">Pick a day above to see open times ✦</p>';
+  }
+  renderBkCal();
+}
+// True when we know nobody qualified can take this day.
+function dayFullyBooked(ds) {
+  if (!bkDayAvail.configured) return false;
+  const d = bkDayAvail.days[ds];
+  return !d || !d.open;
 }
 function syncLegacyMirror() {
   const first = booking.items[0] || null;
@@ -1139,7 +1193,7 @@ async function renderTimeslots(date) {
   const grid = document.getElementById('timeslots');
   grid.innerHTML = '<p style="color:var(--latte);font-size:0.82rem;">Loading available times…</p>';
   try {
-    const r = await fetch(`/api/calendar-blocks?date=${date}`);
+    const r = await fetch(`/api/calendar-blocks?date=${date}&services=${encodeURIComponent(serviceKey())}`);
     const d = await r.json();
     _slotData.blocks = d.blocks || [];
     _slotData.booked = d.booked || [];
@@ -1398,11 +1452,18 @@ function goStep(n) {
 }
 
 // ── SELECT A DAY calendar (GlossGenius pattern) ──
-let bkCalCursor = new Date().toISOString().slice(0, 10);
+// Dates in the grid are built from local calendar parts, so "today" has to be
+// local too. toISOString() is UTC — in California that rolls over at 5pm, and
+// an evening visitor would find tomorrow greyed out as if it were in the past.
+function localDs(d) {
+  d = d || new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+let bkCalCursor = localDs();
 function bkCalNav(dir) {
   const d = new Date(bkCalCursor + 'T12:00:00');
   d.setMonth(d.getMonth() + dir);
-  bkCalCursor = d.toISOString().slice(0, 10);
+  bkCalCursor = localDs(d);
   renderBkCal();
 }
 function renderBkCal() {
@@ -1411,24 +1472,25 @@ function renderBkCal() {
   document.getElementById('bk-cal-label').textContent = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const first = new Date(y, mo, 1).getDay();
   const days = new Date(y, mo + 1, 0).getDate();
-  const today = new Date().toISOString().slice(0, 10);
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  const today = localDs();
+  const tomorrow = localDs(new Date(Date.now() + 86400000));
   let html = '';
   for (let i = 0; i < first; i++) html += '<div class="bk-day off"></div>';
   let sawBlock = false;
   for (let day = 1; day <= days; day++) {
     const ds = y + '-' + String(mo + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
     const past = ds < tomorrow; // bookings start tomorrow, same rule as before
-    const block = !past && coverageBlockFor(ds);
+    const block = !past && (coverageBlockFor(ds) || dayFullyBooked(ds));
     if (block) sawBlock = true;
     const disabled = past || block;
-    const cls = 'bk-day' + (disabled ? ' off' : '') + (ds === booking.date ? ' sel' : '') + (ds === today ? ' today' : '');
-    const title = block ? ' title="Not available this day — limited team in"' : '';
+    const cls = 'bk-day' + (disabled ? ' off' : '') + (block ? ' full' : '') + (ds === booking.date ? ' sel' : '') + (ds === today ? ' today' : '');
+    const title = block ? ' title="Fully booked"' : '';
     html += '<div class="' + cls + '"' + title + (disabled ? '' : ' onclick="pickBkDay(\'' + ds + '\')"') + '>' + day + '</div>';
   }
   document.getElementById('bk-cells').innerHTML = html;
   const note = document.getElementById('bk-coverage-note');
   if (note) note.style.display = sawBlock ? 'block' : 'none';
+  loadMonthAvailability(bkCalCursor);
 }
 function pickBkDay(ds) {
   booking.date = ds;
