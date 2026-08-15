@@ -150,10 +150,11 @@ module.exports = async function (req, res) {
       let emailed = false;
       try {
         const text = `Hi {{name}},\n\nWelcome to ZOLA ✦\n\nHere's 10% off your first booking or press-on order:\n\n${code}\n\nJust mention it when you book, or use it at checkout.\n\n— Zahra\nZOLA Nail Studio`;
-        emailed = await sendEmail(email, 'Your 10% off ✦', toHtml(personalise(text, name)));
+        const r = await sendEmail(email, 'Your 10% off ✦', toHtml(personalise(text, name)));
+        emailed = !!(r && r.sent);
       } catch (_) {}
 
-      return res.json({ ok: true, code, emailed: !!emailed });
+      return res.json({ ok: true, code, emailed });
     }
 
     if (!auth(req)) return res.status(401).json({ error: 'Unauthorized' });
@@ -192,10 +193,15 @@ module.exports = async function (req, res) {
       const testTo = String((req.body || {}).test_to || '').trim().toLowerCase();
       if (!subject || !body) return res.status(400).json({ error: 'Subject and message are both required' });
 
-      // Test send goes to one address and is never recorded as a campaign
+      // Test send goes to one address and is never recorded as a campaign.
+      // sendEmail returns { sent, why } — read .sent, never the object itself,
+      // or a failed send reports as success and she is left wondering where
+      // the mail went. Pass `why` straight through so the real provider error
+      // is visible instead of a generic "failed".
       if (testTo) {
-        const ok = await sendEmail(testTo, personalise(subject, 'Maria'), toHtml(personalise(body, 'Maria')));
-        return res.json({ ok: !!ok, test: true, sent: ok ? 1 : 0 });
+        const r = await sendEmail(testTo, personalise(subject, 'Maria'), toHtml(personalise(body, 'Maria')));
+        const sent = !!(r && r.sent);
+        return res.json({ ok: sent, test: true, sent: sent ? 1 : 0, why: (r && r.why) || 'unknown' });
       }
 
       const subs = await query(
@@ -205,17 +211,19 @@ module.exports = async function (req, res) {
 
       let sent = 0, failed = 0;
       const failures = [];
+      let lastWhy = '';
       for (const s of subs) {
         try {
-          const ok = await sendEmail(s.email, personalise(subject, s.name), toHtml(personalise(body, s.name)));
-          if (ok) sent++; else { failed++; failures.push(s.email); }
-        } catch (e) { failed++; failures.push(s.email); }
+          const r = await sendEmail(s.email, personalise(subject, s.name), toHtml(personalise(body, s.name)));
+          if (r && r.sent) sent++;
+          else { failed++; failures.push(s.email); lastWhy = (r && r.why) || 'unknown'; }
+        } catch (e) { failed++; failures.push(s.email); lastWhy = String(e.message || e); }
       }
       await execute(
         'INSERT INTO campaigns (stage, subject, body, sent_ts, sent_count, failed_count, created_ts) VALUES (?,?,?,?,?,?,?)',
         [stage, subject, body, Date.now(), sent, failed, Date.now()]
       );
-      return res.json({ ok: true, sent, failed, total: subs.length, failures: failures.slice(0, 10) });
+      return res.json({ ok: true, sent, failed, total: subs.length, failures: failures.slice(0, 10), why: lastWhy });
     }
 
     // ── OWNER: remove somebody from the list ──

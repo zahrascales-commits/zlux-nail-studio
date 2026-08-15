@@ -3099,7 +3099,7 @@ async function mkTest(){
     test_to:to,subject:document.getElementById('mk-subject').value,body:document.getElementById('mk-body').value})});
   const d=await r.json();
   st.innerHTML=d.ok?'<span style="color:#7ec98a">Test sent to '+esc(to)+' ✓</span>'
-    :'<span style="color:#e08a8a">'+esc(d.error||'Test failed — check Settings → Email')+'</span>';
+    :'<span style="color:#e08a8a">Not sent — '+esc(d.why||d.error||'check Settings → Email')+'</span>';
 }
 async function mkSend(){
   const n=mkData.count||0;
