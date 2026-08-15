@@ -16,6 +16,22 @@ module.exports = async function (req, res) {
   try {
     await ensureTables();
 
+    // ── MAGIC LINK LOGIN: team.html?t=<token> ──
+    // Tapping a booking notification should land on the schedule, not a PIN
+    // pad. The token is scoped to one artist and returns the same shape as a
+    // PIN login, so the portal behaves identically from there on.
+    if (method === 'POST' && action === 'token_login') {
+      const tok = String((req.body && req.body.token) || '').trim();
+      const { memberForToken } = require('./_worker-link');
+      const memberId = await memberForToken(tok);
+      if (!memberId) return res.status(401).json({ error: 'That link is no longer valid — please use your PIN.' });
+      const member = await queryOne(
+        'SELECT id, name, role, color, pin FROM team_members WHERE id=? AND active=1', [memberId]
+      );
+      if (!member) return res.status(401).json({ error: 'That account is no longer active.' });
+      return res.json({ ok: true, member_id: member.id, name: member.name, role: member.role, color: member.color, pin: member.pin });
+    }
+
     // ── LOGIN ──
     if (method === 'POST' && action === 'login') {
       const pin = String((req.body && req.body.pin) || '').trim();

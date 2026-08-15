@@ -1052,6 +1052,12 @@
           <textarea id="site-banner-text" rows="3" placeholder="The founding rate locks in at $299/mo forever…"></textarea>
         </div>
         <div class="site-card">
+          <h3>Studio Address 📍</h3>
+          <p>Sent in every confirmation text and email so clients know exactly where to come.</p>
+          <label class="fld-label">Address</label>
+          <input id="site-address" placeholder="123 Main St, Porterville, CA 93257" />
+        </div>
+        <div class="site-card">
           <h3>Homepage Quote ✦</h3>
           <p>The big words over your hero photo. Use <strong>&lt;br&gt;</strong> to break a line and wrap words in <strong>&lt;span class="gold-text"&gt;…&lt;/span&gt;</strong> to make them gold.</p>
           <label class="fld-label">Small line above</label>
@@ -1227,6 +1233,17 @@
         <option value="#8E9E6B">Sage</option>
         <option value="#9E6B8E">Plum</option>
       </select>
+    </div>
+    <div class="field">
+      <label class="fld-label">Photo (shown on the website above their name)</label>
+      <div style="display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap">
+        <div id="m-photo-prev" style="width:76px;height:76px;border-radius:50%;background:var(--surface);border:1px solid var(--border-hi);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--muted);overflow:hidden;flex-shrink:0">+</div>
+        <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="pickMemberPhoto()">Choose photo</button>
+          <button type="button" class="btn btn-danger btn-sm" onclick="clearMemberPhoto()">Remove</button>
+        </div>
+      </div>
+      <input type="hidden" id="m-photo" />
     </div>
     <div class="field"><label class="fld-label">Bio / Blurb (shown on the website)</label><textarea id="m-bio" rows="3" placeholder="Write a short intro — e.g. 'Trained in Zahra's exact methods. Known for clean structured sets and detail-forward nail art.'"></textarea></div>
     <div class="field">
@@ -2292,6 +2309,7 @@ function openMemberModal(){
   document.getElementById('m-email').value='';
   document.getElementById('m-color').value='#B6A588';
   document.getElementById('m-bio').value='';
+  setMemberPhoto('');
   document.getElementById('m-show-site').checked=false;
   document.getElementById('m-active-wrap').style.display='none';
   openModal('modal-member');
@@ -2306,10 +2324,38 @@ function editMember(id){
   document.getElementById('m-email').value=m.email||'';
   document.getElementById('m-color').value=m.color||'#B6A588';
   document.getElementById('m-bio').value=m.bio||'';
+  setMemberPhoto(m.photo||'');
   document.getElementById('m-show-site').checked=!!Number(m.show_on_site);
   document.getElementById('m-active-wrap').style.display='block';
   document.getElementById('m-active').value=String(Number(m.active));
   openModal('modal-member');
+}
+// Headshots are stored as compressed data-URLs alongside the member row, the
+// same way site photos work, so there is no separate upload step for her.
+function setMemberPhoto(url){
+  document.getElementById('m-photo').value=url||'';
+  const p=document.getElementById('m-photo-prev');
+  p.innerHTML=url?'<img src="'+url+'" style="width:100%;height:100%;object-fit:cover" alt="">':'+';
+}
+function clearMemberPhoto(){setMemberPhoto('');}
+function pickMemberPhoto(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+  inp.onchange=()=>{
+    const f=inp.files&&inp.files[0];if(!f)return;
+    const img=new Image(),rd=new FileReader();
+    rd.onload=e=>{img.src=e.target.result;};
+    img.onload=()=>{
+      // square crop from the centre so every headshot sits the same in the circle
+      const side=Math.min(img.width,img.height);
+      const cv=document.createElement('canvas');cv.width=cv.height=Math.min(600,side);
+      cv.getContext('2d').drawImage(img,(img.width-side)/2,(img.height-side)/2,side,side,0,0,cv.width,cv.height);
+      let du=cv.toDataURL('image/jpeg',0.82);
+      if(du.length>500000)du=cv.toDataURL('image/jpeg',0.6);
+      setMemberPhoto(du);
+    };
+    rd.readAsDataURL(f);
+  };
+  inp.click();
 }
 async function saveMember(){
   const id=document.getElementById('m-id').value;
@@ -2320,13 +2366,14 @@ async function saveMember(){
   const email=document.getElementById('m-email').value.trim();
   const bio=document.getElementById('m-bio').value.trim();
   const show_on_site=document.getElementById('m-show-site').checked;
+  const photo=document.getElementById('m-photo').value;
   if(!name){toast('Enter a name');return;}
   if(id){
     const active=document.getElementById('m-active').value;
-    await api('/api/manager',{method:'PUT',body:JSON.stringify({action:'update_member',id,name,role,color,phone,email,bio,show_on_site,active:Number(active)})});
+    await api('/api/manager',{method:'PUT',body:JSON.stringify({action:'update_member',id,name,role,color,phone,email,bio,photo,show_on_site,active:Number(active)})});
     toast('Team member updated');
   }else{
-    const r=await api('/api/manager',{method:'POST',body:JSON.stringify({action:'add_member',name,role,color,phone,email,bio,show_on_site})});
+    const r=await api('/api/manager',{method:'POST',body:JSON.stringify({action:'add_member',name,role,color,phone,email,bio,photo,show_on_site})});
     const d=await r.json();
     if(d.member)toast('Added — PIN '+d.member.pin);
   }
@@ -3206,6 +3253,7 @@ async function loadSite(){
     document.getElementById('site-sig').value=s.spots_sig??'';
     document.getElementById('site-luxe').value=s.spots_luxe??'';
     document.getElementById('site-black').value=s.spots_black??'';
+    document.getElementById('site-address').value=s.studio_address||'';
     document.getElementById('site-hero-kicker').value=s.hero_kicker||'';
     document.getElementById('site-hero-quote').value=s.hero_quote||'';
     document.getElementById('site-hero-sub').value=s.hero_sub||'';
@@ -3223,6 +3271,7 @@ async function saveSite(){
     banner_title:document.getElementById('site-banner-title').value,
     banner_text:document.getElementById('site-banner-text').value,
     announcement:document.getElementById('site-announcement').value,
+    studio_address:document.getElementById('site-address').value,
     hero_kicker:document.getElementById('site-hero-kicker').value,
     hero_quote:document.getElementById('site-hero-quote').value,
     hero_sub:document.getElementById('site-hero-sub').value,

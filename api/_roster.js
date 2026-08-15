@@ -8,7 +8,7 @@ module.exports = async function (req, res) {
   try {
     await ensureTables();
     const rows = await query(
-      "SELECT name, role, title, bio, color FROM team_members WHERE show_on_site=1 AND active=1 ORDER BY id"
+      "SELECT name, role, title, bio, color, photo FROM team_members WHERE show_on_site=1 AND active=1 ORDER BY id"
     );
     const team = rows.map(r => ({
       name: r.name,
@@ -16,6 +16,7 @@ module.exports = async function (req, res) {
       title: (r.title && String(r.title).trim()) || r.role || 'Nail Artist',
       bio: r.bio || '',
       color: r.color || '#B6A588',
+      photo: r.photo || '',
       initial: (r.name || '?').trim().charAt(0).toUpperCase(),
     }));
     return res.json({ team });

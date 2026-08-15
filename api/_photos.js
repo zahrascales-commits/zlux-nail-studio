@@ -30,6 +30,32 @@ module.exports = async function (req, res) {
       return res.json({ photos: out });
     }
 
+    // ── PUBLIC: who does this confirmation code belong to? ──
+    // The link in a confirmation text carries only the booking code, so the
+    // upload page can fill in the client's own name, service and date itself.
+    // That's what makes the photo land on the artist's feed tagged with who
+    // sent it, without asking the client to type a thing.
+    if (req.method === 'GET' && action === 'inspo_context') {
+      const code = String(req.query.c || '').trim().slice(0, 40);
+      if (!code) return res.status(400).json({ error: 'Missing booking code' });
+      const appt = await queryOne(
+        `SELECT a.client_name, a.service, a.date, m.name AS member_name
+           FROM team_appointments a
+           LEFT JOIN team_members m ON m.id = a.team_member_id
+          WHERE a.notes LIKE ?
+          ORDER BY a.id DESC LIMIT 1`,
+        ['%' + code + '%']
+      ).catch(() => null);
+      if (!appt) return res.status(404).json({ error: 'We could not find that booking.' });
+      return res.json({
+        confirmation: code,
+        client_name: appt.client_name || '',
+        service: appt.service || '',
+        appt_date: appt.date || '',
+        member_name: appt.member_name || '',
+      });
+    }
+
     // ── PUBLIC: client attaches an inspo photo after booking ──
     if (req.method === 'POST' && action === 'inspo') {
       const { confirmation, client_name, client_email, service, appt_date, data_url } = req.body || {};

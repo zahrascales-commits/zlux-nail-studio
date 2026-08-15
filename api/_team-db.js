@@ -202,6 +202,7 @@ async function ensureTables() {
   // Columns added after launch — idempotent, ignored once they exist
   for (const sql of [
     "ALTER TABLE team_members ADD COLUMN phone TEXT DEFAULT ''",
+    "ALTER TABLE team_members ADD COLUMN photo TEXT DEFAULT ''",
     "ALTER TABLE team_members ADD COLUMN email TEXT DEFAULT ''",
     "ALTER TABLE team_members ADD COLUMN restricted INTEGER DEFAULT 0",
     "ALTER TABLE team_members ADD COLUMN bio TEXT DEFAULT ''",

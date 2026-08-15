@@ -232,11 +232,11 @@ function login(){
     .then(({ok,d})=>{
       if(!ok||!d.ok){err.textContent='Invalid PIN. Try again.';return;}
       MID=d.member_id;PIN=pin;NAME=d.name;COLOR=d.color||'#B6A588';
-      sessionStorage.setItem('zt',JSON.stringify({MID,PIN,NAME,COLOR}));
+      localStorage.setItem('zt',JSON.stringify({MID,PIN,NAME,COLOR}));
       enter();
     }).catch(()=>err.textContent='Connection error.');
 }
-function logout(){sessionStorage.removeItem('zt');location.reload();}
+function logout(){localStorage.removeItem('zt');location.reload();}
 function enter(){
   document.getElementById('login').style.display='none';
   document.getElementById('app').style.display='block';
@@ -536,7 +536,37 @@ function hdr(){return{'Content-Type':'application/json','X-Team-Id':String(MID),
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2400);}
 
-(function(){const s=sessionStorage.getItem('zt');if(s){try{const o=JSON.parse(s);MID=o.MID;PIN=o.PIN;NAME=o.NAME;COLOR=o.COLOR||'#B6A588';enter();}catch{}}})();
+// Sign-in on load. A ?t= token from a booking notification wins, so tapping
+// the text lands on the schedule instead of a PIN pad; otherwise fall back to
+// the saved session. Either way the session persists in localStorage, so she
+// only ever types her PIN once.
+(async function(){
+  const tok=new URLSearchParams(location.search).get('t');
+  if(tok){
+    // Strip the token from the URL immediately so it isn't left sitting in
+    // history, a screenshot, or a link she forwards to someone.
+    history.replaceState(null,'',location.pathname);
+    try{
+      const r=await fetch('/api/team?action=token_login',{method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'token_login',token:tok})});
+      const d=await r.json();
+      if(r.ok&&d.ok){
+        MID=d.member_id;PIN=d.pin;NAME=d.name;COLOR=d.color||'#B6A588';
+        localStorage.setItem('zt',JSON.stringify({MID,PIN,NAME,COLOR}));
+        enter();
+        return;
+      }
+      const err=document.getElementById('err');
+      if(err)err.textContent=d.error||'That link has expired — enter your PIN.';
+    }catch{
+      const err=document.getElementById('err');
+      if(err)err.textContent='Could not open that link — enter your PIN.';
+    }
+  }
+  const s=localStorage.getItem('zt');
+  if(s){try{const o=JSON.parse(s);MID=o.MID;PIN=o.PIN;NAME=o.NAME;COLOR=o.COLOR||'#B6A588';enter();}catch{}}
+})();
 </script>
 <script src="js/pwa.js"></script>
 </body>

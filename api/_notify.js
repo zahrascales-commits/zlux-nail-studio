@@ -113,9 +113,33 @@ async function notifyInApp(recipient, memberId, title, body) {
 
 // Fire everything for a new appointment: instant client confirmation
 // (email + SMS) and instant alert to whoever was booked (owner or artist).
+// One confirmation text carrying everything they need before they arrive:
+// where to go, who they're seeing, and the one-tap way to send their inspo.
+function clientSms(a, when, address, inspoLink) {
+  const first = (a.clientName || '').split(' ')[0] || 'love';
+  let msg = `ZOLA confirmed ✦ Hi ${first}! Your ${a.service || 'appointment'} is booked for ${when}`;
+  if (a.memberName) msg += ` with ${a.memberName}`;
+  msg += '.';
+  if (address) msg += ` We're at ${address}.`;
+  if (inspoLink) msg += ` Send your inspo photo here so we can prep: ${inspoLink}`;
+  return msg + ' — ZOLA Nail Studio';
+}
+
 async function notifyNewAppointment(a) {
   const results = { client_email: null, client_sms: null, artist: null };
   const when = `${a.dateLabel || a.date} at ${a.timeLabel || a.time}`;
+
+  // Studio address is owner-editable, so a move doesn't mean editing code.
+  const SITE = process.env.PUBLIC_SITE_URL || 'https://zlux-github.vercel.app';
+  let studioAddress = '';
+  try {
+    const { queryOne } = require('./_team-db');
+    const row = await queryOne("SELECT value FROM site_settings WHERE key='studio_address'");
+    studioAddress = (row && row.value) || '';
+  } catch (_) {}
+  // Deep link into the photo step with their booking already attached, so the
+  // whole job is: open, pick photo, send.
+  const inspoLink = a.confirmation ? `${SITE}/inspo.html?c=${encodeURIComponent(a.confirmation)}` : '';
 
   // client confirmation — instant
   if (a.clientEmail) {
@@ -132,15 +156,18 @@ async function notifyNewAppointment(a) {
             <p style="margin:0.2rem 0"><b>Service:</b> ${a.service || 'Appointment'}</p>
             <p style="margin:0.2rem 0"><b>When:</b> ${when}</p>
             ${a.memberName ? `<p style="margin:0.2rem 0"><b>Your artist:</b> ${a.memberName}</p>` : ''}
+            ${studioAddress ? `<p style="margin:0.2rem 0"><b>Where:</b> ${studioAddress}</p>` : ''}
           </div>
+          ${inspoLink ? `<div style="background:#fff;border:1px solid #E5D9C6;padding:1.2rem;margin:1.2rem 0;text-align:center">
+            <p style="margin:0 0 0.9rem;font-size:0.92rem">Send us your inspo photo so we can prep before you arrive ✦</p>
+            <a href="${inspoLink}" style="display:inline-block;background:#C4A882;color:#0D0D0D;text-decoration:none;padding:13px 26px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;font-weight:bold">Add My Inspo Photo</a>
+          </div>` : ''}
           <p style="font-size:0.85rem;color:#8B6A3E">Need to change it? Give us 24 hours' notice and we'll take care of you.</p>
         </div>
       </div>`);
-    results.client_sms = await sendSMS(a.clientPhone,
-      `ZOLA confirmed ✦ Hi ${(a.clientName || '').split(' ')[0] || 'love'}! Your ${a.service || 'appointment'} is booked for ${when}${a.memberName ? ' with ' + a.memberName : ''}. Reply here with any questions — ZOLA Nail Studio`);
+    results.client_sms = await sendSMS(a.clientPhone, clientSms(a, when, studioAddress, inspoLink));
   } else if (a.clientPhone) {
-    results.client_sms = await sendSMS(a.clientPhone,
-      `ZOLA confirmed ✦ Your ${a.service || 'appointment'} is booked for ${when}${a.memberName ? ' with ' + a.memberName : ''}. — ZOLA Nail Studio`);
+    results.client_sms = await sendSMS(a.clientPhone, clientSms(a, when, studioAddress, inspoLink));
   }
 
   // whoever got booked — instant in-app + SMS/email
@@ -148,8 +175,26 @@ async function notifyNewAppointment(a) {
   const body = `${a.service || 'Service'} — ${when}${a.clientPhone ? ' · ' + a.clientPhone : ''}`;
   if (a.memberId) {
     await notifyInApp('member', a.memberId, title, body);
-    if (a.memberPhone) await sendSMS(a.memberPhone, `ZOLA: you have a new appointment — ${a.clientName || 'Client'}, ${a.service || ''}, ${when}. Check your Team Portal.`);
-    if (a.memberEmail) await sendEmail(a.memberEmail, title, `<p>${body}</p><p>Open your Team Portal to see details.</p>`);
+    // Carry a one-tap link into her own schedule. Being asked for a PIN right
+    // after tapping a notification is what stops people checking at all.
+    let link = '';
+    try { link = await require('./_worker-link').linkFor(a.memberId); } catch (_) {}
+    if (a.memberPhone) {
+      await sendSMS(a.memberPhone,
+        `ZOLA: new appointment — ${a.clientName || 'Client'}, ${a.service || ''}, ${when}.` +
+        (link ? ` Your full schedule: ${link}` : ' Check your Team Portal.'));
+    }
+    if (a.memberEmail) {
+      await sendEmail(a.memberEmail, title,
+        `<div style="font-family:Helvetica,Arial,sans-serif;background:#faf7f4;padding:26px">
+          <div style="max-width:500px;margin:0 auto;background:#fff;padding:28px 26px;border:1px solid #eee5d8">
+            <div style="font-family:Georgia,serif;font-size:20px;letter-spacing:3px;margin-bottom:18px">ZOLA</div>
+            <p style="font-size:15px;color:#3a3027;margin:0 0 12px"><b>${title}</b></p>
+            <p style="font-size:15px;color:#3a3027;line-height:1.7;margin:0 0 20px">${body}</p>
+            ${link ? `<a href="${link}" style="display:inline-block;background:#B6A588;color:#0D0D0D;text-decoration:none;padding:13px 26px;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;font-weight:bold">Open My Schedule</a>
+            <p style="font-size:11px;color:#8C7A5E;margin-top:18px">This link signs you in automatically — keep it private.</p>` : ''}
+          </div></div>`);
+    }
     results.artist = 'member ' + a.memberId;
   }
   // owner always gets an in-app copy of every booking

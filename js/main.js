@@ -346,7 +346,9 @@ document.addEventListener('DOMContentLoaded', () => {
           card.className = 'team-card';
           card.style.cssText = 'text-align:center;max-width:280px;';
           card.innerHTML =
-            '<div class="team-avatar" style="margin:0 auto 1rem;background:' + esc(m.color) + '">' + esc(m.initial) + '</div>' +
+            (m.photo
+              ? '<div class="team-avatar" style="margin:0 auto 1rem;background:#fff;overflow:hidden;padding:0;"><img src="' + esc(m.photo) + '" alt="' + esc(m.name) + '" style="width:100%;height:100%;object-fit:cover;display:block;"></div>'
+              : '<div class="team-avatar" style="margin:0 auto 1rem;background:' + esc(m.color) + '">' + esc(m.initial) + '</div>') +
             '<h3 style="font-size:1.3rem;margin-bottom:0.2rem;">' + esc(m.name) + '</h3>' +
             '<div class="section-label" style="font-size:0.58rem;margin-bottom:0.5rem;">' + esc(m.title) + '</div>' +
             '<span class="availability-badge available">Accepting Members</span>' +
@@ -359,7 +361,9 @@ document.addEventListener('DOMContentLoaded', () => {
           card.style.cssText = 'max-width:220px;';
           card.innerHTML =
             '<div style="width:140px;height:140px;border-radius:50%;background:var(--blush);border:2px solid rgba(182,165,136,0.3);margin:0 auto 1.25rem;display:flex;align-items:center;justify-content:center;overflow:hidden;">' +
-            '<span style="font-family:\'Cinzel\',serif;font-size:3rem;color:var(--latte);">' + esc(m.initial) + '</span></div>' +
+            (m.photo
+              ? '<img src="' + esc(m.photo) + '" alt="' + esc(m.name) + '" style="width:100%;height:100%;object-fit:cover;display:block;">'
+              : '<span style="font-family:\'Cinzel\',serif;font-size:3rem;color:var(--latte);">' + esc(m.initial) + '</span>') + '</div>' +
             '<h3 style="font-size:1.35rem;margin-bottom:0.2rem;">' + esc(m.name) + '</h3>' +
             '<div class="section-label" style="font-size:0.58rem;margin-bottom:0.75rem;">' + esc(m.title) + '</div>' +
             '<span class="availability-badge available">Accepting Members</span>' +

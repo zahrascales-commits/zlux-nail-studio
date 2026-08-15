@@ -293,6 +293,7 @@ module.exports = async (req, res) => {
         dateLabel: formatDate(date), timeLabel: formatTime(time_slot),
         memberId: m ? m.id : null, memberName: m ? m.name : null,
         memberPhone: m ? m.phone : null, memberEmail: m ? m.email : null,
+        confirmation,
       });
       await upsertClient({ name: customer_name, email: customer_email, phone: customer_phone, service: service_name, date });
     } catch (_) {}
