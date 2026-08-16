@@ -83,6 +83,36 @@
     font-size:0.6rem;font-weight:700;border-radius:8px;text-align:center;vertical-align:middle}
 
   .wrap{max-width:1080px;margin:0 auto;padding:1.75rem 1.5rem 5rem}
+  /* ── LEFT SIDEBAR NAV (desktop) ──────────────────────────────────────────
+     Purely a restyle of the existing .tabs / .tab elements — showTab() and
+     every data-tab hook are untouched, so nothing about how the panels work
+     changes. A vertical list reads far better than 14 tabs scrolling
+     sideways, and every section stays visible at once.
+     Phones keep the horizontal strip: a sidebar would eat half a 390px screen. */
+  @media (min-width: 981px){
+    .tabs{
+      position:fixed; top:0; left:0; bottom:0; width:212px;
+      display:flex; flex-direction:column; gap:0; overflow-y:auto;
+      padding:1.25rem 0 1.5rem; background:var(--surface);
+      border-right:1px solid var(--border); border-bottom:none; z-index:60;
+    }
+    .tabs::before{
+      content:'ZOLA'; font-family:'Cinzel',serif; font-size:1.3rem; letter-spacing:0.16em;
+      color:var(--gold); padding:0.25rem 1.25rem 1.1rem; margin-bottom:0.5rem;
+      border-bottom:1px solid var(--border);
+    }
+    .tab{
+      width:100%; text-align:left; padding:0.72rem 1.25rem; font-size:0.72rem;
+      border-bottom:none; border-left:2px solid transparent; white-space:nowrap;
+      display:flex; align-items:center; gap:0.4rem;
+    }
+    .tab:hover{background:var(--gold-faint)}
+    .tab.active{border-bottom-color:transparent; border-left-color:var(--gold); background:var(--gold-faint)}
+    .tab .dot{margin-left:auto}
+    .topbar{padding-left:calc(212px + 1.5rem)}
+    .wrap{margin-left:212px; max-width:1180px; padding-left:2rem; padding-right:2rem}
+  }
+
   .panel{display:none;animation:fadeUp 0.45s ease}
   .panel.active{display:block}
 
