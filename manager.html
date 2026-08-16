@@ -3092,7 +3092,7 @@ async function mkPreview(){
   box.innerHTML='<div style="padding:0.6rem 0.8rem;background:var(--surface);border-bottom:1px solid var(--border);font-size:0.75rem;color:var(--muted)">Subject: <span style="color:var(--cream)">'+esc(d.subject)+'</span></div>'+d.html;
 }
 async function mkTest(){
-  const to=prompt('Send a test to which email address?', 'zahrascales@gmail.com');
+  const to=prompt('Send a test to which email address?', 'zolastudioempire@gmail.com');
   if(!to)return;
   const st=document.getElementById('mk-status');st.textContent='Sending test…';
   const r=await api('/api/marketing?action=send',{method:'POST',body:JSON.stringify({

@@ -32,7 +32,7 @@ module.exports = async (req, res) => {
         sgMail.setApiKey(process.env.SENDGRID_API_KEY);
         try {
           await sgMail.send({
-            to: 'zahrascales@gmail.com',
+            to: 'zolastudioempire@gmail.com',
             from: 'studio@zluxnails.com',
             subject: `New waitlist — ${t} — ${name}`,
             text: `New waitlist signup:\nName: ${name}\nEmail: ${email}\nPhone: ${phone||'none'}\nTier: ${t}`,

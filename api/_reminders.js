@@ -12,7 +12,7 @@ const { query, queryOne, execute, ensureTables } = require('./_team-db');
 const notify = require('./_notify');
 
 const APPT_HOURS = 2;
-const OWNER_EMAIL = process.env.OWNER_EMAIL || 'zahrascales@gmail.com';
+const OWNER_EMAIL = process.env.OWNER_EMAIL || 'zolastudioempire@gmail.com';
 
 function fmtTime(t){ const [h,m]=String(t).split(':').map(Number); return (h>12?h-12:(h||12))+':'+String(m).padStart(2,'0')+' '+(h>=12?'PM':'AM'); }
 function fmtDate(d){ const [y,mo,day]=String(d).split('-'); return new Date(+y,+mo-1,+day).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}); }

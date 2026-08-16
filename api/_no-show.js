@@ -46,7 +46,7 @@ module.exports = async (req, res) => {
             sgMail.setApiKey(process.env.SENDGRID_API_KEY);
             try {
               await sgMail.send({
-                to: 'zahrascales@gmail.com',
+                to: 'zolastudioempire@gmail.com',
                 from: 'studio@zluxnails.com',
                 subject: `FLAGGED: ${member?.full_name} — 2+ no-shows`,
                 text: `Member ${memberId} (${member?.full_name || 'unknown'}) has been flagged for 2 or more no-shows in the last 6 months. Review in admin dashboard.`,
