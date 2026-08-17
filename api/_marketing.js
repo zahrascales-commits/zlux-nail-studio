@@ -59,7 +59,7 @@ ZOLA Nail Studio`,
 
 It's live right now.
 
-Small batch, first come first served. Shop it here: https://zlux-github.vercel.app/pressons.html
+Small batch, first come first served. Shop it here: https://zolanailstudio.com/pressons.html
 
 — Zahra
 ZOLA Nail Studio`,

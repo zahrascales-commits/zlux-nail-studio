@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://zlux-github.vercel.app/index.html</loc><priority>1.0</priority></url>
-  <url><loc>https://zlux-github.vercel.app/memberships.html</loc><priority>0.9</priority></url>
-  <url><loc>https://zlux-github.vercel.app/services.html</loc><priority>0.9</priority></url>
-  <url><loc>https://zlux-github.vercel.app/booking.html</loc><priority>0.9</priority></url>
-  <url><loc>https://zlux-github.vercel.app/classes.html</loc><priority>0.7</priority></url>
-  <url><loc>https://zlux-github.vercel.app/pressons.html</loc><priority>0.8</priority></url>
-  <url><loc>https://zlux-github.vercel.app/about.html</loc><priority>0.6</priority></url>
-  <url><loc>https://zlux-github.vercel.app/contact.html</loc><priority>0.6</priority></url>
-  <url><loc>https://zlux-github.vercel.app/signup.html</loc><priority>0.7</priority></url>
+  <url><loc>https://zolanailstudio.com/index.html</loc><priority>1.0</priority></url>
+  <url><loc>https://zolanailstudio.com/memberships.html</loc><priority>0.9</priority></url>
+  <url><loc>https://zolanailstudio.com/services.html</loc><priority>0.9</priority></url>
+  <url><loc>https://zolanailstudio.com/booking.html</loc><priority>0.9</priority></url>
+  <url><loc>https://zolanailstudio.com/classes.html</loc><priority>0.7</priority></url>
+  <url><loc>https://zolanailstudio.com/pressons.html</loc><priority>0.8</priority></url>
+  <url><loc>https://zolanailstudio.com/about.html</loc><priority>0.6</priority></url>
+  <url><loc>https://zolanailstudio.com/contact.html</loc><priority>0.6</priority></url>
+  <url><loc>https://zolanailstudio.com/signup.html</loc><priority>0.7</priority></url>
 </urlset>

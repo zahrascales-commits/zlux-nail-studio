@@ -8,7 +8,7 @@
 const { queryOne, execute, ensureTables } = require('./_team-db');
 const crypto = require('crypto');
 
-const SITE = process.env.PUBLIC_SITE_URL || 'https://zlux-github.vercel.app';
+const SITE = process.env.PUBLIC_SITE_URL || 'https://zolanailstudio.com';
 
 async function ensureLinkTable() {
   await ensureTables();

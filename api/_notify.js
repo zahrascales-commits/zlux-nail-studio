@@ -130,7 +130,7 @@ async function notifyNewAppointment(a) {
   const when = `${a.dateLabel || a.date} at ${a.timeLabel || a.time}`;
 
   // Studio address is owner-editable, so a move doesn't mean editing code.
-  const SITE = process.env.PUBLIC_SITE_URL || 'https://zlux-github.vercel.app';
+  const SITE = process.env.PUBLIC_SITE_URL || 'https://zolanailstudio.com';
   let studioAddress = '';
   try {
     const { queryOne } = require('./_team-db');

@@ -9,4 +9,4 @@ Disallow: /worker.html
 Disallow: /chat.html
 Disallow: /checkin.html
 
-Sitemap: https://zlux-github.vercel.app/sitemap.xml
+Sitemap: https://zolanailstudio.com/sitemap.xml
