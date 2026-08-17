@@ -45,9 +45,15 @@ function clearKeyCache() { _keyCache = null; }
 
 async function providerStatus() {
   const k = await getKeys();
+  // Report the address mail actually goes out as, and whether it's still the
+  // sandbox. A key alone isn't enough — sending from onboarding@resend.dev
+  // reaches nobody but the account owner, which looks identical to working.
+  const sandbox = /@resend\.dev$/i.test(k.fromEmail || '');
   return {
     email: !!(k.resendKey || k.sendgridKey),
     sms: !!(k.twilioSid && k.twilioToken && k.twilioFrom),
+    from_email: k.fromEmail || '',
+    from_is_sandbox: sandbox,
   };
 }
 

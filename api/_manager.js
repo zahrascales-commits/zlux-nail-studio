@@ -42,8 +42,11 @@ module.exports = async function (req, res) {
 
     // ── CONNECT PROVIDERS (paste keys in Settings tab; stored write-only) ──
     if (method === 'POST' && action === 'save_keys') {
-      const { twilio_sid, twilio_token, twilio_from, resend_key, stripe_secret, stripe_publishable } = req.body || {};
-      const pairs = { twilio_sid, twilio_token, twilio_from, resend_key, stripe_secret, stripe_publishable };
+      const { twilio_sid, twilio_token, twilio_from, resend_key, stripe_secret, stripe_publishable, notify_from_email } = req.body || {};
+      // The address clients see mail come from. Until this is set, sends fall
+      // back to Resend's onboarding@resend.dev sandbox, which only ever
+      // reaches the account owner — so client mail silently goes nowhere.
+      const pairs = { twilio_sid, twilio_token, twilio_from, resend_key, stripe_secret, stripe_publishable, notify_from_email };
       for (const [k, v] of Object.entries(pairs)) {
         if (v !== undefined && v !== null && String(v).trim() !== '') {
           await execute(

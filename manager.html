@@ -959,6 +959,12 @@
           <p>Paste your Resend API key (free at resend.com → API Keys → Create). Email turns on the moment you save.</p>
           <label class="fld-label">Resend API Key (starts with re_…)</label>
           <input id="k-resend" type="password" placeholder="re_xxxxxxxxxxxx" style="margin-bottom:0.9rem" autocomplete="off" />
+          <label class="fld-label">Send emails from</label>
+          <input id="k-from-email" placeholder="hello@zolanailstudio.com" style="margin-bottom:0.4rem" autocomplete="off" />
+          <div style="font-size:0.7rem;color:var(--muted);line-height:1.55;margin-bottom:0.9rem">
+            Must be at a domain you verified in Resend. Leave this blank and mail goes out from Resend's test address, which only ever reaches you — clients get nothing.
+          </div>
+          <div id="from-email-now" style="font-size:0.72rem;margin-bottom:0.9rem"></div>
           <button class="btn btn-gold btn-sm" onclick="saveKeys()">Connect Email</button>
           <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--border)">
             <label class="fld-label">Send a test to me</label>
@@ -3389,7 +3395,22 @@ async function delClient(id){
 
 /* ── SETTINGS ── */
 function renderProviderStatus(){
-  document.getElementById('key-email').innerHTML='✉️ Email delivery: '+(PROVIDERS.email?'<span class="key-on">ON — sending live ✦</span>':'<span class="key-off">OFF — paste your Resend key below</span>');
+  // "Key present" and "clients actually receive mail" are different things —
+  // Resend's sandbox address reaches nobody but Zahra, so say that plainly
+  // rather than showing a green ON that isn't true for her clients.
+  const sandbox=PROVIDERS.from_is_sandbox;
+  document.getElementById('key-email').innerHTML='✉️ Email delivery: '+
+    (!PROVIDERS.email ? '<span class="key-off">OFF — paste your Resend key below</span>'
+      : sandbox ? '<span class="key-off">TEST ONLY — reaches you, not clients</span>'
+      : '<span class="key-on">ON — sending live ✦</span>');
+  const noteEl=document.getElementById('from-email-now');
+  if(noteEl){
+    noteEl.innerHTML=PROVIDERS.from_email
+      ? (sandbox
+          ? '<span style="color:#e0a06a">Sending as <strong>'+esc(PROVIDERS.from_email)+'</strong> — Resend\'s test address. Set yours above so clients receive mail.</span>'
+          : '<span style="color:#7ec98a">Sending as <strong>'+esc(PROVIDERS.from_email)+'</strong> ✓</span>')
+      : '';
+  }
   document.getElementById('key-sms').innerHTML='📱 Text delivery: '+(PROVIDERS.sms?'<span class="key-on">ON — sending live ✦</span>':'<span class="key-off">OFF — paste your Twilio values below</span>');
   loadStripeStatus();
 }
@@ -3428,8 +3449,10 @@ async function saveKeys(){
     twilio_sid:document.getElementById('k-sid').value.trim(),
     twilio_token:document.getElementById('k-token').value.trim(),
     twilio_from:document.getElementById('k-from').value.trim(),
-    resend_key:document.getElementById('k-resend').value.trim()};
-  if(!body.twilio_sid&&!body.twilio_token&&!body.twilio_from&&!body.resend_key){toast('Paste at least one value first');return;}
+    resend_key:document.getElementById('k-resend').value.trim(),
+    notify_from_email:document.getElementById('k-from-email').value.trim()};
+  if(!body.twilio_sid&&!body.twilio_token&&!body.twilio_from&&!body.resend_key&&!body.notify_from_email){toast('Paste at least one value first');return;}
+  if(body.notify_from_email&&!/^[^@s]+@[^@s]+.[^@s]+$/.test(body.notify_from_email)){toast('That from-address does not look like an email');return;}
   const r=await api('/api/manager?action=save_keys',{method:'POST',body:JSON.stringify(body)});
   const d=await r.json();
   if(d.ok){PROVIDERS=d.providers||PROVIDERS;renderProviderStatus();
