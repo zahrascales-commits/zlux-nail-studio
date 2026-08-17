@@ -296,6 +296,15 @@ module.exports = async (req, res) => {
         confirmation,
       });
       await upsertClient({ name: customer_name, email: customer_email, phone: customer_phone, service: service_name, date });
+      // Record marketing consent only when they actually ticked the box.
+      // Never clear it here — someone who opted in previously and left the box
+      // unticked on a later booking has not withdrawn consent, and silently
+      // dropping them would lose a subscriber they meant to keep.
+      if (req.body && req.body.sms_marketing_optin && customer_email) {
+        try {
+          await teamDb.execute('UPDATE clients SET marketing_opt_in=1 WHERE email=?', [String(customer_email).toLowerCase()]);
+        } catch (_) {}
+      }
     } catch (_) {}
 
     return res.status(201).json({ id, confirmation, total_cents, deposit_cents });

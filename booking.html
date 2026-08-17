@@ -583,6 +583,23 @@
         </span>
       </label>
       <div id="submit-error" style="display:none;background:rgba(192,82,74,0.08);border:1px solid rgba(192,82,74,0.3);padding:0.85rem 1.1rem;margin-bottom:1rem;font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:#a04038;"></div>
+      <!-- SMS CONSENT
+           Appointment texts are transactional and disclosed here; marketing is
+           a separate, unticked, optional box. Carriers and the TCPA treat those
+           as different permissions, and bundling them is the kind of consent
+           that gets a sending number shut off. -->
+      <div class="sms-consent">
+        <label class="sms-optin">
+          <input type="checkbox" id="sms-marketing" />
+          <span>Text me about new press-on drops, last-minute openings and offers. <em>Optional — your appointment texts come either way.</em></span>
+        </label>
+        <p class="sms-legal">
+          By booking, you agree to receive text messages from ZOLA Nail Studio about this appointment — confirmations, reminders and updates.
+          Message frequency varies. Message and data rates may apply. Reply <strong>STOP</strong> to opt out at any time, or <strong>HELP</strong> for help.
+          See our <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy &amp; SMS Terms</a>. We never sell or share your number.
+        </p>
+      </div>
+
       <div class="step-nav">
         <button class="btn-outline-dark" onclick="goStep(3)">← Back</button>
         <button class="btn-gold" onclick="submitBooking()" style="animation:none;flex:1;text-align:center;">Pay Deposit & Confirm</button>
@@ -1674,6 +1691,10 @@ async function submitBooking() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             customer_name: name, customer_email: email, customer_phone: phone,
+            // Marketing consent is recorded per booking so there is a record of
+            // when and how they agreed — that's what a carrier or the FCC asks
+            // for if consent is ever questioned.
+            sms_marketing_optin: !!(document.getElementById('sms-marketing') || {}).checked,
             ...unit,
             member_id: document.getElementById('member-id-input').value.trim().toUpperCase() || null,
             member_tier: booking.memberTier || null,

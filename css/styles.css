@@ -1747,3 +1747,16 @@ ul { list-style: none; }
 @media (max-width: 600px) {
   .team-card { flex-direction: column; align-items: center; text-align: center; gap: 1rem; padding: 1.75rem 1.25rem; }
 }
+
+
+/* ══════════════════════════════════════════════════
+   SMS CONSENT (booking + signup)
+══════════════════════════════════════════════════ */
+.sms-consent { background: rgba(182,165,136,0.07); border: 1px solid rgba(182,165,136,0.25); padding: 1.1rem 1.25rem; margin-bottom: 1.25rem; }
+.sms-optin { display: flex; gap: 0.7rem; align-items: flex-start; cursor: pointer; margin-bottom: 0.85rem; }
+.sms-optin input { width: 20px; height: 20px; accent-color: var(--champagne); flex-shrink: 0; margin-top: 0.1rem; }
+.sms-optin span { font-family: 'Josefin Sans', sans-serif; font-size: 0.86rem; line-height: 1.6; color: var(--espresso); }
+.sms-optin em { font-style: normal; color: var(--latte); font-size: 0.8rem; }
+.sms-legal { font-family: 'Josefin Sans', sans-serif; font-size: 0.72rem; line-height: 1.75; color: var(--latte); margin: 0; padding-top: 0.85rem; border-top: 1px solid rgba(182,165,136,0.22); }
+.sms-legal strong { color: var(--espresso); font-weight: 600; }
+.sms-legal a { color: var(--champagne); }
