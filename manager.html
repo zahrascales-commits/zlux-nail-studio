@@ -1543,7 +1543,26 @@ async function delPromo(code){
 // skills are matched by name, so "Short Acrylic" vs "Short Acrylic Set" would
 // silently mean no artist is ever qualified and every day would read as fully
 // booked. Rename a service on the booking page and rename it here too.
-const SERVICES = ['Regular Gel Manicure','Organic Structured Manicure','Short Gel X','Medium Gel X','Long Gel X','Short Acrylic Set','Medium Acrylic Set','Long Acrylic Set','Russian Dry Pedicure','Russian Dry Pedicure — Full Correction'];
+// The service list is loaded from the live catalog at startup so anything
+// added to the menu automatically appears in "what does she do?" and
+// everywhere else that offers a service. The array below is only a fallback
+// for a failed fetch — worker skills are matched by NAME, so a stale list
+// would silently mean nobody is qualified and every day reads fully booked.
+let SERVICES = ['Regular Gel Manicure','Organic Structured Manicure','Short Gel X','Medium Gel X','Long Gel X','Short Acrylic Set','Medium Acrylic Set','Long Acrylic Set','Russian Dry Pedicure','Russian Dry Pedicure — Full Correction'];
+async function loadServiceCatalog(){
+  try{
+    const r = await fetch('/api/services');
+    const list = await r.json();
+    const names = (Array.isArray(list) ? list : [])
+      .filter(s => s && s.name && !s.hidden)
+      .map(s => s.name);
+    if (names.length) SERVICES = names;
+  }catch(_){ /* keep the fallback */ }
+  // repaint anything already showing the old list
+  if (typeof renderSchedServices === 'function' && schedMember) renderSchedServices();
+  const sel = document.getElementById('a-service');
+  if (sel) fillServiceSelect(sel, sel.value);
+}
 const SLOTS = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'];
 let PWD='';
 let members=[];
@@ -1566,6 +1585,7 @@ async function login(){
     const d=await r.json();
     members=d.members||[];appts=d.appointments||[];
     PROVIDERS=d.providers||{email:false,sms:false};
+    loadServiceCatalog();
     sessionStorage.setItem('zm_pwd',pwd);
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='block';
