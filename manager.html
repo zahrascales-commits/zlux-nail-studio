@@ -341,7 +341,46 @@
   .ai-tag::before{content:'✦';animation:pulse 2s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
 
-  /* ── SITE EDITOR ── */
+  /* ── DISCOUNT CODES ── */
+async function loadPromos(){
+  const g=document.getElementById('promo-list');if(!g)return;
+  try{
+    const r=await api('/api/promo');const d=await r.json();
+    const c=d.codes||[];
+    if(!c.length){g.innerHTML='<div style="color:var(--muted);font-size:0.8rem">No codes yet.</div>';return;}
+    g.innerHTML=c.map(x=>'<div style="display:flex;align-items:center;gap:0.7rem;padding:0.65rem 0.85rem;border:1px solid var(--border);border-radius:8px;background:var(--card)">'
+      +'<div style="flex:1;min-width:0">'
+        +'<div style="font-family:'Cinzel',serif;font-size:1rem;color:var(--gold);letter-spacing:0.08em">'+esc(x.code)+'</div>'
+        +'<div style="font-size:0.68rem;color:var(--muted)">$'+(Number(x.amount_off_cents)/100).toFixed(0)+' off'
+          +(x.label?' · '+esc(x.label):'')+' · used '+Number(x.used_count||0)+'×</div>'
+      +'</div>'
+      +'<span class="status-pill '+(Number(x.active)?'status-on':'status-off')+'">'+(Number(x.active)?'On':'Off')+'</span>'
+      +'<button class="btn btn-ghost btn-sm" onclick="togglePromo(''+x.code+'','+(Number(x.active)?0:1)+','+Number(x.amount_off_cents)+')">'+(Number(x.active)?'Turn off':'Turn on')+'</button>'
+      +'<button class="btn btn-danger btn-sm" onclick="delPromo(''+x.code+'')">Delete</button>'
+      +'</div>').join('');
+  }catch{g.innerHTML='<div style="color:var(--muted);font-size:0.8rem">Could not load codes.</div>';}
+}
+async function savePromo(){
+  const code=document.getElementById('pc-code').value.trim().toUpperCase();
+  const off=Number(document.getElementById('pc-off').value);
+  const label=document.getElementById('pc-label').value.trim();
+  if(!code){toast('Enter a code');return;}
+  if(!(off>0)){toast('Enter how many dollars off');return;}
+  const r=await api('/api/promo?action=save',{method:'POST',body:JSON.stringify({action:'save',code,amount_off:off,label,active:true})});
+  if(r.ok){toast('Saved ✦');document.getElementById('pc-code').value='';document.getElementById('pc-off').value='';document.getElementById('pc-label').value='';await loadPromos();}
+  else toast(((await r.json().catch(()=>({}))).error)||'Save failed');
+}
+async function togglePromo(code,active,cents){
+  await api('/api/promo?action=save',{method:'POST',body:JSON.stringify({action:'save',code,amount_off:cents/100,active:!!active})});
+  await loadPromos();
+}
+async function delPromo(code){
+  if(!confirm('Delete '+code+'? Anyone using it will stop getting the discount.'))return;
+  await api('/api/promo',{method:'DELETE',body:JSON.stringify({code})});
+  await loadPromos();
+}
+
+/* ── SITE EDITOR ── */
   .site-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
   .site-card{background:var(--card);border:1px solid var(--border);padding:1.4rem}
   .site-card h3{font-family:'Cinzel', serif;font-size:0.95rem;color:var(--gold);margin-bottom:0.4rem}
@@ -1096,6 +1135,17 @@
           <label class="fld-label">Banner Text</label>
           <textarea id="site-banner-text" rows="3" placeholder="The founding rate locks in at $299/mo forever…"></textarea>
         </div>
+        <div class="site-card" style="grid-column:1/-1;">
+          <h3>Discount Codes 🎟️</h3>
+          <p>Codes you hand out. <strong>TRAIN20</strong> is ready to go for the trainee special — it's already on your homepage.</p>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem">
+            <div style="flex:1;min-width:130px"><label class="fld-label">Code</label><input id="pc-code" placeholder="TRAIN20" style="text-transform:uppercase" /></div>
+            <div style="width:110px"><label class="fld-label">$ off</label><input id="pc-off" type="number" min="1" step="1" placeholder="20" /></div>
+            <div style="flex:2;min-width:170px"><label class="fld-label">Note to yourself</label><input id="pc-label" placeholder="Trainee special" /></div>
+            <button class="btn btn-gold btn-sm" onclick="savePromo()">Save code</button>
+          </div>
+          <div id="promo-list" style="display:grid;gap:0.5rem"></div>
+        </div>
         <div class="site-card">
           <h3>Studio Address 📍</h3>
           <p>Sent in every confirmation text and email so clients know exactly where to come.</p>
@@ -1493,7 +1543,7 @@
 // skills are matched by name, so "Short Acrylic" vs "Short Acrylic Set" would
 // silently mean no artist is ever qualified and every day would read as fully
 // booked. Rename a service on the booking page and rename it here too.
-const SERVICES = ['Organic Structured Manicure','Short Gel X','Medium Gel X','Long Gel X','Short Acrylic Set','Medium Acrylic Set','Long Acrylic Set','Russian Dry Pedicure','Russian Dry Pedicure — Full Correction'];
+const SERVICES = ['Regular Gel Manicure','Organic Structured Manicure','Short Gel X','Medium Gel X','Long Gel X','Short Acrylic Set','Medium Acrylic Set','Long Acrylic Set','Russian Dry Pedicure','Russian Dry Pedicure — Full Correction'];
 const SLOTS = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'];
 let PWD='';
 let members=[];
@@ -1567,6 +1617,14 @@ let schedCursor = todayDs();
 let schedCoverage = {};          // per-member: how far ahead she's scheduled
 let schedDirty = false;
 
+// Compact 12-hour label for the small calendar cells — "9a", "12:30p", "6p".
+// The full fmtTime is too wide for a day square.
+function fmtShort(t){
+  const [h,mi]=String(t).split(':').map(Number);
+  const ap=h>=12?'p':'a';
+  const hh=h>12?h-12:(h===0?12:h);
+  return hh+(mi?':'+String(mi).padStart(2,'0'):'')+ap;
+}
 function schedMonthRange(ds){
   const d=new Date(ds+'T12:00:00'), y=d.getFullYear(), m=d.getMonth();
   const pad=n=>String(n).padStart(2,'0');
@@ -1705,7 +1763,8 @@ function renderSchedCal(){
     const on=!!schedShifts[ds];
     const past=ds<today;
     const sh=on?schedShifts[ds]:null;
-    const hh=on?(sh.lunchStart?`${sh.start}–${sh.end} 🍽`:`${sh.start}–${sh.end}`):'';
+    // 12-hour, never 24 — she reads this calendar at a glance
+    const hh=on?(sh.lunchStart?`${fmtShort(sh.start)}-${fmtShort(sh.end)} 🍽`:`${fmtShort(sh.start)}-${fmtShort(sh.end)}`):'';
     html+=`<button class="sched-day${on?' on':''}${past?' pastday':''}" ${past?'disabled':`onclick="toggleSchedDay('${ds}')"`}>
       <span>${day}</span><span class="hh">${hh}</span></button>`;
   }
@@ -2988,6 +3047,7 @@ async function deleteInq(){
 // thumbnails. Each "Shop the Look" service takes two photos: the set on its
 // own, and the same set worn — the homepage swaps between them on hover.
 const LOOK_SERVICES=[
+  {key:'regular-gel',label:'Regular Gel Mani'},
   {key:'organic-manicure',label:'Organic Manicure'},
   {key:'short-gelx',label:'Short Gel X'},
   {key:'medium-gelx',label:'Medium Gel X'},
@@ -3302,6 +3362,7 @@ async function igDelete(id){
 /* ── SITE EDITOR ── */
 async function loadSite(){
   loadShopIg();
+  loadPromos();
   loadSitePhotos();
   loadClasses();
   loadClassPurchases();

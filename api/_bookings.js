@@ -205,6 +205,26 @@ module.exports = async (req, res) => {
       deposit_cents = Math.ceil(total_cents * 0.5);
     }
 
+    // Apply a discount code, priced server-side. The browser only ever tells
+    // us WHICH code — never what it is worth — so a tampered request cannot
+    // change the amount charged. Never let a promo failure lose the booking.
+    let promo_code = null, promo_off_cents = 0;
+    try {
+      const raw = (req.body || {}).promo_code;
+      if (raw) {
+        const p = await require('./_promo').lookup(raw);
+        if (p.ok && p.amount_off_cents > 0) {
+          promo_code = p.code;
+          // Never discount below zero, and recompute the deposit off the new
+          // total so a discounted booking doesn't overcharge the deposit.
+          promo_off_cents = Math.min(p.amount_off_cents, total_cents);
+          total_cents = Math.max(0, total_cents - promo_off_cents);
+          deposit_cents = Math.min(deposit_cents, total_cents);
+          await require('./_promo').redeem(p.code);
+        }
+      }
+    } catch (_) { /* a broken promo must never block a booking */ }
+
     const id = incId();
     const confirmation = `ZOLA-${String(id).padStart(5, '0')}`;
 
@@ -307,7 +327,7 @@ module.exports = async (req, res) => {
       }
     } catch (_) {}
 
-    return res.status(201).json({ id, confirmation, total_cents, deposit_cents });
+    return res.status(201).json({ id, confirmation, total_cents, deposit_cents, promo_code, promo_off_cents });
   }
 
   // Cancel booking (DELETE)

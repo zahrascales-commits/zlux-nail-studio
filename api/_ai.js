@@ -24,7 +24,7 @@ MEMBERSHIPS (6-month minimum, then month-to-month, 30 days notice):
 Members always book before guests. Unused services do NOT roll over.
 
 SERVICES (drop-in prices):
-Manicure: Organic Structured Manicure from $90 · Short Gel X $95 · Medium Gel X $100 · Long Gel X $110 · Short Acrylic $95 · Medium Acrylic $100 · Long Acrylic $110.
+Manicure: Regular Gel Manicure $55 · Organic Structured Manicure from $90 · Short Gel X $95 · Medium Gel X $100 · Long Gel X $110 · Short Acrylic $95 · Medium Acrylic $100 · Long Acrylic $110.
 Pedicure: Russian Dry Pedicure $95 (water-free Russian technique, grows out natural toenails, the healthiest pedicure offered) · Russian Dry Pedicure — Full Correction $125 (adds full-foot exfoliation, buffing, and callus correction each visit — the only way calluses truly resolve). Both are tailored to the client as ZOLA learns their preferences.
 Add-ons: Soak Off Removal +$35 · Russian Manicure Technique +$30 · Scrub Massage +$25 · Nail Art +$25 · Lotion Massage +$15.
 The studio works exclusively with hard gel and gel acrylic (no soft gel / regular polish) — better structure, healthier nails. Clients come to ZOLA because their nails actually GROW here.

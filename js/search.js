@@ -18,6 +18,8 @@
 
   const INDEX = [
     // ── Services (deep-link into booking, service pre-selected) ──
+    { t: 'Regular Gel Manicure', s: '$55 · Classic gel colour — clean and simple', u: bookUrl('Regular Gel Manicure'), c: 'Service',
+      k: 'regular gel manicure mani colour color classic simple basic cheap cheapest entry standard normal polish shellac' },
     { t: 'Organic Structured Manicure', s: '$90 · Healthiest option — built for nail growth', u: bookUrl('Organic Structured Manicure'), c: 'Service',
       k: 'organic structure structured manicure mani natural overlay healthy growth recommended basic regular' },
     { t: 'Short Gel X', s: '$95 · Gel-X extensions, short length', u: bookUrl('Short Gel X'), c: 'Service',

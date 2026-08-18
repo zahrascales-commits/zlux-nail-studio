@@ -319,6 +319,10 @@
       </button>
 
       <div class="section-label" style="margin-bottom:0.75rem;">Manicure</div>
+      <button class="option-btn" id="svc-btn-gel" onclick="toggleService('Regular Gel Manicure',55,'manicure',this)">
+        <div><span class="option-name">Regular Gel Manicure</span><span class="option-sub">Classic gel colour — clean, simple, quick</span></div>
+        <div style="text-align:right;"><span class="option-price">$55</span></div>
+      </button>
       <button class="option-btn" id="svc-btn-0" onclick="toggleService('Organic Structured Manicure',90,'manicure',this)">
         <div><span class="option-name">Organic Structured Manicure</span><span class="option-sub">Healthiest option — recommended for nail growth</span></div>
         <div style="text-align:right;"><span class="option-price" id="price-0">from $90</span><div id="tag-0"></div></div>
@@ -592,6 +596,15 @@
         </span>
       </label>
       <div id="submit-error" style="display:none;background:rgba(192,82,74,0.08);border:1px solid rgba(192,82,74,0.3);padding:0.85rem 1.1rem;margin-bottom:1rem;font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:#a04038;"></div>
+      <div class="promo-row">
+        <label class="luxury-label" style="margin-bottom:0.4rem;">Have a code?</label>
+        <div style="display:flex;gap:0.5rem;">
+          <input class="luxury-input" id="promo-input" placeholder="e.g. TRAIN20" style="flex:1;text-transform:uppercase;" onkeydown="if(event.key==='Enter'){event.preventDefault();applyPromo();}" />
+          <button class="btn-outline-dark" type="button" onclick="applyPromo()" style="white-space:nowrap;">Apply</button>
+        </div>
+        <div id="promo-msg" style="font-family:'Josefin Sans',sans-serif;font-size:0.78rem;margin-top:0.5rem;"></div>
+      </div>
+
       <!-- SMS CONSENT
            Appointment texts are transactional and disclosed here; marketing is
            a separate, unticked, optional box. Carriers and the TCPA treat those
@@ -1632,6 +1645,40 @@ function continueToCheckout() {
   goStep(4);
 }
 
+// Checked here only so the client sees the discount before paying. The real
+// discount is applied server-side at booking, so nothing typed in the browser
+// can change what actually gets charged.
+let appliedPromo = null;
+async function applyPromo() {
+  const el = document.getElementById('promo-input');
+  const msg = document.getElementById('promo-msg');
+  const code = (el.value || '').trim().toUpperCase();
+  if (!code) { msg.textContent = ''; appliedPromo = null; return; }
+  msg.style.color = 'var(--latte)';
+  msg.textContent = 'Checking…';
+  try {
+    const r = await fetch('/api/promo?action=check', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'check', code })
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      appliedPromo = null;
+      msg.style.color = '#b43232';
+      msg.textContent = d.error || 'That code is not recognised.';
+      return;
+    }
+    appliedPromo = d.code;
+    msg.style.color = '#4e8e5e';
+    const off = Math.round((d.amount_off_cents || 0) / 100);
+    msg.textContent = off > 0 ? ('\u2713 $' + off + ' off applied at checkout') : '\u2713 Code applied';
+  } catch (_) {
+    appliedPromo = null;
+    msg.style.color = '#b43232';
+    msg.textContent = 'Could not check that code — try again.';
+  }
+}
+
 async function submitBooking() {
   const errBox = document.getElementById('submit-error');
   errBox.style.display = 'none';
@@ -1704,6 +1751,7 @@ async function submitBooking() {
             // when and how they agreed — that's what a carrier or the FCC asks
             // for if consent is ever questioned.
             sms_marketing_optin: !!(document.getElementById('sms-marketing') || {}).checked,
+            promo_code: appliedPromo,
             ...unit,
             member_id: document.getElementById('member-id-input').value.trim().toUpperCase() || null,
             member_tier: booking.memberTier || null,

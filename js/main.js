@@ -221,6 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const lookGrid = document.getElementById('look-grid');
   if (lookGrid) {
     const LOOKS = [
+      { key: 'regular-gel', name: 'Regular Gel Manicure', price: '$55' },
       { key: 'organic-manicure', name: 'Organic Structured Manicure', price: '$90' },
       { key: 'short-gelx', name: 'Short Gel X', price: '$95' },
       { key: 'medium-gelx', name: 'Medium Gel X', price: '$100' },

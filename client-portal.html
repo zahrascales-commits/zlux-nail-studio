@@ -308,6 +308,16 @@ let profileData = {};
 let qrInterval = null;
 let qrExpireInterval = null;
 
+// Clients should never read a 24-hour clock on their own appointments.
+function fmtTime(t){
+  if(!t) return '';
+  const [h,m]=String(t).split(':').map(Number);
+  if(isNaN(h)) return t;
+  const ap=h>=12?'PM':'AM';
+  const hh=h>12?h-12:(h===0?12:h);
+  return hh+':'+String(m||0).padStart(2,'0')+' '+ap;
+}
+
 function showError(msg) {
   const el = document.getElementById('login-err');
   el.textContent = msg;
@@ -433,7 +443,7 @@ function populatePortal(d) {
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;">
           <div>
             <div class="appt-date">${new Date(a.appointment_date+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric'})}</div>
-            <div class="appt-detail">${a.appointment_time} · ${a.service}</div>
+            <div class="appt-detail">${fmtTime(a.appointment_time)} · ${a.service}</div>
           </div>
           <span class="appt-status ${a.status}">${a.status}</span>
         </div>

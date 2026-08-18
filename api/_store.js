@@ -1,6 +1,7 @@
 // Module-level singleton — persists across warm invocations on the same instance
 const services = [
   { id: 1,  name: 'Organic Structured Manicure', description: 'A healthy nail enhancement using organic product for a clean, structured look. As we learn you, we tailor every visit precisely to you.', duration_min: 60, price_cents: 9000, starting_at: true },
+  { id: 12, name: 'Regular Gel Manicure',        description: 'A clean, classic gel manicure — shaped, cuticles tidied, gel colour of your choice.', duration_min: 60, price_cents: 5500  },
   { id: 2,  name: 'Medium Gel X',                description: 'Medium-length Gel X extensions for a sleek, polished finish.',                  duration_min: 75, price_cents: 10000 },
   { id: 3,  name: 'Short Gel X',                 description: 'Short Gel X extensions — low-maintenance, high-impact.',                         duration_min: 60, price_cents: 9500  },
   { id: 4,  name: 'Long Gel X',                  description: 'Long Gel X extensions for a dramatic, statement look.',                           duration_min: 90, price_cents: 11000 },
