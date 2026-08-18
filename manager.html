@@ -734,6 +734,15 @@
             <span class="sched-hours-note">applied to days you tick</span>
           </div>
 
+          <div class="sched-hours" style="border-bottom:1px solid var(--border)">
+            <label>Lunch</label>
+            <input type="time" id="sched-lunch-start" />
+            <span>to</span>
+            <input type="time" id="sched-lunch-end" />
+            <button class="btn btn-ghost btn-sm" type="button" onclick="schedClearLunch()">No lunch</button>
+            <span class="sched-hours-note">any length — those hours stop being bookable</span>
+          </div>
+
           <div class="sched-cal-head">
             <button class="btn btn-ghost btn-sm" onclick="schedNav(-1)">‹</button>
             <div class="sched-cal-label" id="sched-cal-label"></div>
@@ -1668,7 +1677,7 @@ async function loadSchedMonth(){
   try{
     const r=await api(`/api/manager?action=shifts&member_id=${schedMember}&from=${from}&to=${to}`);
     const d=await r.json();
-    for(const s of (d.shifts||[])) schedShifts[s.date]={start:s.start_time,end:s.end_time};
+    for(const s of (d.shifts||[])) schedShifts[s.date]={start:s.start_time,end:s.end_time,lunchStart:s.lunch_start||'',lunchEnd:s.lunch_end||''};
     schedCoverage=d.coverage||schedCoverage;
   }catch{}
   renderSchedCal();renderSchedWarning();
@@ -1695,7 +1704,8 @@ function renderSchedCal(){
     const ds=schedDs(y,m,day);
     const on=!!schedShifts[ds];
     const past=ds<today;
-    const hh=on?`${schedShifts[ds].start}–${schedShifts[ds].end}`:'';
+    const sh=on?schedShifts[ds]:null;
+    const hh=on?(sh.lunchStart?`${sh.start}–${sh.end} 🍽`:`${sh.start}–${sh.end}`):'';
     html+=`<button class="sched-day${on?' on':''}${past?' pastday':''}" ${past?'disabled':`onclick="toggleSchedDay('${ds}')"`}>
       <span>${day}</span><span class="hh">${hh}</span></button>`;
   }
@@ -1705,7 +1715,15 @@ function renderSchedCal(){
 function schedHours(){
   const s=document.getElementById('sched-start').value||'09:00';
   const e=document.getElementById('sched-end').value||'18:00';
-  return {start:s,end:e};
+  const ls=document.getElementById('sched-lunch-start').value||'';
+  const le=document.getElementById('sched-lunch-end').value||'';
+  // Both halves or neither — half a lunch would silently block nothing.
+  return {start:s,end:e,lunchStart:ls&&le?ls:'',lunchEnd:ls&&le?le:''};
+}
+function schedClearLunch(){
+  document.getElementById('sched-lunch-start').value='';
+  document.getElementById('sched-lunch-end').value='';
+  schedDirty=true;markSchedDirty();
 }
 function toggleSchedDay(ds){
   if(schedShifts[ds])delete schedShifts[ds];
@@ -1777,6 +1795,10 @@ async function schedSave(){
   const status=document.getElementById('sched-status');
   const h=schedHours();
   if(h.end<=h.start){status.innerHTML='<span style="color:#e08a8a">End time must be after start time.</span>';return;}
+  if(h.lunchStart&&h.lunchEnd){
+    if(h.lunchEnd<=h.lunchStart){status.innerHTML='<span style="color:#e08a8a">Lunch end must be after lunch start.</span>';return;}
+    if(h.lunchStart<h.start||h.lunchEnd>h.end){status.innerHTML='<span style="color:#e08a8a">Lunch has to fall inside the working hours.</span>';return;}
+  }
   btn.disabled=true;status.textContent='Saving…';
   try{
     // Skills. "Ticked everything" is stored as unrestricted so adding a new
@@ -1790,13 +1812,14 @@ async function schedSave(){
     const dates=Object.keys(schedShifts).sort();
     // Per-date hours are preserved by sending each date's own times
     const r2=await api('/api/manager?action=shifts',{method:'PUT',
-      body:JSON.stringify({member_id:schedMember,from,to,dates,start_time:h.start,end_time:h.end})});
+      body:JSON.stringify({member_id:schedMember,from,to,dates,start_time:h.start,end_time:h.end,lunch_start:h.lunchStart||null,lunch_end:h.lunchEnd||null})});
     if(!r2.ok)throw new Error((await r2.json().catch(()=>({}))).error||'Could not save days');
     for(const ds of dates){
       const s=schedShifts[ds];
-      if(s.start!==h.start||s.end!==h.end){
+      if(s.start!==h.start||s.end!==h.end||(s.lunchStart||'')!==(h.lunchStart||'')||(s.lunchEnd||'')!==(h.lunchEnd||'')){
         await api('/api/manager?action=shift_hours',{method:'PUT',
-          body:JSON.stringify({member_id:schedMember,date:ds,start_time:s.start,end_time:s.end})});
+          body:JSON.stringify({member_id:schedMember,date:ds,start_time:s.start,end_time:s.end,
+            lunch_start:s.lunchStart||null,lunch_end:s.lunchEnd||null})});
       }
     }
     // keep the in-memory roster in step so the Team tab agrees

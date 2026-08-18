@@ -54,7 +54,7 @@ async function shiftCoverage(from, to, services) {
   const svc = (services || []).filter(Boolean);
   const [team, rows, countRow] = await Promise.all([
     loadTeam(),
-    query('SELECT member_id, date, start_time, end_time FROM tech_shifts WHERE date>=? AND date<=?', [from, to]),
+    query('SELECT member_id, date, start_time, end_time, lunch_start, lunch_end FROM tech_shifts WHERE date>=? AND date<=?', [from, to]),
     query('SELECT COUNT(*) AS n FROM tech_shifts'),
   ]);
   const configured = Number((countRow[0] || {}).n || 0) > 0;
@@ -71,6 +71,8 @@ async function shiftCoverage(from, to, services) {
       name: m.name,
       start: r.start_time,
       end: r.end_time,
+      lunchStart: r.lunch_start || null,
+      lunchEnd: r.lunch_end || null,
     });
   }
   return { configured, byDate };
@@ -91,7 +93,13 @@ function hourCapacity(shifts, slots) {
   const cap = {};
   for (const s of slots) {
     let n = 0;
-    for (const sh of shifts || []) if (s >= sh.start && s < sh.end) n++;
+    for (const sh of shifts || []) {
+      if (s < sh.start || s >= sh.end) continue;
+      // Lunch removes those hours from her availability. Any length works —
+      // a 30-minute break and a three-hour one are the same rule.
+      if (sh.lunchStart && sh.lunchEnd && s >= sh.lunchStart && s < sh.lunchEnd) continue;
+      n++;
+    }
     cap[s] = n;
   }
   return cap;

@@ -304,12 +304,21 @@ module.exports = async function (req, res) {
     // should be ON for this artist in the given range, and we make the table
     // match exactly. One call covers ticking, unticking and bulk fills alike.
     if (method === 'PUT' && action === 'shifts') {
-      const { member_id, from, to, dates, start_time, end_time } = req.body || {};
+      const { member_id, from, to, dates, start_time, end_time, lunch_start, lunch_end } = req.body || {};
       if (!member_id) return res.status(400).json({ error: 'member_id required' });
       if (!from || !to) return res.status(400).json({ error: 'from and to required' });
       const st = start_time || '09:00';
       const et = end_time || '18:00';
       if (et <= st) return res.status(400).json({ error: 'End time must be after start time' });
+      // Lunch is optional and any length — the only rules are that it has a
+      // real span and sits inside the shift, otherwise it would silently
+      // remove nothing or block hours she never worked.
+      const ls = lunch_start || null, le = lunch_end || null;
+      if ((ls && !le) || (le && !ls)) return res.status(400).json({ error: 'Lunch needs both a start and an end time' });
+      if (ls && le) {
+        if (le <= ls) return res.status(400).json({ error: 'Lunch end must be after lunch start' });
+        if (ls < st || le > et) return res.status(400).json({ error: 'Lunch has to fall inside the working hours' });
+      }
       const want = Array.isArray(dates) ? dates.filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)) : [];
       const mid = Number(member_id);
       // Replace the window rather than diff it — the payload is one month of
@@ -317,8 +326,8 @@ module.exports = async function (req, res) {
       await execute('DELETE FROM tech_shifts WHERE member_id=? AND date>=? AND date<=?', [mid, from, to]);
       for (const d of want) {
         await execute(
-          'INSERT OR REPLACE INTO tech_shifts (member_id, date, start_time, end_time, created_ts) VALUES (?,?,?,?,?)',
-          [mid, d, st, et, Date.now()]
+          'INSERT OR REPLACE INTO tech_shifts (member_id, date, start_time, end_time, lunch_start, lunch_end, created_ts) VALUES (?,?,?,?,?,?,?)',
+          [mid, d, st, et, ls, le, Date.now()]
         );
       }
       return res.json({ ok: true, saved: want.length });
@@ -326,13 +335,13 @@ module.exports = async function (req, res) {
 
     // Per-date hours, for when one day runs different from the rest
     if (method === 'PUT' && action === 'shift_hours') {
-      const { member_id, date, start_time, end_time } = req.body || {};
+      const { member_id, date, start_time, end_time, lunch_start, lunch_end } = req.body || {};
       if (!member_id || !date) return res.status(400).json({ error: 'member_id and date required' });
       if (!start_time || !end_time) return res.status(400).json({ error: 'start_time and end_time required' });
       if (end_time <= start_time) return res.status(400).json({ error: 'End time must be after start time' });
       await execute(
-        'INSERT OR REPLACE INTO tech_shifts (member_id, date, start_time, end_time, created_ts) VALUES (?,?,?,?,?)',
-        [Number(member_id), date, start_time, end_time, Date.now()]
+        'INSERT OR REPLACE INTO tech_shifts (member_id, date, start_time, end_time, lunch_start, lunch_end, created_ts) VALUES (?,?,?,?,?,?,?)',
+        [Number(member_id), date, start_time, end_time, lunch_start || null, lunch_end || null, Date.now()]
       );
       return res.json({ ok: true });
     }
