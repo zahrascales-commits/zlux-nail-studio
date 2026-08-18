@@ -1760,3 +1760,19 @@ ul { list-style: none; }
 .sms-legal { font-family: 'Josefin Sans', sans-serif; font-size: 0.72rem; line-height: 1.75; color: var(--latte); margin: 0; padding-top: 0.85rem; border-top: 1px solid rgba(182,165,136,0.22); }
 .sms-legal strong { color: var(--espresso); font-weight: 600; }
 .sms-legal a { color: var(--champagne); }
+
+/* Booking-page SMS disclosure — shown on load, not buried in the flow, so a
+   carrier reviewer opening the opt-in URL actually sees it. */
+.sms-notice {
+  background: rgba(182,165,136,0.09);
+  border: 1px solid rgba(182,165,136,0.3);
+  border-left: 3px solid var(--champagne);
+  padding: 0.95rem 1.15rem;
+  margin-bottom: 1.5rem;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 0.76rem;
+  line-height: 1.75;
+  color: var(--latte);
+}
+.sms-notice strong { color: var(--espresso); font-weight: 600; }
+.sms-notice a { color: var(--champagne); text-decoration: underline; }
