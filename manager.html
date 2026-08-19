@@ -130,6 +130,12 @@
   .btn-danger{background:rgba(200,80,80,0.12);color:#e08a8a;border:1px solid rgba(200,80,80,0.25)}
   .btn-danger:hover{background:rgba(200,80,80,0.2)}
   .btn-sm{padding:0.4rem 0.7rem;font-size:0.6rem}
+  /* A day with anything booked reads purple, so a full month is obvious at a
+     glance. Today and the selected day still win visually. */
+  .cal-cell.has-appts{background:rgba(146,110,178,0.16);border-color:rgba(146,110,178,0.4)}
+  .cal-cell.has-appts .cal-num{color:#c9a9e0;font-weight:600}
+  .cal-cell.has-appts.sel{background:rgba(146,110,178,0.3)}
+
   /* ── SCHEDULING ── */
   .mk-stages{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.6rem}
   .mk-stage{text-align:left;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 0.95rem;cursor:pointer;display:flex;flex-direction:column;gap:0.25rem;transition:all 0.18s;min-height:64px}
@@ -1485,7 +1491,7 @@ async function delPromo(code){
       <div><label class="fld-label">Client Phone</label><input id="a-phone" placeholder="(555) 000-0000" /></div>
     </div>
     <div class="field"><label class="fld-label">Client Email (for instant confirmation)</label><input id="a-email" placeholder="client@email.com" /></div>
-    <div class="field"><label class="fld-label">Service</label><select id="a-service"></select></div>
+    <div class="field"><label class="fld-label">Service or task</label><select id="a-service"></select><input id="a-service-other" placeholder="Type what they are doing" style="display:none;margin-top:0.5rem" /></div>
     <div class="field two">
       <div><label class="fld-label">Date</label><input type="date" id="a-date" /></div>
       <div><label class="fld-label">Time</label><select id="a-time"></select></div>
@@ -2470,7 +2476,10 @@ function renderMonth(){
     const colors=[...new Set(dayAppts.map(a=>apptColor(a)))];
     const dots=colors.length?`<span class="dot-row">${colors.map(c=>`<span class="adot" style="background:${c}"></span>`).join('')}</span>`:'';
     const count=dayAppts.length?`<span class="cal-count">${dayAppts.length} appt${dayAppts.length>1?'s':''}</span>`:'';
-    cells+=`<div class="cal-cell ${ds===today?'today':''} ${ds===curDate?'sel':''}" onclick="openDay('${ds}')"><span class="cal-num">${day}</span>${dots}${count}</div>`;
+    // A booked day is tinted, not just dotted — at a glance she can see how
+    // full a month is without reading every cell.
+    const busy=dayAppts.length?' has-appts':'';
+    cells+=`<div class="cal-cell ${ds===today?'today':''} ${ds===curDate?'sel':''}${busy}" onclick="openDay('${ds}')"><span class="cal-num">${day}</span>${dots}${count}</div>`;
   }
   document.getElementById('cal-month-wrap').innerHTML=
     `<div class="cal-month"><div class="cal-dows"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div><div class="cal-cells">${cells}</div></div>`;
@@ -3026,7 +3035,19 @@ function fillMemberSelect(sel,selected){
   sel.innerHTML='<option value="">— Unassigned —</option>'+members.map(m=>`<option value="${m.id}" ${Number(selected)===m.id?'selected':''}>${esc(m.name)}</option>`).join('');
 }
 function fillServiceSelect(sel,selected){
-  sel.innerHTML=SERVICES.map(s=>`<option ${s===selected?'selected':''}>${s}</option>`).join('');
+  // Not just the service menu — she also blocks people in for a princess
+  // party, a class, press-on work, or simply to come in and count stock.
+  const EXTRA=['Princess Party','Class / Training','Press-On Work','Deep Clean','Inventory Count','Admin / Office','Other (type it)'];
+  sel.innerHTML=SERVICES.map(s=>`<option ${s===selected?'selected':''}>${s}</option>`).join('')
+    +'<option disabled>──────────</option>'
+    +EXTRA.map(s=>`<option ${s===selected?'selected':''}>${s}</option>`).join('');
+  sel.onchange=function(){
+    const box=document.getElementById('a-service-other');
+    if(!box)return;
+    const other=this.value==='Other (type it)';
+    box.style.display=other?'block':'none';
+    if(other)box.focus();
+  };
 }
 function fillTimeSelect(sel,selected){
   sel.innerHTML=SLOTS.map(t=>`<option value="${t}" ${t===selected?'selected':''}>${fmtTime(t)}</option>`).join('');
@@ -3041,6 +3062,7 @@ function openApptModal(){
   document.getElementById('a-date').value=curDate;
   fillMemberSelect(document.getElementById('a-member'),'');
   fillServiceSelect(document.getElementById('a-service'),SERVICES[0]);
+  const _so=document.getElementById('a-service-other'); if(_so){_so.value='';_so.style.display='none';}
   fillTimeSelect(document.getElementById('a-time'),'10:00');
   document.getElementById('a-delete').style.display='none';
   openModal('modal-appt');
@@ -3055,6 +3077,13 @@ function editAppt(id){
   document.getElementById('a-date').value=a.date;
   fillMemberSelect(document.getElementById('a-member'),a.team_member_id);
   fillServiceSelect(document.getElementById('a-service'),a.service);
+  const _eo=document.getElementById('a-service-other');
+  if(_eo){
+    const sel=document.getElementById('a-service');
+    const known=[...sel.options].some(o=>o.value===a.service);
+    if(!known && a.service){ sel.value='Other (type it)'; _eo.value=a.service; _eo.style.display='block'; }
+    else { _eo.value=''; _eo.style.display='none'; }
+  }
   fillTimeSelect(document.getElementById('a-time'),a.time);
   document.getElementById('a-delete').style.display='inline-flex';
   openModal('modal-appt');
@@ -3066,7 +3095,12 @@ async function saveAppt(){
     client_name:document.getElementById('a-client').value.trim(),
     client_phone:document.getElementById('a-phone').value.trim(),
     client_email:document.getElementById('a-email').value.trim(),
-    service:document.getElementById('a-service').value,
+    // 'Other' means she typed it herself — save what she typed, not the label
+    service:(function(){
+      const v=document.getElementById('a-service').value;
+      const o=document.getElementById('a-service-other');
+      return (v==='Other (type it)' && o && o.value.trim()) ? o.value.trim() : v;
+    })(),
     date:document.getElementById('a-date').value,
     time:document.getElementById('a-time').value,
     notes:document.getElementById('a-notes').value.trim(),

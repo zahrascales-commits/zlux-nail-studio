@@ -83,6 +83,27 @@
   .empty .big{font-size:2rem;opacity:0.5;margin-bottom:0.6rem}
   .loading{text-align:center;padding:2rem;color:var(--muted);font-size:0.85rem}
 
+  /* MY MONTH */
+  .wc-head{display:flex;align-items:center;justify-content:space-between;gap:0.6rem;margin-bottom:0.6rem}
+  .wc-label{flex:1;text-align:center;font-family:'Cinzel',serif;font-size:1rem;color:var(--cream)}
+  .wc-dows{display:grid;grid-template-columns:repeat(7,1fr);gap:0.25rem;margin-bottom:0.25rem}
+  .wc-dows span{text-align:center;font-size:0.56rem;letter-spacing:0.1em;color:var(--muted)}
+  .wc-cells{display:grid;grid-template-columns:repeat(7,1fr);gap:0.25rem}
+  .wc-cell{aspect-ratio:1;min-height:38px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:0.78rem;cursor:pointer;transition:all 0.15s}
+  .wc-cell.blank{border:none;background:none;cursor:default}
+  .wc-cell.today{border-color:var(--gold)}
+  /* purple = clients booked; the quieter tint = rostered but nothing booked yet */
+  .wc-cell.busy{background:rgba(146,110,178,0.24);border-color:rgba(146,110,178,0.5);color:#e6d5f2;font-weight:600}
+  .wc-cell.work{background:var(--gold-faint);border-color:var(--border-hi);color:var(--cream)}
+  .wc-cell.sel{outline:1px solid var(--gold)}
+  .wc-cell .n{font-size:0.5rem;line-height:1;margin-top:2px;color:#c9a9e0}
+  .wc-key{display:flex;gap:1rem;flex-wrap:wrap;margin-top:0.6rem;font-size:0.64rem;color:var(--muted)}
+  .wc-sw{display:inline-block;width:11px;height:11px;vertical-align:-1px;margin-right:0.25rem;border:1px solid var(--border-hi)}
+  .wc-sw.busy{background:rgba(146,110,178,0.5)}
+  .wc-sw.work{background:var(--gold-faint)}
+  .wc-day{margin-top:0.9rem}
+
   /* CHAT SHEET */
   .overlay{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,0.75);backdrop-filter:blur(3px);display:none;align-items:flex-end;justify-content:center}
   .overlay.open{display:flex;animation:fadeIn 0.2s ease}
@@ -172,7 +193,21 @@
   </div>
   <div class="wrap">
     <section class="panel active" id="panel-schedule">
-      <div class="label-sm">My Hours</div>
+      <div class="label-sm">My Month</div>
+      <div class="wc-head">
+        <button class="mini" onclick="wcNav(-1)">‹</button>
+        <div class="wc-label" id="wc-label"></div>
+        <button class="mini" onclick="wcNav(1)">›</button>
+      </div>
+      <div class="wc-dows"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+      <div class="wc-cells" id="wc-cells"></div>
+      <div class="wc-key">
+        <span><i class="wc-sw busy"></i> Clients booked</span>
+        <span><i class="wc-sw work"></i> Rostered in</span>
+      </div>
+      <div id="wc-day" class="wc-day"></div>
+
+      <div class="label-sm" style="margin-top:1.75rem;">My Hours</div>
       <p style="font-family:'Josefin Sans',sans-serif;font-size:0.76rem;color:var(--muted);margin-bottom:0.8rem;line-height:1.7;">When you're rostered in. Set by Zahra — your appointments are below.</p>
       <div id="my-hours" style="margin-bottom:1.75rem;"><div class="loading">Loading…</div></div>
       <div id="team-checkins"></div>
@@ -456,6 +491,58 @@ function fmtDate(ds){return new Date(ds+'T12:00:00').toLocaleDateString('en-US',
 
 // Her rostered hours, separate from bookings — she needs to know when she is
 // expected in even on a day with nothing booked yet.
+let wcCursor = new Date();
+let wcShifts = {}, wcAppts = {}, wcSel = '';
+
+function wcDs(y,m,d){const p=n=>String(n).padStart(2,'0');return y+'-'+p(m+1)+'-'+p(d);}
+function wcNav(dir){ wcCursor.setMonth(wcCursor.getMonth()+dir); renderWorkCal(); }
+
+function renderWorkCal(){
+  const el = document.getElementById('wc-cells');
+  if(!el) return;
+  const y = wcCursor.getFullYear(), m = wcCursor.getMonth();
+  document.getElementById('wc-label').textContent =
+    new Date(y,m,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const first = new Date(y,m,1).getDay(), days = new Date(y,m+1,0).getDate();
+  const now = new Date();
+  const today = wcDs(now.getFullYear(), now.getMonth(), now.getDate());
+  let html = '';
+  for(let i=0;i<first;i++) html += '<div class="wc-cell blank"></div>';
+  for(let d=1; d<=days; d++){
+    const ds = wcDs(y,m,d);
+    const n = (wcAppts[ds]||[]).length;
+    const cls = ['wc-cell'];
+    if(n) cls.push('busy'); else if(wcShifts[ds]) cls.push('work');
+    if(ds===today) cls.push('today');
+    if(ds===wcSel) cls.push('sel');
+    html += '<button class="'+cls.join(' ')+'" onclick="wcPick(\''+ds+'\')">'
+      + '<span>'+d+'</span>' + (n?'<span class="n">'+n+'</span>':'') + '</button>';
+  }
+  el.innerHTML = html;
+  if(wcSel) wcRenderDay();
+}
+
+function wcPick(ds){ wcSel = (wcSel===ds ? '' : ds); renderWorkCal(); if(!wcSel) document.getElementById('wc-day').innerHTML=''; }
+
+function wcRenderDay(){
+  const el = document.getElementById('wc-day');
+  const sh = wcShifts[wcSel];
+  const list = (wcAppts[wcSel]||[]).slice().sort((a,b)=>String(a.time).localeCompare(String(b.time)));
+  let html = '<div style="border:1px solid var(--border-hi);background:var(--card);padding:0.9rem 1rem">'
+    + '<div style="font-family:\'Cinzel\',serif;font-size:1rem;color:var(--cream);margin-bottom:0.4rem">'+fmtDate(wcSel)+'</div>';
+  html += sh
+    ? '<div style="font-size:0.74rem;color:var(--gold);margin-bottom:0.6rem">Rostered '+fmtTime(sh.start_time)+' – '+fmtTime(sh.end_time)
+      + (sh.lunch_start&&sh.lunch_end ? ' · lunch '+fmtTime(sh.lunch_start)+'–'+fmtTime(sh.lunch_end) : '') + '</div>'
+    : '<div style="font-size:0.74rem;color:var(--muted);margin-bottom:0.6rem">Not rostered this day</div>';
+  html += list.length
+    ? list.map(a =>
+        '<div style="border-top:1px solid var(--border);padding:0.55rem 0">'
+        + '<div style="font-size:0.85rem;color:var(--cream)">'+fmtTime(a.time)+' · '+esc(a.client_name||'Open')+'</div>'
+        + '<div style="font-size:0.72rem;color:var(--muted)">'+esc(a.service||'—')+'</div></div>').join('')
+    : '<div style="font-size:0.76rem;color:var(--muted)">No clients booked.</div>';
+  el.innerHTML = html + '</div>';
+}
+
 async function loadMyHours(){
   const el = document.getElementById('my-hours');
   if(!el) return;
@@ -467,6 +554,8 @@ async function loadMyHours(){
       el.innerHTML = '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;color:var(--muted);line-height:1.7;">No hours set yet. Zahra schedules these — ask her if you think that\'s wrong.</div>';
       return;
     }
+    wcShifts = {}; rows.forEach(s => { wcShifts[s.date] = s; });
+    renderWorkCal();
     el.innerHTML = rows.map(s => {
       const lunch = s.lunch_start && s.lunch_end
         ? '<span style="color:var(--muted)"> · lunch ' + fmtTime(s.lunch_start) + '–' + fmtTime(s.lunch_end) + '</span>'
@@ -502,6 +591,10 @@ async function loadSchedule(){
   try{
     const r=await fetch('/api/team?action=schedule&member_id='+MID+'&pin='+PIN);
     const d=await r.json();schedule=d.schedule||[];
+    // group by date so the month calendar can colour booked days purple
+    wcAppts={};
+    for(const a of schedule){ (wcAppts[a.date]=wcAppts[a.date]||[]).push(a); }
+    renderWorkCal();
     renderMiniCal();renderSchedule();
   }catch{el.innerHTML='<div class="empty">Connection error.</div>';}
 }
