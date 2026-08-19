@@ -38,7 +38,9 @@ module.exports = async function (req, res) {
 
     // ── ADD (owner only) ──
     if (req.method === 'POST' && action === 'add') {
-      if (who.role !== 'owner') return res.status(403).json({ error: 'Only the owner can add items' });
+      // Workers add items too — otherwise every new product has to go through
+      // Zahra, which is exactly the bottleneck this is meant to remove. The
+      // row records who added it, so she can still see where things came from.
       const { name, qty, unit, low_threshold } = req.body || {};
       if (!name) return res.status(400).json({ error: 'Name required' });
       const r = await execute(

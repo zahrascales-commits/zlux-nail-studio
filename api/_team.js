@@ -80,6 +80,20 @@ module.exports = async function (req, res) {
       return res.json({ clients, appointments: appts, bc_profiles: profMap });
     }
 
+    // ── HER OWN ROSTERED HOURS ──
+    // Separate from appointments on purpose: she needs to know when she is
+    // expected in even on a day with nobody booked yet.
+    if (method === 'GET' && action === 'my_shifts') {
+      const today = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const from = today.getFullYear() + '-' + pad(today.getMonth() + 1) + '-' + pad(today.getDate());
+      const rows = await query(
+        'SELECT date, start_time, end_time, lunch_start, lunch_end FROM tech_shifts WHERE member_id=? AND date>=? ORDER BY date LIMIT 60',
+        [member.id, from]
+      ).catch(() => []);
+      return res.json({ shifts: rows });
+    }
+
     if (method === 'GET' && action === 'schedule') {
       const today = new Date().toISOString().slice(0, 10);
       const rows = await query(
