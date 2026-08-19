@@ -30,8 +30,12 @@ async function ensure() {
       'INSERT OR IGNORE INTO promo_codes (code, label, amount_off_cents, active, max_uses, used_count, created_ts) VALUES (?,?,?,?,?,?,?)',
       ['TRAIN20', 'Trainee special — thank you for helping us train', 2000, 1, 0, 0, Date.now()]
     );
-    await execute("UPDATE promo_codes SET trainee_only=1 WHERE code='TRAIN20'").catch(() => {});
+
   }
+  // TRAIN20 is the trainee special by definition. Set unconditionally: the
+  // row is usually already there, so doing this only on first insert left the
+  // flag off and the calendar unfiltered.
+  await execute("UPDATE promo_codes SET trainee_only=1 WHERE code='TRAIN20'").catch(() => {});
 }
 
 const norm = c => String(c || '').trim().toUpperCase().slice(0, 32);
