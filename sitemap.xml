@@ -10,4 +10,5 @@
   <url><loc>https://zolanailstudio.com/contact.html</loc><priority>0.6</priority></url>
   <url><loc>https://zolanailstudio.com/signup.html</loc><priority>0.7</priority></url>
   <url><loc>https://zolanailstudio.com/privacy.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://zolanailstudio.com/careers.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
 </urlset>
