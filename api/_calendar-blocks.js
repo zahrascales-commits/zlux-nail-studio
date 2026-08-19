@@ -92,12 +92,13 @@ module.exports = async (req, res) => {
         const { shiftCoverage, hourCapacity, usageByHour, openHours } = require('./_shifts');
         const services = String(req.query.services || '')
           .split('|').map(s => s.trim()).filter(Boolean);
-        const { configured, byDate } = await shiftCoverage(date, date, services);
+        const traineeOnly = String(req.query.trainee_only || '') === '1';
+        const { configured, byDate } = await shiftCoverage(date, date, services, traineeOnly);
         if (configured) {
           const onShift = byDate[date] || [];
           if (!onShift.length) {
             allSlots = [];
-            blocks.push({ date, slot: 'ALL', note: 'No artist in for this service' });
+            blocks.push({ date, slot: 'ALL', note: traineeOnly ? 'No trainee in for this service' : 'No artist in for this service' });
           } else {
             // Hand back open *hours* — the page walks each hour of the 2-hour
             // block itself, so trimming to start times here would kill the last

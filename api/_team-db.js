@@ -210,6 +210,7 @@ async function ensureTables() {
     "ALTER TABLE team_members ADD COLUMN title TEXT DEFAULT ''",
     "ALTER TABLE tech_shifts ADD COLUMN lunch_start TEXT",
     "ALTER TABLE tech_shifts ADD COLUMN lunch_end TEXT",
+    "ALTER TABLE team_members ADD COLUMN trainee INTEGER DEFAULT 0",
   ]) { try { await execute(sql); } catch (_) {} }
   _ready = true;
 }

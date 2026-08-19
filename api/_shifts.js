@@ -27,7 +27,7 @@ function covers(member, services) {
 }
 
 async function loadTeam() {
-  const members = await query('SELECT id, name, active, restricted FROM team_members');
+  const members = await query('SELECT id, name, active, restricted, trainee FROM team_members');
   const skillRows = await query('SELECT team_member_id, service_name FROM worker_skills');
   const byId = {};
   for (const m of members) {
@@ -36,6 +36,7 @@ async function loadTeam() {
       name: m.name,
       active: Number(m.active) !== 0,
       restricted: !!Number(m.restricted),
+      trainee: !!Number(m.trainee),
       skills: [],
     };
   }
@@ -50,7 +51,11 @@ async function loadTeam() {
 // `configured` reports whether any shifts exist at all. Until she has scheduled
 // a single day, every caller falls back to the old always-open behaviour — an
 // empty table means "not set up yet", never "the studio is closed forever".
-async function shiftCoverage(from, to, services) {
+// traineeOnly narrows coverage to artists still in training. A client who
+// applied the trainee discount is only offered times a trainee can actually
+// work — offering them anyone else's slot would mean either honouring the
+// discount for a senior artist or taking it away after they had booked.
+async function shiftCoverage(from, to, services, traineeOnly) {
   const svc = (services || []).filter(Boolean);
   const [team, rows, countRow] = await Promise.all([
     loadTeam(),
@@ -66,6 +71,7 @@ async function shiftCoverage(from, to, services) {
   for (const r of rows) {
     const m = teamById[Number(r.member_id)];
     if (!m || !covers(m, svc)) continue;
+    if (traineeOnly && !m.trainee) continue;
     (byDate[r.date] = byDate[r.date] || []).push({
       id: m.id,
       name: m.name,

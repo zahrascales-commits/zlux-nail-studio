@@ -55,7 +55,8 @@ module.exports = async function (req, res) {
       const services = String(req.query.services || '')
         .split('|').map(s => s.trim()).filter(Boolean);
 
-      const { configured, byDate } = await shiftCoverage(from, to, services);
+      const traineeOnly = String(req.query.trainee_only || '') === '1';
+      const { configured, byDate } = await shiftCoverage(from, to, services, traineeOnly);
       // Nothing scheduled yet anywhere — leave the calendar wide open rather
       // than blanking out every date on a live booking page.
       if (!configured) return res.json({ configured: false, days: {} });

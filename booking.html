@@ -449,7 +449,16 @@
     </div>
 
     <!-- ══ STEP 3: Date + Time ══ -->
-    <div class="booking-step" id="step-3">
+        <div class="promo-row" style="margin-top:1.25rem;">
+        <label class="luxury-label" style="margin-bottom:0.4rem;">Have a discount code?</label>
+        <div style="display:flex;gap:0.5rem;">
+          <input class="luxury-input" id="promo-input" placeholder="e.g. TRAIN20" style="flex:1;text-transform:uppercase;" onkeydown="if(event.key==='Enter'){event.preventDefault();applyPromo();}" />
+          <button class="btn-outline-dark" type="button" onclick="applyPromo()" style="white-space:nowrap;">Apply</button>
+        </div>
+        <div id="promo-msg" style="font-family:'Josefin Sans',sans-serif;font-size:0.78rem;margin-top:0.5rem;line-height:1.6;"></div>
+      </div>
+
+  <div class="booking-step" id="step-3">
       <div class="step-title">Select a Day</div>
 
       <div id="priority-note-step3" style="display:none;" class="member-id-banner">
@@ -596,15 +605,6 @@
         </span>
       </label>
       <div id="submit-error" style="display:none;background:rgba(192,82,74,0.08);border:1px solid rgba(192,82,74,0.3);padding:0.85rem 1.1rem;margin-bottom:1rem;font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:#a04038;"></div>
-      <div class="promo-row">
-        <label class="luxury-label" style="margin-bottom:0.4rem;">Have a code?</label>
-        <div style="display:flex;gap:0.5rem;">
-          <input class="luxury-input" id="promo-input" placeholder="e.g. TRAIN20" style="flex:1;text-transform:uppercase;" onkeydown="if(event.key==='Enter'){event.preventDefault();applyPromo();}" />
-          <button class="btn-outline-dark" type="button" onclick="applyPromo()" style="white-space:nowrap;">Apply</button>
-        </div>
-        <div id="promo-msg" style="font-family:'Josefin Sans',sans-serif;font-size:0.78rem;margin-top:0.5rem;"></div>
-      </div>
-
       <!-- SMS CONSENT
            Appointment texts are transactional and disclosed here; marketing is
            a separate, unticked, optional box. Carriers and the TCPA treat those
@@ -781,12 +781,12 @@ async function loadMonthAvailability(cursorDs) {
   const y = d.getFullYear(), mo = d.getMonth();
   const from = y + '-' + String(mo + 1).padStart(2, '0') + '-01';
   const to = y + '-' + String(mo + 1).padStart(2, '0') + '-' + String(new Date(y, mo + 1, 0).getDate()).padStart(2, '0');
-  const cacheKey = key + '@' + from;
+  const cacheKey = key + '@' + from + (promoTraineeOnly ? '@trainee' : '');
   if (bkDayAvail.key === cacheKey) return;
   const my = ++_availToken;
   try {
     const r = await fetch('/api/coverage?action=service_days&services=' + encodeURIComponent(key)
-      + '&from=' + from + '&to=' + to);
+      + '&from=' + from + '&to=' + to + (promoTraineeOnly ? '&trainee_only=1' : ''));
     const j = await r.json();
     if (my !== _availToken) return; // a newer month/service won the race
     bkDayAvail = { key: cacheKey, configured: !!j.configured, days: j.days || {} };
@@ -1232,7 +1232,8 @@ async function renderTimeslots(date) {
   const grid = document.getElementById('timeslots');
   grid.innerHTML = '<p style="color:var(--latte);font-size:0.82rem;">Loading available times…</p>';
   try {
-    const r = await fetch(`/api/calendar-blocks?date=${date}&services=${encodeURIComponent(serviceKey())}`);
+    const r = await fetch(`/api/calendar-blocks?date=${date}&services=${encodeURIComponent(serviceKey())}`
+      + (promoTraineeOnly ? '&trainee_only=1' : ''));
     const d = await r.json();
     _slotData.blocks = d.blocks || [];
     _slotData.booked = d.booked || [];
@@ -1649,11 +1650,19 @@ function continueToCheckout() {
 // discount is applied server-side at booking, so nothing typed in the browser
 // can change what actually gets charged.
 let appliedPromo = null;
+// A trainee code changes which days are even offered, so it has to be
+// applied before the calendar is drawn — not at payment.
+let promoTraineeOnly = false;
 async function applyPromo() {
   const el = document.getElementById('promo-input');
   const msg = document.getElementById('promo-msg');
   const code = (el.value || '').trim().toUpperCase();
-  if (!code) { msg.textContent = ''; appliedPromo = null; return; }
+  if (!code) {
+    msg.textContent = ''; appliedPromo = null; promoTraineeOnly = false;
+    bkDayAvail = { key: null, configured: false, days: {} };
+    if (typeof renderBkCal === 'function') renderBkCal();
+    return;
+  }
   msg.style.color = 'var(--latte)';
   msg.textContent = 'Checking…';
   try {
@@ -1663,15 +1672,22 @@ async function applyPromo() {
     });
     const d = await r.json();
     if (!r.ok || !d.ok) {
-      appliedPromo = null;
+      appliedPromo = null; promoTraineeOnly = false;
       msg.style.color = '#b43232';
       msg.textContent = d.error || 'That code is not recognised.';
       return;
     }
     appliedPromo = d.code;
+    promoTraineeOnly = !!d.trainee_only;
     msg.style.color = '#4e8e5e';
     const off = Math.round((d.amount_off_cents || 0) / 100);
     msg.textContent = off > 0 ? ('\u2713 $' + off + ' off applied at checkout') : '\u2713 Code applied';
+    if (promoTraineeOnly) {
+      msg.textContent += ' \u2014 you\u2019ll see times our trainees are working.';
+    }
+    // the calendar was built for everyone; rebuild it for this code
+    bkDayAvail = { key: null, configured: false, days: {} };
+    if (typeof renderBkCal === 'function') renderBkCal();
   } catch (_) {
     appliedPromo = null;
     msg.style.color = '#b43232';

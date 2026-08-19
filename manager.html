@@ -1343,6 +1343,12 @@ async function delPromo(code){
     <div class="field"><label class="fld-label">Bio / Blurb (shown on the website)</label><textarea id="m-bio" rows="3" placeholder="Write a short intro — e.g. 'Trained in Zahra's exact methods. Known for clean structured sets and detail-forward nail art.'"></textarea></div>
     <div class="field">
       <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+        <input type="checkbox" id="m-trainee" style="width:auto;" />
+        <span>In training — clients using a trainee code will only see her times</span>
+      </label>
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
         <input type="checkbox" id="m-show-site" style="width:auto;" />
         <span>Show this person on the public website (homepage &amp; About page)</span>
       </label>
@@ -2421,7 +2427,7 @@ function renderMembers(){
         <div class="avatar" style="background:${m.color}">${initials(m.name)}</div>
         <div style="flex:1">
           <div class="mc-name">${esc(m.name)}</div>
-          <div class="mc-role">${esc(m.role||'Nail Artist')}${Number(m.show_on_site)?' · <span style="color:var(--gold)">On website ✓</span>':''}</div>
+          <div class="mc-role">${esc(m.role||'Nail Artist')}${Number(m.show_on_site)?' · <span style="color:var(--gold)">On website ✓</span>':''}${Number(m.trainee)?' · <span style="color:#e0a06a">In training</span>':''}</div>
         </div>
         <span class="status-pill ${Number(m.active)?'status-on':'status-off'}">${Number(m.active)?'Active':'Paused'}</span>
       </div>
@@ -2448,6 +2454,7 @@ function openMemberModal(){
   document.getElementById('m-color').value='#B6A588';
   document.getElementById('m-bio').value='';
   setMemberPhoto('');
+  document.getElementById('m-trainee').checked=false;
   document.getElementById('m-show-site').checked=false;
   document.getElementById('m-active-wrap').style.display='none';
   openModal('modal-member');
@@ -2463,6 +2470,7 @@ function editMember(id){
   document.getElementById('m-color').value=m.color||'#B6A588';
   document.getElementById('m-bio').value=m.bio||'';
   setMemberPhoto(m.photo||'');
+  document.getElementById('m-trainee').checked=!!Number(m.trainee);
   document.getElementById('m-show-site').checked=!!Number(m.show_on_site);
   document.getElementById('m-active-wrap').style.display='block';
   document.getElementById('m-active').value=String(Number(m.active));
@@ -2505,13 +2513,14 @@ async function saveMember(){
   const bio=document.getElementById('m-bio').value.trim();
   const show_on_site=document.getElementById('m-show-site').checked;
   const photo=document.getElementById('m-photo').value;
+  const trainee=document.getElementById('m-trainee').checked;
   if(!name){toast('Enter a name');return;}
   if(id){
     const active=document.getElementById('m-active').value;
-    await api('/api/manager',{method:'PUT',body:JSON.stringify({action:'update_member',id,name,role,color,phone,email,bio,photo,show_on_site,active:Number(active)})});
+    await api('/api/manager',{method:'PUT',body:JSON.stringify({action:'update_member',id,name,role,color,phone,email,bio,photo,trainee,show_on_site,active:Number(active)})});
     toast('Team member updated');
   }else{
-    const r=await api('/api/manager',{method:'POST',body:JSON.stringify({action:'add_member',name,role,color,phone,email,bio,photo,show_on_site})});
+    const r=await api('/api/manager',{method:'POST',body:JSON.stringify({action:'add_member',name,role,color,phone,email,bio,photo,trainee,show_on_site})});
     const d=await r.json();
     if(d.member)toast('Added — PIN '+d.member.pin);
   }

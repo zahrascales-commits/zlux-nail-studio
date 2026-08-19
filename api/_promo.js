@@ -17,8 +17,11 @@ async function ensure() {
     active INTEGER DEFAULT 1,
     max_uses INTEGER DEFAULT 0,
     used_count INTEGER DEFAULT 0,
-    created_ts INTEGER
+    created_ts INTEGER,
+    trainee_only INTEGER DEFAULT 0
   )`);
+  // added after launch — ignored once present
+  try { await execute('ALTER TABLE promo_codes ADD COLUMN trainee_only INTEGER DEFAULT 0'); } catch (_) {}
   // The trainee code exists from the start so she has something to hand out
   // immediately rather than having to build it first.
   const seeded = await queryOne("SELECT code FROM promo_codes WHERE code='TRAIN20'").catch(() => null);
@@ -27,6 +30,7 @@ async function ensure() {
       'INSERT OR IGNORE INTO promo_codes (code, label, amount_off_cents, active, max_uses, used_count, created_ts) VALUES (?,?,?,?,?,?,?)',
       ['TRAIN20', 'Trainee special — thank you for helping us train', 2000, 1, 0, 0, Date.now()]
     );
+    await execute("UPDATE promo_codes SET trainee_only=1 WHERE code='TRAIN20'").catch(() => {});
   }
 }
 
@@ -42,7 +46,7 @@ async function lookup(code) {
   if (!Number(row.active)) return { ok: false, why: 'That code is no longer active.' };
   const max = Number(row.max_uses) || 0;
   if (max > 0 && Number(row.used_count) >= max) return { ok: false, why: 'That code has been fully used.' };
-  return { ok: true, code: c, amount_off_cents: Number(row.amount_off_cents) || 0, label: row.label || '' };
+  return { ok: true, code: c, amount_off_cents: Number(row.amount_off_cents) || 0, label: row.label || '', trainee_only: !!Number(row.trainee_only) };
 }
 
 async function redeem(code) {
@@ -71,7 +75,7 @@ module.exports.handler = async function (req, res) {
     if (req.method === 'POST' && action === 'check') {
       const r = await lookup((req.body || {}).code);
       if (!r.ok) return res.status(404).json({ ok: false, error: r.why });
-      return res.json({ ok: true, code: r.code, amount_off_cents: r.amount_off_cents, label: r.label });
+      return res.json({ ok: true, code: r.code, amount_off_cents: r.amount_off_cents, label: r.label, trainee_only: r.trainee_only });
     }
 
     if (req.headers['x-ceo-password'] !== CEO_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
@@ -81,7 +85,7 @@ module.exports.handler = async function (req, res) {
     }
 
     if (req.method === 'POST' && action === 'save') {
-      const { code, label, amount_off, active, max_uses } = req.body || {};
+      const { code, label, amount_off, active, max_uses, trainee_only } = req.body || {};
       const c = norm(code);
       if (!c) return res.status(400).json({ error: 'A code is required' });
       const cents = Math.round(Number(amount_off || 0) * 100);
@@ -93,6 +97,9 @@ module.exports.handler = async function (req, res) {
            active=excluded.active, max_uses=excluded.max_uses`,
         [c, String(label || '').slice(0, 160), cents, active === false ? 0 : 1, Number(max_uses) || 0, Date.now()]
       );
+      if (trainee_only !== undefined) {
+        await execute('UPDATE promo_codes SET trainee_only=? WHERE code=?', [trainee_only ? 1 : 0, c]);
+      }
       return res.json({ ok: true, code: c });
     }
 
