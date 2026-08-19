@@ -279,6 +279,32 @@ module.exports = async function (req, res) {
       return res.json({ ok: true });
     }
 
+    // ── SHOWCASE SETTINGS (the Preview numbers on the Sales screen) ──
+    // Stored server-side so the figures are the same on her phone and laptop
+    // and survive a reload. Defaults to a single Signature member — a brand
+    // new studio showing hundreds of members is the fastest way to look fake.
+    if (method === 'GET' && action === 'showcase') {
+      const row = await queryOne("SELECT value FROM site_settings WHERE key='showcase_cfg'").catch(() => null);
+      let cfg = { SIGNATURE: 1, LUXE: 0, BLACK_CARD: 0, growth: 1 };
+      if (row && row.value) { try { cfg = Object.assign(cfg, JSON.parse(row.value)); } catch (_) {} }
+      return res.json({ cfg });
+    }
+    if (method === 'PUT' && action === 'showcase') {
+      const b = req.body || {};
+      const n = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
+      const cfg = {
+        SIGNATURE: n(b.SIGNATURE, 400),
+        LUXE: n(b.LUXE, 400),
+        BLACK_CARD: n(b.BLACK_CARD, 200),
+        growth: n(b.growth, 3),
+      };
+      await execute(
+        "INSERT INTO site_settings (key, value) VALUES ('showcase_cfg', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        [JSON.stringify(cfg)]
+      );
+      return res.json({ ok: true, cfg });
+    }
+
     // ── TECH SHIFTS (which dates + hours each artist actually works) ──
     // Read a whole month at once so the scheduling calendar paints in one call.
     if (method === 'GET' && action === 'shifts') {

@@ -1613,7 +1613,7 @@ function showTab(name){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
   if(name==='schedule'){renderCal();loadBlocks();loadDayHours();}
-  if(name==='sales'){loadSales();startSalesLive();} else stopSalesLive();
+  if(name==='sales'){loadShowcaseCfg().then(loadSales);startSalesLive();} else stopSalesLive();
   if(name==='deposits')loadDeposits();
   if(name==='inventory')loadInventory();
   if(name==='messages')loadThreads();
@@ -2184,21 +2184,131 @@ function animateNum(el, to, fmt){
   requestAnimationFrame(step);
 }
 
-// Showcase numbers: impressive but believable for a growing boutique studio,
-// trending gently upward over real time (so reloads always look like growth)
-// with a cap so they never balloon into obviously-fake territory.
+// Preview numbers.
+//
+// These start where a real new studio starts — one member — and inch upward,
+// because a brand new business showing hundreds of members reads as fake
+// instantly, which defeats the whole point of the screen.
+//
+// The starting counts live in Studio Manager (server-side, so they match on
+// every device). Growth then adds a little on top over real time so a reload
+// always trends up rather than sitting frozen.
+let showcaseCfg = { SIGNATURE: 1, LUXE: 0, BLACK_CARD: 0, growth: 1 };
+
+// Quick levels — each one a believable next step rather than a jump.
+const SHOWCASE_LEVELS = [
+  { n: 1, SIGNATURE: 1,  LUXE: 0, BLACK_CARD: 0 },
+  { n: 2, SIGNATURE: 2,  LUXE: 0, BLACK_CARD: 0 },
+  { n: 3, SIGNATURE: 3,  LUXE: 0, BLACK_CARD: 0 },
+  { n: 4, SIGNATURE: 4,  LUXE: 1, BLACK_CARD: 0 },
+  { n: 5, SIGNATURE: 6,  LUXE: 2, BLACK_CARD: 0 },
+  { n: 6, SIGNATURE: 9,  LUXE: 3, BLACK_CARD: 1 },
+  { n: 7, SIGNATURE: 14, LUXE: 5, BLACK_CARD: 2 },
+  { n: 8, SIGNATURE: 20, LUXE: 8, BLACK_CARD: 3 },
+];
+
+async function loadShowcaseCfg(){
+  try{
+    const r = await api('/api/manager?action=showcase');
+    const d = await r.json();
+    if (d && d.cfg) showcaseCfg = d.cfg;
+  }catch(_){ /* keep the conservative default */ }
+}
+
 function showcaseCounts(){
-  const EPOCH = Date.UTC(2026,6,1); // anchor recently so totals stay realistic
-  const days = Math.max(0,(Date.now()-EPOCH)/86400000);
   if(!showcaseState) showcaseState = { bump:{SIGNATURE:0,LUXE:0,BLACK_CARD:0} };
-  const sig = 38 + Math.min(60, Math.floor(days/4))  + showcaseState.bump.SIGNATURE; // ~+1 / 4 days
-  const lux = 26 + Math.min(45, Math.floor(days/6))  + showcaseState.bump.LUXE;      // ~+1 / 6 days
-  const blk = 10 + Math.min(20, Math.floor(days/11)) + showcaseState.bump.BLACK_CARD;// ~+1 / 11 days
-  return { SIGNATURE:sig, LUXE:lux, BLACK_CARD:blk, new_this_month: 6 + (Math.floor(days/2)%14) };
+  const c = showcaseCfg || {};
+  // growth 0 holds the numbers still; 1 is gentle, 3 is fastest. Even at 3 a
+  // tier only gains a member every few days, and each is capped so it can
+  // never drift far from the figure she actually chose.
+  const g = Math.max(0, Math.min(3, Number(c.growth) || 0));
+  const EPOCH = Date.UTC(2026, 7, 1);
+  const days = g === 0 ? 0 : Math.max(0, (Date.now() - EPOCH) / 86400000);
+  const grow = (base, perDays, cap) =>
+    base + Math.min(cap, Math.floor(days / perDays)) ;
+  const sig = grow(Number(c.SIGNATURE)||0, 14/g || 1e9, Math.ceil((Number(c.SIGNATURE)||0)*0.6)+2) + showcaseState.bump.SIGNATURE;
+  const lux = grow(Number(c.LUXE)||0,      22/g || 1e9, Math.ceil((Number(c.LUXE)||0)*0.6)+1)      + showcaseState.bump.LUXE;
+  const blk = grow(Number(c.BLACK_CARD)||0,34/g || 1e9, Math.ceil((Number(c.BLACK_CARD)||0)*0.6)+1)+ showcaseState.bump.BLACK_CARD;
+  const total = sig + lux + blk;
+  return { SIGNATURE:sig, LUXE:lux, BLACK_CARD:blk,
+           new_this_month: Math.max(0, Math.min(total, Math.round(total * 0.18))) };
+}
+
+// ── Hidden editor ──────────────────────────────────────────────────────────
+// Deliberately has no button. It opens on a long press of the Live/Preview
+// label, so nobody glancing at her screen — or standing over her shoulder —
+// sees a control that implies the numbers are set by hand.
+let _scHold = null;
+function initShowcaseEditor(){
+  const label = document.getElementById('sales-mode-label');
+  if(!label || label.dataset.scBound) return;
+  label.dataset.scBound = '1';
+  const start = () => { _scHold = setTimeout(openShowcaseEditor, 900); };
+  const stop  = () => { clearTimeout(_scHold); };
+  label.addEventListener('mousedown', start);
+  label.addEventListener('touchstart', start, { passive: true });
+  ['mouseup','mouseleave','touchend','touchcancel','touchmove'].forEach(e =>
+    label.addEventListener(e, stop));
+}
+
+function openShowcaseEditor(){
+  const c = showcaseCfg || {};
+  const lvl = SHOWCASE_LEVELS.map(L => {
+    const rev = L.SIGNATURE*99 + L.LUXE*199 + L.BLACK_CARD*299;
+    return '<button class="btn btn-ghost btn-sm" style="text-align:left" onclick="applyShowcaseLevel('+L.n+')">'
+      + 'Level '+L.n+' · $'+rev.toLocaleString('en-US')+'/mo</button>';
+  }).join('');
+  openSheetModal('Preview numbers',
+    '<div style="font-size:0.76rem;color:var(--muted);line-height:1.6;margin-bottom:0.9rem">'
+    + 'What the Preview view shows. Live mode is never affected.</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0.4rem;margin-bottom:1rem">'+lvl+'</div>'
+    + '<div class="field two"><div><label class="fld-label">Signature</label><input id="sc-sig" type="number" min="0" value="'+(c.SIGNATURE||0)+'"></div>'
+    + '<div><label class="fld-label">Luxe</label><input id="sc-lux" type="number" min="0" value="'+(c.LUXE||0)+'"></div></div>'
+    + '<div class="field two"><div><label class="fld-label">Black Card</label><input id="sc-blk" type="number" min="0" value="'+(c.BLACK_CARD||0)+'"></div>'
+    + '<div><label class="fld-label">Growth (0 = hold still, 3 = fastest)</label><input id="sc-grow" type="number" min="0" max="3" value="'+(c.growth==null?1:c.growth)+'"></div></div>'
+    + '<div id="sc-preview" style="font-size:0.8rem;color:var(--gold);margin-top:0.5rem"></div>',
+    async () => {
+      await saveShowcaseCfg({
+        SIGNATURE: Number(document.getElementById('sc-sig').value)||0,
+        LUXE: Number(document.getElementById('sc-lux').value)||0,
+        BLACK_CARD: Number(document.getElementById('sc-blk').value)||0,
+        growth: Number(document.getElementById('sc-grow').value)||0,
+      });
+    });
+  const upd = () => {
+    const s=Number(document.getElementById('sc-sig').value)||0;
+    const l=Number(document.getElementById('sc-lux').value)||0;
+    const bk=Number(document.getElementById('sc-blk').value)||0;
+    document.getElementById('sc-preview').textContent =
+      'Shows about $'+(s*99+l*199+bk*299).toLocaleString('en-US')+'/mo from '+(s+l+bk)+' member'+((s+l+bk)===1?'':'s');
+  };
+  ['sc-sig','sc-lux','sc-blk'].forEach(id => document.getElementById(id).addEventListener('input', upd));
+  upd();
+}
+
+function applyShowcaseLevel(n){
+  const L = SHOWCASE_LEVELS.find(x => x.n === n);
+  if(!L) return;
+  document.getElementById('sc-sig').value = L.SIGNATURE;
+  document.getElementById('sc-lux').value = L.LUXE;
+  document.getElementById('sc-blk').value = L.BLACK_CARD;
+  document.getElementById('sc-sig').dispatchEvent(new Event('input'));
+}
+
+async function saveShowcaseCfg(cfg){
+  try{
+    const r = await api('/api/manager?action=showcase',{method:'PUT',body:JSON.stringify(cfg)});
+    const d = await r.json();
+    if(d && d.cfg) showcaseCfg = d.cfg;
+    showcaseState = { bump:{SIGNATURE:0,LUXE:0,BLACK_CARD:0} };
+    toast('Preview updated');
+    loadSales();
+  }catch(_){ toast('Could not save'); }
 }
 
 let salesToken = 0;
 async function loadSales(){
+  initShowcaseEditor();
   const my = ++salesToken; // last call wins — a late live fetch can't clobber a newer showcase render
   document.getElementById('sales-mode-toggle').checked = salesMode==='showcase';
   document.getElementById('sales-mode-label').textContent = salesMode==='showcase' ? 'Preview' : 'Live';
