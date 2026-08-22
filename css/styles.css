@@ -1861,3 +1861,50 @@ ul { list-style: none; }
   .team-grid { grid-template-columns: 1fr; gap: 2.25rem; max-width: 320px; }
   .team-name { font-size: 1.35rem; }
 }
+
+/* ══════════════════════════════════════════════════
+   MEMBERSHIP SAVINGS BREAKDOWN
+══════════════════════════════════════════════════ */
+.sv-card { background: #fff; border: 1px solid rgba(182,165,136,0.28); padding: 2.5rem 2rem; box-shadow: 0 22px 60px rgba(13,13,13,0.06); }
+.sv-tag {
+  display: inline-block; font-family: 'Josefin Sans', sans-serif; font-size: 0.58rem;
+  font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase;
+  background: var(--espresso); color: var(--champagne); padding: 0.35rem 0.85rem; margin-bottom: 1rem;
+}
+.sv-title { font-family: 'Cinzel', serif; font-weight: 300; font-size: clamp(1.5rem,3.6vw,2.1rem); color: var(--espresso); line-height: 1.25; margin-bottom: 0.6rem; }
+.sv-lede { font-family: 'Josefin Sans', sans-serif; font-size: 0.92rem; line-height: 1.9; color: var(--latte); margin-bottom: 1.75rem; }
+.sv-head, .sv-row { display: grid; grid-template-columns: 1fr auto auto; gap: 0.75rem; align-items: baseline; }
+.sv-head {
+  font-family: 'Josefin Sans', sans-serif; font-size: 0.58rem; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--champagne);
+  padding-bottom: 0.6rem; border-bottom: 1px solid rgba(182,165,136,0.3);
+}
+.sv-head span:nth-child(2), .sv-head span:nth-child(3),
+.sv-row .sv-was, .sv-row .sv-save { text-align: right; min-width: 68px; }
+.sv-row { padding: 0.85rem 0; border-bottom: 1px solid rgba(182,165,136,0.14); }
+.sv-what { font-family: 'Josefin Sans', sans-serif; font-size: 0.92rem; color: var(--espresso); }
+.sv-what em { display: block; font-style: normal; font-size: 0.74rem; color: var(--latte); margin-top: 0.1rem; }
+.sv-was { font-family: 'Josefin Sans', sans-serif; font-size: 0.88rem; color: var(--latte); text-decoration: line-through; opacity: 0.65; }
+.sv-save { font-family: 'Cinzel', serif; font-size: 1.05rem; color: var(--champagne); }
+.sv-total {
+  display: flex; align-items: center; justify-content: space-between; gap: 1.25rem; flex-wrap: wrap;
+  background: var(--espresso); padding: 1.4rem 1.5rem; margin-top: 1.25rem;
+}
+.sv-total-l { font-family: 'Josefin Sans', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--champagne); }
+.sv-total-s { font-family: 'Josefin Sans', sans-serif; font-size: 0.8rem; color: rgba(221,208,184,0.75); margin-top: 0.25rem; }
+.sv-total-n { font-family: 'Cinzel', serif; font-size: clamp(2rem,6vw,2.8rem); color: var(--champagne); line-height: 1; }
+.sv-year { font-family: 'Josefin Sans', sans-serif; font-size: 0.92rem; color: var(--espresso); text-align: center; padding: 1rem 0 1.5rem; }
+.sv-year strong { font-family: 'Cinzel', serif; font-size: 1.25rem; color: var(--champagne); }
+.sv-incl-t { font-family: 'Josefin Sans', sans-serif; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--champagne); padding-top: 1.25rem; border-top: 1px solid rgba(182,165,136,0.25); margin-bottom: 0.9rem; }
+.sv-incl { list-style: none; margin: 0 0 1.75rem; padding: 0; }
+.sv-incl li { font-family: 'Josefin Sans', sans-serif; font-size: 0.88rem; line-height: 1.8; color: var(--latte); padding-left: 1.4rem; position: relative; margin-bottom: 0.5rem; }
+.sv-incl li::before { content: '✦'; position: absolute; left: 0; color: var(--champagne); }
+.sv-incl li strong { color: var(--espresso); }
+.sv-cta { display: block; text-align: center; width: 100%; }
+.sv-fine { font-family: 'Josefin Sans', sans-serif; font-size: 0.72rem; line-height: 1.7; color: var(--latte); text-align: center; margin-top: 1rem; }
+.sv-fine a { color: var(--champagne); }
+@media (max-width: 560px) {
+  .sv-card { padding: 1.75rem 1.25rem; }
+  .sv-head, .sv-row { grid-template-columns: 1fr auto; }
+  .sv-head span:nth-child(2), .sv-row .sv-was { display: none; }
+}
