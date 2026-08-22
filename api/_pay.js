@@ -47,13 +47,18 @@ const ADDON_DISCOUNT = { SIGNATURE: 0.50, LUXE: 1.00, BLACK_CARD: 1.00 };
 // The booking page says "Short Acrylic Set", the menu says "Short Acrylic",
 // add-ons vary too — normalize so every spelling finds its price.
 function norm(s) { return String(s || '').toLowerCase().replace(/\bset\b|\btechnique\b|\bsoak off\b/g, '').replace(/[^a-z]/g, ''); }
+// An empty or missing name must NOT match. The loose fallback uses includes(),
+// and every string contains the empty string — so a malformed request used to
+// price silently as the first item on the menu instead of being rejected.
 function findService(name) {
   const n = norm(name);
+  if (!n) return null;
   return services.find(s => norm(s.name) === n)
     || services.find(s => n.includes(norm(s.name)) || norm(s.name).includes(n));
 }
 function findAddon(name) {
   const n = norm(name);
+  if (!n) return null;
   return addons.find(a => norm(a.name) === n)
     || addons.find(a => n.includes(norm(a.name)) || norm(a.name).includes(n));
 }
