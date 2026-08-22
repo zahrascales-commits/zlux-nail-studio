@@ -5,7 +5,11 @@ const app = express();
 app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), require('./_stripe-webhook'));
 
 // JSON body parsing for all other routes
-app.use(express.json());
+// Photos travel as data-URLs in the JSON body. express.json() defaults to a
+// 100KB limit, which silently 413d every real phone photo while tiny test
+// images sailed through — the handlers already cap uploads at ~900KB, so the
+// parser has to allow at least that much to reach them.
+app.use(express.json({ limit: '6mb' }));
 
 // Original site API routes
 app.all('/api/services',         require('./_services'));
