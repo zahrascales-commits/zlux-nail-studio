@@ -121,14 +121,40 @@ async function notifyInApp(recipient, memberId, title, body) {
 // (email + SMS) and instant alert to whoever was booked (owner or artist).
 // One confirmation text carrying everything they need before they arrive:
 // where to go, who they're seeing, and the one-tap way to send their inspo.
+// What a client needs before they arrive and after they leave. Kept as one
+// list so the text and the email can never say different things.
+const PREP_LINES = [
+  'No lotion or oils on your hands for 24 hours before.',
+  'Arrive with hands freshly washed and clean.',
+];
+const AFTERCARE_LINES = [
+  'No lotion or oils for 24 hours afterwards.',
+  'Keep hands out of water as much as you can while the set cures.',
+];
+
 function clientSms(a, when, address, inspoLink) {
-  const first = (a.clientName || '').split(' ')[0] || 'love';
-  let msg = `ZOLA confirmed ✦ Hi ${first}! Your ${a.service || 'appointment'} is booked for ${when}`;
-  if (a.memberName) msg += ` with ${a.memberName}`;
-  msg += '.';
-  if (address) msg += ` We're at ${address}.`;
-  if (inspoLink) msg += ` Send your inspo photo here so we can prep: ${inspoLink}`;
-  return msg + ' — ZOLA Nail Studio';
+  const first = (a.clientName || '').split(' ')[0] || 'there';
+  const lines = [];
+  lines.push('ZOLA NAIL STUDIO');
+  lines.push('');
+  lines.push('Confirmed, ' + first + '.');
+  lines.push((a.service || 'Your appointment') + (a.memberName ? ' with ' + a.memberName : ''));
+  lines.push(when);
+  if (address) lines.push(address);
+  lines.push('');
+  lines.push('BEFORE YOUR VISIT');
+  PREP_LINES.forEach(l => lines.push('- ' + l));
+  lines.push('');
+  lines.push('AFTERCARE');
+  AFTERCARE_LINES.forEach(l => lines.push('- ' + l));
+  if (inspoLink) {
+    lines.push('');
+    lines.push('Send your inspiration photo: ' + inspoLink);
+  }
+  lines.push('');
+  lines.push('Arrive as you are. You will leave immaculate.');
+  lines.push('Reply STOP to opt out.');
+  return lines.join('\n');
 }
 
 async function notifyNewAppointment(a) {
@@ -168,6 +194,17 @@ async function notifyNewAppointment(a) {
             <p style="margin:0 0 0.9rem;font-size:0.92rem">Send us your inspo photo so we can prep before you arrive ✦</p>
             <a href="${inspoLink}" style="display:inline-block;background:#C4A882;color:#0D0D0D;text-decoration:none;padding:13px 26px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;font-weight:bold">Add My Inspo Photo</a>
           </div>` : ''}
+          <div style="display:flex;gap:1rem;flex-wrap:wrap;margin:1.4rem 0">
+            <div style="flex:1;min-width:200px;background:#fff;border:1px solid #E5D9C6;padding:1rem 1.1rem">
+              <p style="margin:0 0 0.6rem;font-size:0.68rem;letter-spacing:0.16em;text-transform:uppercase;color:#8B6A3E">Before your visit</p>
+              <p style="margin:0 0 0.4rem;font-size:0.86rem;line-height:1.6">No lotion or oils on your hands for 24 hours before.</p><p style="margin:0 0 0.4rem;font-size:0.86rem;line-height:1.6">Arrive with hands freshly washed and clean.</p>
+            </div>
+            <div style="flex:1;min-width:200px;background:#fff;border:1px solid #E5D9C6;padding:1rem 1.1rem">
+              <p style="margin:0 0 0.6rem;font-size:0.68rem;letter-spacing:0.16em;text-transform:uppercase;color:#8B6A3E">Aftercare</p>
+              <p style="margin:0 0 0.4rem;font-size:0.86rem;line-height:1.6">No lotion or oils for 24 hours afterwards.</p><p style="margin:0 0 0.4rem;font-size:0.86rem;line-height:1.6">Keep hands out of water as much as you can while the set cures.</p>
+            </div>
+          </div>
+          <p style="font-size:0.95rem;color:#0D0D0D;font-style:italic;margin:1.2rem 0">Arrive as you are. You will leave immaculate.</p>
           <p style="font-size:0.85rem;color:#8B6A3E">Need to change it? Give us 24 hours' notice and we'll take care of you.</p>
         </div>
       </div>`);
