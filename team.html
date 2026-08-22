@@ -53,7 +53,12 @@
   .who-name{font-size:0.66rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--gold)}
   .logout{background:none;border:1px solid var(--border);color:var(--muted);font-size:0.58rem;letter-spacing:0.14em;text-transform:uppercase;padding:0.45rem 0.8rem;cursor:pointer;transition:all 0.2s}
   .logout:hover{border-color:var(--gold);color:var(--gold)}
-  .tabs{position:sticky;top:60px;z-index:30;display:flex;background:rgba(11,11,11,0.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:0 1.4rem}
+  /* Five tabs do not fit a phone — scroll the row rather than letting it push
+     the whole portal sideways. */
+  .tabs{position:sticky;top:60px;z-index:30;display:flex;background:rgba(11,11,11,0.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:0 1.4rem;
+    overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;white-space:nowrap}
   .tab{padding:0.85rem 1.2rem;font-size:0.68rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all 0.2s}
   .tab.active{color:var(--gold);border-bottom-color:var(--gold)}
   .wrap{max-width:760px;margin:0 auto;padding:1.6rem 1.4rem 5rem}
