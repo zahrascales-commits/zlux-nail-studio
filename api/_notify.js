@@ -157,11 +157,9 @@ function clientSms(a, when, address, inspoLink) {
   return lines.join('\n');
 }
 
-async function notifyNewAppointment(a) {
-  const results = { client_email: null, client_sms: null, artist: null };
-  const when = `${a.dateLabel || a.date} at ${a.timeLabel || a.time}`;
-
-  // Studio address is owner-editable, so a move doesn't mean editing code.
+// Where the studio is and the one-tap way to send an inspo photo. Both are
+// owner-editable, so a move or a rename never means editing code.
+async function bookingContext(a) {
   const SITE = process.env.PUBLIC_SITE_URL || 'https://zolanailstudio.com';
   let studioAddress = '';
   try {
@@ -169,13 +167,62 @@ async function notifyNewAppointment(a) {
     const row = await queryOne("SELECT value FROM site_settings WHERE key='studio_address'");
     studioAddress = (row && row.value) || '';
   } catch (_) {}
-  // Deep link into the photo step with their booking already attached, so the
-  // whole job is: open, pick photo, send.
-  const inspoLink = a.confirmation ? `${SITE}/inspo.html?c=${encodeURIComponent(a.confirmation)}` : '';
+  return {
+    when: `${a.dateLabel || a.date} at ${a.timeLabel || a.time}`,
+    studioAddress,
+    inspoLink: a.confirmation ? `${SITE}/inspo.html?c=${encodeURIComponent(a.confirmation)}` : '',
+  };
+}
 
-  // client confirmation — instant
+// Sent the moment they book, when the artist is still being decided. Short on
+// purpose: its whole job is to stop the silence between paying and knowing who
+// they are seeing. The real confirmation follows.
+function pendingSms(a, when) {
+  const first = (a.clientName || '').split(' ')[0] || 'there';
+  const lines = [];
+  lines.push('ZOLA NAIL STUDIO');
+  lines.push('');
+  lines.push('Received, ' + first + '.');
+  lines.push((a.service || 'Your appointment'));
+  lines.push(when);
+  lines.push('');
+  lines.push('We are assigning your artist now. Your full confirmation lands shortly.');
+  lines.push('');
+  lines.push('Reply STOP to opt out.');
+  return lines.join('\n');
+}
+
+async function notifyClientPending(a) {
+  const { when } = await bookingContext(a);
+  const out = { email: null, sms: null };
+  if (a.clientPhone) out.sms = await sendSMS(a.clientPhone, pendingSms(a, when));
   if (a.clientEmail) {
-    results.client_email = await sendEmail(a.clientEmail,
+    out.email = await sendEmail(a.clientEmail, `We have your booking — ${a.dateLabel || a.date}`,
+      `<div style="font-family:Georgia,serif;max-width:540px;margin:0 auto;background:#FAFAF8;color:#0D0D0D">
+        <div style="background:#0D0D0D;padding:2.2rem;text-align:center">
+          <h1 style="color:#C4A882;margin:0;letter-spacing:0.1em;font-weight:400">ZOLA</h1>
+          <p style="color:#8B6A3E;font-size:0.72rem;letter-spacing:0.2em;text-transform:uppercase;margin:0.4rem 0 0">Nail Studio · Porterville, CA</p>
+        </div>
+        <div style="padding:2rem">
+          <p>Hi ${(a.clientName || 'love').split(' ')[0]}, we have you ✦</p>
+          <div style="background:#F5EEE8;border-left:3px solid #C4A882;padding:1.2rem;margin:1.2rem 0">
+            <p style="margin:0.2rem 0"><b>Service:</b> ${a.service || 'Appointment'}</p>
+            <p style="margin:0.2rem 0"><b>When:</b> ${when}</p>
+          </div>
+          <p style="font-size:0.95rem;line-height:1.7">We are assigning your artist now. Your full confirmation — with her name, the address, and how to prepare — is on its way.</p>
+        </div>
+      </div>`);
+  }
+  return out;
+}
+
+// The real one. Everything they need: their name, the service, their artist,
+// the time, the address, how to prepare, and how to care for the set.
+async function notifyClientConfirmed(a) {
+  const { when, studioAddress, inspoLink } = await bookingContext(a);
+  const out = { email: null, sms: null };
+  if (a.clientEmail) {
+    out.email = await sendEmail(a.clientEmail,
       `Your ZOLA appointment is confirmed — ${a.dateLabel || a.date}`,
       `<div style="font-family:Georgia,serif;max-width:540px;margin:0 auto;background:#FAFAF8;color:#0D0D0D">
         <div style="background:#0D0D0D;padding:2.2rem;text-align:center">
@@ -208,9 +255,23 @@ async function notifyNewAppointment(a) {
           <p style="font-size:0.85rem;color:#8B6A3E">Need to change it? Give us 24 hours' notice and we'll take care of you.</p>
         </div>
       </div>`);
-    results.client_sms = await sendSMS(a.clientPhone, clientSms(a, when, studioAddress, inspoLink));
-  } else if (a.clientPhone) {
-    results.client_sms = await sendSMS(a.clientPhone, clientSms(a, when, studioAddress, inspoLink));
+  }
+  if (a.clientPhone) out.sms = await sendSMS(a.clientPhone, clientSms(a, when, studioAddress, inspoLink));
+  return out;
+}
+
+async function notifyNewAppointment(a) {
+  const results = { client_email: null, client_sms: null, artist: null };
+  const { when } = await bookingContext(a);
+
+  // A booking with an artist already on it is confirmed outright. One still
+  // out for claim gets the holding message instead — _claims sends the real
+  // confirmation the moment somebody takes it, so sending it here too would
+  // promise the client an artist nobody has agreed to be.
+  if (!a.pendingClaim) {
+    const c = await notifyClientConfirmed(a);
+    results.client_email = c.email;
+    results.client_sms = c.sms;
   }
 
   // whoever got booked — instant in-app + SMS/email
@@ -238,11 +299,34 @@ async function notifyNewAppointment(a) {
             <p style="font-size:11px;color:#8C7A5E;margin-top:18px">This link signs you in automatically — keep it private.</p>` : ''}
           </div></div>`);
     }
+    // The one that lands on a locked phone. Text is the backstop for anyone
+    // who never set this up.
+    try {
+      await require('./_push').pushToMember(a.memberId, {
+        title: `New appointment · ${a.service || 'Service'}`,
+        body: `${a.clientName || 'Client'} · ${when}`,
+        url: '/team.html', tag: 'zola-appt-' + (a.confirmation || when),
+      });
+    } catch (_) {}
     results.artist = 'member ' + a.memberId;
   }
-  // owner always gets an in-app copy of every booking
-  await notifyInApp('owner', null, a.memberId ? title + ` → ${a.memberName || 'artist'}` : title + ' → you', body);
+  // Owner gets an in-app copy of every booking — except one still out for
+  // claim, where _claims posts a better one naming who it went to.
+  if (!a.pendingClaim) {
+    await notifyInApp('owner', null, a.memberId ? title + ` → ${a.memberName || 'artist'}` : title + ' → you', body);
+    try {
+      await require('./_push').pushToOwner({
+        title: a.memberId ? `New booking → ${a.memberName || 'artist'}` : 'New booking',
+        body: `${a.clientName || 'Client'} · ${a.service || ''} · ${when}`,
+        url: '/manager.html', tag: 'zola-booking',
+      });
+    } catch (_) {}
+  }
   return results;
 }
 
-module.exports = { sendEmail, sendSMS, notifyInApp, notifyNewAppointment, e164, providerStatus, clearKeyCache };
+module.exports = {
+  sendEmail, sendSMS, notifyInApp, notifyNewAppointment,
+  notifyClientPending, notifyClientConfirmed, bookingContext,
+  e164, providerStatus, clearKeyCache,
+};

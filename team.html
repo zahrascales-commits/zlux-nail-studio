@@ -202,6 +202,8 @@
   </div>
   <div class="wrap">
     <section class="panel active" id="panel-schedule">
+      <div id="open-jobs"></div>
+      <div id="push-setup" style="margin-bottom:1.75rem;"></div>
       <div class="label-sm">My Month</div>
       <div class="wc-head">
         <button class="mini" onclick="wcNav(-1)">‹</button>
@@ -293,6 +295,7 @@ function enter(){
   document.documentElement.style.setProperty('--gold',COLOR);
   document.documentElement.style.setProperty('--gold-faint',COLOR+'14');
   loadSchedule();loadMyHours();loadBell();
+  startJobPolling();mountPush();
   setInterval(loadBell,30000);
 }
 
@@ -367,6 +370,82 @@ function showTab(t){
   if(t==='clients')loadTeamClients();
   if(t==='inspo')loadTeamInspo();
   if(t==='inventory')loadTeamInv();
+}
+
+
+/* ══════════════ OPEN APPOINTMENTS — FIRST TO CONFIRM ══════════════ */
+// Everything listed here has already been filtered to what she can actually
+// take: trained on the service, rostered in for those hours, nothing else
+// booked across them. So the only question left on screen is whether she
+// wants it.
+let JOBS = [], jobsTimer = null;
+
+function jobCountdown(ts){
+  const left = Math.max(0, Math.round((ts - Date.now()) / 60000));
+  if(!ts) return '';
+  if(left <= 0) return 'assigning now';
+  return left + ' min left';
+}
+
+async function loadJobs(){
+  const el = document.getElementById('open-jobs');
+  if(!el || !MID) return;
+  try{
+    const r = await fetch('/api/team?action=open_jobs&member_id='+MID+'&pin='+PIN);
+    const d = await r.json();
+    JOBS = d.jobs || [];
+  }catch(_){ return; }
+
+  if(!JOBS.length){ el.innerHTML=''; return; }
+
+  el.innerHTML =
+    '<div style="border:1px solid var(--gold);background:var(--gold-faint);padding:1.1rem 1.15rem;border-radius:10px;margin-bottom:1.75rem;">'
+    + '<div class="label-sm" style="margin:0 0 0.3rem;">Open Appointments ✦ ' + JOBS.length + '</div>'
+    + '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.76rem;color:var(--muted);line-height:1.7;margin-bottom:0.9rem;">First to confirm takes it. These are already matched to your services and your rostered hours.</p>'
+    + JOBS.map(function(j){
+        return '<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:0.9rem 1rem;margin-bottom:0.7rem;">'
+          + '<div style="font-family:Cinzel,serif;font-size:0.98rem;color:var(--cream);letter-spacing:0.03em;">' + esc(j.service||'Appointment') + '</div>'
+          + '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;color:var(--gold);margin-top:0.25rem;">' + esc(j.date_label||j.date) + ' · ' + esc(j.time_label||j.time) + '</div>'
+          + '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.76rem;color:var(--muted);margin-top:0.2rem;">'
+            + esc(j.client_name||'Client')
+            + ' · offered to ' + j.offered_to + ' · ' + jobCountdown(j.expires_ts)
+          + '</div>'
+          + '<button class="mini mini-gold" style="margin-top:0.75rem;width:100%;" onclick="takeJob(\'' + esc(j.confirmation) + '\',this)">Confirm — take this one</button>'
+        + '</div>';
+      }).join('')
+    + '</div>';
+}
+
+async function takeJob(confirmation, btn){
+  if(btn){ btn.disabled = true; btn.textContent = 'Confirming…'; }
+  try{
+    const r = await fetch('/api/team?action=claim',{method:'POST',headers:hdr(),
+      body:JSON.stringify({action:'claim',confirmation:confirmation})});
+    const d = await r.json();
+    toast(d.why || (d.ok ? 'Confirmed' : 'Could not confirm'));
+    // Either way the list has moved on — and if she won it, it belongs on
+    // her schedule now, not in the open pile.
+    await loadJobs();
+    if(d.ok) loadSchedule();
+  }catch(_){
+    toast('Could not confirm — check your signal');
+    if(btn){ btn.disabled = false; btn.textContent = 'Confirm — take this one'; }
+  }
+}
+
+/* ══════════════ PHONE NOTIFICATIONS ══════════════ */
+function mountPush(){
+  if(window.ZolaPush && MID){
+    window.ZolaPush.mount(document.getElementById('push-setup'), { member_id: MID, pin: PIN });
+  }
+}
+
+// A booking can land at any moment, so the open list refreshes on its own
+// rather than waiting for her to pull down.
+function startJobPolling(){
+  if(jobsTimer) clearInterval(jobsTimer);
+  loadJobs();
+  jobsTimer = setInterval(loadJobs, 30000);
 }
 
 /* ── POST-APPOINTMENT CHECK-INS ("how did it go?" + notes) ── */
@@ -717,6 +796,7 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
   if(s){try{const o=JSON.parse(s);MID=o.MID;PIN=o.PIN;NAME=o.NAME;COLOR=o.COLOR||'#B6A588';enter();}catch{}}
 })();
 </script>
+<script src="js/push.js"></script>
 <script src="js/pwa.js"></script>
 </body>
 </html>

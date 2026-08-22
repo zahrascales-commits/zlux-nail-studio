@@ -208,13 +208,17 @@ module.exports = async (req, res) => {
     // Apply a discount code, priced server-side. The browser only ever tells
     // us WHICH code — never what it is worth — so a tampered request cannot
     // change the amount charged. Never let a promo failure lose the booking.
-    let promo_code = null, promo_off_cents = 0;
+    let promo_code = null, promo_off_cents = 0, promo_trainee_only = false;
     try {
       const raw = (req.body || {}).promo_code;
       if (raw) {
         const p = await require('./_promo').lookup(raw);
         if (p.ok && p.amount_off_cents > 0) {
           promo_code = p.code;
+          // A trainee code has to keep its promise: the booking is dispatched
+          // only to artists still in training, never to a senior artist at a
+          // discounted rate.
+          promo_trainee_only = !!p.trainee_only;
           // Never discount below zero, and recompute the deposit off the new
           // total so a discounted booking doesn't overcharge the deposit.
           promo_off_cents = Math.min(p.amount_off_cents, total_cents);
@@ -304,7 +308,7 @@ module.exports = async (req, res) => {
       await teamDb.ensureTables();
       let m = null;
       if (worker) m = await teamDb.queryOne('SELECT id, name, phone, email FROM team_members WHERE name=? AND active=1', [worker]).catch(() => null);
-      await teamDb.execute(
+      const teamRow = await teamDb.execute(
         `INSERT INTO team_appointments (team_member_id, client_name, client_phone, service, date, time, notes, status, chat_token)
          VALUES (?,?,?,?,?,?,?, 'scheduled', ?)`,
         [m ? m.id : null, (for_name && for_name.trim()) || customer_name, customer_phone || '', service_name, date, time_slot,
@@ -314,7 +318,11 @@ module.exports = async (req, res) => {
       );
       // Skip duplicate client email/SMS if the legacy SendGrid path is active
       const legacyActive = !!process.env.SENDGRID_API_KEY;
-      await notifyNewAppointment({
+      // Nobody picked an artist, so this goes out to everyone who could take
+      // it and the first to confirm gets it. With an artist already chosen
+      // there is nothing to race for and it confirms outright.
+      const pendingClaim = !m;
+      const notifyPayload = {
         clientName: customer_name,
         clientEmail: legacyActive ? null : customer_email,
         clientPhone: (legacyActive && process.env.TWILIO_ACCOUNT_SID) ? null : customer_phone,
@@ -322,8 +330,20 @@ module.exports = async (req, res) => {
         dateLabel: formatDate(date), timeLabel: formatTime(time_slot),
         memberId: m ? m.id : null, memberName: m ? m.name : null,
         memberPhone: m ? m.phone : null, memberEmail: m ? m.email : null,
-        confirmation,
-      });
+        confirmation, pendingClaim,
+      };
+      await notifyNewAppointment(notifyPayload);
+      if (pendingClaim) {
+        // Never let dispatch failing take the booking down with it — the money
+        // is already taken and the appointment is already on the calendar.
+        try {
+          await require('./_claims').openClaim({
+            ...notifyPayload,
+            teamApptId: teamRow && teamRow.lastInsertRowid,
+            traineeOnly: promo_trainee_only,
+          });
+        } catch (_) {}
+      }
       await upsertClient({ name: customer_name, email: customer_email, phone: customer_phone, service: service_name, date });
       // Record marketing consent only when they actually ticked the box.
       // Never clear it here — someone who opted in previously and left the box

@@ -94,6 +94,23 @@ module.exports = async function (req, res) {
       return res.json({ shifts: rows });
     }
 
+    // ── OPEN APPOINTMENTS: first to confirm takes it ──
+    // Only ever lists what this artist could genuinely take — the filtering
+    // happened when the booking was dispatched, so anything here is hers to
+    // win.
+    if (method === 'GET' && action === 'open_jobs') {
+      const jobs = await require('./_claims').openJobsFor(member.id);
+      return res.json({ jobs });
+    }
+
+    if (method === 'POST' && action === 'claim') {
+      const conf = String((req.body && req.body.confirmation) || '').trim();
+      if (!conf) return res.status(400).json({ error: 'Which appointment?' });
+      // Losing the race is not an error — she needs to see who got it, not a
+      // red failure screen.
+      return res.json(await require('./_claims').claim(conf, member.id));
+    }
+
     if (method === 'GET' && action === 'schedule') {
       const today = new Date().toISOString().slice(0, 10);
       const rows = await query(

@@ -732,6 +732,7 @@
         </div>
       </div>
       <div class="cards" id="ov-stats"></div>
+      <div id="ov-dispatch"></div>
       <div class="page-head" style="margin-top:2rem;"><div><div class="page-title" style="font-size:1.15rem;">Coming up</div></div></div>
       <div id="ov-upcoming"></div>
     </section>
@@ -1064,6 +1065,23 @@
           <p>Your personal color across the studio system. Your appointments show as dots in this color. Only you can change colors — yours or your team's.</p>
           <div class="color-opts" id="owner-color-opts"></div>
           <p class="set-note">Team member colors are set in the Team tab when you add or edit someone — each keeps one consistent color forever.</p>
+        </div>
+        <div class="site-card">
+          <h3>Phone Notifications ✦</h3>
+          <p>Get every booking on your lock screen the moment it comes in — no app store, no login. On iPhone, add ZOLA to your Home Screen first and open it from that icon.</p>
+          <div id="push-setup" style="margin:0.9rem 0;"></div>
+          <p class="set-note">Your artists turn theirs on the same way, at the top of their own Team Portal.</p>
+        </div>
+        <div class="site-card">
+          <h3>First To Confirm ✦</h3>
+          <p>A booking with no artist chosen goes out to everyone who can actually take it — trained on that service, rostered in for those hours, nothing else booked. The first to confirm gets it, and only then does the client get their confirmation naming her.</p>
+          <label class="fld-label">If nobody confirms within</label>
+          <div style="display:flex;gap:0.6rem;align-items:center;">
+            <input id="claim-hold" type="number" min="1" max="240" style="max-width:120px;" />
+            <span style="font-size:0.85rem;color:var(--latte);">minutes, the studio assigns it</span>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="margin-top:0.7rem;" onclick="saveClaimHold()">Save</button>
+          <p class="set-note">It goes to whoever has the lightest day. Keep this short — a client is sitting unconfirmed the whole time.</p>
         </div>
         <div class="site-card">
           <h3>Business Details</h3>
@@ -1757,7 +1775,7 @@ function logout(){sessionStorage.removeItem('zm_pwd');location.reload();}
 // Reloading a screen is now defined once, so the tab switch, the Refresh
 // button and the auto-refresh timer can never drift apart.
 const TAB_LOADERS = {
-  overview:   () => loadOverview(),
+  overview:   () => { loadOverview(); loadDispatch(); },
   records:    () => loadRecords(),
   bookings:   () => loadAllBookings(),
   reports:    () => loadReports(),
@@ -1778,7 +1796,7 @@ const TAB_LOADERS = {
   site:       () => loadSite(),
   traffic:    () => loadTraffic(),
   clients:    () => loadClients(),
-  settings:   () => loadSettings(),
+  settings:   () => { loadSettings(); mountOwnerPush(); },
 };
 
 function currentTab(){
@@ -3707,6 +3725,93 @@ async function mkRemove(id){
 
   
 
+
+/* ══════════════ DISPATCH — FIRST TO CONFIRM ══════════════ */
+let CLAIMS = null;
+
+function dispatchPill(r){
+  if(r.status === 'open')   return '<span class="status-pill" style="background:rgba(182,165,136,0.18);color:var(--gold)">Waiting</span>';
+  if(r.status === 'none')   return '<span class="status-pill" style="background:rgba(214,102,102,0.18);color:var(--danger)">Nobody free</span>';
+  if(r.how === 'auto')      return '<span class="status-pill status-on">Auto-assigned</span>';
+  if(r.how === 'manual')    return '<span class="status-pill status-on">You assigned</span>';
+  return '<span class="status-pill status-on">Confirmed</span>';
+}
+
+async function loadDispatch(){
+  const el = document.getElementById('ov-dispatch');
+  if(!el) return;
+  let d;
+  try{ d = await (await api('/api/manager?action=claims')).json(); }
+  catch(_){ el.innerHTML=''; return; }
+  CLAIMS = d;
+
+  const rows = d.rows || [];
+  const live = rows.filter(function(r){ return r.status === 'open' || r.status === 'none'; });
+  // Nothing waiting and nothing recent — no reason to take up the screen.
+  if(!rows.length){ el.innerHTML=''; return; }
+
+  const card = function(r){
+    const who = r.status === 'open'
+      ? 'Out to ' + (r.offered_names.length ? r.offered_names.join(', ') : 'nobody')
+      : (r.status === 'none' ? 'Nobody rostered was free — assign someone' : r.claimed_name + ' took it');
+    let assign = '';
+    if(r.status === 'open' || r.status === 'none'){
+      const opts = (members||[]).map(function(mm){
+        return '<option value="' + mm.id + '">' + esc(mm.name) + '</option>';
+      }).join('');
+      assign = '<div style="display:flex;gap:0.5rem;margin-top:0.6rem;align-items:center;flex-wrap:wrap;">'
+        + '<select style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:0.55rem 0.7rem;max-width:220px;outline:none;" id="asg-' + esc(r.confirmation) + '"><option value="">Give it to…</option>' + opts + '</select>'
+        + '<button class="btn btn-ghost btn-sm" onclick="assignClaim(\'' + esc(r.confirmation) + '\')">Assign</button>'
+        + '</div>';
+    }
+    return '<div class="member-card" style="--mc:#B6A588"><div class="mc-top"><div style="flex:1">'
+      + '<div class="mc-name">' + esc(r.client_name || 'Client') + ' · ' + esc(r.service || '') + '</div>'
+      + '<div class="mc-role">' + esc(r.when) + ' · ' + esc(who) + '</div>'
+      + '</div>' + dispatchPill(r) + '</div>' + assign + '</div>';
+  };
+
+  el.innerHTML =
+    '<div class="page-head" style="margin-top:2rem;"><div>'
+    + '<div class="page-title" style="font-size:1.15rem;">Dispatch' + (live.length ? ' ✦ ' + live.length + ' waiting' : '') + '</div>'
+    + '<div class="page-desc">Bookings with no artist chosen go out to everyone who can take them. First to confirm gets it — the client is only told who they are seeing once someone has.</div>'
+    + '</div></div>'
+    + rows.slice(0, 12).map(card).join('');
+}
+
+async function assignClaim(confirmation){
+  const sel = document.getElementById('asg-' + confirmation);
+  const id = sel && sel.value;
+  if(!id){ toast('Pick who it goes to'); return; }
+  try{
+    const r = await api('/api/manager?action=claim_assign',{method:'POST',
+      body:JSON.stringify({action:'claim_assign',confirmation:confirmation,member_id:Number(id)})});
+    const d = await r.json();
+    toast(d.ok ? 'Assigned — the client has been told' : (d.error || 'Could not assign'));
+    loadDispatch();
+  }catch(_){ toast('Could not assign'); }
+}
+
+async function saveClaimHold(){
+  const v = Number((document.getElementById('claim-hold')||{}).value);
+  try{
+    const r = await api('/api/manager?action=claim_hold',{method:'PUT',
+      body:JSON.stringify({action:'claim_hold',minutes:v})});
+    const d = await r.json();
+    toast(d.ok ? 'Saved — ' + d.minutes + ' minutes' : (d.error || 'Could not save'));
+  }catch(_){ toast('Could not save'); }
+}
+
+// Her own phone, set up exactly the way the artists set up theirs.
+function mountOwnerPush(){
+  if(window.ZolaPush){
+    window.ZolaPush.mount(document.getElementById('push-setup'), { pass: PWD });
+  }
+  api('/api/manager?action=claims').then(function(r){ return r.json(); }).then(function(d){
+    const el = document.getElementById('claim-hold');
+    if(el && d && d.hold_minutes) el.value = d.hold_minutes;
+  }).catch(function(){});
+}
+
 /* ══════════════ RECORDS ══════════════ */
 let RECORDS = null;
 
@@ -4572,6 +4677,7 @@ async function copy(text,msg){try{await navigator.clipboard.writeText(text);toas
 /* ── INIT ── */
 (function(){const saved=sessionStorage.getItem('zm_pwd');if(saved){document.getElementById('pwd').value=saved;login();}})();
 </script>
+<script src="js/push.js"></script>
 <script src="js/pwa.js"></script>
 </body>
 </html>

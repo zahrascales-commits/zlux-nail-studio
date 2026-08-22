@@ -443,6 +443,31 @@ module.exports = async function (req, res) {
 
     // ── TECH SHIFTS (which dates + hours each artist actually works) ──
     // Read a whole month at once so the scheduling calendar paints in one call.
+    /* ── DISPATCH: who a booking went out to, and who took it ──────────
+       Her view of the race. Anything still open she can hand to whoever
+       she wants without waiting for the timer.                          */
+    if (method === 'GET' && action === 'claims') {
+      return res.json(await require('./_claims').claimsOverview());
+    }
+
+    if (method === 'POST' && action === 'claim_assign') {
+      const { confirmation, member_id } = req.body || {};
+      if (!confirmation || !member_id) return res.status(400).json({ error: 'Which appointment, and to whom?' });
+      return res.json(await require('./_claims').assignManually(String(confirmation), Number(member_id)));
+    }
+
+    // How long a booking waits for someone to confirm before the studio
+    // assigns it. A client should never sit unconfirmed for long, so this
+    // is capped rather than free-form.
+    if (method === 'PUT' && action === 'claim_hold') {
+      const n = Number((req.body || {}).minutes);
+      if (!Number.isFinite(n) || n < 1 || n > 240) {
+        return res.status(400).json({ error: 'Pick between 1 and 240 minutes.' });
+      }
+      await execute("INSERT INTO site_settings (key,value) VALUES ('claim_hold_minutes',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", [String(Math.round(n))]);
+      return res.json({ ok: true, minutes: Math.round(n) });
+    }
+
     if (method === 'GET' && action === 'shifts') {
       const from = req.query.from || '0000-00-00';
       const to = req.query.to || '9999-12-31';
