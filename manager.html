@@ -172,7 +172,7 @@
   .sched-hours label{font-size:0.66rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted)}
   /* min-width so the native time control shows the whole value — squeezed
      narrow it renders as a bare "0" and reads broken */
-  .sched-hours input{background:var(--surface);border:1px solid var(--border-hi);color:var(--cream);
+  .sched-hours input, .sched-hours select{background:var(--surface);border:1px solid var(--border-hi);color:var(--cream);
     padding:0.55rem 0.7rem;border-radius:8px;font-size:0.85rem;min-height:44px;color-scheme:dark;
     min-width:125px;box-sizing:border-box}
   .sched-hours-note{font-size:0.66rem;color:var(--muted)}
@@ -206,7 +206,7 @@
     .sched-save-bar .btn{width:100%}
     .sched-hours{gap:0.45rem}
     .sched-hours label{width:100%}
-    .sched-hours input{flex:1}
+    .sched-hours input, .sched-hours select{flex:1}
     .sched-hours-note{width:100%}
   }
   .icon-btn{background:none;border:1px solid var(--border);color:var(--muted);width:32px;height:32px;cursor:pointer;
@@ -773,17 +773,17 @@ async function delPromo(code){
         <div class="sched-card">
           <div class="sched-hours">
             <label>Hours</label>
-            <input type="time" id="sched-start" value="09:00" />
+            <select id="sched-start" data-time12 data-default="09:00"></select>
             <span>to</span>
-            <input type="time" id="sched-end" value="18:00" />
+            <select id="sched-end" data-time12 data-default="18:00"></select>
             <span class="sched-hours-note">applied to days you tick</span>
           </div>
 
           <div class="sched-hours" style="border-bottom:1px solid var(--border)">
             <label>Lunch</label>
-            <input type="time" id="sched-lunch-start" />
+            <select id="sched-lunch-start" data-time12></select>
             <span>to</span>
-            <input type="time" id="sched-lunch-end" />
+            <select id="sched-lunch-end" data-time12></select>
             <button class="btn btn-ghost btn-sm" type="button" onclick="schedClearLunch()">No lunch</button>
             <span class="sched-hours-note">any length — those hours stop being bookable</span>
           </div>
@@ -984,7 +984,7 @@ async function delPromo(code){
               <label class="ntf-row"><input type="checkbox" id="ntf-cpost" /> <span>Thank-you note after the appointment</span></label>
               <div class="ai-tag" style="margin-top:1rem;">Inventory</div>
               <label class="ntf-row"><input type="checkbox" id="ntf-invday" /> <span>Daily reminder for team to update counts</span></label>
-              <div class="ntf-sub">Time: <input type="time" id="ntf-invday-time" style="width:auto;display:inline-block;" /></div>
+              <div class="ntf-sub">Time: <select id="ntf-invday-time" style="width:auto;display:inline-block;" data-time12></select></div>
               <label class="ntf-row"><input type="checkbox" id="ntf-invlow" /> <span>Alert me when an item hits its low-stock number</span></label>
             </div>
           </div>
@@ -1597,6 +1597,7 @@ async function login(){
     const d=await r.json();
     members=d.members||[];appts=d.appointments||[];
     PROVIDERS=d.providers||{email:false,sms:false};
+    fillTime12Selects();
     loadServiceCatalog();
     sessionStorage.setItem('zm_pwd',pwd);
     document.getElementById('login').style.display='none';
@@ -1615,6 +1616,7 @@ function logout(){sessionStorage.removeItem('zm_pwd');location.reload();}
 
 /* ── TABS ── */
 function showTab(name){
+  fillTime12Selects();
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
@@ -3002,6 +3004,24 @@ async function resetTraffic(){
 
 /* ── SCHEDULE ── */
 function fmtDateLabel(ds){const d=new Date(ds+'T12:00:00');return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});}
+// Every [data-time12] select gets the same 12-hour option list. The VALUE
+// stays 24-hour ("18:00") because that is what the availability maths and the
+// database use — only the label changes.
+function fillTime12Selects(){
+  document.querySelectorAll('select[data-time12]').forEach(sel => {
+    if(sel.dataset.filled) return;
+    sel.dataset.filled = '1';
+    const opts = ['<option value=""></option>'];
+    for(let mins = 5*60; mins <= 23*60; mins += 15){
+      const h = Math.floor(mins/60), mi = mins % 60;
+      const v = String(h).padStart(2,'0') + ':' + String(mi).padStart(2,'0');
+      opts.push('<option value="' + v + '">' + fmtTime(v) + '</option>');
+    }
+    sel.innerHTML = opts.join('');
+    if(sel.dataset.default) sel.value = sel.dataset.default;
+  });
+}
+
 function fmtTime(t){const[h,m]=t.split(':').map(Number);const ap=h>=12?'PM':'AM';const hh=h>12?h-12:(h===0?12:h);return hh+':'+String(m).padStart(2,'0')+' '+ap;}
 function goToday(){curDate=new Date().toISOString().slice(0,10);renderCal();}
 function jumpDate(v){if(v){curDate=v;renderCal();}}
