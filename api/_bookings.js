@@ -225,8 +225,17 @@ module.exports = async (req, res) => {
       }
     } catch (_) { /* a broken promo must never block a booking */ }
 
+    // incId() counts in memory, so it restarted at 1 on every cold start and
+    // handed several different bookings the same ZOLA-00001. Number from the
+    // durable table instead, with the in-memory id only as a last resort.
     const id = incId();
-    const confirmation = `ZOLA-${String(id).padStart(5, '0')}`;
+    let seq = id;
+    try {
+      const row = await queryOne('SELECT COUNT(*) AS n FROM appointments');
+      const n = Number(row && row.n);
+      if (Number.isFinite(n)) seq = n + 1;
+    } catch (_) { /* keep the in-memory number */ }
+    const confirmation = `ZOLA-${String(seq).padStart(5, '0')}`;
 
     bookings.push({
       id, customer_name, customer_email, customer_phone,

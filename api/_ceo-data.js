@@ -32,6 +32,41 @@ module.exports = async (req, res) => {
 
   // ── GET ────────────────────────────────────────────────────────────
   if (req.method === 'GET') {
+    // Every booking figure below comes from the durable appointments table.
+    // It used to read store.bookings, an in-memory array that empties on every
+    // cold start — which is how a paid booking could reach Stripe and the bank
+    // while this dashboard still said zero.
+    async function allBookings() {
+      try {
+        const rows = await query(
+          `SELECT id, guest_name, guest_email, service, addons, appointment_date, appointment_time,
+                  status, total_cents, deposit_cents, deposit_paid, staff_id, member_id, created_at
+             FROM appointments ORDER BY appointment_date DESC, appointment_time DESC`);
+        return rows.map(r => ({
+          id: r.id,
+          guest_name: r.guest_name,
+          guest_email: r.guest_email,
+          service_name: r.service,
+          service: r.service,
+          addons: r.addons,
+          date: r.appointment_date,
+          appointment_date: r.appointment_date,
+          time_slot: r.appointment_time,
+          appointment_time: r.appointment_time,
+          status: r.status,
+          total_cents: Number(r.total_cents) || 0,
+          deposit_cents: Number(r.deposit_cents) || 0,
+          deposit_paid: Number(r.deposit_paid) || 0,
+          staff_id: r.staff_id,
+          member_id: r.member_id,
+          created_at: r.created_at,
+        }));
+      } catch (_) { return []; }
+    }
+    // Cancelled bookings still belong in the history, but never in revenue.
+    const isLive = b => String(b.status || '').toUpperCase() !== 'CANCELLED';
+    const sumRevenue = list => list.filter(isLive).reduce((s, b) => s + (b.total_cents || 0), 0);
+
     if (section === 'overview') {
       let members = [];
       try { members = await query('SELECT tier FROM members'); } catch (_) {}
@@ -39,15 +74,19 @@ module.exports = async (req, res) => {
       const mrr = members.reduce((s, m) => s + (PRICE[m.tier] || 0), 0);
       const byTier = { SIGNATURE: 0, LUXE: 0, BLACK_CARD: 0 };
       members.forEach(m => { if (byTier[m.tier] !== undefined) byTier[m.tier]++; });
+
+      const all = await allBookings();
       const today = new Date().toISOString().slice(0, 10);
-      const todayBookings = store.bookings.filter(b => b.date === today);
+      const todayBookings = all.filter(b => b.date === today);
       return res.json({
         mrr, totalMembers: members.length, byTier,
         todayBookings: todayBookings.length,
-        todayRevenue: todayBookings.reduce((s, b) => s + b.total_cents, 0),
-        totalBookings: store.bookings.length,
-        upcomingBookings: store.bookings.filter(b => b.date >= today).sort((a,b) => a.date.localeCompare(b.date) || a.time_slot.localeCompare(b.time_slot)).slice(0, 8),
-        recentBookings: store.bookings.slice(-6).reverse(),
+        todayRevenue: sumRevenue(todayBookings),
+        totalBookings: all.length,
+        upcomingBookings: all.filter(b => b.date >= today && isLive(b))
+          .sort((a, b) => String(a.date).localeCompare(String(b.date))
+            || String(a.time_slot).localeCompare(String(b.time_slot))).slice(0, 8),
+        recentBookings: all.slice(0, 6),
         lowInventory: store.inventory.filter(i => i.qty <= i.low_at),
         topQuestions: topQuestions(5),
         funnelSummary: funnelSummary(),
@@ -63,28 +102,119 @@ module.exports = async (req, res) => {
     }
 
     if (section === 'bookings') {
+      const all = await allBookings();
       const dateFilter = req.query.date;
-      let result = store.bookings.slice().reverse();
-      if (dateFilter) result = result.filter(b => b.date === dateFilter);
-      return res.json({ bookings: result });
+      return res.json({ bookings: dateFilter ? all.filter(b => b.date === dateFilter) : all });
     }
 
     if (section === 'reports') {
+      const all = await allBookings();
       const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
       const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-      const weeklyBookings = store.bookings.filter(b => b.date >= weekAgo);
-      const monthlyBookings = store.bookings.filter(b => b.date >= monthAgo);
+      const weekly = all.filter(b => b.date >= weekAgo);
+      const monthly = all.filter(b => b.date >= monthAgo);
       const svcCount = {};
-      store.bookings.forEach(b => { svcCount[b.service_name] = (svcCount[b.service_name] || 0) + 1; });
+      all.filter(isLive).forEach(b => { svcCount[b.service_name] = (svcCount[b.service_name] || 0) + 1; });
       return res.json({
-        weeklyBookings: weeklyBookings.length,
-        weeklyRevenue: weeklyBookings.reduce((s,b) => s + b.total_cents, 0),
-        monthlyBookings: monthlyBookings.length,
-        monthlyRevenue: monthlyBookings.reduce((s,b) => s + b.total_cents, 0),
-        totalBookings: store.bookings.length,
+        weeklyBookings: weekly.length,
+        weeklyRevenue: sumRevenue(weekly),
+        monthlyBookings: monthly.length,
+        monthlyRevenue: sumRevenue(monthly),
+        totalBookings: all.length,
         funnelByStep: funnelSummary(),
         topQuestions: topQuestions(20),
-        servicePopularity: Object.entries(svcCount).sort((a,b) => b[1]-a[1]).slice(0, 8),
+        servicePopularity: Object.entries(svcCount).sort((a, b) => b[1] - a[1]).slice(0, 8),
+      });
+    }
+
+    // ── RECORDS: the permanent books, month by month and year by year ──
+    // Kept as a separate section so the dashboard stays fast: this walks
+    // everything ever booked, which the day-to-day screens do not need.
+    if (section === 'records') {
+      const all = await allBookings();
+
+      let members = [];
+      try {
+        members = await query('SELECT member_id, full_name, tier, membership_started_at FROM members');
+      } catch (_) {}
+
+      let team = [], teamAppts = [];
+      try {
+        const tdb = require('./_team-db');
+        await tdb.ensureTables();
+        team = await tdb.query('SELECT id, name FROM team_members');
+        teamAppts = await tdb.query('SELECT team_member_id, client_name, service, date, status FROM team_appointments');
+      } catch (_) {}
+
+      let inventory = [];
+      try {
+        const tdb = require('./_team-db');
+        inventory = await tdb.query('SELECT name, qty, unit, created_ts FROM studio_inventory');
+      } catch (_) {}
+
+      const bucket = {};
+      const touch = k => (bucket[k] = bucket[k] || {
+        key: k, bookings: 0, cancelled: 0, revenue: 0, deposits: 0, clients: {},
+      });
+      for (const b of all) {
+        if (!b.date) continue;
+        const mo = String(b.date).slice(0, 7);
+        const yr = String(b.date).slice(0, 4);
+        for (const k of [mo, yr]) {
+          const t = touch(k);
+          t.bookings++;
+          if (!isLive(b)) { t.cancelled++; continue; }
+          t.revenue += b.total_cents || 0;
+          if (Number(b.deposit_paid)) t.deposits += b.deposit_cents || 0;
+          if (b.guest_name) t.clients[b.guest_name] = (t.clients[b.guest_name] || 0) + 1;
+        }
+      }
+
+      // memberships counted by when they started, so a month shows what it won
+      const memberBucket = {};
+      for (const m of members) {
+        const d = String(m.membership_started_at || '').slice(0, 10);
+        if (!d) continue;
+        for (const k of [d.slice(0, 7), d.slice(0, 4)]) {
+          memberBucket[k] = memberBucket[k] || { joined: 0, byTier: {} };
+          memberBucket[k].joined++;
+          memberBucket[k].byTier[m.tier] = (memberBucket[k].byTier[m.tier] || 0) + 1;
+        }
+      }
+
+      // who served whom, from the team calendar
+      const nameById = {};
+      for (const t of team) nameById[t.id] = t.name;
+      const byArtist = {};
+      for (const a of teamAppts) {
+        if (String(a.status || '').toLowerCase() === 'cancelled') continue;
+        const who = nameById[a.team_member_id] || 'Unassigned';
+        byArtist[who] = byArtist[who] || { artist: who, appointments: 0, clients: {} };
+        byArtist[who].appointments++;
+        if (a.client_name) byArtist[who].clients[a.client_name] = true;
+      }
+
+      const rows = Object.values(bucket).map(t => ({
+        key: t.key,
+        kind: t.key.length === 4 ? 'year' : 'month',
+        bookings: t.bookings,
+        cancelled: t.cancelled,
+        revenue_cents: t.revenue,
+        deposits_cents: t.deposits,
+        unique_clients: Object.keys(t.clients).length,
+        repeat_clients: Object.values(t.clients).filter(n => n > 1).length,
+        members_joined: (memberBucket[t.key] || {}).joined || 0,
+        members_by_tier: (memberBucket[t.key] || {}).byTier || {},
+      })).sort((a, b) => String(b.key).localeCompare(String(a.key)));
+
+      return res.json({
+        rows,
+        artists: Object.values(byArtist)
+          .map(a => ({ artist: a.artist, appointments: a.appointments, clients: Object.keys(a.clients).length }))
+          .sort((a, b) => b.appointments - a.appointments),
+        inventory_items: inventory.length,
+        inventory_units: inventory.reduce((s, i) => s + (Number(i.qty) || 0), 0),
+        total_members: members.length,
       });
     }
 
