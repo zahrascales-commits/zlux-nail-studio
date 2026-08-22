@@ -546,6 +546,7 @@
     <button class="tab" data-tab="schedule" onclick="showTab('schedule')">Calendar</button>
     <button class="tab" data-tab="bookings" onclick="showTab('bookings')">All Bookings</button>
     <button class="tab" data-tab="reports" onclick="showTab('reports')">Reports</button>
+    <button class="tab" data-tab="records" onclick="showTab('records')">Records</button>
     <button class="tab" data-tab="sales" onclick="showTab('sales')">Sales</button>
     <button class="tab" data-tab="deposits" onclick="showTab('deposits')">Deposits <span class="dot" id="dep-dot" style="display:none">0</span></button>
     <button class="tab" data-tab="inventory" onclick="showTab('inventory')">Inventory <span class="dot" id="inv-dot" style="display:none">0</span></button>
@@ -758,6 +759,28 @@
       <div class="page-head" style="margin-top:2rem;"><div><div class="page-title" style="font-size:1.15rem;">Where people drop off</div>
       <div class="page-desc">Each step of the booking flow, and how many left there.</div></div></div>
       <div id="rp-funnel"></div>
+    </section>
+
+    <!-- RECORDS -->
+    <section class="panel" id="panel-records">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Records</div>
+          <div class="page-desc">Every month and every year on the books. Nothing here is ever deleted — it is the history you can look back on.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="exportRecords()">Download CSV</button>
+      </div>
+      <div class="cards" id="rc-totals"></div>
+
+      <div class="page-head" style="margin-top:2rem;"><div><div class="page-title" style="font-size:1.15rem;">By year</div></div></div>
+      <div id="rc-years"></div>
+
+      <div class="page-head" style="margin-top:2rem;"><div><div class="page-title" style="font-size:1.15rem;">By month</div></div></div>
+      <div id="rc-months"></div>
+
+      <div class="page-head" style="margin-top:2rem;"><div><div class="page-title" style="font-size:1.15rem;">By artist</div>
+        <div class="page-desc">How many appointments each person has taken, and how many different clients they have seen.</div></div></div>
+      <div id="rc-artists"></div>
     </section>
 
     <!-- SERVICES -->
@@ -1735,6 +1758,7 @@ function logout(){sessionStorage.removeItem('zm_pwd');location.reload();}
 // button and the auto-refresh timer can never drift apart.
 const TAB_LOADERS = {
   overview:   () => loadOverview(),
+  records:    () => loadRecords(),
   bookings:   () => loadAllBookings(),
   reports:    () => loadReports(),
   services:   () => loadServicesTab(),
@@ -3682,6 +3706,104 @@ async function mkRemove(id){
 }
 
   
+
+/* ══════════════ RECORDS ══════════════ */
+let RECORDS = null;
+
+function rcRow(r){
+  const rev = cmoney(r.revenue_cents);
+  const dep = cmoney(r.deposits_cents);
+  const tiers = Object.entries(r.members_by_tier || {})
+    .map(function(e){ return e[1] + ' ' + String(e[0]).toLowerCase().replace('_',' '); }).join(', ');
+  return '<div class="member-card" style="--mc:#B6A588">'
+    + '<div class="mc-top"><div style="flex:1">'
+      + '<div class="mc-name">' + esc(rcLabel(r)) + '</div>'
+      + '<div class="mc-role">' + r.bookings + ' booking' + (r.bookings===1?'':'s')
+        + (r.cancelled ? ' · ' + r.cancelled + ' cancelled' : '')
+        + ' · ' + r.unique_clients + ' client' + (r.unique_clients===1?'':'s')
+        + (r.repeat_clients ? ' · ' + r.repeat_clients + ' came back' : '')
+      + '</div></div>'
+      + '<span class="status-pill status-on">' + rev + '</span></div>'
+    + '<div style="font-size:0.72rem;color:var(--muted);margin-top:0.45rem">'
+      + dep + ' taken as deposits'
+      + (r.members_joined ? ' · ' + r.members_joined + ' joined' + (tiers ? ' (' + esc(tiers) + ')' : '') : '')
+    + '</div></div>';
+}
+
+function rcLabel(r){
+  if(r.kind === 'year') return r.key;
+  const p = String(r.key).split('-');
+  return new Date(Number(p[0]), Number(p[1]) - 1, 1)
+    .toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
+async function loadRecords(){
+  const t = document.getElementById('rc-totals');
+  const y = document.getElementById('rc-years');
+  const mo = document.getElementById('rc-months');
+  const ar = document.getElementById('rc-artists');
+  t.innerHTML = '<div class="empty">Loading…</div>';
+  try{
+    const d = await ceo('records');
+    RECORDS = d;
+    const years = (d.rows||[]).filter(function(r){ return r.kind === 'year'; });
+    const months = (d.rows||[]).filter(function(r){ return r.kind === 'month'; });
+    const allRev = years.reduce(function(s,r){ return s + r.revenue_cents; }, 0);
+    const allBk = years.reduce(function(s,r){ return s + r.bookings; }, 0);
+
+    t.innerHTML = [
+      statCard(cmoney(allRev), 'Booked all time'),
+      statCard(allBk, 'Bookings all time'),
+      statCard(d.total_members||0, 'Members'),
+      statCard(d.inventory_items||0, 'Inventory items'),
+      statCard(d.inventory_units||0, 'Units in stock'),
+    ].join('');
+
+    y.innerHTML = years.length ? years.map(rcRow).join('') : emptyBox('📅','Nothing on the books yet.');
+    mo.innerHTML = months.length ? months.map(rcRow).join('') : emptyBox('📅','No months yet.');
+    ar.innerHTML = (d.artists||[]).length
+      ? d.artists.map(function(a){
+          return '<div class="member-card" style="--mc:#B6A588"><div class="mc-top"><div style="flex:1">'
+            + '<div class="mc-name">' + esc(a.artist) + '</div>'
+            + '<div class="mc-role">' + a.clients + ' different client' + (a.clients===1?'':'s') + '</div></div>'
+            + '<span class="status-pill status-on">' + a.appointments + ' appt' + (a.appointments===1?'':'s') + '</span>'
+            + '</div></div>';
+        }).join('')
+      : emptyBox('👥','Nothing assigned to an artist yet.');
+  }catch(_){
+    t.innerHTML = emptyBox('⚠️','Could not load the records.');
+    y.innerHTML = mo.innerHTML = ar.innerHTML = '';
+  }
+}
+
+// Download so the books can go to an accountant, or just be kept somewhere
+// that is not only this website.
+function exportRecords(){
+  if(!RECORDS){ toast('Still loading'); return; }
+  const head = ['Period','Type','Bookings','Cancelled','Revenue','Deposits','Clients','Repeat clients','Members joined'];
+  const lines = [head.join(',')];
+  (RECORDS.rows||[]).forEach(function(r){
+    lines.push([
+      r.key, r.kind, r.bookings, r.cancelled,
+      (r.revenue_cents/100).toFixed(2), (r.deposits_cents/100).toFixed(2),
+      r.unique_clients, r.repeat_clients, r.members_joined,
+    ].join(','));
+  });
+  lines.push('');
+  lines.push(['Artist','Appointments','Clients'].join(','));
+  (RECORDS.artists||[]).forEach(function(a){
+    lines.push([JSON.stringify(a.artist), a.appointments, a.clients].join(','));
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'zola-records-' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  toast('Downloaded ✦');
+}
+
 /* ══════════════ PORTED FROM CEO STUDIO ══════════════
    Same /api/ceo-data endpoints, rebuilt in this page's own markup so the
    merged manager reads as one product rather than two bolted together. */
