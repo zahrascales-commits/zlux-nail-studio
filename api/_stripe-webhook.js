@@ -4,12 +4,33 @@ const Stripe = require('stripe');
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+  // Keys come from Settings first, then env. Storing them in the database is
+  // what lets the Studio Manager repair this without a redeploy — and a
+  // missing signing secret is why every event was returning 400.
+  let secretKey = process.env.STRIPE_SECRET_KEY || '';
+  let signingSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+  try {
+    const { query } = require('./_team-db');
+    const rows = await query("SELECT key, value FROM site_settings WHERE key IN ('stripe_secret','stripe_webhook_secret')");
+    for (const r of rows) {
+      if (r.key === 'stripe_secret' && r.value) secretKey = r.value;
+      if (r.key === 'stripe_webhook_secret' && r.value) signingSecret = r.value;
+    }
+  } catch (_) { /* fall back to env */ }
+
+  if (!signingSecret) {
+    // Nothing to verify against. Returning 2xx stops Stripe retiring the
+    // endpoint over a configuration gap, and the log says what is wrong.
+    console.error('Stripe webhook: no signing secret configured');
+    return res.status(200).send('no signing secret configured');
+  }
+
+  const stripe = Stripe(secretKey);
   const sig = req.headers['stripe-signature'];
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    event = stripe.webhooks.constructEvent(req.body, sig, signingSecret);
   } catch (err) {
     console.error('Webhook sig fail:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);

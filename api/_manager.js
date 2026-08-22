@@ -279,6 +279,106 @@ module.exports = async function (req, res) {
       return res.json({ ok: true });
     }
 
+    // ── STRIPE WEBHOOKS ──
+    // Stripe retries a failing endpoint for nine days then gives up, and a
+    // dead subscription webhook means renewals stop being recorded. The two
+    // things that break it are an endpoint still pointing at an old domain,
+    // and a missing signing secret (every event then fails verification and
+    // returns 400, which Stripe counts as a failure).
+    async function stripeKey() {
+      const rows = await query("SELECT key, value FROM site_settings WHERE key='stripe_secret'");
+      return (rows[0] && rows[0].value) || process.env.STRIPE_SECRET_KEY || '';
+    }
+    async function sapi(path, opts = {}) {
+      const secret = await stripeKey();
+      const r = await fetch('https://api.stripe.com/v1/' + path, {
+        method: opts.method || 'GET',
+        headers: {
+          Authorization: 'Bearer ' + secret,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: opts.body,
+      });
+      return { status: r.status, body: await r.json() };
+    }
+
+    if (method === 'GET' && action === 'webhook_status') {
+      const secretRow = await queryOne("SELECT value FROM site_settings WHERE key='stripe_webhook_secret'").catch(() => null);
+      const haveSigningSecret = !!((secretRow && secretRow.value) || process.env.STRIPE_WEBHOOK_SECRET);
+      const r = await sapi('webhook_endpoints?limit=20');
+      if (r.status !== 200) {
+        return res.json({ ok: false, error: (r.body.error || {}).message || 'Could not read webhooks', haveSigningSecret });
+      }
+      const want = (process.env.PUBLIC_SITE_URL || 'https://zolanailstudio.com') + '/api/stripe-webhook';
+      return res.json({
+        ok: true, want, haveSigningSecret,
+        endpoints: (r.body.data || []).map(e => ({
+          id: e.id, url: e.url, status: e.status, livemode: e.livemode,
+          events: (e.enabled_events || []).length,
+          correct: e.url === want,
+        })),
+      });
+    }
+
+    // Point Stripe at the live domain and store the signing secret, so events
+    // verify instead of 400-ing. Old endpoints are disabled rather than
+    // deleted — if one turns out to matter it can be switched back on.
+    if (method === 'POST' && action === 'webhook_fix') {
+      const want = (process.env.PUBLIC_SITE_URL || 'https://zolanailstudio.com') + '/api/stripe-webhook';
+      const EVENTS = [
+        'invoice.payment_succeeded', 'invoice.payment_failed',
+        'customer.subscription.created', 'customer.subscription.updated',
+        'customer.subscription.deleted', 'checkout.session.completed',
+        'payment_intent.succeeded', 'payment_intent.payment_failed',
+      ];
+
+      const list = await sapi('webhook_endpoints?limit=20');
+      if (list.status !== 200) {
+        return res.status(400).json({ error: (list.body.error || {}).message || 'Could not read webhooks' });
+      }
+      const existing = (list.body.data || []);
+      const already = existing.find(e => e.url === want);
+
+      const disabled = [];
+      for (const e of existing) {
+        if (e.url === want) continue;
+        const d = await sapi('webhook_endpoints/' + e.id, {
+          method: 'POST', body: new URLSearchParams({ disabled: 'true' }).toString(),
+        });
+        disabled.push({ url: e.url, ok: d.status === 200 });
+      }
+
+      let created = null, secret = null;
+      if (already) {
+        // make sure it is enabled and listening for what we need
+        const p = new URLSearchParams({ disabled: 'false' });
+        EVENTS.forEach(ev => p.append('enabled_events[]', ev));
+        await sapi('webhook_endpoints/' + already.id, { method: 'POST', body: p.toString() });
+        created = { id: already.id, url: already.url, reused: true };
+      } else {
+        const p = new URLSearchParams({ url: want, description: 'ZOLA site' });
+        EVENTS.forEach(ev => p.append('enabled_events[]', ev));
+        const c = await sapi('webhook_endpoints', { method: 'POST', body: p.toString() });
+        if (c.status !== 200) {
+          return res.status(400).json({ error: (c.body.error || {}).message || 'Could not create webhook' });
+        }
+        created = { id: c.body.id, url: c.body.url, reused: false };
+        secret = c.body.secret || null; // only returned at creation
+      }
+
+      if (secret) {
+        await execute(
+          "INSERT INTO site_settings (key, value) VALUES ('stripe_webhook_secret', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+          [secret]);
+      }
+      const secretRow = await queryOne("SELECT value FROM site_settings WHERE key='stripe_webhook_secret'").catch(() => null);
+      return res.json({
+        ok: true, created, disabled,
+        haveSigningSecret: !!((secretRow && secretRow.value) || process.env.STRIPE_WEBHOOK_SECRET),
+        note: secret ? 'signing secret stored' : (already ? 'reused existing endpoint — its secret was set when it was created' : ''),
+      });
+    }
+
     // ── COVERAGE CHECK: which services can actually be booked this month? ──
     // The commonest confusion is "why is the calendar blocked?" when the real
     // answer is that the only artist rostered that month is not ticked for
