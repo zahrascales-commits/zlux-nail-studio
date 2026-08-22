@@ -3828,10 +3828,10 @@ async function loadOverview(){
   try{
     const d = await ceo('overview');
     s.innerHTML = [
-      statCard(cdollars(d.mrr), 'Monthly recurring'),
+      statCard(cmoney(d.mrr), 'Monthly recurring'),
       statCard(d.totalMembers||0, 'Members'),
       statCard(d.todayBookings||0, 'Booked today'),
-      statCard(cdollars(d.todayRevenue), 'Today'),
+      statCard(cmoney(d.todayRevenue), 'Today'),
       statCard(d.totalBookings||0, 'Bookings all time'),
     ].join('');
     const up = d.upcomingBookings || [];
@@ -3874,9 +3874,9 @@ async function loadReports(){
     const d = await ceo('reports');
     s.innerHTML = [
       statCard(d.weeklyBookings||0, 'Bookings this week'),
-      statCard(cdollars(d.weeklyRevenue), 'This week'),
+      statCard(cmoney(d.weeklyRevenue), 'This week'),
       statCard(d.monthlyBookings||0, 'Bookings this month'),
-      statCard(cdollars(d.monthlyRevenue), 'This month'),
+      statCard(cmoney(d.monthlyRevenue), 'This month'),
       statCard(d.totalBookings||0, 'All time'),
     ].join('');
     const steps = d.funnelByStep || {};
