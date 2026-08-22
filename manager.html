@@ -362,45 +362,6 @@
   .ai-tag::before{content:'✦';animation:pulse 2s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
 
-  /* ── DISCOUNT CODES ── */
-async function loadPromos(){
-  const g=document.getElementById('promo-list');if(!g)return;
-  try{
-    const r=await api('/api/promo');const d=await r.json();
-    const c=d.codes||[];
-    if(!c.length){g.innerHTML='<div style="color:var(--muted);font-size:0.8rem">No codes yet.</div>';return;}
-    g.innerHTML=c.map(x=>'<div style="display:flex;align-items:center;gap:0.7rem;padding:0.65rem 0.85rem;border:1px solid var(--border);border-radius:8px;background:var(--card)">'
-      +'<div style="flex:1;min-width:0">'
-        +'<div style="font-family:'Cinzel',serif;font-size:1rem;color:var(--gold);letter-spacing:0.08em">'+esc(x.code)+'</div>'
-        +'<div style="font-size:0.68rem;color:var(--muted)">$'+(Number(x.amount_off_cents)/100).toFixed(0)+' off'
-          +(x.label?' · '+esc(x.label):'')+' · used '+Number(x.used_count||0)+'×</div>'
-      +'</div>'
-      +'<span class="status-pill '+(Number(x.active)?'status-on':'status-off')+'">'+(Number(x.active)?'On':'Off')+'</span>'
-      +'<button class="btn btn-ghost btn-sm" onclick="togglePromo(''+x.code+'','+(Number(x.active)?0:1)+','+Number(x.amount_off_cents)+')">'+(Number(x.active)?'Turn off':'Turn on')+'</button>'
-      +'<button class="btn btn-danger btn-sm" onclick="delPromo(''+x.code+'')">Delete</button>'
-      +'</div>').join('');
-  }catch{g.innerHTML='<div style="color:var(--muted);font-size:0.8rem">Could not load codes.</div>';}
-}
-async function savePromo(){
-  const code=document.getElementById('pc-code').value.trim().toUpperCase();
-  const off=Number(document.getElementById('pc-off').value);
-  const label=document.getElementById('pc-label').value.trim();
-  if(!code){toast('Enter a code');return;}
-  if(!(off>0)){toast('Enter how many dollars off');return;}
-  const r=await api('/api/promo?action=save',{method:'POST',body:JSON.stringify({action:'save',code,amount_off:off,label,active:true})});
-  if(r.ok){toast('Saved ✦');document.getElementById('pc-code').value='';document.getElementById('pc-off').value='';document.getElementById('pc-label').value='';await loadPromos();}
-  else toast(((await r.json().catch(()=>({}))).error)||'Save failed');
-}
-async function togglePromo(code,active,cents){
-  await api('/api/promo?action=save',{method:'POST',body:JSON.stringify({action:'save',code,amount_off:cents/100,active:!!active})});
-  await loadPromos();
-}
-async function delPromo(code){
-  if(!confirm('Delete '+code+'? Anyone using it will stop getting the discount.'))return;
-  await api('/api/promo',{method:'DELETE',body:JSON.stringify({code})});
-  await loadPromos();
-}
-
 /* ── SITE EDITOR ── */
   .site-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
   .site-card{background:var(--card);border:1px solid var(--border);padding:1.4rem}
@@ -3583,6 +3544,60 @@ async function mkRemove(id){
   if(!confirm('Take this person off your list?'))return;
   await api('/api/marketing?action=subscriber',{method:'DELETE',body:JSON.stringify({id})});
   await loadMarketing();
+}
+
+  /* ── DISCOUNT CODES ── */
+async function loadPromos(){
+  const g=document.getElementById('promo-list'); if(!g) return;
+  try{
+    const r=await api('/api/promo'); const d=await r.json();
+    const c=d.codes||[];
+    if(!c.length){ g.innerHTML='<div style="color:var(--muted);font-size:0.8rem">No codes yet.</div>'; return; }
+    g.innerHTML=c.map(function(x){
+      const off=(Number(x.amount_off_cents)/100).toFixed(0);
+      const on=Number(x.active);
+      const code=String(x.code).replace(/'/g,'');
+      return [
+        '<div style="display:flex;align-items:center;gap:0.7rem;padding:0.65rem 0.85rem;border:1px solid var(--border);border-radius:8px;background:var(--card)">',
+          '<div style="flex:1;min-width:0">',
+            '<div style="font-family:Cinzel,serif;font-size:1rem;color:var(--gold);letter-spacing:0.08em">'+esc(x.code)+'</div>',
+            '<div style="font-size:0.68rem;color:var(--muted)">$'+off+' off'
+              +(x.label?' · '+esc(x.label):'')+' · used '+Number(x.used_count||0)+'×</div>',
+          '</div>',
+          '<span class="status-pill '+(on?'status-on':'status-off')+'">'+(on?'On':'Off')+'</span>',
+          '<button class="btn btn-ghost btn-sm" onclick="togglePromo(&quot;'+code+'&quot;,'+(on?0:1)+','+Number(x.amount_off_cents)+')">'+(on?'Turn off':'Turn on')+'</button>',
+          '<button class="btn btn-danger btn-sm" onclick="delPromo(&quot;'+code+'&quot;)">Delete</button>',
+        '</div>'
+      ].join('');
+    }).join('');
+  }catch(_){ g.innerHTML='<div style="color:var(--muted);font-size:0.8rem">Could not load codes.</div>'; }
+}
+
+async function savePromo(){
+  const code=document.getElementById('pc-code').value.trim().toUpperCase();
+  const off=Number(document.getElementById('pc-off').value);
+  const label=document.getElementById('pc-label').value.trim();
+  if(!code){ toast('Enter a code'); return; }
+  if(!(off>0)){ toast('Enter how many dollars off'); return; }
+  const r=await api('/api/promo?action=save',{method:'POST',
+    body:JSON.stringify({action:'save',code,amount_off:off,label,active:true})});
+  if(r.ok){
+    toast('Saved ✦');
+    ['pc-code','pc-off','pc-label'].forEach(function(id){ document.getElementById(id).value=''; });
+    await loadPromos();
+  } else toast(((await r.json().catch(function(){return {};})).error)||'Save failed');
+}
+
+async function togglePromo(code,active,cents){
+  await api('/api/promo?action=save',{method:'POST',
+    body:JSON.stringify({action:'save',code,amount_off:cents/100,active:!!active})});
+  await loadPromos();
+}
+
+async function delPromo(code){
+  if(!confirm('Delete '+code+'? Anyone using it will stop getting the discount.')) return;
+  await api('/api/promo',{method:'DELETE',body:JSON.stringify({code})});
+  await loadPromos();
 }
 
 /* ── SHOP MY IG ──
