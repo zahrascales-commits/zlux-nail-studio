@@ -533,7 +533,10 @@
   </div>
 
   <div class="tabs">
-    <button class="tab active" data-tab="schedule" onclick="showTab('schedule')">Calendar</button>
+    <button class="tab active" data-tab="overview" onclick="showTab('overview')">Overview</button>
+    <button class="tab" data-tab="schedule" onclick="showTab('schedule')">Calendar</button>
+    <button class="tab" data-tab="bookings" onclick="showTab('bookings')">All Bookings</button>
+    <button class="tab" data-tab="reports" onclick="showTab('reports')">Reports</button>
     <button class="tab" data-tab="sales" onclick="showTab('sales')">Sales</button>
     <button class="tab" data-tab="deposits" onclick="showTab('deposits')">Deposits <span class="dot" id="dep-dot" style="display:none">0</span></button>
     <button class="tab" data-tab="inventory" onclick="showTab('inventory')">Inventory <span class="dot" id="inv-dot" style="display:none">0</span></button>
@@ -545,6 +548,11 @@
     <button class="tab" data-tab="clients" onclick="showTab('clients')">Clients</button>
     <button class="tab" data-tab="site" onclick="showTab('site')">Site</button>
     <button class="tab" data-tab="traffic" onclick="showTab('traffic')">Traffic</button>
+    <button class="tab" data-tab="services" onclick="showTab('services')">Services</button>
+    <button class="tab" data-tab="goals" onclick="showTab('goals')">Goals</button>
+    <button class="tab" data-tab="payouts" onclick="showTab('payouts')">Payouts</button>
+    <button class="tab" data-tab="giftcards" onclick="showTab('giftcards')">Gift Cards</button>
+    <button class="tab" data-tab="faq" onclick="showTab('faq')">Ask Zola</button>
     <button class="tab" data-tab="settings" onclick="showTab('settings')">Settings</button>
   </div>
 
@@ -704,6 +712,115 @@
       <div id="mk-subs" style="display:grid;gap:0.4rem;"></div>
     </section>
 
+
+    <!-- OVERVIEW -->
+    <section class="panel active" id="panel-overview">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Overview</div>
+          <div class="page-desc">Where the studio stands right now.</div>
+        </div>
+      </div>
+      <div class="cards" id="ov-stats"></div>
+      <div class="page-head" style="margin-top:2rem;"><div><div class="page-title" style="font-size:1.15rem;">Coming up</div></div></div>
+      <div id="ov-upcoming"></div>
+    </section>
+
+    <!-- ALL BOOKINGS -->
+    <section class="panel" id="panel-bookings">
+      <div class="page-head">
+        <div>
+          <div class="page-title">All Bookings</div>
+          <div class="page-desc">Every booking taken through the website, newest first.</div>
+        </div>
+      </div>
+      <div id="bk-list"></div>
+    </section>
+
+    <!-- REPORTS -->
+    <section class="panel" id="panel-reports">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Reports</div>
+          <div class="page-desc">How the last week and month actually went.</div>
+        </div>
+      </div>
+      <div class="cards" id="rp-stats"></div>
+      <div class="page-head" style="margin-top:2rem;"><div><div class="page-title" style="font-size:1.15rem;">Where people drop off</div>
+      <div class="page-desc">Each step of the booking flow, and how many left there.</div></div></div>
+      <div id="rp-funnel"></div>
+    </section>
+
+    <!-- SERVICES -->
+    <section class="panel" id="panel-services">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Services &amp; Prices</div>
+          <div class="page-desc">Your live menu. These are the prices clients are charged and what the deposit is worked out from.</div>
+        </div>
+      </div>
+      <div id="sv-list"></div>
+      <div class="page-head" style="margin-top:2rem;"><div><div class="page-title" style="font-size:1.15rem;">Add-Ons</div></div></div>
+      <div id="sv-addons"></div>
+    </section>
+
+    <!-- GOALS -->
+    <section class="panel" id="panel-goals">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Goals</div>
+          <div class="page-desc">What you're working towards, and how close you are.</div>
+        </div>
+      </div>
+      <div id="gl-list"></div>
+    </section>
+
+    <!-- PAYOUTS -->
+    <section class="panel" id="panel-payouts">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Payouts</div>
+          <div class="page-desc">Money coming in, and what reaches your bank.</div>
+        </div>
+      </div>
+      <div id="po-health"></div>
+      <div class="cards" id="po-stats" style="margin-top:1.25rem;"></div>
+      <div class="sched-card" style="margin-top:1.5rem;">
+        <div style="font-family:'Cinzel',serif;font-size:1.05rem;color:var(--cream);margin-bottom:0.75rem;">Commission calculator</div>
+        <div class="field two">
+          <div><label class="fld-label">Service price</label><input id="po-price" type="number" min="0" value="110" oninput="calcPayout()" /></div>
+          <div><label class="fld-label">Their commission %</label><input id="po-rate" type="number" min="0" max="100" value="40" oninput="calcPayout()" /></div>
+        </div>
+        <div id="po-calc" style="font-size:0.88rem;color:var(--cream);line-height:1.9;margin-top:0.5rem;"></div>
+      </div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:1.25rem;">
+        <a class="btn btn-gold btn-sm" href="https://dashboard.stripe.com/payouts" target="_blank">Stripe Payouts ↗</a>
+        <a class="btn btn-ghost btn-sm" href="https://dashboard.stripe.com/balance" target="_blank">Stripe Balance ↗</a>
+      </div>
+    </section>
+
+    <!-- GIFT CARDS -->
+    <section class="panel" id="panel-giftcards">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Gift Cards</div>
+          <div class="page-desc">Issued cards and what's left on them.</div>
+        </div>
+      </div>
+      <div id="gc-list"></div>
+    </section>
+
+    <!-- ASK ZOLA -->
+    <section class="panel" id="panel-faq">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Ask Zola</div>
+          <div class="page-desc">What clients actually type into the chat on your website. Worth a look weekly — it shows what people are confused about.</div>
+        </div>
+      </div>
+      <div id="faq-list"></div>
+    </section>
+
     <!-- SCHEDULING — pick an artist, tick her services, tick her days -->
     <section class="panel" id="panel-scheduling">
       <div class="page-head">
@@ -840,7 +957,7 @@
     </section>
 
     <!-- CALENDAR / SCHEDULE -->
-    <section class="panel active" id="panel-schedule">
+    <section class="panel" id="panel-schedule">
       <div class="page-head">
         <div>
           <div class="page-title">Calendar</div>
@@ -1586,6 +1703,7 @@ async function login(){
     members=d.members||[];appts=d.appointments||[];
     PROVIDERS=d.providers||{email:false,sms:false};
     startAutoRefresh();
+    showTab('overview');
     fillTime12Selects();
     loadServiceCatalog();
     sessionStorage.setItem('zm_pwd',pwd);
@@ -1607,6 +1725,14 @@ function logout(){sessionStorage.removeItem('zm_pwd');location.reload();}
 // Reloading a screen is now defined once, so the tab switch, the Refresh
 // button and the auto-refresh timer can never drift apart.
 const TAB_LOADERS = {
+  overview:   () => loadOverview(),
+  bookings:   () => loadAllBookings(),
+  reports:    () => loadReports(),
+  services:   () => loadServicesTab(),
+  goals:      () => loadGoals(),
+  payouts:    () => loadPayouts(),
+  giftcards:  () => loadGiftCards(),
+  faq:        () => loadFaq(),
   schedule:   () => { renderCal(); loadBlocks(); loadDayHours(); },
   sales:      () => loadShowcaseCfg().then(loadSales),
   deposits:   () => loadDeposits(),
@@ -3546,7 +3672,212 @@ async function mkRemove(id){
   await loadMarketing();
 }
 
-  /* ── DISCOUNT CODES ── */
+  
+/* ══════════════ PORTED FROM CEO STUDIO ══════════════
+   Same /api/ceo-data endpoints, rebuilt in this page's own markup so the
+   merged manager reads as one product rather than two bolted together. */
+const cmoney = c => '$' + Math.round(Number(c||0)/100).toLocaleString('en-US');
+const cdollars = n => '$' + Math.round(Number(n||0)).toLocaleString('en-US');
+async function ceo(section){
+  const r = await api('/api/ceo-data?section=' + section);
+  if(!r.ok) throw new Error('load failed');
+  return r.json();
+}
+function statCard(num, label){
+  return '<div class="stat"><div class="stat-num">' + num + '</div><div class="stat-lbl">' + label + '</div></div>';
+}
+function emptyBox(icon, msg){
+  return '<div class="empty"><div class="big">' + icon + '</div>' + msg + '</div>';
+}
+
+async function loadOverview(){
+  const s = document.getElementById('ov-stats');
+  const u = document.getElementById('ov-upcoming');
+  s.innerHTML = '<div class="empty">Loading…</div>';
+  try{
+    const d = await ceo('overview');
+    s.innerHTML = [
+      statCard(cdollars(d.mrr), 'Monthly recurring'),
+      statCard(d.totalMembers||0, 'Members'),
+      statCard(d.todayBookings||0, 'Booked today'),
+      statCard(cdollars(d.todayRevenue), 'Today'),
+      statCard(d.totalBookings||0, 'Bookings all time'),
+    ].join('');
+    const up = d.upcomingBookings || [];
+    u.innerHTML = up.length
+      ? up.map(b => '<div class="member-card" style="--mc:#B6A588"><div class="mc-top"><div style="flex:1">'
+          + '<div class="mc-name">' + esc(b.guest_name || b.client_name || 'Client') + '</div>'
+          + '<div class="mc-role">' + esc(b.service || '—') + ' · ' + esc(b.appointment_date || b.date || '')
+          + (b.appointment_time || b.time ? ' at ' + fmtTime(b.appointment_time || b.time) : '') + '</div>'
+          + '</div></div></div>').join('')
+      : emptyBox('📅', 'Nothing booked yet.');
+  }catch(_){ s.innerHTML = emptyBox('⚠️', 'Could not load the overview.'); u.innerHTML = ''; }
+}
+
+async function loadAllBookings(){
+  const el = document.getElementById('bk-list');
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try{
+    const d = await ceo('bookings');
+    const b = d.bookings || [];
+    el.innerHTML = b.length
+      ? b.map(x => '<div class="member-card" style="--mc:#B6A588"><div class="mc-top"><div style="flex:1">'
+          + '<div class="mc-name">' + esc(x.guest_name || 'Client') + '</div>'
+          + '<div class="mc-role">' + esc(x.service || '—') + ' · ' + esc(x.appointment_date || '')
+          + (x.appointment_time ? ' at ' + fmtTime(x.appointment_time) : '') + '</div></div>'
+          + '<span class="status-pill ' + (String(x.status).toUpperCase()==='CANCELLED' ? 'status-off' : 'status-on') + '">'
+          + esc(x.status || 'booked') + '</span></div>'
+          + (x.total_cents ? '<div style="font-size:0.72rem;color:var(--muted);margin-top:0.4rem">'
+              + cmoney(x.total_cents) + ' total · ' + cmoney(x.deposit_cents) + ' deposit'
+              + (Number(x.deposit_paid) ? ' · paid ✓' : ' · unpaid') + '</div>' : '')
+          + '</div>').join('')
+      : emptyBox('🗓️', 'No website bookings yet.');
+  }catch(_){ el.innerHTML = emptyBox('⚠️', 'Could not load bookings.'); }
+}
+
+async function loadReports(){
+  const s = document.getElementById('rp-stats');
+  const f = document.getElementById('rp-funnel');
+  s.innerHTML = '<div class="empty">Loading…</div>';
+  try{
+    const d = await ceo('reports');
+    s.innerHTML = [
+      statCard(d.weeklyBookings||0, 'Bookings this week'),
+      statCard(cdollars(d.weeklyRevenue), 'This week'),
+      statCard(d.monthlyBookings||0, 'Bookings this month'),
+      statCard(cdollars(d.monthlyRevenue), 'This month'),
+      statCard(d.totalBookings||0, 'All time'),
+    ].join('');
+    const steps = d.funnelByStep || {};
+    const names = { 1:'Opened booking', 2:'Picked a service', 3:'Picked a time', 4:'Paid deposit' };
+    const keys = Object.keys(steps);
+    f.innerHTML = keys.length
+      ? keys.map(k => {
+          const st = steps[k] || {};
+          const reached = Number(st.reached||0), dropped = Number(st.dropped||0);
+          const pct = reached ? Math.round((dropped/reached)*100) : 0;
+          return '<div style="padding:0.7rem 0;border-bottom:1px solid var(--border)">'
+            + '<div style="display:flex;justify-content:space-between;gap:1rem;font-size:0.85rem;color:var(--cream)">'
+            + '<span>' + (names[k] || ('Step ' + k)) + '</span>'
+            + '<span style="color:var(--muted)">' + reached + ' reached · ' + dropped + ' left</span></div>'
+            + '<div style="height:5px;background:var(--surface);margin-top:0.4rem;border-radius:3px;overflow:hidden">'
+            + '<div style="height:100%;width:' + Math.min(100, pct) + '%;background:' + (pct>50?'#e08a8a':'var(--gold)') + '"></div></div></div>';
+        }).join('')
+      : emptyBox('📈', 'No funnel data yet — it fills in as people book.');
+  }catch(_){ s.innerHTML = emptyBox('⚠️', 'Could not load reports.'); f.innerHTML = ''; }
+}
+
+async function loadServicesTab(){
+  const el = document.getElementById('sv-list');
+  const ad = document.getElementById('sv-addons');
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try{
+    const d = await ceo('services');
+    const row = (x, isAddon) => '<div class="member-card" style="--mc:#B6A588"><div class="mc-top"><div style="flex:1">'
+      + '<div class="mc-name">' + esc(x.name) + '</div>'
+      + '<div class="mc-role">' + esc(x.description || '') + (x.duration_min ? ' · ' + x.duration_min + ' min' : '') + '</div></div>'
+      + '<span class="status-pill status-on">' + (isAddon ? '+' : '') + cmoney(x.price_cents) + '</span></div></div>';
+    const svc = (d.services || []).filter(x => !x.hidden);
+    el.innerHTML = svc.length ? svc.map(x => row(x, false)).join('') : emptyBox('💅', 'No services.');
+    ad.innerHTML = (d.addons || []).length ? d.addons.map(x => row(x, true)).join('') : emptyBox('✦', 'No add-ons.');
+  }catch(_){ el.innerHTML = emptyBox('⚠️', 'Could not load the menu.'); ad.innerHTML = ''; }
+}
+
+async function loadGoals(){
+  const el = document.getElementById('gl-list');
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try{
+    const d = await ceo('goals');
+    const g = d.goals || [];
+    el.innerHTML = g.length
+      ? g.map(x => {
+          const cur = Number(x.current||0), tgt = Number(x.target||0);
+          const pct = tgt ? Math.min(100, Math.round((cur/tgt)*100)) : 0;
+          return '<div class="member-card" style="--mc:#B6A588"><div class="mc-top"><div style="flex:1">'
+            + '<div class="mc-name">' + esc(x.title) + '</div>'
+            + '<div class="mc-role">' + cur + ' of ' + tgt + ' ' + esc(x.unit || '')
+            + (x.deadline ? ' · by ' + esc(x.deadline) : '') + '</div></div>'
+            + '<span class="status-pill ' + (pct>=100?'status-on':'status-off') + '">' + pct + '%</span></div>'
+            + '<div style="height:6px;background:var(--surface);margin-top:0.6rem;border-radius:3px;overflow:hidden">'
+            + '<div style="height:100%;width:' + pct + '%;background:var(--gold)"></div></div></div>';
+        }).join('')
+      : emptyBox('🎯', 'No goals set yet.');
+  }catch(_){ el.innerHTML = emptyBox('⚠️', 'Could not load goals.'); }
+}
+
+function calcPayout(){
+  const price = Number(document.getElementById('po-price').value) || 0;
+  const rate = Math.min(100, Math.max(0, Number(document.getElementById('po-rate').value) || 0));
+  const theirs = price * (rate/100);
+  document.getElementById('po-calc').innerHTML =
+    'They keep <strong style="color:var(--gold)">' + cdollars(theirs) + '</strong>'
+    + ' · you keep <strong style="color:var(--gold)">' + cdollars(price - theirs) + '</strong>'
+    + '<br><span style="font-size:0.76rem;color:var(--muted)">Before Stripe\'s fee, which is about 2.9% + 30¢ per payment.</span>';
+}
+
+async function loadPayouts(){
+  const h = document.getElementById('po-health');
+  const s = document.getElementById('po-stats');
+  calcPayout();
+  h.innerHTML = '<div class="empty">Checking Stripe…</div>';
+  try{
+    const r = await api('/api/manager?action=stripe_health');
+    const d = await r.json();
+    if(!d.ok){
+      h.innerHTML = '<div style="background:rgba(200,80,80,0.12);border:1px solid rgba(200,80,80,0.4);padding:0.9rem 1.1rem;border-radius:10px;font-size:0.85rem;line-height:1.6">'
+        + '⚠️ Stripe is not responding: ' + esc(d.detail || d.reason || 'unknown') + '</div>';
+    } else {
+      const good = d.charges_enabled && d.payouts_enabled;
+      h.innerHTML = '<div style="background:' + (good?'rgba(106,176,122,0.12)':'rgba(200,120,60,0.12)')
+        + ';border:1px solid ' + (good?'rgba(106,176,122,0.4)':'rgba(200,120,60,0.4)')
+        + ';padding:0.9rem 1.1rem;border-radius:10px;font-size:0.85rem;line-height:1.7">'
+        + (good ? '✓ Taking payments and paying out' : '⚠️ Something is not switched on yet')
+        + '<br><span style="color:var(--muted);font-size:0.78rem">'
+        + 'Charges ' + (d.charges_enabled?'on':'off') + ' · payouts ' + (d.payouts_enabled?'on':'off')
+        + (d.payout_schedule ? ' · ' + esc(d.payout_schedule.interval||'') + ', ' + (d.payout_schedule.delay_days||0) + ' day delay' : '')
+        + '</span></div>';
+    }
+    const bal = d.balance || {};
+    s.innerHTML = [
+      statCard(cdollars(bal.available), 'Available now'),
+      statCard(cdollars(bal.pending), 'Still clearing'),
+      statCard(esc(d.statement_descriptor || '—'), 'On their statement'),
+    ].join('');
+  }catch(_){ h.innerHTML = emptyBox('⚠️', 'Could not reach Stripe.'); s.innerHTML=''; }
+}
+
+async function loadGiftCards(){
+  const el = document.getElementById('gc-list');
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try{
+    const d = await ceo('giftcards');
+    const g = d.giftCards || [];
+    el.innerHTML = g.length
+      ? g.map(x => '<div class="member-card" style="--mc:#B6A588"><div class="mc-top"><div style="flex:1">'
+          + '<div class="mc-name">' + esc(x.code || 'Card') + '</div>'
+          + '<div class="mc-role">' + esc(x.recipient || x.buyer || '') + '</div></div>'
+          + '<span class="status-pill status-on">' + cmoney(x.balance_cents != null ? x.balance_cents : x.amount_cents) + '</span></div></div>').join('')
+      : emptyBox('🎁', 'No gift cards issued yet.');
+  }catch(_){ el.innerHTML = emptyBox('⚠️', 'Could not load gift cards.'); }
+}
+
+async function loadFaq(){
+  const el = document.getElementById('faq-list');
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try{
+    // the chat questions ride along on the overview payload
+    const d = await ceo('overview');
+    const q = d.chatQuestions || d.topQuestions || [];
+    el.innerHTML = q.length
+      ? q.map(x => '<div style="padding:0.7rem 0.9rem;border:1px solid var(--border);border-radius:8px;background:var(--card);margin-bottom:0.45rem">'
+          + '<div style="font-size:0.85rem;color:var(--cream)">' + esc(x.q || x.question || String(x)) + '</div>'
+          + (x.count ? '<div style="font-size:0.68rem;color:var(--muted);margin-top:0.15rem">asked ' + x.count + '×</div>' : '')
+          + '</div>').join('')
+      : emptyBox('💬', 'Nobody has used the chat yet. Questions appear here as they come in.');
+  }catch(_){ el.innerHTML = emptyBox('⚠️', 'Could not load questions.'); }
+}
+
+/* ── DISCOUNT CODES ── */
 async function loadPromos(){
   const g=document.getElementById('promo-list'); if(!g) return;
   try{
