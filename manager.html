@@ -136,6 +136,21 @@
   .cal-cell.has-appts .cal-num{color:#c9a9e0;font-weight:600}
   .cal-cell.has-appts.sel{background:rgba(146,110,178,0.3)}
 
+  /* Coverage panel — the answer to "why is that month blocked?" */
+  .cov-panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.2rem;margin-bottom:1.5rem}
+  .cov-head{display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.9rem}
+  .cov-title{font-family:'Cinzel',serif;font-size:1.05rem;color:var(--cream)}
+  .cov-sub{font-size:0.72rem;color:var(--muted);margin-top:0.1rem}
+  .cov-row{display:flex;align-items:center;gap:0.7rem;padding:0.55rem 0;border-bottom:1px solid var(--border)}
+  .cov-row:last-child{border-bottom:none}
+  .cov-pill{flex-shrink:0;font-size:0.56rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
+    padding:0.22rem 0.5rem;border-radius:4px;min-width:66px;text-align:center}
+  .cov-pill.ok{background:rgba(106,176,122,0.16);color:#7ec98a}
+  .cov-pill.no{background:rgba(200,80,80,0.14);color:#e08a8a}
+  .cov-name{flex:1;min-width:0;font-size:0.82rem;color:var(--cream)}
+  .cov-why{font-size:0.68rem;color:var(--muted);margin-top:0.1rem}
+  .cov-fix{font-size:0.68rem;color:#e0a06a;margin-top:0.1rem}
+
   /* ── SCHEDULING ── */
   .mk-stages{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.6rem}
   .mk-stage{text-align:left;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:0.85rem 0.95rem;cursor:pointer;display:flex;flex-direction:column;gap:0.25rem;transition:all 0.18s;min-height:64px}
@@ -744,6 +759,17 @@ async function delPromo(code){
       </div>
 
       <!-- STEP 1 -->
+      <div class="cov-panel" id="cov-panel">
+        <div class="cov-head">
+          <div>
+            <div class="cov-title">What clients can book</div>
+            <div class="cov-sub" id="cov-month">—</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadCoverage()">↻ Recheck</button>
+        </div>
+        <div id="cov-list"><div style="font-size:0.8rem;color:var(--muted)">Checking…</div></div>
+      </div>
+
       <div class="sched-step">
         <div class="sched-step-n">1</div>
         <div class="sched-step-t">Who are you scheduling?</div>
@@ -1668,7 +1694,58 @@ function schedMonthRange(ds){
 }
 function schedDs(y,m,day){const pad=n=>String(n).padStart(2,'0');return `${y}-${pad(m+1)}-${pad(day)}`;}
 
+// Ask the server, per service, whether anything can actually be booked in the
+// month on screen — and if not, name who could fix it and how.
+async function loadCoverage(){
+  const el = document.getElementById('cov-list');
+  if(!el) return;
+  const {from,to} = schedMonthRange(schedCursor);
+  const d = new Date(schedCursor+'T12:00:00');
+  document.getElementById('cov-month').textContent =
+    d.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  el.innerHTML = '<div style="font-size:0.8rem;color:var(--muted)">Checking…</div>';
+  try{
+    const r = await api('/api/manager?action=coverage_check&from='+from+'&to='+to);
+    const j = await r.json();
+    const rows = j.coverage || [];
+    const capable = j.capable || {};
+    if(!rows.length){ el.innerHTML='<div style="font-size:0.8rem;color:var(--muted)">Nothing to check.</div>'; return; }
+
+    // Before any shift exists the booking page stays wide open on purpose.
+    if(rows.every(x => !x.configured)){
+      el.innerHTML = '<div style="font-size:0.8rem;color:#7ec98a;line-height:1.6">'
+        + 'Nothing scheduled yet, so <strong>every service is bookable on every day</strong>. '
+        + 'That changes the moment you save your first day below.</div>';
+      return;
+    }
+
+    el.innerHTML = rows.map(x => {
+      const can = capable[x.service] || [];
+      const ok = x.days > 0;
+      let why, fix = '';
+      if(ok){
+        why = x.days + ' day' + (x.days===1?'':'s') + ' open · ' + x.artists.join(', ');
+      } else if(!can.length){
+        why = 'Nobody is ticked for this service';
+        fix = 'Fix: tick it under someone in step 2 below';
+      } else {
+        why = can.join(', ') + ' can do it';
+        fix = 'Fix: give ' + (can.length===1?can[0]:'one of them') + ' some days this month';
+      }
+      return '<div class="cov-row">'
+        + '<span class="cov-pill '+(ok?'ok':'no')+'">'+(ok?'Bookable':'Blocked')+'</span>'
+        + '<span class="cov-name">'+esc(x.service)
+          + '<span class="cov-why">'+esc(why)+'</span>'
+          + (fix?'<span class="cov-fix">'+esc(fix)+'</span>':'')
+        + '</span></div>';
+    }).join('');
+  }catch(_){
+    el.innerHTML = '<div style="font-size:0.8rem;color:#e08a8a">Could not check coverage.</div>';
+  }
+}
+
 async function loadScheduling(){
+  loadCoverage();
   renderSchedPeople();
   try{
     const {from,to}=schedMonthRange(schedCursor);
@@ -1777,7 +1854,7 @@ async function loadSchedMonth(){
 
 function schedNav(dir){
   const go=()=>{const d=new Date(schedCursor+'T12:00:00');d.setMonth(d.getMonth()+dir);
-    schedCursor=localDsM(d);schedDirty=false;loadSchedMonth();
+    schedCursor=localDsM(d);schedDirty=false;loadSchedMonth();loadCoverage();
     document.getElementById('sched-status').textContent='';};
   if(schedDirty && !confirm('You have unsaved changes for this month. Leave without saving?'))return;
   go();
@@ -1920,6 +1997,7 @@ async function schedSave(){
     if(m){m.skills=Array.from(schedSkills);m.restricted=all?0:1;}
     schedDirty=false;
     status.innerHTML='<span style="color:#7ec98a">Saved ✓ '+dates.length+' day'+(dates.length===1?'':'s')+' this month</span>';
+    loadCoverage();
     await loadSchedMonth();
   }catch(e){
     status.innerHTML='<span style="color:#e08a8a">'+esc(e.message||'Save failed')+'</span>';

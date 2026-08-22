@@ -279,6 +279,42 @@ module.exports = async function (req, res) {
       return res.json({ ok: true });
     }
 
+    // ── COVERAGE CHECK: which services can actually be booked this month? ──
+    // The commonest confusion is "why is the calendar blocked?" when the real
+    // answer is that the only artist rostered that month is not ticked for
+    // that service. This answers it per service instead of making her guess.
+    if (method === 'GET' && action === 'coverage_check') {
+      const from = req.query.from, to = req.query.to;
+      if (!from || !to) return res.status(400).json({ error: 'from and to required' });
+
+      const store = require('./_store');
+      const services = (store.services || []).filter(s => !s.hidden).map(s => s.name);
+      const { shiftCoverage } = require('./_shifts');
+
+      const out = [];
+      for (const name of services) {
+        const { configured, byDate } = await shiftCoverage(from, to, [name]);
+        const dates = Object.keys(byDate);
+        const who = new Set();
+        for (const d of dates) for (const a of byDate[d]) who.add(a.name);
+        out.push({ service: name, configured, days: dates.length, artists: Array.from(who) });
+      }
+
+      // who COULD do each service, whether or not they are rostered — so the
+      // fix is obvious: tick the service, or give that artist some days.
+      const members = await query('SELECT id, name, restricted FROM team_members WHERE active=1');
+      const skillRows = await query('SELECT team_member_id, service_name FROM worker_skills');
+      const skills = {};
+      for (const r of skillRows) (skills[r.team_member_id] = skills[r.team_member_id] || []).push(r.service_name);
+      const capable = {};
+      for (const name of services) {
+        capable[name] = members
+          .filter(mm => !Number(mm.restricted) || (skills[mm.id] || []).includes(name))
+          .map(mm => mm.name);
+      }
+      return res.json({ coverage: out, capable });
+    }
+
     // ── SHOWCASE SETTINGS (the Preview numbers on the Sales screen) ──
     // Stored server-side so the figures are the same on her phone and laptop
     // and survive a reload. Defaults to a single Signature member — a brand
