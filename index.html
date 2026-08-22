@@ -56,7 +56,24 @@
     .priority-third  { background: rgba(140,122,94,0.12); color: var(--latte); }
     .priority-second { background: rgba(182,165,136,0.15); color: var(--champagne); }
     .priority-first  { background: var(--espresso); color: var(--champagne); }
-  </style>
+  
+  /* ── GROUPED MENU ──
+     A service that comes in lengths opens in place rather than listing the
+     same set three times. <details> so it works with no JavaScript at all. */
+  .service-group{border-bottom:1px solid rgba(182,165,136,0.14)}
+  .service-group>summary{cursor:pointer;list-style:none}
+  .service-group>summary::-webkit-details-marker{display:none}
+  .service-group>summary .service-name::after{content:'+';margin-left:0.5rem;color:var(--gold,#B6A588);font-weight:400}
+  .service-group[open]>summary .service-name::after{content:'–'}
+  .service-group>summary{border-bottom:none}
+  .service-more{display:block;font-size:0.66rem;letter-spacing:0.14em;text-transform:uppercase;opacity:0.55;margin-top:0.18rem}
+  .service-sub{padding-left:1.4rem;opacity:0.9;font-size:0.92em}
+  .service-sub:last-child{border-bottom:none}
+  a.service-row{text-decoration:none;color:inherit}
+  a.service-row:hover .service-name,.service-group>summary:hover .service-name{color:var(--gold,#B6A588)}
+  /* A card that opens the length picker is a <button>; it must not look like one. */
+  button.look-card{border:none;background:none;padding:0;font:inherit;text-align:inherit;cursor:pointer;width:100%}
+</style>
 </head>
 <body>
 <div class="scroll-progress" id="scroll-progress"></div>
@@ -129,6 +146,19 @@
 </section>
 
 <!-- Product sheet that slides up when a post is tapped -->
+<!-- LENGTH PICKER — opened by a service card that comes in lengths. -->
+<div class="ig-sheet" id="size-sheet" aria-hidden="true">
+  <div class="ig-sheet-box" role="dialog" aria-label="Choose your length">
+    <button class="ig-sheet-x" id="size-sheet-x" aria-label="Close">&times;</button>
+    <div class="ig-sheet-photo" id="size-sheet-photo"></div>
+    <div class="ig-sheet-body">
+      <div class="ig-sheet-cap" id="size-sheet-cap"></div>
+      <div class="ig-sheet-label">Choose your length</div>
+      <div class="ig-sheet-items" id="size-sheet-items"></div>
+    </div>
+  </div>
+</div>
+
 <div class="ig-sheet" id="ig-sheet" aria-hidden="true">
   <div class="ig-sheet-box" role="dialog" aria-label="Shop this photo">
     <button class="ig-sheet-x" id="ig-sheet-x" aria-label="Close">&times;</button>
@@ -410,21 +440,26 @@
     <div class="grid-2" style="max-width:880px;margin:0 auto;">
       <div>
         <div class="section-label" style="margin-bottom:1rem;">Manicure</div>
-        <div class="services-table">
-          <div class="service-row"><span class="service-name">Organic Structured Manicure</span><span class="service-price">from $90</span></div>
-          <div class="service-row"><span class="service-name">Short Gel X</span><span class="service-price">$95</span></div>
-          <div class="service-row"><span class="service-name">Medium Gel X</span><span class="service-price">$100</span></div>
-          <div class="service-row"><span class="service-name">Long Gel X</span><span class="service-price">$110</span></div>
-          <div class="service-row"><span class="service-name">Short Acrylic Set</span><span class="service-price">$95</span></div>
-          <div class="service-row"><span class="service-name">Medium Acrylic Set</span><span class="service-price">$100</span></div>
-          <div class="service-row"><span class="service-name">Long Acrylic Set</span><span class="service-price">$110</span></div>
+        <div class="services-table" id="menu-mani">
+          <a class="service-row" href="booking.html?rebook=Regular%20Gel%20Manicure"><span class="service-name">Regular Gel Manicure</span><span class="service-price">$55</span></a>
+          <a class="service-row" href="booking.html?rebook=Organic%20Structured%20Manicure"><span class="service-name">Organic Structured Manicure</span><span class="service-price">$90</span></a>
+          <details class="service-group"><summary class="service-row"><span class="service-name">Gel X<span class="service-more">Short · Medium · Long</span></span><span class="service-price">from $95</span></summary>
+            <a class="service-row service-sub" href="booking.html?rebook=Short%20Gel%20X"><span class="service-name">Short</span><span class="service-price">$95</span></a>
+            <a class="service-row service-sub" href="booking.html?rebook=Medium%20Gel%20X"><span class="service-name">Medium</span><span class="service-price">$100</span></a>
+            <a class="service-row service-sub" href="booking.html?rebook=Long%20Gel%20X"><span class="service-name">Long</span><span class="service-price">$110</span></a>
+          </details>
+          <details class="service-group"><summary class="service-row"><span class="service-name">Acrylic<span class="service-more">Short · Medium · Long</span></span><span class="service-price">from $95</span></summary>
+            <a class="service-row service-sub" href="booking.html?rebook=Short%20Acrylic%20Set"><span class="service-name">Short</span><span class="service-price">$95</span></a>
+            <a class="service-row service-sub" href="booking.html?rebook=Medium%20Acrylic%20Set"><span class="service-name">Medium</span><span class="service-price">$100</span></a>
+            <a class="service-row service-sub" href="booking.html?rebook=Long%20Acrylic%20Set"><span class="service-name">Long</span><span class="service-price">$110</span></a>
+          </details>
         </div>
       </div>
       <div>
         <div class="section-label" style="margin-bottom:1rem;">Pedicure</div>
-        <div class="services-table">
-          <div class="service-row"><span class="service-name">Russian Dry Pedicure</span><span class="service-price">$95</span></div>
-          <div class="service-row"><span class="service-name">Russian Dry Pedicure — Full Correction</span><span class="service-price">$125</span></div>
+        <div class="services-table" id="menu-pedi">
+          <a class="service-row" href="booking.html?rebook=Russian%20Dry%20Pedicure"><span class="service-name">Russian Dry Pedicure</span><span class="service-price">$95</span></a>
+          <a class="service-row" href="booking.html?rebook=Russian%20Dry%20Pedicure%20%E2%80%94%20Full%20Correction"><span class="service-name">Russian Dry Pedicure — Full Correction</span><span class="service-price">$125</span></a>
         </div>
         <div class="section-label" style="margin-top:1.5rem;margin-bottom:1rem;">Add-Ons</div>
         <div class="services-table">
@@ -681,6 +716,7 @@
   <div class="sp-toast-body">Black Card — 4 founding spots remaining</div>
 </div>
 
+<script src="js/service-groups.js"></script>
 <script src="js/main.js"></script>
 <script src="js/search.js"></script>
 <script src="js/analytics.js"></script>

@@ -219,41 +219,139 @@ document.addEventListener('DOMContentLoaded', () => {
      two photo slots so hovering swaps the set on its own for the worn shot.
      Tapping a card lands on booking with that service already selected. */
   const lookGrid = document.getElementById('look-grid');
-  if (lookGrid) {
-    const LOOKS = [
-      { key: 'regular-gel', name: 'Regular Gel Manicure', price: '$55' },
-      { key: 'organic-manicure', name: 'Organic Structured Manicure', price: '$90' },
-      { key: 'short-gelx', name: 'Short Gel X', price: '$95' },
-      { key: 'medium-gelx', name: 'Medium Gel X', price: '$100' },
-      { key: 'long-gelx', name: 'Long Gel X', price: '$110' },
-      { key: 'short-acrylic', name: 'Short Acrylic Set', price: '$95' },
-      { key: 'medium-acrylic', name: 'Medium Acrylic Set', price: '$100' },
-      { key: 'long-acrylic', name: 'Long Acrylic Set', price: '$110' },
-      { key: 'pedicure', name: 'Russian Dry Pedicure', price: '$95' },
+  if (lookGrid && window.ZolaServices) {
+    const esc = s => String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+    // One card per service. A set that comes in lengths shows the service
+    // once — the lengths are the next tap, not eight near-identical cards.
+    const FALLBACK = [
+      { name: 'Regular Gel Manicure', price_cents: 5500 },
+      { name: 'Organic Structured Manicure', price_cents: 9000 },
+      { name: 'Short Gel X', price_cents: 9500 },
+      { name: 'Medium Gel X', price_cents: 10000 },
+      { name: 'Long Gel X', price_cents: 11000 },
+      { name: 'Short Acrylic Set', price_cents: 9500 },
+      { name: 'Medium Acrylic Set', price_cents: 10000 },
+      { name: 'Long Acrylic Set', price_cents: 11000 },
+      { name: 'Russian Dry Pedicure', price_cents: 9500 },
     ];
-    lookGrid.innerHTML = LOOKS.map(l =>
-      '<a class="look-card" href="booking.html?rebook=' + encodeURIComponent(l.name) + '">' +
-        '<span class="look-ph">' +
-          '<span class="look-img" data-look-slot="look-' + l.key + '"></span>' +
-          '<span class="look-img look-img-alt" data-look-slot="look-' + l.key + '-alt"></span>' +
-          '<span class="look-fallback">◆</span>' +
-        '</span>' +
-        '<span class="look-meta">' +
-          '<span class="look-name">' + l.name + '</span>' +
-          '<span class="look-price">' + l.price + '</span>' +
-        '</span>' +
-        '<span class="look-cta">Book this ✦</span>' +
-      '</a>').join('');
-    fetch('/api/photos').then(r => r.json()).then(d => {
-      const photos = (d && d.photos) || {};
-      lookGrid.querySelectorAll('[data-look-slot]').forEach(el => {
-        const url = photos[el.dataset.lookSlot];
-        if (!url) return;
-        el.style.backgroundImage = 'url(' + url + ')';
-        el.classList.add('has-photo');
-        const ph = el.closest('.look-ph');
-        if (ph) ph.classList.add(el.classList.contains('look-img-alt') ? 'has-alt' : 'has-main');
+
+    const sheet = document.getElementById('size-sheet');
+    const closeSizes = () => {
+      if (!sheet) return;
+      sheet.classList.remove('open');
+      sheet.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    };
+    const openSizes = (g) => {
+      if (!sheet) return;
+      const ph = document.getElementById('size-sheet-photo');
+      const img = lookGrid.querySelector('[data-look-slot="look-' + g.key + '"]');
+      ph.style.backgroundImage = (img && img.style.backgroundImage) || '';
+      ph.style.display = (img && img.style.backgroundImage) ? '' : 'none';
+      document.getElementById('size-sheet-cap').textContent = g.name;
+      document.getElementById('size-sheet-items').innerHTML = g.variants.map(v =>
+        '<a class="ig-buy" href="booking.html?rebook=' + encodeURIComponent(v.name) + '">' +
+          '<span class="ig-buy-n">' + esc(v.size || v.name) +
+            ' <em>' + window.ZolaServices.money(v.price_cents) + '</em></span>' +
+          '<span class="ig-buy-b">Book This</span></a>').join('');
+      sheet.classList.add('open');
+      sheet.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    };
+    if (sheet) {
+      const x = document.getElementById('size-sheet-x');
+      if (x) x.addEventListener('click', closeSizes);
+      sheet.addEventListener('click', ev => { if (ev.target === sheet) closeSizes(); });
+      document.addEventListener('keydown', ev => {
+        if (ev.key === 'Escape' && sheet.classList.contains('open')) closeSizes();
       });
+    }
+
+    const render = (services) => {
+      const groups = window.ZolaServices.group(services);
+      lookGrid.innerHTML = groups.map((g, i) => {
+        // A service with one length has nothing to choose — go straight to
+        // booking. Anything with lengths opens the picker first.
+        const tag = g.sized ? 'button' : 'a';
+        const attrs = g.sized
+          ? 'type="button" data-g="' + i + '"'
+          : 'href="booking.html?rebook=' + encodeURIComponent(g.variants[0].name) + '"';
+        return '<' + tag + ' class="look-card" ' + attrs + '>' +
+          '<span class="look-ph">' +
+            '<span class="look-img" data-look-slot="look-' + g.key + '"></span>' +
+            '<span class="look-img look-img-alt" data-look-slot="look-' + g.key + '-alt"></span>' +
+            '<span class="look-fallback">◆</span>' +
+          '</span>' +
+          '<span class="look-meta">' +
+            '<span class="look-name">' + esc(g.name) + '</span>' +
+            '<span class="look-price">' + esc(g.price_label) + '</span>' +
+          '</span>' +
+          '<span class="look-cta">' + (g.sized ? 'Choose length ✦' : 'Book this ✦') + '</span>' +
+        '</' + tag + '>';
+      }).join('');
+
+      lookGrid.querySelectorAll('button.look-card').forEach(btn => {
+        btn.addEventListener('click', () => openSizes(groups[Number(btn.dataset.g)]));
+      });
+
+      // Photos are per service now, so one Gel X photo covers every length.
+      fetch('/api/photos').then(r => r.json()).then(d => {
+        const photos = (d && d.photos) || {};
+        lookGrid.querySelectorAll('[data-look-slot]').forEach(el => {
+          const url = photos[el.dataset.lookSlot];
+          if (!url) return;
+          el.style.backgroundImage = 'url(' + url + ')';
+          el.classList.add('has-photo');
+          const ph = el.closest('.look-ph');
+          if (ph) ph.classList.add(el.classList.contains('look-img-alt') ? 'has-alt' : 'has-main');
+        });
+      }).catch(() => {});
+    };
+
+    // Live menu first, so adding a service in Studio Manager puts it on the
+    // homepage without anyone touching code.
+    fetch('/api/services')
+      .then(r => r.json())
+      .then(d => render((d && d.services) || (Array.isArray(d) ? d : []) || FALLBACK))
+      .catch(() => render(FALLBACK));
+  }
+
+  /* ── THE MENU ──
+     Same grouping as the cards above: the service, then its lengths when
+     you open it. Prices come from the live menu, so they can never drift
+     from what the booking page actually charges. */
+  const menuMani = document.getElementById('menu-mani');
+  const menuPedi = document.getElementById('menu-pedi');
+  if (menuMani && menuPedi && window.ZolaServices) {
+    const escM = s => String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    fetch('/api/services').then(r => r.json()).then(d => {
+      const groups = window.ZolaServices.group((d && d.services) || (Array.isArray(d) ? d : []));
+      if (!groups.length) return;
+      const isPedi = g => /pedicure/i.test(g.name);
+      const row = g => {
+        if (!g.sized) {
+          return '<a class="service-row" href="booking.html?rebook=' + encodeURIComponent(g.variants[0].name) + '">' +
+            '<span class="service-name">' + escM(g.name) + '</span>' +
+            '<span class="service-price">' + escM(g.price_label) + '</span></a>';
+        }
+        return '<details class="service-group">' +
+          '<summary class="service-row"><span class="service-name">' + escM(g.name) +
+            '<span class="service-more">Short · Medium · Long</span></span>' +
+          '<span class="service-price">' + escM(g.price_label) + '</span></summary>' +
+          g.variants.map(v =>
+            '<a class="service-row service-sub" href="booking.html?rebook=' + encodeURIComponent(v.name) + '">' +
+              '<span class="service-name">' + escM(v.size || v.name) + '</span>' +
+              '<span class="service-price">' + window.ZolaServices.money(v.price_cents) + '</span></a>').join('') +
+        '</details>';
+      };
+      const mani = groups.filter(g => !isPedi(g));
+      const pedi = groups.filter(isPedi);
+      if (mani.length) menuMani.innerHTML = mani.map(row).join('');
+      if (pedi.length) menuPedi.innerHTML = pedi.map(row).join('');
     }).catch(() => {});
   }
 

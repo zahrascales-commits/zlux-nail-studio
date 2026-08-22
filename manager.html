@@ -3507,17 +3507,20 @@ async function deleteInq(){
 // Grouped so the Site tab reads as sections rather than one long wall of
 // thumbnails. Each "Shop the Look" service takes two photos: the set on its
 // own, and the same set worn — the homepage swaps between them on hover.
-const LOOK_SERVICES=[
-  {key:'regular-gel',label:'Regular Gel Mani'},
-  {key:'organic-manicure',label:'Organic Manicure'},
-  {key:'short-gelx',label:'Short Gel X'},
-  {key:'medium-gelx',label:'Medium Gel X'},
-  {key:'long-gelx',label:'Long Gel X'},
-  {key:'short-acrylic',label:'Short Acrylic'},
-  {key:'medium-acrylic',label:'Medium Acrylic'},
-  {key:'long-acrylic',label:'Long Acrylic'},
-  {key:'pedicure',label:'Dry Pedicure'},
+// Only used if the live menu can't be reached — the real list comes from
+// /api/services so a new service brings its own photo slot with it.
+const LOOK_FALLBACK=[
+  {name:'Regular Gel Manicure',price_cents:5500},
+  {name:'Organic Structured Manicure',price_cents:9000},
+  {name:'Short Gel X',price_cents:9500},
+  {name:'Medium Gel X',price_cents:10000},
+  {name:'Long Gel X',price_cents:11000},
+  {name:'Short Acrylic Set',price_cents:9500},
+  {name:'Medium Acrylic Set',price_cents:10000},
+  {name:'Long Acrylic Set',price_cents:11000},
+  {name:'Russian Dry Pedicure',price_cents:9500},
 ];
+let LOOK_SERVICES=[];
 const PHOTO_GROUPS=[
   {title:'Homepage & Pages', hint:'The big photos across your site. Tap any tile to swap it.', slots:[
     {slot:'home-hero',label:'Homepage Hero'},
@@ -3525,19 +3528,32 @@ const PHOTO_GROUPS=[
     {slot:'about-portrait',label:'About — Zahra'},
     {slot:'services-header',label:'Services Header'},
   ]},
-  {title:'Shop the Look — the set', hint:'The nails on their own. This is what shows first.', slots:
-    LOOK_SERVICES.map(s=>({slot:'look-'+s.key,label:s.label}))},
-  {title:'Shop the Look — worn', hint:'The same set on a hand or model. This fades in when someone hovers.', slots:
-    LOOK_SERVICES.map(s=>({slot:'look-'+s.key+'-alt',label:s.label+' (worn)'}))},
+  {title:'Shop the Look — the set', hint:'The nails on their own. This is what shows first. One photo per service — it covers every length.', slots:[]},
+  {title:'Shop the Look — worn', hint:'The same set on a hand or model. This fades in when someone hovers.', slots:[]},
   {title:'Instagram Strip', hint:'The six-photo row near the bottom of the homepage.', slots:[
     {slot:'insta-1',label:'Instagram 1'},{slot:'insta-2',label:'Instagram 2'},
     {slot:'insta-3',label:'Instagram 3'},{slot:'insta-4',label:'Instagram 4'},
     {slot:'insta-5',label:'Instagram 5'},{slot:'insta-6',label:'Instagram 6'},
   ]},
 ];
-const PHOTO_SLOTS=PHOTO_GROUPS.flatMap(g=>g.slots);
 let sitePhotos={};
+
+// Rebuilds the two Shop the Look groups from whatever is on the menu today.
+function syncLookSlots(services){
+  if(!window.ZolaServices) return;
+  const src=(services&&services.length)?services:LOOK_FALLBACK;
+  LOOK_SERVICES=window.ZolaServices.group(src).map(g=>({key:g.key,label:g.name}));
+  const set=PHOTO_GROUPS.find(g=>g.title==='Shop the Look — the set');
+  const worn=PHOTO_GROUPS.find(g=>g.title==='Shop the Look — worn');
+  if(set) set.slots=LOOK_SERVICES.map(s=>({slot:'look-'+s.key,label:s.label}));
+  if(worn) worn.slots=LOOK_SERVICES.map(s=>({slot:'look-'+s.key+'-alt',label:s.label+' (worn)'}));
+}
+
 async function loadSitePhotos(){
+  try{
+    const r=await fetch('/api/services');const d=await r.json();
+    syncLookSlots((d&&d.services)||(Array.isArray(d)?d:[]));
+  }catch{ syncLookSlots([]); }
   try{const r=await fetch('/api/photos');const d=await r.json();sitePhotos=d.photos||{};}catch{sitePhotos={};}
   renderPhotoSlots();
 }
@@ -4677,6 +4693,7 @@ async function copy(text,msg){try{await navigator.clipboard.writeText(text);toas
 /* ── INIT ── */
 (function(){const saved=sessionStorage.getItem('zm_pwd');if(saved){document.getElementById('pwd').value=saved;login();}})();
 </script>
+<script src="js/service-groups.js"></script>
 <script src="js/push.js"></script>
 <script src="js/pwa.js"></script>
 </body>
