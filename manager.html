@@ -565,6 +565,7 @@ async function delPromo(code){
         <button class="bell" onclick="toggleBell()" title="Notifications">🔔<span class="bell-badge" id="bell-badge" style="display:none">0</span></button>
         <div class="bell-drop" id="bell-drop"></div>
       </div>
+      <button class="btn btn-ghost btn-sm" id="refresh-btn" onclick="refreshCurrent(true)" title="Refresh this screen">↻ <span id="refresh-label">Refresh</span></button>
       <a class="btn btn-ghost btn-sm" href="index.html" target="_blank">View Site ↗</a>
       <button class="btn btn-ghost btn-sm" onclick="logout()">Log Out</button>
     </div>
@@ -1623,6 +1624,7 @@ async function login(){
     const d=await r.json();
     members=d.members||[];appts=d.appointments||[];
     PROVIDERS=d.providers||{email:false,sms:false};
+    startAutoRefresh();
     fillTime12Selects();
     loadServiceCatalog();
     sessionStorage.setItem('zm_pwd',pwd);
@@ -1641,24 +1643,74 @@ async function login(){
 function logout(){sessionStorage.removeItem('zm_pwd');location.reload();}
 
 /* ── TABS ── */
+// Reloading a screen is now defined once, so the tab switch, the Refresh
+// button and the auto-refresh timer can never drift apart.
+const TAB_LOADERS = {
+  schedule:   () => { renderCal(); loadBlocks(); loadDayHours(); },
+  sales:      () => loadShowcaseCfg().then(loadSales),
+  deposits:   () => loadDeposits(),
+  inventory:  () => loadInventory(),
+  messages:   () => loadThreads(),
+  scheduling: () => loadScheduling(),
+  marketing:  () => loadMarketing(),
+  team:       () => { renderMembers(); loadClientInspo(); loadOverrides(); },
+  inbox:      () => loadInquiries(),
+  site:       () => loadSite(),
+  traffic:    () => loadTraffic(),
+  clients:    () => loadClients(),
+  settings:   () => loadSettings(),
+};
+
+function currentTab(){
+  const t = document.querySelector('.tab.active');
+  return t ? t.dataset.tab : null;
+}
+
+// New bookings and deposits land in the shared appointment list, so a refresh
+// has to pull that too — otherwise the Calendar and Deposits screens would
+// redraw the same stale data they already had.
+async function refreshCurrent(manual){
+  const btn = document.getElementById('refresh-btn');
+  const lbl = document.getElementById('refresh-label');
+  if(manual && lbl){ lbl.textContent = 'Refreshing…'; if(btn) btn.disabled = true; }
+  try{
+    const r = await api('/api/manager?action=bootstrap');
+    if(r.ok){
+      const d = await r.json();
+      if(d.members) members = d.members;
+      if(d.appointments) appts = d.appointments;
+      if(d.providers) PROVIDERS = d.providers;
+    }
+  }catch(_){ /* a failed poll should never blank the screen */ }
+  const fn = TAB_LOADERS[currentTab()];
+  if(fn) { try { await fn(); } catch(_) {} }
+  if(manual && lbl){ lbl.textContent = 'Refreshed ✓'; setTimeout(()=>{ lbl.textContent='Refresh'; }, 1600); }
+  if(btn) btn.disabled = false;
+}
+
+// Quietly re-check once a minute, but only while the tab is actually on
+// screen — polling a backgrounded tab burns database reads for nobody.
+let _autoTimer = null;
+function startAutoRefresh(){
+  if(_autoTimer) return;
+  _autoTimer = setInterval(() => {
+    if(document.visibilityState !== 'visible') return;
+    if(typeof schedDirty !== 'undefined' && schedDirty) return; // never clobber unsaved edits
+    refreshCurrent(false);
+  }, 60000);
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'visible') refreshCurrent(false);
+  });
+}
+
 function showTab(name){
   fillTime12Selects();
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
-  if(name==='schedule'){renderCal();loadBlocks();loadDayHours();}
-  if(name==='sales'){loadShowcaseCfg().then(loadSales);startSalesLive();} else stopSalesLive();
-  if(name==='deposits')loadDeposits();
-  if(name==='inventory')loadInventory();
-  if(name==='messages')loadThreads();
-  if(name==='scheduling')loadScheduling();
-  if(name==='marketing')loadMarketing();
-  if(name==='team'){renderMembers();loadClientInspo();loadOverrides();}
-  if(name==='inbox')loadInquiries();
-  if(name==='site')loadSite();
-  if(name==='traffic')loadTraffic();
-  if(name==='clients')loadClients();
-  if(name==='settings')loadSettings();
+  if(name==='sales') startSalesLive(); else stopSalesLive();
+  const fn = TAB_LOADERS[name];
+  if(fn) fn();
 }
 
 /* ══════════════ SCHEDULING ══════════════
