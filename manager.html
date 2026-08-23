@@ -4479,11 +4479,70 @@ function renderClients(){
         <button class="btn btn-gold btn-sm" onclick="saveClient(${c.id})">Save Profile</button>
         <button class="btn btn-danger btn-sm" onclick="delClient(${c.id})">Delete</button>
       </div>
+      <div id="cl-history" style="margin-top:1.2rem"><div class="empty" style="padding:1rem">Loading her visits…</div></div>
       ${bcProfileHtml(c.email)}
     </div>`;
   }).join('');
 }
-function toggleClient(id){openClientId=openClientId===id?null:id;renderClients();}
+function toggleClient(id){
+  openClientId=openClientId===id?null:id;
+  renderClients();
+  if(openClientId) loadClientHistory(openClientId);
+}
+
+/* ── ONE CLIENT'S WHOLE HISTORY ──
+   Every visit, who did it, what they had, what they paid. Loaded when the
+   card is opened rather than with the list — nobody needs 400 clients'
+   histories to look at one. */
+async function loadClientHistory(id){
+  const el=document.getElementById('cl-history');
+  if(!el) return;
+  try{
+    const d=await (await api('/api/clients?action=history&id='+id)).json();
+    const v=d.visits||[], t=d.totals||{};
+    const head='<div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.8rem">'
+      + statPill(t.visits||0, (t.visits===1?'visit':'visits'))
+      + statPill(cmoney(t.spent_cents||0), 'spent')
+      + (t.cancelled?statPill(t.cancelled,'cancelled'):'')
+      + (t.first_visit?statPill(niceDate(t.first_visit),'first came'):'')
+      + '</div>';
+    if(!v.length){ el.innerHTML=head+'<div class="empty" style="padding:1rem">No visits on record yet.</div>'; return; }
+    el.innerHTML=head
+      + '<div class="fld-label" style="margin-bottom:0.5rem">Every visit</div>'
+      + v.map(function(x){
+          const off = String(x.status||'').toLowerCase()==='cancelled';
+          return '<div style="border-top:1px solid var(--border);padding:0.65rem 0;display:flex;gap:0.8rem;align-items:flex-start;'
+            + (off?'opacity:0.5;':'') + '">'
+            + '<div style="min-width:118px">'
+              + '<div style="font-size:0.82rem;color:var(--cream)">'+niceDate(x.date)+'</div>'
+              + '<div style="font-size:0.7rem;color:var(--muted)">'+esc(x.time?fmtTime(x.time):'—')+'</div>'
+            + '</div>'
+            + '<div style="flex:1">'
+              + '<div style="font-size:0.85rem;color:var(--cream)">'+esc(x.service||'Appointment')
+                + (off?' <span style="color:var(--danger)">· cancelled</span>':'') + '</div>'
+              + (x.addons&&x.addons.length?'<div style="font-size:0.7rem;color:var(--gold)">+ '+esc(x.addons.join(', '))+'</div>':'')
+              + '<div style="font-size:0.72rem;color:var(--muted)">'
+                + (x.provider?'with '+esc(x.provider):'no artist recorded')
+                + (x.confirmation?' · '+esc(x.confirmation):'') + '</div>'
+            + '</div>'
+            + '<div style="text-align:right;min-width:82px">'
+              + '<div style="font-size:0.85rem;color:var(--cream)">'+(x.total_cents==null?'—':cmoney(x.total_cents))+'</div>'
+              + (x.deposit_paid?'<div style="font-size:0.65rem;color:#7ec98a">'+cmoney(x.deposit_cents)+' deposit paid</div>':'')
+            + '</div></div>';
+        }).join('');
+  }catch(_){ el.innerHTML='<div class="empty" style="padding:1rem">Could not load her visits.</div>'; }
+}
+
+function statPill(n,label){
+  return '<div style="background:var(--card);border:1px solid var(--border);padding:0.5rem 0.75rem;border-radius:8px">'
+    + '<div style="font-family:Cinzel,serif;font-size:1rem;color:var(--cream)">'+n+'</div>'
+    + '<div style="font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted)">'+label+'</div></div>';
+}
+function niceDate(ds){
+  if(!ds) return '—';
+  const d=new Date(ds+'T12:00:00');
+  return isNaN(d)?ds:d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
 async function saveClient(id){
   await api('/api/clients?action=update',{method:'PUT',body:JSON.stringify({action:'update',id,
     name:document.getElementById('cl-name').value.trim(),

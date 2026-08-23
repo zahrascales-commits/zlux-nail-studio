@@ -89,6 +89,109 @@ async function handler(req, res) {
       return res.json({ ok: true });
     }
 
+    /* ── OWNER: one client's whole history ────────────────────────────
+       Every visit they have ever had: when, who did it, what they had,
+       and what they paid. Assembled from two tables because that is where
+       the truth actually lives — the money is on the booking, the artist
+       is on the studio calendar — and neither alone can answer "who did
+       her nails in March and what did she spend". */
+    if (req.method === 'GET' && action === 'history') {
+      if (req.headers['x-ceo-password'] !== CEO_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
+      const client = await queryOne('SELECT * FROM clients WHERE id=?', [Number(req.query.id)]);
+      if (!client) return res.status(404).json({ error: 'No such client' });
+
+      const em = String(client.email || '').trim().toLowerCase();
+      const nm = String(client.name || '').trim();
+      const ph = String(client.phone || '').replace(/\D/g, '');
+
+      // The studio calendar: who served them, and when.
+      let teamRows = [];
+      try {
+        teamRows = await query(
+          `SELECT a.id, a.client_name, a.client_phone, a.service, a.date, a.time, a.notes, a.status,
+                  m.name AS provider
+             FROM team_appointments a
+             LEFT JOIN team_members m ON m.id = a.team_member_id
+            WHERE (? <> '' AND lower(a.client_name) = lower(?))
+               OR (? <> '' AND replace(replace(replace(replace(a.client_phone,'-',''),' ',''),'(',''),')','') = ?)
+            ORDER BY a.date DESC, a.time DESC`,
+          [nm, nm, ph, ph]);
+      } catch (_) {}
+
+      // The booking ledger: what it came to.
+      let payRows = [];
+      try {
+        const main = require('./_db');
+        payRows = await main.query(
+          `SELECT guest_name, guest_email, service, addons, appointment_date, appointment_time,
+                  status, total_cents, deposit_cents, deposit_paid
+             FROM appointments
+            WHERE (? <> '' AND lower(COALESCE(guest_email,'')) = ?)
+               OR (? <> '' AND lower(COALESCE(guest_name,'')) = lower(?))
+            ORDER BY appointment_date DESC, appointment_time DESC`,
+          [em, em, nm, nm]);
+      } catch (_) {}
+
+      // Same visit, two records. Date plus time is the join.
+      const money = {};
+      for (const p of payRows) money[p.appointment_date + ' ' + p.appointment_time] = p;
+
+      const seen = new Set();
+      const visits = [];
+      const add = (v) => {
+        const k = v.date + ' ' + v.time;
+        if (seen.has(k)) return;
+        seen.add(k);
+        visits.push(v);
+      };
+
+      for (const t of teamRows) {
+        const p = money[t.date + ' ' + t.time];
+        const conf = (String(t.notes || '').match(/ZOLA-\d+/) || [''])[0];
+        let addons = [];
+        try { addons = JSON.parse((p && p.addons) || '[]'); } catch (_) {}
+        add({
+          date: t.date, time: t.time,
+          service: t.service || (p && p.service) || '',
+          addons,
+          provider: t.provider || '',
+          total_cents: p ? Number(p.total_cents) || 0 : null,
+          deposit_cents: p ? Number(p.deposit_cents) || 0 : 0,
+          deposit_paid: p ? !!Number(p.deposit_paid) : false,
+          status: t.status || (p && p.status) || 'scheduled',
+          confirmation: conf,
+        });
+      }
+      // Anything on the ledger with no calendar entry still belongs in her
+      // history — dropping it would understate what she has spent.
+      for (const p of payRows) {
+        let addons = [];
+        try { addons = JSON.parse(p.addons || '[]'); } catch (_) {}
+        add({
+          date: p.appointment_date, time: p.appointment_time,
+          service: p.service || '', addons, provider: '',
+          total_cents: Number(p.total_cents) || 0,
+          deposit_cents: Number(p.deposit_cents) || 0,
+          deposit_paid: !!Number(p.deposit_paid),
+          status: p.status || 'scheduled', confirmation: '',
+        });
+      }
+
+      visits.sort((a, b) => String(b.date + b.time).localeCompare(String(a.date + a.time)));
+      const counted = visits.filter(v => String(v.status || '').toLowerCase() !== 'cancelled');
+      return res.json({
+        client: { id: client.id, name: client.name, email: client.email, phone: client.phone },
+        visits,
+        totals: {
+          visits: counted.length,
+          cancelled: visits.length - counted.length,
+          spent_cents: counted.reduce((s, v) => s + (v.total_cents || 0), 0),
+          first_visit: counted.length ? counted[counted.length - 1].date : '',
+          last_visit: counted.length ? counted[0].date : '',
+        },
+      });
+    }
+
     // ── OWNER: list every client for the mass-message picker ──
     if (req.method === 'GET' && action === 'list') {
       const rows = await query('SELECT id, name, email, phone, last_service, marketing_opt_in FROM clients ORDER BY name');
