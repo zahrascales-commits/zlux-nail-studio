@@ -23,7 +23,10 @@ module.exports = async function (req, res) {
 
     // Lengths are not specialities — "Short Gel X, Medium Gel X, Long Gel X"
     // reads as padding where "Gel X" reads as a skill.
-    const baseName = (s) => String(s).replace(/^(Extra Long|X-Long|XL|Short|Medium|Long)s+/i, '').replace(/s+Set$/i, '').trim();
+    const baseName = (s) => String(s)
+      .replace(/^(Extra Long|X-Long|XL|Short|Medium|Long)\s+/i, '')
+      .replace(/\s+Set$/i, '')
+      .trim();
 
     const team = rows.map(r => ({
       does: Number(r.restricted)

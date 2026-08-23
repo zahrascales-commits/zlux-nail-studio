@@ -64,7 +64,9 @@ async function handler(req, res) {
     // ── OWNER ONLY ──
     if (req.headers['x-ceo-password'] !== CEO_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
 
-    if (req.method === 'GET') {
+    // The bare GET is the client list. It has to stay last among GETs, or it
+    // answers for every named action before that action is ever reached.
+    if (req.method === 'GET' && !action) {
       const rows = await query('SELECT * FROM clients ORDER BY created_ts DESC LIMIT 500');
       // include Black Card questionnaire profiles so the owner sees everything
       let bc_profiles = {};
