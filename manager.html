@@ -1794,6 +1794,8 @@ async function login(){
     if(r.status===401){err.textContent='Wrong password.';return;}
     if(!r.ok){err.textContent='Server error — try again.';return;}
     PWD=pwd;
+    // The profile sheet needs the password, and only has it now.
+    if(window.ZolaClient) window.ZolaClient.init({ pass: PWD });
     const d=await r.json();
     members=d.members||[];appts=d.appointments||[];
     PROVIDERS=d.providers||{email:false,sms:false};
@@ -1820,7 +1822,7 @@ function logout(){sessionStorage.removeItem('zm_pwd');location.reload();}
 // Reloading a screen is now defined once, so the tab switch, the Refresh
 // button and the auto-refresh timer can never drift apart.
 // The profile sheet needs to know who is asking before it can open anything.
-if(window.ZolaClient) window.ZolaClient.init({ pass: PWD });
+// Initialised after login instead — at parse time PWD is still empty,
 
 const TAB_LOADERS = {
   overview:   () => { loadOverview(); loadDispatch(); },
