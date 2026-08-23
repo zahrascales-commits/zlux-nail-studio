@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Welcome to ZOLA</title>
+<link rel="icon" href="/img/zola-icon.png" />
+<meta name="theme-color" content="#0D0D0D" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@200;300;400;600;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet" />
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --ink:#0D0D0D; --deep:#141210; --gold:#C4A882; --gold-soft:#DDD0B8;
+    --cream:#F5EEE8; --latte:#8C7A5E; --muted:#7d6d55;
+    --line:rgba(196,168,130,0.22); --line-hi:rgba(196,168,130,0.5);
+  }
+  html,body{height:100%}
+  body{
+    background:var(--ink); color:var(--cream);
+    font-family:'Josefin Sans',sans-serif;
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* A slow drift behind everything, so the screen is never dead between
+     unlocks. Pure CSS — it must not compete with the animation for frames. */
+  .aura{
+    position:fixed; inset:-30%; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(closest-side at 30% 35%, rgba(196,168,130,0.16), transparent 70%),
+      radial-gradient(closest-side at 72% 68%, rgba(154,111,196,0.13), transparent 70%);
+    animation:drift 26s ease-in-out infinite alternate;
+  }
+  @keyframes drift{ from{transform:translate3d(-3%,-2%,0) scale(1)} to{transform:translate3d(3%,2%,0) scale(1.12)} }
+
+  .stage{position:relative;z-index:1;height:100%;display:flex;flex-direction:column}
+
+  /* ── progress rail ── */
+  .rail{display:flex;gap:5px;padding:1.15rem 1.25rem 0;flex-shrink:0}
+  .rail i{flex:1;height:2px;background:rgba(196,168,130,0.2);border-radius:2px;overflow:hidden;position:relative}
+  .rail i::after{
+    content:'';position:absolute;inset:0;background:var(--gold);
+    transform:scaleX(0);transform-origin:left;
+  }
+  .rail i.done::after{transform:scaleX(1)}
+  .rail i.now::after{animation:fill var(--dwell,5200ms) linear forwards}
+  @keyframes fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+  .top{padding:1.1rem 1.5rem 0;text-align:center;flex-shrink:0}
+  .wordmark{font-family:'Cinzel',serif;font-size:1.05rem;letter-spacing:0.42em;color:var(--gold);text-indent:0.42em}
+  .tierline{font-size:0.6rem;letter-spacing:0.26em;text-transform:uppercase;color:var(--muted);margin-top:0.4rem}
+
+  /* ── the slide ── */
+  .frame{flex:1;display:flex;align-items:center;justify-content:center;padding:1rem 1.5rem 0;min-height:0}
+  .slide{width:100%;max-width:430px;text-align:center;opacity:0}
+  .slide.in{animation:slideIn 900ms cubic-bezier(0.22,1,0.36,1) forwards}
+  .slide.out{animation:slideOut 520ms cubic-bezier(0.55,0,1,0.45) forwards}
+  @keyframes slideIn{from{opacity:0;transform:translateY(26px) scale(0.97)}to{opacity:1;transform:none}}
+  @keyframes slideOut{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-20px) scale(0.985)}}
+
+  .count{font-size:0.58rem;letter-spacing:0.28em;text-transform:uppercase;color:var(--latte);margin-bottom:1.5rem}
+  .headline{font-family:'Cinzel',serif;font-weight:400;font-size:2rem;line-height:1.22;color:var(--cream);margin-bottom:0.85rem}
+  .detail{font-size:0.95rem;line-height:1.85;color:var(--latte);max-width:340px;margin:0 auto}
+  .stamp{
+    display:inline-block;margin-top:1.25rem;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;
+    color:var(--gold);border:1px solid var(--line-hi);padding:0.45rem 0.85rem;border-radius:100px;
+    opacity:0;animation:stampIn 600ms ease 1100ms forwards;
+  }
+  @keyframes stampIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* ── the lock ── */
+  .lockwrap{height:112px;display:flex;align-items:center;justify-content:center;margin-bottom:1.4rem}
+  .lock{width:74px;height:92px;overflow:visible}
+  .shackle{
+    fill:none;stroke:var(--gold);stroke-width:5.5;stroke-linecap:round;
+    transform-origin:62px 34px;
+  }
+  .slide.in .shackle{animation:unlatch 1100ms cubic-bezier(0.34,1.56,0.64,1) 380ms forwards}
+  @keyframes unlatch{
+    0%{transform:none}
+    45%{transform:translateY(-7px)}
+    100%{transform:translateY(-9px) rotate(24deg)}
+  }
+  .body-plate{fill:none;stroke:var(--gold);stroke-width:5.5;stroke-linejoin:round}
+  .slide.in .body-plate{animation:plate 800ms ease 300ms forwards}
+  @keyframes plate{0%{fill:rgba(196,168,130,0)}100%{fill:rgba(196,168,130,0.14)}}
+  .spark{
+    fill:none;stroke:var(--gold-soft);stroke-width:2;opacity:0;transform-origin:50% 50%;
+  }
+  .slide.in .spark{animation:spark 900ms ease 900ms forwards}
+  @keyframes spark{0%{opacity:0.9;transform:scale(0.4)}100%{opacity:0;transform:scale(2.1)}}
+
+  /* ── the calendar unlock, which deserves to be shown not described ── */
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;max-width:290px;margin:0 auto 1.35rem}
+  .cal b{
+    aspect-ratio:1;border:1px solid rgba(196,168,130,0.16);border-radius:4px;
+    background:rgba(255,255,255,0.02);
+  }
+  .cal b.open{
+    border-color:var(--line-hi);
+    background:rgba(196,168,130,0.26);
+    opacity:0;animation:dayOn 420ms ease forwards;
+  }
+  @keyframes dayOn{from{opacity:0;transform:scale(0.6)}to{opacity:1;transform:none}}
+
+  /* ── free-service tokens dropping into the wallet ── */
+  .tokens{display:flex;gap:0.6rem;justify-content:center;margin-bottom:1.35rem;flex-wrap:wrap}
+  .token{
+    border:1px solid var(--line-hi);border-radius:12px;padding:0.75rem 1.05rem;
+    background:rgba(196,168,130,0.1);opacity:0;
+    animation:tokenIn 700ms cubic-bezier(0.34,1.56,0.64,1) forwards;
+  }
+  @keyframes tokenIn{from{opacity:0;transform:translateY(-26px) rotate(-7deg)}to{opacity:1;transform:none}}
+  .token .t-n{font-family:'Cinzel',serif;font-size:1.5rem;color:var(--gold);line-height:1}
+  .token .t-l{font-size:0.55rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);margin-top:0.3rem}
+
+  /* ── foot ── */
+  .foot{padding:0 1.5rem 1.5rem;text-align:center;flex-shrink:0}
+  .skip{
+    background:none;border:none;color:var(--muted);font-family:'Josefin Sans',sans-serif;
+    font-size:0.68rem;letter-spacing:0.16em;text-transform:uppercase;cursor:pointer;padding:0.7rem 1rem;
+  }
+  .skip:hover{color:var(--gold)}
+
+  /* ── the last screen ── */
+  .final .headline{font-size:2.15rem}
+  .cta{
+    display:inline-block;margin-top:1.6rem;background:var(--gold);color:var(--ink);
+    text-decoration:none;padding:1rem 2.1rem;border:none;border-radius:2px;cursor:pointer;
+    font-family:'Josefin Sans',sans-serif;font-size:0.7rem;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;
+  }
+  .cta.ghost{background:none;color:var(--gold);border:1px solid var(--line-hi);margin-left:0.5rem}
+  .ctas{display:flex;gap:0.6rem;justify-content:center;flex-wrap:wrap;margin-top:1.6rem}
+
+  @media (max-width:420px){
+    .headline{font-size:1.62rem}
+    .detail{font-size:0.88rem}
+    .lockwrap{height:92px}
+    .lock{width:62px;height:78px}
+  }
+  /* Someone who does not want movement still gets the whole story, just
+     without any of it moving. */
+  @media (prefers-reduced-motion:reduce){
+    .aura{animation:none}
+    .slide,.slide.in,.slide.out{animation:none!important;opacity:1!important;transform:none!important}
+    .shackle,.body-plate,.spark,.cal b.open,.token,.stamp{animation:none!important;opacity:1!important;transform:none!important}
+    .rail i.now::after{transform:scaleX(1)}
+  }
+</style>
+</head>
+<body>
+<div class="aura"></div>
+
+<div class="stage">
+  <div class="rail" id="rail"></div>
+  <div class="top">
+    <div class="wordmark">ZOLA</div>
+    <div class="tierline" id="tierline">Loading your membership…</div>
+  </div>
+  <div class="frame"><div class="slide" id="slide"></div></div>
+  <div class="foot"><button class="skip" id="skip" onclick="finish()">Skip to my account →</button></div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   THE WELCOME REVEAL
+
+   Somebody has just paid for a membership, and the old screen handed
+   them a receipt. This walks them through what they now own — one perk
+   at a time, unlocking, with no tapping required. It advances itself
+   because being asked to press Next eleven times is work, and this is
+   meant to feel like being shown around.
+   ══════════════════════════════════════════════════════════════════ */
+
+const esc = s => String(s == null ? '' : s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+const params = new URLSearchParams(location.search);
+const MEMBER_ID = (params.get('m') || localStorage.getItem('zola_member_id') || '').trim().toUpperCase();
+
+let WALLET = null, SLIDES = [], idx = -1, timer = null, advancing = false;
+
+// How long each kind of slide holds. The ones with something to watch get
+// longer, because cutting away from an animation mid-way reads as a glitch.
+const DWELL = { open: 4200, calendar: 6200, free_service: 5600, final: 99999, default: 5000 };
+
+function lockSvg(){
+  return '<div class="lockwrap"><svg class="lock" viewBox="0 0 100 116" aria-hidden="true">'
+    + '<path class="shackle" d="M28 46 V33 a22 22 0 0 1 44 0 V46"/>'
+    + '<rect class="body-plate" x="16" y="46" width="68" height="56" rx="9"/>'
+    + '<circle class="spark" cx="50" cy="74" r="15"/>'
+    + '<circle cx="50" cy="70" r="5" fill="var(--gold)"/>'
+    + '<rect x="47.5" y="72" width="5" height="13" rx="2.5" fill="var(--gold)"/>'
+    + '</svg></div>';
+}
+
+// The calendar perk, shown rather than stated: guest days stay shut, the
+// days the membership just bought light up one after another.
+function calendarArt(days){
+  const total = 28;
+  let cells = '';
+  for (let i = 0; i < total; i++){
+    const open = i < days;
+    cells += open
+      ? '<b class="open" style="animation-delay:' + (420 + i * 95) + 'ms"></b>'
+      : '<b></b>';
+  }
+  return '<div class="cal">' + cells + '</div>';
+}
+
+function tokenArt(list){
+  return '<div class="tokens">' + list.map(function(t, i){
+    return '<div class="token" style="animation-delay:' + (420 + i * 260) + 'ms">'
+      + '<div class="t-n">' + t.n + '</div><div class="t-l">' + esc(t.l) + '</div></div>';
+  }).join('') + '</div>';
+}
+
+function build(w){
+  const out = [];
+
+  out.push({
+    kind: 'open',
+    art: lockSvg(),
+    count: 'Welcome',
+    headline: (w.name || 'You').split(' ')[0] + ', you’re in.',
+    detail: w.tier_label + ' is yours. Let me show you what that actually means — nothing to tap, just watch.',
+    stamp: '',
+  });
+
+  w.perks.forEach(function(p, i){
+    const s = {
+      kind: p.kind,
+      art: lockSvg(),
+      count: 'Unlocked · ' + (i + 1) + ' of ' + w.perks.length,
+      headline: p.label,
+      detail: p.detail,
+      stamp: p.status || '',
+    };
+    if (p.kind === 'calendar') {
+      s.art = calendarArt(p.value || 0);
+      s.stamp = p.value + ' days ahead of everyone else';
+    }
+    if (p.kind === 'free_service') {
+      s.art = tokenArt([{ n: p.value, l: (p.of === 'any' ? 'service' : p.of) + (p.value === 1 ? '' : 's') + ' free' }]);
+      s.stamp = 'Already in your account';
+    }
+    out.push(s);
+  });
+
+  // Everything at once, so the last thing they see is the size of it.
+  const free = w.free_services.total;
+  out.push({
+    kind: 'final',
+    art: tokenArt([
+      { n: free, l: 'free ' + (free === 1 ? 'service' : 'services') + ' a month' },
+      { n: (w.addon_discount_pct === 100 ? 'FREE' : w.addon_discount_pct + '%'), l: 'off every add-on' },
+      { n: w.window.days_ahead, l: 'days of calendar' },
+    ]),
+    count: 'That’s everything',
+    headline: 'It’s all waiting in your account.',
+    detail: 'Your free services and discounts apply themselves at checkout. You never have to remember a code.',
+    stamp: '',
+    final: true,
+  });
+
+  return out;
+}
+
+function render(){
+  const s = SLIDES[idx];
+  const el = document.getElementById('slide');
+  const dwell = DWELL[s.kind] || DWELL.default;
+
+  el.className = 'slide' + (s.final ? ' final' : '');
+  el.innerHTML =
+    s.art
+    + '<div class="count">' + esc(s.count) + '</div>'
+    + '<h1 class="headline">' + esc(s.headline) + '</h1>'
+    + '<p class="detail">' + esc(s.detail) + '</p>'
+    + (s.stamp ? '<div class="stamp">' + esc(s.stamp) + '</div>' : '')
+    + (s.final
+        ? '<div class="ctas">'
+          + '<a class="cta" href="client-portal.html">Open my account</a>'
+          + '<a class="cta ghost" href="booking.html">Book my first visit</a>'
+          + '</div>'
+        : '');
+  // Restart the entry animation on a node the browser has already seen.
+  void el.offsetWidth;
+  el.classList.add('in');
+
+  // The rail is the only thing telling them how much is left.
+  const rail = document.getElementById('rail').children;
+  for (let i = 0; i < rail.length; i++){
+    rail[i].className = i < idx ? 'done' : (i === idx ? 'now' : '');
+    if (i === idx) rail[i].style.setProperty('--dwell', dwell + 'ms');
+  }
+
+  if (s.final) {
+    document.getElementById('skip').style.display = 'none';
+    markSeen();
+    return;
+  }
+  clearTimeout(timer);
+  timer = setTimeout(next, dwell);
+}
+
+function next(){
+  if (advancing || idx >= SLIDES.length - 1) return;
+  advancing = true;
+  const el = document.getElementById('slide');
+  el.classList.remove('in');
+  el.classList.add('out');
+  setTimeout(function(){
+    idx++;
+    advancing = false;
+    render();
+  }, 420);
+}
+
+// Tapping should move it along rather than do nothing — some people will
+// not wait, and making them wait is worse than letting them skip ahead.
+document.addEventListener('click', function(e){
+  if (e.target.closest('a,button')) return;
+  if (SLIDES.length && idx < SLIDES.length - 1) { clearTimeout(timer); next(); }
+});
+
+function finish(){
+  clearTimeout(timer);
+  markSeen();
+  location.href = 'client-portal.html';
+}
+
+function markSeen(){
+  if (!MEMBER_ID) return;
+  try {
+    fetch('/api/perks?action=revealed', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'revealed', member_id: MEMBER_ID }),
+    }).catch(function(){});
+  } catch (_) {}
+}
+
+(async function(){
+  if (!MEMBER_ID) { location.replace('client-portal.html'); return; }
+  try {
+    const r = await fetch('/api/perks?action=wallet&member_id=' + encodeURIComponent(MEMBER_ID));
+    if (!r.ok) throw new Error('no wallet');
+    WALLET = await r.json();
+  } catch (_) {
+    location.replace('client-portal.html');
+    return;
+  }
+
+  document.getElementById('tierline').textContent = WALLET.tier_label + ' · Member ' + WALLET.member_id;
+  SLIDES = build(WALLET);
+  document.getElementById('rail').innerHTML = SLIDES.map(function(){ return '<i></i>'; }).join('');
+  idx = 0;
+  render();
+})();
+</script>
+</body>
+</html>

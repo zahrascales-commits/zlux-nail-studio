@@ -203,6 +203,13 @@
       .bk-day:hover { border-color:rgba(182,165,136,0.5); }
       .bk-day.off { opacity:0.25; cursor:default; }
       .bk-day:hover.off { border-color:transparent; }
+      /* A day that has not opened yet is not the same as a day that is full.
+         It reads as closed rather than exhausted — there is still something
+         to buy. */
+      .bk-day.locked{
+        opacity:0.34; cursor:default; position:relative;
+        background:repeating-linear-gradient(135deg,transparent,transparent 4px,rgba(182,165,136,0.14) 4px,rgba(182,165,136,0.14) 8px);
+      }
       /* Fully booked reads as struck through rather than merely faint, so it's
          clearly "taken" and not "still loading". */
       .bk-day.full { opacity:0.32; text-decoration:line-through; text-decoration-thickness:1px; }
@@ -745,6 +752,9 @@ function itemCount() { return booking.items.reduce((s, it) => s + it.qty, 0); }
 
 // ── Coverage windows: date ranges where a limited team means limited services ──
 let bkCoverageWindows = [];
+// Guests get the public horizon the moment the page opens; a member ID
+// widens it a second later without the calendar ever looking broken.
+window.addEventListener('DOMContentLoaded', function(){ loadBookingWindow(null); });
 let _coverageLoaded = false;
 async function loadCoverageWindows() {
   if (_coverageLoaded) return;
@@ -851,6 +861,8 @@ async function validateMemberId() {
   const rules = TIER_RULES[member.tier];
   booking.type = 'member';
   booking.memberTier = member.tier;
+  // Their tier just widened the calendar — redraw it against the new horizon.
+  loadBookingWindow(member.tier);
   booking.memberLabel = rules.label;
   // Remember the verified ID so members don't retype it next visit
   try { localStorage.setItem('zola_member_id', raw); } catch (_) {}
@@ -1506,6 +1518,29 @@ function bkCalNav(dir) {
   bkCalCursor = localDs(d);
   renderBkCal();
 }
+/* ══════════════ HOW FAR AHEAD YOU MAY BOOK ══════════════
+   A guest sees a short window. Each tier adds days on top. This is the
+   perk the memberships page sells, so it has to bite here or it is not a
+   perk at all. */
+let BK_WINDOW = null;
+
+async function loadBookingWindow(tier){
+  try{
+    const r = await fetch('/api/perks?action=window&tier=' + encodeURIComponent(tier || ''));
+    BK_WINDOW = await r.json();
+  }catch(_){ BK_WINDOW = null; }
+  renderBkCal();
+}
+
+// The last date this person may book, as a plain YYYY-MM-DD.
+function bkHorizon(){
+  if(!BK_WINDOW || !Number.isFinite(Number(BK_WINDOW.days_ahead))) return null;
+  const d = new Date();
+  d.setHours(12,0,0,0);
+  d.setDate(d.getDate() + Number(BK_WINDOW.days_ahead));
+  return localDs(d);
+}
+
 function renderBkCal() {
   const d = new Date(bkCalCursor + 'T12:00:00');
   const y = d.getFullYear(), mo = d.getMonth();
@@ -1514,22 +1549,39 @@ function renderBkCal() {
   const days = new Date(y, mo + 1, 0).getDate();
   const today = localDs();
   const tomorrow = localDs(new Date(Date.now() + 86400000));
+  const horizon = bkHorizon();
   let html = '';
   for (let i = 0; i < first; i++) html += '<div class="bk-day off"></div>';
-  let sawBlock = false;
+  let sawBlock = false, sawLocked = false;
   for (let day = 1; day <= days; day++) {
     const ds = y + '-' + String(mo + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
     const past = ds < tomorrow; // bookings start tomorrow, same rule as before
-    const block = !past && (coverageBlockFor(ds) || dayFullyBooked(ds));
+    // Beyond the horizon is not "fully booked" — it has not opened yet, and
+    // saying so is what makes the membership worth having.
+    const beyond = !past && horizon && ds > horizon;
+    if (beyond) sawLocked = true;
+    const block = !past && !beyond && (coverageBlockFor(ds) || dayFullyBooked(ds));
     if (block) sawBlock = true;
-    const disabled = past || block;
-    const cls = 'bk-day' + (disabled ? ' off' : '') + (block ? ' full' : '') + (ds === booking.date ? ' sel' : '') + (ds === today ? ' today' : '');
-    const title = block ? ' title="Fully booked"' : '';
+    const disabled = past || block || beyond;
+    const cls = 'bk-day' + (disabled ? ' off' : '') + (block ? ' full' : '') + (beyond ? ' locked' : '')
+      + (ds === booking.date ? ' sel' : '') + (ds === today ? ' today' : '');
+    const title = beyond ? ' title="Opens closer to the date — members see further ahead"'
+                : (block ? ' title="Fully booked"' : '');
     html += '<div class="' + cls + '"' + title + (disabled ? '' : ' onclick="pickBkDay(\'' + ds + '\')"') + '>' + day + '</div>';
   }
   document.getElementById('bk-cells').innerHTML = html;
   const note = document.getElementById('bk-coverage-note');
-  if (note) note.style.display = sawBlock ? 'block' : 'none';
+  if (note){
+    const bits = [];
+    if (sawBlock) bits.push('Greyed dates are fully booked ✦');
+    if (sawLocked){
+      bits.push(BK_WINDOW && BK_WINDOW.extra > 0
+        ? 'Locked dates open closer to the time. Your membership already opens ' + BK_WINDOW.extra + ' extra days.'
+        : 'Locked dates have not opened yet — <a href="memberships.html" style="color:var(--champagne);">members book up to 20 days further ahead</a>.');
+    }
+    note.innerHTML = bits.join('<br>');
+    note.style.display = bits.length ? 'block' : 'none';
+  }
   loadMonthAvailability(bkCalCursor);
 }
 function pickBkDay(ds) {

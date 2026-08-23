@@ -496,8 +496,10 @@
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-top:1.5rem;">
-        <a href="client-portal.html" class="btn-signup" style="text-decoration:none;text-align:center;display:block;">Go to My Portal</a>
+      <a href="#" id="see-perks" class="btn-signup" style="text-decoration:none;text-align:center;display:block;margin-top:1.5rem;">See everything you just unlocked ✦</a>
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.74rem;color:var(--latte);text-align:center;margin-top:0.7rem;" id="perks-countdown"></p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-top:1.25rem;">
+        <a href="client-portal.html" class="btn-signup" style="text-decoration:none;text-align:center;display:block;background:none;border:1px solid var(--champagne);color:var(--champagne);">Skip to My Portal</a>
         <a href="booking.html" class="btn-signup" style="text-decoration:none;text-align:center;display:block;background:var(--espresso);color:var(--champagne);">Book First Appointment</a>
       </div>
     </div>
@@ -742,6 +744,9 @@
       document.getElementById('conf-email').textContent = signupData.email;
       localStorage.setItem('zlux_member_id', signupData.memberId);
       localStorage.setItem('zlux_tier', signupData.tier);
+      // The booking page and the reveal both look for this key.
+      localStorage.setItem('zola_member_id', signupData.memberId);
+      startPerkWalkthrough(signupData.memberId);
     }
     document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
     document.getElementById('step-' + n).classList.add('active');
@@ -753,6 +758,33 @@
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (n === 4 && signupData.memberId && window.zolaConfetti) window.zolaConfetti();
+  }
+
+  /* Someone who has just paid should be shown what they bought, not handed
+     a receipt and left to find it. The confirmation stays on screen long
+     enough to read the member ID, then the walkthrough takes over — and any
+     tap, on the button or anywhere else, goes there immediately. */
+  function startPerkWalkthrough(memberId){
+    const url = 'welcome.html?m=' + encodeURIComponent(memberId);
+    const btn = document.getElementById('see-perks');
+    const note = document.getElementById('perks-countdown');
+    if (btn) btn.setAttribute('href', url);
+
+    let left = 6;
+    const tick = function(){
+      if (note) note.textContent = left > 0
+        ? 'Starting your walkthrough in ' + left + '…'
+        : 'Opening…';
+      if (left <= 0) { clearInterval(iv); location.href = url; return; }
+      left--;
+    };
+    tick();
+    const iv = setInterval(tick, 1000);
+    // Anyone who wants to read the page for longer should be able to.
+    const stop = function(){ clearInterval(iv); if (note) note.textContent = ''; };
+    document.querySelectorAll('#step-4 a').forEach(function(a){
+      if (a.id !== 'see-perks') a.addEventListener('click', stop);
+    });
   }
 
   window.addEventListener('scroll', () => { document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60); });
