@@ -1091,6 +1091,17 @@
           <p class="set-note">Leftovers show up at the top of your Overview under <strong>Leftover Appointments</strong>, and you get a notification. Keep the wait short — a client is sitting unconfirmed the whole time.</p>
         </div>
         <div class="site-card">
+          <h3>How Far Ahead People Can Book ✦</h3>
+          <p>Guests can book this many days out. Members see further — Signature +3, Luxe +13, Black Card +20 — and that gap is the calendar perk they are paying for.</p>
+          <label class="fld-label">Guests can book</label>
+          <div style="display:flex;gap:0.6rem;align-items:center;">
+            <input id="public-horizon" type="number" min="1" max="365" style="max-width:120px;" />
+            <span style="font-size:0.85rem;color:var(--latte);">days ahead</span>
+            <button class="btn btn-ghost btn-sm" onclick="savePublicHorizon()">Save</button>
+          </div>
+          <p class="set-note">Tighten this to make membership worth more — but only once your roster is filled in far enough ahead, or guests will find nothing bookable at all.</p>
+        </div>
+        <div class="site-card">
           <h3>Business Details</h3>
           <label class="fld-label">Studio Name</label>
           <input id="set-bizname" placeholder="ZOLA Nail Studio" style="margin-bottom:0.7rem" />
@@ -4046,6 +4057,15 @@ async function saveClaimHold(){
   }catch(_){ toast('Could not save'); }
 }
 
+async function savePublicHorizon(){
+  const v = Number((document.getElementById('public-horizon')||{}).value);
+  try{
+    const d = await (await api('/api/perks?action=public_window',{method:'PUT',
+      body:JSON.stringify({action:'public_window',days:v})})).json();
+    toast(d.ok ? 'Guests can book ' + d.days + ' days ahead' : (d.error||'Could not save'));
+  }catch(_){ toast('Could not save'); }
+}
+
 // Her own phone, set up exactly the way the artists set up theirs.
 function mountOwnerPush(){
   if(window.ZolaPush){
@@ -4054,6 +4074,10 @@ function mountOwnerPush(){
   api('/api/manager?action=claims').then(function(r){ return r.json(); }).then(function(d){
     const hold = document.getElementById('claim-hold');
     if(hold && d && d.hold_minutes) hold.value = d.hold_minutes;
+    const horizon = document.getElementById('public-horizon');
+    if(horizon) fetch('/api/perks?action=window').then(function(r){return r.json();})
+      .then(function(w){ if(w && w.public_days_ahead) horizon.value = w.public_days_ahead; })
+      .catch(function(){});
     const mode = document.getElementById('claim-mode');
     if(mode && d && d.unclaimed_action) mode.value = d.unclaimed_action;
   }).catch(function(){});

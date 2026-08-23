@@ -68,8 +68,15 @@ const TIERS = {
 // How far ahead a guest can book. Every tier's calendar perk is measured
 // against this, so a member is genuinely ahead of the room rather than
 // merely allowed to book — "you see it before drop-ins do" is only true if
-// drop-ins cannot see it. Owner-editable; a week is the starting point.
-const DEFAULT_PUBLIC_DAYS = 7;
+// drop-ins cannot see it.
+//
+// Thirty days rather than a tight week, on purpose. The tighter the guest
+// window the stronger the perk looks, but a studio whose roster starts three
+// weeks out has no bookable dates inside a short window at all — the first
+// version of this shipped at seven days and closed public booking completely.
+// Better to start wide and let her tighten it in Settings once the calendar
+// is filled in than to strangle bookings for a nicer-sounding benefit.
+const DEFAULT_PUBLIC_DAYS = 30;
 let PUBLIC_DAYS_AHEAD = DEFAULT_PUBLIC_DAYS;
 
 // Deliberately NOT the old `public_days_ahead` key. That one already exists
