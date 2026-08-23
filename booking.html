@@ -203,6 +203,25 @@
       .bk-day:hover { border-color:rgba(182,165,136,0.5); }
       .bk-day.off { opacity:0.25; cursor:default; }
       .bk-day:hover.off { border-color:transparent; }
+      /* Each artist with the hours she can genuinely take. A greyed card is
+         somebody who is simply not in that day, which is a useful answer —
+         dropping her from the list reads as though she left. */
+      .art-card{border:1px solid rgba(182,165,136,0.3);padding:0.9rem 1rem;margin-bottom:0.6rem;background:var(--soft-white);}
+      .art-card.sel{border-color:var(--espresso);background:rgba(182,165,136,0.12);}
+      .art-card.off{opacity:0.5;}
+      .art-top{display:flex;align-items:center;gap:0.7rem;}
+      .art-ph{width:42px;height:42px;border-radius:50%;background:rgba(182,165,136,0.25);flex-shrink:0;
+        display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:1.1rem;
+        color:var(--espresso);overflow:hidden;}
+      .art-ph img{width:100%;height:100%;object-fit:cover;}
+      .art-n{font-family:'Cinzel',serif;font-size:1rem;color:var(--espresso);}
+      .art-r{font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:var(--latte);}
+      .art-times{display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.7rem;}
+      .art-times button{border:1px solid rgba(182,165,136,0.4);background:transparent;padding:0.4rem 0.65rem;
+        font-family:'Josefin Sans',sans-serif;font-size:0.76rem;color:var(--espresso);cursor:pointer;}
+      .art-times button.on{background:var(--espresso);color:var(--champagne);border-color:var(--espresso);}
+      .art-none{font-family:'Josefin Sans',sans-serif;font-size:0.74rem;color:var(--latte);margin-top:0.5rem;}
+
       /* A day that has not opened yet is not the same as a day that is full.
          It reads as closed rather than exhausted — there is still something
          to buy. */
@@ -434,14 +453,9 @@
 
       <!-- Artist Preference: Black Card exclusive — everyone else is assigned automatically -->
       <div id="artist-pref-section" style="display:none;">
-        <div class="section-label" style="margin:1.25rem 0 0.35rem;">Artist Preference <span style="color:var(--champagne);font-weight:700;">· Black Card</span></div>
-        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.76rem;color:var(--latte);margin-bottom:0.6rem;">As a Black Card member, you can request your artist for every appointment.</p>
-        <button class="option-btn" onclick="selectWorker('Zahra',this)">
-          <div><span class="option-name">Zahra — Founder & Lead Artist</span><span class="option-sub">Celebrity nail artist, specializes in structured sets</span></div>
-        </button>
-        <button class="option-btn" onclick="selectWorker('Any Artist',this)">
-          <div><span class="option-name">Any Available Artist</span><span class="option-sub">First available appointment</span></div>
-        </button>
+        <div class="section-label" style="margin:1.25rem 0 0.35rem;">Choose Your Artist <span style="color:var(--champagne);font-weight:700;">· Black Card</span></div>
+        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.76rem;color:var(--latte);margin-bottom:0.6rem;">Pick your date first, then choose who you want and when. This is yours alone — nobody else sees who is free.</p>
+        <div id="artist-choices"><p style="font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:var(--latte);">Pick a date below and your artists will appear here ✦</p></div>
       </div>
 
       <div class="step-nav">
@@ -1519,6 +1533,83 @@ function bkCalNav(dir) {
   bkCalCursor = localDs(d);
   renderBkCal();
 }
+
+/* ══════════════ BLACK CARD · CHOOSE YOUR ARTIST ══════════════
+   Gated on the server too — this endpoint refuses anyone who is not
+   Black Card, because hiding a section in the page is not access
+   control and this is the benefit the tier is sold on. */
+let ARTISTS = [];
+
+async function loadArtistChoices(){
+  const box = document.getElementById('artist-choices');
+  if (!box || booking.memberTier !== 'BLACK_CARD') return;
+  if (!booking.date){
+    box.innerHTML = '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;color:var(--latte);">Pick a date below and your artists will appear here ✦</p>';
+    return;
+  }
+  box.innerHTML = '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;color:var(--latte);">Checking who is free…</p>';
+  const id = (booking.memberId || localStorage.getItem('zola_member_id') || localStorage.getItem('zlux_member_id') || '').trim().toUpperCase();
+  try{
+    const r = await fetch('/api/coverage?action=artists&member_id=' + encodeURIComponent(id)
+      + '&date=' + encodeURIComponent(booking.date)
+      + '&services=' + encodeURIComponent(serviceKey()));
+    const d = await r.json();
+    if (d.error){ box.innerHTML = '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;color:var(--latte);">' + d.error + '</p>'; return; }
+    ARTISTS = d.artists || [];
+  }catch(_){ box.innerHTML = '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;color:var(--latte);">Could not check availability.</p>'; return; }
+
+  if (!ARTISTS.length){
+    box.innerHTML = '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;color:var(--latte);">Nobody is in for this on that date — try another day.</p>';
+    return;
+  }
+
+  box.innerHTML = ARTISTS.map(function(a){
+    const inToday = !!a.shift_start;
+    const free = (a.times || []).length;
+    const sel = booking.worker === a.name;
+    return '<div class="art-card' + (sel ? ' sel' : '') + (inToday && free ? '' : ' off') + '">'
+      + '<div class="art-top">'
+        + '<div class="art-ph">' + (a.photo ? '<img src="' + a.photo + '" alt="">' : esc((a.name||'?').charAt(0))) + '</div>'
+        + '<div style="flex:1"><div class="art-n">' + esc(a.name) + '</div>'
+        + '<div class="art-r">' + esc(a.title)
+          + (inToday ? ' · in ' + fmt12(a.shift_start) + '–' + fmt12(a.shift_end) : ' · not in this day')
+        + '</div></div>'
+      + '</div>'
+      + (inToday && free
+          ? '<div class="art-times">' + a.times.map(function(t){
+              return '<button class="' + (sel && booking.time === t ? 'on' : '') + '" onclick="pickArtistTime(\'' + esc(a.name) + '\',\'' + t + '\')">' + fmt12(t) + '</button>';
+            }).join('') + '</div>'
+          : '<div class="art-none">' + (inToday ? 'Fully booked that day.' : 'Not working that day.') + '</div>')
+      + '</div>';
+  }).join('');
+}
+
+function fmt12(t){
+  if(!t) return '';
+  const p = String(t).split(':'); let h = Number(p[0]);
+  const ap = h >= 12 ? 'PM' : 'AM';
+  h = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+  return h + ':' + (p[1]||'00') + ' ' + ap;
+}
+
+// Picking an artist and a time in one tap — they are the same decision for
+// somebody who came here to choose a person.
+function pickArtistTime(name, time){
+  booking.worker = name;
+  booking.time = time;
+  booking.unitTimes = [time];
+  const sw = document.getElementById('summary-worker');
+  if (sw) sw.textContent = name;
+  loadArtistChoices();
+  renderTimeslots(booking.date);
+  const grid = document.getElementById('timeslots');
+  if (grid){
+    grid.querySelectorAll('button').forEach(function(b){
+      if (b.dataset && b.dataset.slot === time) b.classList.add('selected');
+    });
+  }
+}
+
 /* ══════════════ HOW FAR AHEAD YOU MAY BOOK ══════════════
    A guest sees a short window. Each tier adds days on top. This is the
    perk the memberships page sells, so it has to bite here or it is not a
@@ -1592,6 +1683,7 @@ function renderBkCal() {
 function pickBkDay(ds) {
   booking.date = ds;
   booking.time = null;
+  loadArtistChoices();
   document.getElementById('booking-date').value = ds;
   document.getElementById('step3-error').style.display = 'none';
   renderBkCal();

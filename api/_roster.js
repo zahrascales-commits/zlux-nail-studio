@@ -11,27 +11,10 @@ module.exports = async function (req, res) {
       "SELECT id, name, role, title, bio, color, photo, restricted FROM team_members WHERE show_on_site=1 AND active=1 ORDER BY id"
     );
 
-    // What each artist actually does. A card with no bio written yet still
-    // has something true to say, and "who should I book for acrylics" is the
-    // question this section exists to answer.
-    const skills = {};
-    try {
-      for (const s of await query('SELECT team_member_id, service_name FROM worker_skills')) {
-        (skills[s.team_member_id] = skills[s.team_member_id] || []).push(s.service_name);
-      }
-    } catch (_) {}
-
-    // Lengths are not specialities — "Short Gel X, Medium Gel X, Long Gel X"
-    // reads as padding where "Gel X" reads as a skill.
-    const baseName = (s) => String(s)
-      .replace(/^(Extra Long|X-Long|XL|Short|Medium|Long)\s+/i, '')
-      .replace(/\s+Set$/i, '')
-      .trim();
-
+    // Deliberately does not publish who does which service. Everyone will
+    // be cross-trained eventually so the list dates itself, and choosing
+    // your artist is a Black Card benefit rather than public information.
     const team = rows.map(r => ({
-      does: Number(r.restricted)
-        ? [...new Set((skills[r.id] || []).map(baseName))].slice(0, 4)
-        : [],
       name: r.name,
       // "title" is the owner's custom label (e.g. "Lead Artist"); fall back to role
       title: (r.title && String(r.title).trim()) || r.role || 'Nail Artist',

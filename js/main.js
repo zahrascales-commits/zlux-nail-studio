@@ -441,10 +441,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const esc = s => String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-    // A card with no photo yet gets a proper monogram plate rather than a
-    // faded letter — an artist who has not sent a headshot in should still
-    // look like she belongs on the page.
-    const card = (m, href, label) =>
+    // No booking button and no service list. Choosing your artist is a
+    // Black Card benefit, so a public "Book with Maria" link would hand it
+    // to everyone for free. And listing who does what dates itself the
+    // moment the team is cross-trained, which is where this is heading.
+    const card = (m) =>
       '<article class="team-col">' +
         '<div class="team-photo' + (m.photo ? '' : ' team-photo-empty') + '">' +
           (m.photo
@@ -454,18 +455,13 @@ document.addEventListener('DOMContentLoaded', () => {
         '<h3 class="team-name">' + esc(m.name) + '</h3>' +
         '<div class="team-role">' + esc(m.title) + '</div>' +
         (m.bio ? '<p class="team-bio">' + esc(m.bio) + '</p>' : '') +
-        ((m.does && m.does.length)
-          ? '<div class="team-does">' + m.does.map(function(s){ return '<span>' + esc(s) + '</span>'; }).join('') + '</div>'
-          : '') +
-        '<a href="' + href + '" class="btn-outline-dark team-cta">' + label + '</a>' +
       '</article>';
 
     fetch('/api/roster').then(r => r.json()).then(d => {
       const team = (d && d.team) || [];
       if (!team.length) return;
-      const first = m => esc((m.name || '').split(' ')[0]);
-      if (homeGrid)  homeGrid.innerHTML  = team.map(m => card(m, 'booking.html', 'Book with ' + first(m))).join('');
-      if (aboutGrid) aboutGrid.innerHTML = team.map(m => card(m, 'booking.html', 'Book with ' + first(m))).join('');
+      if (homeGrid)  homeGrid.innerHTML  = team.map(card).join('');
+      if (aboutGrid) aboutGrid.innerHTML = team.map(card).join('');
     }).catch(() => {});
   }
 

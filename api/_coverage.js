@@ -45,6 +45,93 @@ module.exports = async function (req, res) {
       return res.json({ windows });
     }
 
+    /* ── BLACK CARD: who is free, and when ────────────────────────────
+       Choosing your artist is the benefit Black Card is sold on, so this
+       is gated on the server rather than by hiding a section in the page.
+       Anyone may call it; only a Black Card member gets an answer, because
+       a hidden div is not access control.                                */
+    if (action === 'artists') {
+      const memberId = String(req.query.member_id || '').trim().toUpperCase();
+      if (!memberId) return res.status(401).json({ error: 'Members only' });
+
+      let tier = '';
+      try {
+        const row = await require('./_db').queryOne('SELECT tier FROM members WHERE member_id = ?', [memberId]);
+        tier = row ? String(row.tier || '').toUpperCase() : '';
+      } catch (_) {}
+      if (tier !== 'BLACK_CARD') {
+        return res.status(403).json({ error: 'Choosing your artist is a Black Card benefit.' });
+      }
+
+      const date = String(req.query.date || '').slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Which date?' });
+      const services = String(req.query.services || '').split(',').map(s => s.trim()).filter(Boolean);
+
+      const shifts = require('./_shifts');
+      const cov = await shifts.shiftCoverage(date, date, services, false);
+      const onToday = cov.byDate[date] || [];
+
+      let booked = [];
+      try {
+        booked = await query(
+          "SELECT team_member_id, time FROM team_appointments WHERE date=? AND LOWER(COALESCE(status,'scheduled'))<>'cancelled'",
+          [date]);
+      } catch (_) {}
+
+      const team = await query('SELECT id, name, color, photo, title, role FROM team_members WHERE active=1 ORDER BY id');
+      const byId = {};
+      for (const t of team) byId[Number(t.id)] = t;
+
+      // Every start a whole appointment actually fits into, minus what is
+      // already on her day. Offering a time she cannot finish is worse than
+      // showing her as busy.
+      const out = onToday.map(sh => {
+        const busy = new Set();
+        for (const b of booked) {
+          if (Number(b.team_member_id) !== Number(sh.id) || !b.time) continue;
+          for (let k = 0; k * 60 < shifts.APPT_MINUTES; k++) {
+            busy.add(shifts.minToH(shifts.hToMin(String(b.time)) + k * 60));
+          }
+        }
+        const starts = [];
+        for (let mins = shifts.hToMin(sh.start); mins < shifts.hToMin(sh.end); mins += 60) {
+          let fits = true;
+          for (let k = 0; k * 60 < shifts.APPT_MINUTES; k++) {
+            const step = shifts.minToH(mins + k * 60);
+            if (step >= sh.end || busy.has(step)) { fits = false; break; }
+            if (sh.lunchStart && sh.lunchEnd && step >= sh.lunchStart && step < sh.lunchEnd) { fits = false; break; }
+          }
+          if (fits) starts.push(shifts.minToH(mins));
+        }
+        const info = byId[Number(sh.id)] || {};
+        return {
+          id: sh.id, name: sh.name,
+          title: (info.title && String(info.title).trim()) || info.role || 'Nail Artist',
+          color: info.color || '#B6A588', photo: info.photo || '',
+          shift_start: sh.start, shift_end: sh.end,
+          times: starts,
+          booked_count: booked.filter(b => Number(b.team_member_id) === Number(sh.id)).length,
+        };
+      });
+
+      // Anyone qualified but not rostered that day still belongs on the list,
+      // greyed. "She is not in on Tuesday" is a useful answer; leaving her out
+      // entirely reads as though she left the studio.
+      const shown = new Set(out.map(a => Number(a.id)));
+      for (const m of await shifts.loadTeam()) {
+        if (shown.has(Number(m.id)) || !shifts.covers(m, services)) continue;
+        const info = byId[Number(m.id)] || {};
+        out.push({
+          id: m.id, name: m.name,
+          title: (info.title && String(info.title).trim()) || info.role || 'Nail Artist',
+          color: info.color || '#B6A588', photo: info.photo || '',
+          shift_start: null, shift_end: null, times: [], booked_count: 0,
+        });
+      }
+
+      return res.json({ date, configured: cov.configured, artists: out });
+    }
+
     // Service-first month view: for each date in the range, can the selected
     // services actually be booked? Drives which days the calendar grays out.
     if (action === 'service_days') {

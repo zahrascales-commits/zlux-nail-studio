@@ -392,8 +392,11 @@ function doLogout() {
 }
 
 async function loadDashboard(member) {
-  // What their membership is giving them, on the screen they land on.
-  loadWallet();
+  // What their membership is giving them, on the screen they land on. The ID
+  // comes from the session rather than localStorage — signing in through the
+  // portal never writes that key, so reading it left the wallet blank for
+  // anyone who had not also been through signup on the same device.
+  loadWallet(member && member.memberId);
   document.getElementById('portal-login').style.display = 'none';
   document.getElementById('portal-dashboard').style.display = 'block';
   profileData = member;
@@ -569,10 +572,12 @@ function setAccent(color) {
    ══════════════════════════════════════════════════════════════════ */
 let WALLET = null;
 
-async function loadWallet(){
+async function loadWallet(memberId){
   const el = document.getElementById('perk-wallet');
   if (!el) return;
-  const id = (localStorage.getItem('zlux_member_id') || localStorage.getItem('zola_member_id') || '').trim().toUpperCase();
+  const id = String(memberId
+    || localStorage.getItem('zlux_member_id')
+    || localStorage.getItem('zola_member_id') || '').trim().toUpperCase();
   if (!id) { el.innerHTML = ''; return; }
   try{
     const r = await fetch('/api/perks?action=wallet&member_id=' + encodeURIComponent(id));
