@@ -191,6 +191,17 @@ module.exports = async (req, res) => {
       }
     }
 
+    /* ── A BOOKING WITHOUT A DEPOSIT IS NOT A BOOKING ──────────────
+       Eighteen of nineteen rows in the books had never been paid for,
+       and every one of them was being counted as revenue. The gate
+       belongs here, at the point the row is created, rather than being
+       filtered out of the reports afterwards.
+
+       Two things are legitimately free: a visit the membership covers in
+       full, and anything Zahra books herself from Studio Manager. Both
+       are allowed through explicitly. Everything else needs a card.     */
+    const staffBooked = req.headers['x-ceo-password'] === (process.env.CEO_PASSWORD || 'ZOLA2026');
+
     // Price everything SERVER-side from the menu — the client's numbers are
     // never trusted. This also fixes a long-standing units bug where the
     // booking page sent dollars and the server recorded them as cents.
@@ -230,6 +241,14 @@ module.exports = async (req, res) => {
         }
       }
     } catch (_) { /* a broken promo must never block a booking */ }
+
+    // Now that the price is known, refuse anything unpaid that should not be.
+    if (!depositPaid && !staffBooked && deposit_cents > 0) {
+      return res.status(402).json({
+        error: 'This appointment needs its deposit before it can be booked. If your card did not go through, nothing has been charged — please try again.',
+        needs_deposit: true, deposit_cents,
+      });
+    }
 
     // incId() counts in memory, so it restarted at 1 on every cold start and
     // handed several different bookings the same ZOLA-00001. Number from the

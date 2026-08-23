@@ -64,29 +64,131 @@ module.exports = async (req, res) => {
       } catch (_) { return []; }
     }
     // Cancelled bookings still belong in the history, but never in revenue.
-    const isLive = b => String(b.status || '').toUpperCase() !== 'CANCELLED';
-    const sumRevenue = list => list.filter(isLive).reduce((s, b) => s + (b.total_cents || 0), 0);
+    /* ── WHAT COUNTS AS MONEY ────────────────────────────────────────
+       One definition, used by every figure on every screen.
+
+       A booking counts once a deposit has actually been taken. A booking
+       with no deposit is a request, not income — eighteen of the nineteen
+       rows in this studio's books had never been paid for, and they were
+       all being reported as revenue.
+
+       Membership-covered visits are confirmed too: the member already paid
+       through their subscription, so a zero total with a member attached is
+       fully paid, not unpaid.
+
+       Earned means it also happened. Money for work not yet done belongs in
+       "upcoming", never in this week's takings.                          */
+    const upper = s => String(s || '').toUpperCase();
+    const isCancelled = b => upper(b.status) === 'CANCELLED';
+    const isNoShow = b => upper(b.status) === 'NO_SHOW' || upper(b.status) === 'NOSHOW';
+    const isConfirmed = b => !isCancelled(b) &&
+      (Number(b.deposit_paid) === 1 || (b.member_id && (Number(b.total_cents) || 0) === 0));
+    const isUnconfirmed = b => !isCancelled(b) && !isConfirmed(b);
+
+    // Local date, not UTC. "Today" flipping at 5pm in California would move
+    // bookings between earned and upcoming a day early.
+    const pad = n => String(n).padStart(2, '0');
+    const localDay = (d) => {
+      const x = d || new Date();
+      return x.getFullYear() + '-' + pad(x.getMonth() + 1) + '-' + pad(x.getDate());
+    };
+    const TODAY = localDay();
+    const daysAgo = n => localDay(new Date(Date.now() - n * 86400000));
+
+    const isEarned = b => isConfirmed(b) && String(b.date) <= TODAY && !isNoShow(b);
+    const isUpcoming = b => isConfirmed(b) && String(b.date) > TODAY;
+    const cents = list => list.reduce((t, b) => t + (Number(b.total_cents) || 0), 0);
+
+    // Windows are closed at both ends. Only having a lower bound is what let
+    // a September appointment be counted as this week's revenue in August.
+    const between = (list, from, to) => list.filter(b => String(b.date) >= from && String(b.date) <= to);
+
+    // Everything a client-facing figure needs to be clickable: who it was,
+    // how to reach them, what they had, what they paid.
+    let clientBook = {};
+    try {
+      const tdb = require('./_team-db');
+      await tdb.ensureTables();
+      for (const c of await tdb.query('SELECT name, email, phone, visits, notes FROM clients')) {
+        if (c.name) clientBook[String(c.name).toLowerCase()] = c;
+        if (c.email) clientBook[String(c.email).toLowerCase()] = c;
+      }
+    } catch (_) {}
+
+    let artistByKey = {};
+    try {
+      const tdb = require('./_team-db');
+      const rows = await tdb.query(
+        `SELECT a.date, a.time, a.client_name, a.client_phone, m.name AS artist
+           FROM team_appointments a LEFT JOIN team_members m ON m.id = a.team_member_id`);
+      for (const r of rows) artistByKey[r.date + ' ' + r.time] = r;
+    } catch (_) {}
+
+    const detail = (b) => {
+      const link = artistByKey[b.date + ' ' + b.time_slot] || {};
+      const name = b.guest_name || link.client_name || '';
+      const c = clientBook[String(name).toLowerCase()] || clientBook[String(b.guest_email || '').toLowerCase()] || {};
+      let addons = [];
+      try { addons = JSON.parse(b.addons || '[]'); } catch (_) {}
+      return {
+        id: b.id,
+        date: b.date,
+        time: b.time_slot,
+        client: name || 'Guest',
+        email: b.guest_email || c.email || '',
+        phone: c.phone || link.client_phone || '',
+        member_id: b.member_id || '',
+        service: b.service_name || '',
+        addons,
+        artist: link.artist || '',
+        total_cents: Number(b.total_cents) || 0,
+        deposit_cents: Number(b.deposit_cents) || 0,
+        deposit_paid: Number(b.deposit_paid) === 1,
+        status: b.status || '',
+        state: isCancelled(b) ? 'cancelled'
+             : (isUnconfirmed(b) ? 'unconfirmed'
+             : (isNoShow(b) ? 'no_show'
+             : (String(b.date) > TODAY ? 'upcoming' : 'earned'))),
+      };
+    };
+
+    const bucket = (list) => ({
+      count: list.length,
+      cents: cents(list),
+      bookings: list.map(detail),
+    });
 
     if (section === 'overview') {
       let members = [];
       try { members = await query('SELECT tier FROM members WHERE COALESCE(demo,0)=0'); } catch (_) {}
       const PRICE = { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900 };
-      const mrr = members.reduce((s, m) => s + (PRICE[m.tier] || 0), 0);
+      const mrr = members.reduce((s2, mm) => s2 + (PRICE[mm.tier] || 0), 0);
       const byTier = { SIGNATURE: 0, LUXE: 0, BLACK_CARD: 0 };
-      members.forEach(m => { if (byTier[m.tier] !== undefined) byTier[m.tier]++; });
+      members.forEach(mm => { if (byTier[mm.tier] !== undefined) byTier[mm.tier]++; });
 
       const all = await allBookings();
-      const today = new Date().toISOString().slice(0, 10);
-      const todayBookings = all.filter(b => b.date === today);
+      const todayList = all.filter(b => b.date === TODAY);
+      const upcoming = all.filter(isUpcoming)
+        .sort((a, b) => String(a.date).localeCompare(String(b.date))
+          || String(a.time_slot).localeCompare(String(b.time_slot)));
+      const waiting = all.filter(isUnconfirmed).filter(b => String(b.date) >= TODAY);
+
       return res.json({
+        today: TODAY,
         mrr, totalMembers: members.length, byTier,
-        todayBookings: todayBookings.length,
-        todayRevenue: sumRevenue(todayBookings),
+        todayBookings: todayList.length,
+        // Only money already earned. A booking with no deposit is a request.
+        todayRevenue: cents(todayList.filter(isEarned)),
+        weekRevenue: cents(between(all.filter(isEarned), daysAgo(7), TODAY)),
+        monthRevenue: cents(between(all.filter(isEarned), daysAgo(30), TODAY)),
+        upcomingValue: cents(upcoming),
         totalBookings: all.length,
-        upcomingBookings: all.filter(b => b.date >= today && isLive(b))
-          .sort((a, b) => String(a.date).localeCompare(String(b.date))
-            || String(a.time_slot).localeCompare(String(b.time_slot))).slice(0, 8),
-        recentBookings: all.slice(0, 6),
+        // Carries full client detail so every row on the screen can be opened.
+        upcomingBookings: upcoming.slice(0, 8).map(detail),
+        recentBookings: all.filter(isEarned).slice(0, 6).map(detail),
+        // Requests with no deposit — visible, never counted.
+        awaitingDeposit: waiting.length,
+        awaitingDepositValue: cents(waiting),
         lowInventory: store.inventory.filter(i => i.qty <= i.low_at),
         topQuestions: topQuestions(5),
         funnelSummary: funnelSummary(),
@@ -107,44 +209,127 @@ module.exports = async (req, res) => {
       return res.json({ bookings: dateFilter ? all.filter(b => b.date === dateFilter) : all });
     }
 
+    /* ── REPORTS ──────────────────────────────────────────────────────
+       Every number carries the bookings behind it, so any figure on the
+       screen can be opened and checked rather than trusted.            */
     if (section === 'reports') {
       const all = await allBookings();
-      const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-      const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-      const weekly = all.filter(b => b.date >= weekAgo);
-      const monthly = all.filter(b => b.date >= monthAgo);
+      const earned = all.filter(isEarned);
+      const week = between(earned, daysAgo(7), TODAY);
+      const month = between(earned, daysAgo(30), TODAY);
+      const year = between(earned, TODAY.slice(0, 4) + '-01-01', TODAY);
+
+      const upcoming = all.filter(isUpcoming).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      const unconfirmed = all.filter(isUnconfirmed).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+      const cancelled = all.filter(isCancelled);
+
       const svcCount = {};
-      all.filter(isLive).forEach(b => { svcCount[b.service_name] = (svcCount[b.service_name] || 0) + 1; });
+      for (const b of earned) svcCount[b.service_name] = (svcCount[b.service_name] || 0) + 1;
+
       return res.json({
-        weeklyBookings: weekly.length,
-        weeklyRevenue: sumRevenue(weekly),
-        monthlyBookings: monthly.length,
-        monthlyRevenue: sumRevenue(monthly),
-        totalBookings: all.length,
+        today: TODAY,
+        // What the studio has actually been paid for work already done.
+        week: bucket(week),
+        month: bucket(month),
+        year: bucket(year),
+        all_time: bucket(earned),
+        // Paid for, not yet delivered. Real money, but not takings.
+        upcoming: bucket(upcoming),
+        // No deposit ever taken. Never counted as income anywhere.
+        unconfirmed: bucket(unconfirmed),
+        cancelled: bucket(cancelled),
+        servicePopularity: Object.entries(svcCount).sort((a, b) => b[1] - a[1]).slice(0, 8),
         funnelByStep: funnelSummary(),
         topQuestions: topQuestions(20),
-        servicePopularity: Object.entries(svcCount).sort((a, b) => b[1] - a[1]).slice(0, 8),
+        // Kept so older callers do not break, but now built on earned money.
+        weeklyBookings: week.length,
+        weeklyRevenue: cents(week),
+        monthlyBookings: month.length,
+        monthlyRevenue: cents(month),
+        totalBookings: all.length,
       });
     }
 
-    // ── RECORDS: the permanent books, month by month and year by year ──
-    // Kept as a separate section so the dashboard stays fast: this walks
-    // everything ever booked, which the day-to-day screens do not need.
+    /* ── RECORDS: the permanent books, drillable ─────────────────────
+       Every count on this screen carries the actual bookings and the
+       actual people behind it. A figure nobody can open is a figure
+       nobody can check.                                                */
     if (section === 'records') {
       const all = await allBookings();
+      const earned = all.filter(isEarned);
 
       let members = [];
       try {
-        members = await query('SELECT member_id, full_name, tier, membership_started_at FROM members WHERE COALESCE(demo,0)=0');
+        members = await query('SELECT member_id, full_name, tier, membership_started_at, email, phone, date_of_birth FROM members WHERE COALESCE(demo,0)=0');
       } catch (_) {}
 
-      let team = [], teamAppts = [];
-      try {
-        const tdb = require('./_team-db');
-        await tdb.ensureTables();
-        team = await tdb.query('SELECT id, name FROM team_members');
-        teamAppts = await tdb.query('SELECT team_member_id, client_name, service, date, status FROM team_appointments');
-      } catch (_) {}
+      const memberBucket = {};
+      for (const mm of members) {
+        const d = String(mm.membership_started_at || '').slice(0, 10);
+        if (!d) continue;
+        for (const k of [d.slice(0, 7), d.slice(0, 4)]) {
+          memberBucket[k] = memberBucket[k] || { joined: 0, byTier: {}, people: [] };
+          memberBucket[k].joined++;
+          memberBucket[k].byTier[mm.tier] = (memberBucket[k].byTier[mm.tier] || 0) + 1;
+          memberBucket[k].people.push({ member_id: mm.member_id, name: mm.full_name, tier: mm.tier, email: mm.email, phone: mm.phone });
+        }
+      }
+
+      // Group earned bookings by month and by year.
+      const groups = {};
+      const touch = k => (groups[k] = groups[k] || { key: k, rows: [], cancelled: 0 });
+      for (const b of all) {
+        if (!b.date) continue;
+        const mo = String(b.date).slice(0, 7), yr = String(b.date).slice(0, 4);
+        for (const k of [mo, yr]) {
+          const t = touch(k);
+          if (isCancelled(b)) { t.cancelled++; continue; }
+          if (isEarned(b)) t.rows.push(b);
+        }
+      }
+
+      const rows = Object.values(groups).map(g => {
+        const list = g.rows.map(detail);
+        const byClient = {};
+        for (const d of list) {
+          const key = (d.client || 'Guest').toLowerCase();
+          byClient[key] = byClient[key] || { name: d.client, email: d.email, phone: d.phone, visits: 0, spent_cents: 0, services: [] };
+          byClient[key].visits++;
+          byClient[key].spent_cents += d.total_cents;
+          if (d.service) byClient[key].services.push(d.service);
+        }
+        const clients = Object.values(byClient).sort((a, b) => b.visits - a.visits);
+        return {
+          key: g.key,
+          kind: g.key.length === 4 ? 'year' : 'month',
+          bookings: list.length,
+          cancelled: g.cancelled,
+          revenue_cents: list.reduce((s2, d) => s2 + d.total_cents, 0),
+          deposits_cents: list.reduce((s2, d) => s2 + (d.deposit_paid ? d.deposit_cents : 0), 0),
+          unique_clients: clients.length,
+          repeat_clients: clients.filter(c => c.visits > 1).length,
+          members_joined: (memberBucket[g.key] || {}).joined || 0,
+          members_by_tier: (memberBucket[g.key] || {}).byTier || {},
+          // Everything needed to open the number up.
+          detail: {
+            bookings: list,
+            clients,
+            repeat: clients.filter(c => c.visits > 1),
+            members: (memberBucket[g.key] || {}).people || [],
+          },
+        };
+      }).sort((a, b) => String(b.key).localeCompare(String(a.key)));
+
+      // Who served whom — same rules, so it agrees with everything above.
+      const byArtist = {};
+      for (const d of earned.map(detail)) {
+        const who = d.artist || 'Unassigned';
+        byArtist[who] = byArtist[who] || { artist: who, appointments: 0, revenue_cents: 0, clients: {}, bookings: [] };
+        byArtist[who].appointments++;
+        byArtist[who].revenue_cents += d.total_cents;
+        if (d.client) byArtist[who].clients[d.client] = true;
+        byArtist[who].bookings.push(d);
+      }
 
       let inventory = [];
       try {
@@ -152,68 +337,21 @@ module.exports = async (req, res) => {
         inventory = await tdb.query('SELECT name, qty, unit, created_ts FROM studio_inventory');
       } catch (_) {}
 
-      const bucket = {};
-      const touch = k => (bucket[k] = bucket[k] || {
-        key: k, bookings: 0, cancelled: 0, revenue: 0, deposits: 0, clients: {},
-      });
-      for (const b of all) {
-        if (!b.date) continue;
-        const mo = String(b.date).slice(0, 7);
-        const yr = String(b.date).slice(0, 4);
-        for (const k of [mo, yr]) {
-          const t = touch(k);
-          t.bookings++;
-          if (!isLive(b)) { t.cancelled++; continue; }
-          t.revenue += b.total_cents || 0;
-          if (Number(b.deposit_paid)) t.deposits += b.deposit_cents || 0;
-          if (b.guest_name) t.clients[b.guest_name] = (t.clients[b.guest_name] || 0) + 1;
-        }
-      }
-
-      // memberships counted by when they started, so a month shows what it won
-      const memberBucket = {};
-      for (const m of members) {
-        const d = String(m.membership_started_at || '').slice(0, 10);
-        if (!d) continue;
-        for (const k of [d.slice(0, 7), d.slice(0, 4)]) {
-          memberBucket[k] = memberBucket[k] || { joined: 0, byTier: {} };
-          memberBucket[k].joined++;
-          memberBucket[k].byTier[m.tier] = (memberBucket[k].byTier[m.tier] || 0) + 1;
-        }
-      }
-
-      // who served whom, from the team calendar
-      const nameById = {};
-      for (const t of team) nameById[t.id] = t.name;
-      const byArtist = {};
-      for (const a of teamAppts) {
-        if (String(a.status || '').toLowerCase() === 'cancelled') continue;
-        const who = nameById[a.team_member_id] || 'Unassigned';
-        byArtist[who] = byArtist[who] || { artist: who, appointments: 0, clients: {} };
-        byArtist[who].appointments++;
-        if (a.client_name) byArtist[who].clients[a.client_name] = true;
-      }
-
-      const rows = Object.values(bucket).map(t => ({
-        key: t.key,
-        kind: t.key.length === 4 ? 'year' : 'month',
-        bookings: t.bookings,
-        cancelled: t.cancelled,
-        revenue_cents: t.revenue,
-        deposits_cents: t.deposits,
-        unique_clients: Object.keys(t.clients).length,
-        repeat_clients: Object.values(t.clients).filter(n => n > 1).length,
-        members_joined: (memberBucket[t.key] || {}).joined || 0,
-        members_by_tier: (memberBucket[t.key] || {}).byTier || {},
-      })).sort((a, b) => String(b.key).localeCompare(String(a.key)));
-
       return res.json({
+        today: TODAY,
         rows,
         artists: Object.values(byArtist)
-          .map(a => ({ artist: a.artist, appointments: a.appointments, clients: Object.keys(a.clients).length }))
+          .map(a => ({
+            artist: a.artist,
+            appointments: a.appointments,
+            revenue_cents: a.revenue_cents,
+            clients: Object.keys(a.clients).length,
+            detail: { bookings: a.bookings, clients: Object.keys(a.clients) },
+          }))
           .sort((a, b) => b.appointments - a.appointments),
+        unconfirmed: bucket(all.filter(isUnconfirmed)),
         inventory_items: inventory.length,
-        inventory_units: inventory.reduce((s, i) => s + (Number(i.qty) || 0), 0),
+        inventory_units: inventory.reduce((s2, i) => s2 + (Number(i.qty) || 0), 0),
         total_members: members.length,
       });
     }
