@@ -1075,13 +1075,20 @@
         <div class="site-card">
           <h3>First To Confirm ✦</h3>
           <p>A booking with no artist chosen goes out to everyone who can actually take it — trained on that service, rostered in for those hours, nothing else booked. The first to confirm gets it, and only then does the client get their confirmation naming her.</p>
-          <label class="fld-label">If nobody confirms within</label>
+          <label class="fld-label">Give them this long to confirm</label>
           <div style="display:flex;gap:0.6rem;align-items:center;">
             <input id="claim-hold" type="number" min="1" max="240" style="max-width:120px;" />
-            <span style="font-size:0.85rem;color:var(--latte);">minutes, the studio assigns it</span>
+            <span style="font-size:0.85rem;color:var(--latte);">minutes</span>
           </div>
-          <button class="btn btn-ghost btn-sm" style="margin-top:0.7rem;" onclick="saveClaimHold()">Save</button>
-          <p class="set-note">It goes to whoever has the lightest day. Keep this short — a client is sitting unconfirmed the whole time.</p>
+          <label class="fld-label" style="margin-top:0.9rem;">Then, if nobody has</label>
+          <select id="claim-mode">
+            <option value="owner">Send it to me to assign</option>
+            <option value="auto">Assign it automatically to whoever has the lightest day</option>
+          </select>
+          <label class="fld-label" style="margin-top:0.9rem;">Text me at</label>
+          <input id="owner-phone" type="tel" placeholder="(559) 555-0000" />
+          <button class="btn btn-gold btn-sm" style="margin-top:0.8rem;" onclick="saveClaimHold()">Save</button>
+          <p class="set-note">Leftovers show up at the top of your Overview under <strong>Leftover Appointments</strong>, and you get a notification. Keep the wait short — a client is sitting unconfirmed the whole time.</p>
         </div>
         <div class="site-card">
           <h3>Business Details</h3>
@@ -1331,7 +1338,7 @@
         </div>
         <div class="site-card" style="grid-column:1/-1;">
           <h3>Site Photos 📸</h3>
-          <p>Tap any slot to upload a photo from your phone — it appears on the live website in seconds. Photos are auto-compressed for you.</p>
+          <p>Tap any slot to upload a photo from your phone — it appears on the live website in seconds. Photos are auto-compressed for you. <strong>Service photos are also on the Services tab</strong>, right on each service.</p>
           <div id="photo-slots" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.8rem;"></div>
         </div>
         <div class="site-card" style="grid-column:1/-1;">
@@ -3584,7 +3591,15 @@ function renderPhotoSlots(){
 function pickSlotPhoto(slot){
   const inp=document.createElement('input');
   inp.type='file';inp.accept='image/*';
+  // Safari on iPhone ignores .click() on an input that isn't in the document,
+  // which is why tapping a slot did nothing on her phone. It has to be in the
+  // DOM to open the picker, so it goes in off-screen and comes straight back
+  // out once she has chosen.
+  inp.style.cssText='position:fixed;left:-9999px;top:0;opacity:0;';
+  document.body.appendChild(inp);
+  const cleanup=()=>{ try{ inp.remove(); }catch(e){} };
   inp.onchange=()=>{
+    setTimeout(cleanup,0);
     const file=inp.files&&inp.files[0];if(!file)return;
     const img=new Image();const reader=new FileReader();
     reader.onload=e=>{img.src=e.target.result;};
@@ -3597,16 +3612,25 @@ function pickSlotPhoto(slot){
       if(dataUrl.length>850000)dataUrl=canvas.toDataURL('image/jpeg',0.55);
       toast('Uploading…');
       const r=await api('/api/photos?action=slot',{method:'PUT',body:JSON.stringify({action:'slot',slot,data_url:dataUrl})});
-      if(r.ok){toast('Photo live on the site ✦');await loadSitePhotos();}else toast('Upload failed');
+      if(r.ok){
+        toast('Photo live on the site ✦');
+        await loadSitePhotos();
+        // She may have uploaded from the Services tab, where the tiles live
+        // on the service rather than in the photo grid.
+        if(document.getElementById('panel-services').classList.contains('active')) loadServicesTab();
+      } else toast('Upload failed');
     };
     reader.readAsDataURL(file);
   };
+  // If she backs out of the picker there is no change event, so sweep it up.
+  window.addEventListener('focus',()=>setTimeout(cleanup,1500),{once:true});
   inp.click();
 }
 async function clearSlotPhoto(slot){
   if(!confirm('Remove this photo?'))return;
   await api('/api/photos?action=slot',{method:'PUT',body:JSON.stringify({action:'slot',slot,data_url:''})});
   toast('Removed');await loadSitePhotos();
+  if(document.getElementById('panel-services').classList.contains('active')) loadServicesTab();
 }
 
 /* ── CLIENT INSPO FEED (photos clients attach after booking) ── */
@@ -3746,11 +3770,41 @@ async function mkRemove(id){
 let CLAIMS = null;
 
 function dispatchPill(r){
-  if(r.status === 'open')   return '<span class="status-pill" style="background:rgba(182,165,136,0.18);color:var(--gold)">Waiting</span>';
-  if(r.status === 'none')   return '<span class="status-pill" style="background:rgba(214,102,102,0.18);color:var(--danger)">Nobody free</span>';
-  if(r.how === 'auto')      return '<span class="status-pill status-on">Auto-assigned</span>';
-  if(r.how === 'manual')    return '<span class="status-pill status-on">You assigned</span>';
-  return '<span class="status-pill status-on">Confirmed</span>';
+  if(r.status === 'open')     return '<span class="status-pill" style="background:rgba(182,165,136,0.18);color:var(--gold)">Waiting on artists</span>';
+  if(r.status === 'leftover') return '<span class="status-pill" style="background:rgba(214,102,102,0.2);color:#ffb3b3">Needs you</span>';
+  if(r.status === 'none')     return '<span class="status-pill" style="background:rgba(214,102,102,0.2);color:#ffb3b3">Nobody free</span>';
+  if(r.how === 'auto')        return '<span class="status-pill status-on">Auto-assigned</span>';
+  if(r.how === 'manual')      return '<span class="status-pill status-on">You assigned</span>';
+  return '<span class="status-pill status-on">' + esc(r.claimed_name || 'Confirmed') + '</span>';
+}
+
+function claimCard(r, urgent){
+  const who = r.status === 'open'
+    ? 'Out to ' + (r.offered_names.length ? esc(r.offered_names.join(', ')) : 'nobody')
+    : (r.status === 'leftover'
+        ? 'Nobody confirmed it — ' + (r.offered_names.length ? 'offered to ' + esc(r.offered_names.join(', ')) : 'nobody was free')
+        : (r.status === 'none'
+            ? 'Nobody rostered was free'
+            : esc(r.claimed_name) + ' took it'));
+  let assign = '';
+  if(r.status === 'open' || r.status === 'leftover' || r.status === 'none'){
+    const opts = (members||[]).map(function(mm){
+      // Anyone it was offered to is the obvious choice, but she can override
+      // to whoever she wants — that is the whole point of it coming to her.
+      const fits = (r.offered_names||[]).indexOf(mm.name) >= 0;
+      return '<option value="' + mm.id + '">' + esc(mm.name) + (fits ? ' — free then' : '') + '</option>';
+    }).join('');
+    assign = '<div style="display:flex;gap:0.5rem;margin-top:0.7rem;align-items:center;flex-wrap:wrap;">'
+      + '<select style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:0.55rem 0.7rem;max-width:230px;outline:none;" id="asg-' + esc(r.confirmation) + '">'
+        + '<option value="">Give it to…</option>' + opts + '</select>'
+      + '<button class="btn ' + (urgent ? 'btn-gold' : 'btn-ghost') + ' btn-sm" onclick="assignClaim(\'' + esc(r.confirmation) + '\')">Assign</button>'
+      + '</div>';
+  }
+  return '<div class="member-card" style="--mc:' + (urgent ? '#d66' : '#B6A588') + '">'
+    + '<div class="mc-top"><div style="flex:1">'
+      + '<div class="mc-name">' + esc(r.client_name || 'Client') + ' · ' + esc(r.service || '') + '</div>'
+      + '<div class="mc-role">' + esc(r.when) + ' · ' + who + '</div>'
+    + '</div>' + dispatchPill(r) + '</div>' + assign + '</div>';
 }
 
 async function loadDispatch(){
@@ -3762,36 +3816,38 @@ async function loadDispatch(){
   CLAIMS = d;
 
   const rows = d.rows || [];
-  const live = rows.filter(function(r){ return r.status === 'open' || r.status === 'none'; });
-  // Nothing waiting and nothing recent — no reason to take up the screen.
   if(!rows.length){ el.innerHTML=''; return; }
 
-  const card = function(r){
-    const who = r.status === 'open'
-      ? 'Out to ' + (r.offered_names.length ? r.offered_names.join(', ') : 'nobody')
-      : (r.status === 'none' ? 'Nobody rostered was free — assign someone' : r.claimed_name + ' took it');
-    let assign = '';
-    if(r.status === 'open' || r.status === 'none'){
-      const opts = (members||[]).map(function(mm){
-        return '<option value="' + mm.id + '">' + esc(mm.name) + '</option>';
-      }).join('');
-      assign = '<div style="display:flex;gap:0.5rem;margin-top:0.6rem;align-items:center;flex-wrap:wrap;">'
-        + '<select style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:0.55rem 0.7rem;max-width:220px;outline:none;" id="asg-' + esc(r.confirmation) + '"><option value="">Give it to…</option>' + opts + '</select>'
-        + '<button class="btn btn-ghost btn-sm" onclick="assignClaim(\'' + esc(r.confirmation) + '\')">Assign</button>'
-        + '</div>';
-    }
-    return '<div class="member-card" style="--mc:#B6A588"><div class="mc-top"><div style="flex:1">'
-      + '<div class="mc-name">' + esc(r.client_name || 'Client') + ' · ' + esc(r.service || '') + '</div>'
-      + '<div class="mc-role">' + esc(r.when) + ' · ' + esc(who) + '</div>'
-      + '</div>' + dispatchPill(r) + '</div>' + assign + '</div>';
-  };
+  const mine    = rows.filter(function(r){ return r.status === 'leftover' || r.status === 'none'; });
+  const waiting = rows.filter(function(r){ return r.status === 'open'; });
+  const done    = rows.filter(function(r){ return r.status === 'claimed'; });
 
-  el.innerHTML =
-    '<div class="page-head" style="margin-top:2rem;"><div>'
-    + '<div class="page-title" style="font-size:1.15rem;">Dispatch' + (live.length ? ' ✦ ' + live.length + ' waiting' : '') + '</div>'
-    + '<div class="page-desc">Bookings with no artist chosen go out to everyone who can take them. First to confirm gets it — the client is only told who they are seeing once someone has.</div>'
-    + '</div></div>'
-    + rows.slice(0, 12).map(card).join('');
+  let html = '';
+
+  // Leftovers first and in red, because a client is waiting behind each one.
+  if(mine.length){
+    html += '<div class="page-head" style="margin-top:2rem;"><div>'
+      + '<div class="page-title" style="font-size:1.15rem;color:#ffb3b3;">Leftover Appointments ✦ ' + mine.length + '</div>'
+      + '<div class="page-desc">Nobody confirmed these. The client has been told their artist is being assigned — give each one to whoever it needs to go to.</div>'
+      + '</div></div>'
+      + mine.map(function(r){ return claimCard(r, true); }).join('');
+  }
+
+  if(waiting.length){
+    html += '<div class="page-head" style="margin-top:2rem;"><div>'
+      + '<div class="page-title" style="font-size:1.15rem;">Out With The Team ✦ ' + waiting.length + '</div>'
+      + '<div class="page-desc">Sent to everyone who can take them. First to confirm gets it — you can step in early if you want.</div>'
+      + '</div></div>'
+      + waiting.map(function(r){ return claimCard(r, false); }).join('');
+  }
+
+  if(done.length){
+    html += '<div class="page-head" style="margin-top:2rem;"><div>'
+      + '<div class="page-title" style="font-size:1.15rem;">Recently Taken</div></div></div>'
+      + done.slice(0, 6).map(function(r){ return claimCard(r, false); }).join('');
+  }
+
+  el.innerHTML = html;
 }
 
 async function assignClaim(confirmation){
@@ -3809,11 +3865,16 @@ async function assignClaim(confirmation){
 
 async function saveClaimHold(){
   const v = Number((document.getElementById('claim-hold')||{}).value);
+  const mode = (document.getElementById('claim-mode')||{}).value || 'owner';
+  const phone = (document.getElementById('owner-phone')||{}).value || '';
   try{
-    const r = await api('/api/manager?action=claim_hold',{method:'PUT',
-      body:JSON.stringify({action:'claim_hold',minutes:v})});
-    const d = await r.json();
-    toast(d.ok ? 'Saved — ' + d.minutes + ' minutes' : (d.error || 'Could not save'));
+    const a = await (await api('/api/manager?action=claim_hold',{method:'PUT',
+      body:JSON.stringify({action:'claim_hold',minutes:v})})).json();
+    await api('/api/manager?action=claim_mode',{method:'PUT',
+      body:JSON.stringify({action:'claim_mode',mode:mode})});
+    await api('/api/manager?action=owner_phone',{method:'PUT',
+      body:JSON.stringify({action:'owner_phone',phone:phone})});
+    toast(a.ok ? 'Saved ✦' : (a.error || 'Could not save'));
   }catch(_){ toast('Could not save'); }
 }
 
@@ -3823,8 +3884,15 @@ function mountOwnerPush(){
     window.ZolaPush.mount(document.getElementById('push-setup'), { pass: PWD });
   }
   api('/api/manager?action=claims').then(function(r){ return r.json(); }).then(function(d){
-    const el = document.getElementById('claim-hold');
-    if(el && d && d.hold_minutes) el.value = d.hold_minutes;
+    const hold = document.getElementById('claim-hold');
+    if(hold && d && d.hold_minutes) hold.value = d.hold_minutes;
+    const mode = document.getElementById('claim-mode');
+    if(mode && d && d.unclaimed_action) mode.value = d.unclaimed_action;
+  }).catch(function(){});
+  fetch('/api/site-settings').then(function(r){ return r.json(); }).then(function(d){
+    const el = document.getElementById('owner-phone');
+    const s = (d && d.settings) || {};
+    if(el && s.owner_phone) el.value = s.owner_phone;
   }).catch(function(){});
 }
 
@@ -4019,18 +4087,55 @@ async function loadReports(){
   }catch(_){ s.innerHTML = emptyBox('⚠️', 'Could not load reports.'); f.innerHTML = ''; }
 }
 
+// The menu, grouped the way the website shows it, with each service's two
+// photos attached to it. Uploading a photo is the thing she does most often
+// here, so it belongs on the service rather than buried in another tab.
 async function loadServicesTab(){
   const el = document.getElementById('sv-list');
   const ad = document.getElementById('sv-addons');
   el.innerHTML = '<div class="empty">Loading…</div>';
   try{
     const d = await ceo('services');
+    try{ const r = await fetch('/api/photos'); const pd = await r.json(); sitePhotos = pd.photos || {}; }catch(e){}
+
+    const tile = (slot, label) => {
+      const has = sitePhotos[slot];
+      return '<div style="flex:1;min-width:118px;max-width:170px;border:1px ' + (has ? 'solid' : 'dashed')
+        + ' var(--border-hi);border-radius:8px;padding:0.4rem;text-align:center;cursor:pointer;background:var(--bg);"'
+        + ' onclick="pickSlotPhoto(\'' + slot + '\')">'
+        + (has
+            ? '<img src="' + has + '" alt="" style="width:100%;height:88px;object-fit:cover;border-radius:5px;display:block;margin-bottom:0.35rem">'
+            : '<div style="height:88px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--muted)">+</div>')
+        + '<div style="font-size:0.58rem;letter-spacing:0.09em;text-transform:uppercase;color:var(--gold)">' + esc(label) + '</div>'
+        + (has ? '<button class="btn btn-danger btn-sm" style="margin-top:0.3rem" onclick="event.stopPropagation();clearSlotPhoto(\'' + slot + '\')">Remove</button>' : '')
+        + '</div>';
+    };
+
+    const svc = (d.services || []).filter(x => !x.hidden);
+    const groups = window.ZolaServices ? window.ZolaServices.group(svc, { includeHidden: true }) : [];
+
+    el.innerHTML = groups.length ? groups.map(g => {
+      const lengths = g.sized
+        ? g.variants.map(v => esc(v.size || v.name) + ' ' + cmoney(v.price_cents)).join(' · ')
+        : '';
+      return '<div class="member-card" style="--mc:#B6A588">'
+        + '<div class="mc-top"><div style="flex:1">'
+          + '<div class="mc-name">' + esc(g.name) + '</div>'
+          + '<div class="mc-role">' + (lengths || 'One length') + '</div>'
+        + '</div><span class="status-pill status-on">' + esc(g.price_label) + '</span></div>'
+        + '<div style="display:flex;gap:0.6rem;margin-top:0.8rem;flex-wrap:wrap;">'
+          + tile('look-' + g.key, 'The set')
+          + tile('look-' + g.key + '-alt', 'Worn')
+        + '</div>'
+        + '<div style="font-size:0.68rem;color:var(--muted);margin-top:0.5rem;line-height:1.5">'
+          + 'One photo covers every length. The second one fades in when someone hovers on the homepage.'
+        + '</div></div>';
+    }).join('') : emptyBox('💅', 'No services.');
+
     const row = (x, isAddon) => '<div class="member-card" style="--mc:#B6A588"><div class="mc-top"><div style="flex:1">'
       + '<div class="mc-name">' + esc(x.name) + '</div>'
       + '<div class="mc-role">' + esc(x.description || '') + (x.duration_min ? ' · ' + x.duration_min + ' min' : '') + '</div></div>'
       + '<span class="status-pill status-on">' + (isAddon ? '+' : '') + cmoney(x.price_cents) + '</span></div></div>';
-    const svc = (d.services || []).filter(x => !x.hidden);
-    el.innerHTML = svc.length ? svc.map(x => row(x, false)).join('') : emptyBox('💅', 'No services.');
     ad.innerHTML = (d.addons || []).length ? d.addons.map(x => row(x, true)).join('') : emptyBox('✦', 'No add-ons.');
   }catch(_){ el.innerHTML = emptyBox('⚠️', 'Could not load the menu.'); ad.innerHTML = ''; }
 }

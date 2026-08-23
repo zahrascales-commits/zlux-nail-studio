@@ -314,6 +314,18 @@ async function claim(confirmation, memberId) {
 
 /* ── NOBODY CLAIMED IT ─────────────────────────────────────────────── */
 
+// What happens when the hold runs out. Handing it to Zahra is the default
+// because she asked to make that call herself — a booking should not land on
+// an artist who never agreed to it just because a timer expired. Auto-assign
+// stays available for when she does not want to be the bottleneck.
+async function unclaimedAction() {
+  try {
+    const row = await queryOne("SELECT value FROM site_settings WHERE key='claim_unclaimed_action'");
+    if (row && String(row.value) === 'auto') return 'auto';
+  } catch (_) {}
+  return 'owner';
+}
+
 // Serverless has no background timer, so the sweep runs off the back of
 // ordinary traffic: opening the portal or the manager is enough to trigger
 // it. Cheap enough (one indexed read) to sit on any request.
@@ -323,12 +335,27 @@ async function sweep() {
     const due = await query(
       "SELECT * FROM booking_claims WHERE status='open' AND claimed_by IS NULL AND expires_ts<=?",
       [Date.now()]);
+    if (!due.length) return 0;
+    const mode = await unclaimedAction();
+
     for (const row of due) {
       const offered = JSON.parse(row.offered || '[]').map(Number);
+      const when = `${row.date_label || row.date} at ${row.time_label || row.time}`;
+
       if (!offered.length) {
         await execute("UPDATE booking_claims SET status='none' WHERE confirmation=?", [row.confirmation]);
+        await alertOwnerLeftover(row, when, 'Nobody rostered was free for this one.');
         continue;
       }
+
+      // Nobody took it and she wants the call. It stops here and waits for
+      // her rather than being pushed onto someone who did not accept it.
+      if (mode === 'owner') {
+        await execute("UPDATE booking_claims SET status='leftover' WHERE confirmation=?", [row.confirmation]);
+        await alertOwnerLeftover(row, when, 'Nobody confirmed it in time — it is yours to assign.');
+        continue;
+      }
+
       // Whoever has the lightest day, so auto-assigning does not always land
       // on the same person.
       let counts = [];
@@ -348,6 +375,29 @@ async function sweep() {
     }
     return due.length;
   } catch (_) { return 0; }
+}
+
+// A client is sitting on nothing but "assigning your artist" until this is
+// dealt with, so it is worth being loud about.
+async function alertOwnerLeftover(row, when, why) {
+  await notify.notifyInApp('owner', null,
+    `Needs you ✦ ${row.client_name || 'Client'}`,
+    `${row.service || 'Service'} — ${when}. ${why}`);
+  await push.pushToOwner({
+    title: 'A booking needs assigning',
+    body: `${row.client_name || 'Client'} · ${row.service || ''} · ${when}`,
+    url: '/manager.html', tag: 'zola-leftover-' + row.confirmation,
+    requireInteraction: true,
+  });
+  try {
+    const r = await queryOne("SELECT value FROM site_settings WHERE key='owner_phone'");
+    const phone = r && r.value;
+    if (phone) {
+      await notify.sendSMS(phone,
+        `ZOLA: ${row.client_name || 'a client'} is waiting on an artist. ` +
+        `${row.service || ''}, ${when}. Assign it in Studio Manager.`);
+    }
+  } catch (_) {}
 }
 
 // What an artist should see as up for grabs right now.
@@ -382,6 +432,7 @@ async function claimsOverview() {
   } catch (_) {}
   return {
     hold_minutes: await holdMinutes(),
+    unclaimed_action: await unclaimedAction(),
     rows: rows.map(r => ({
       confirmation: r.confirmation,
       service: r.service,
@@ -411,5 +462,5 @@ async function assignManually(confirmation, memberId) {
 
 module.exports = {
   ensureClaimTables, eligibleFor, openClaim, claim, sweep,
-  openJobsFor, claimsOverview, assignManually, holdMinutes,
+  openJobsFor, claimsOverview, assignManually, holdMinutes, unclaimedAction,
 };

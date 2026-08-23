@@ -468,6 +468,22 @@ module.exports = async function (req, res) {
       return res.json({ ok: true, minutes: Math.round(n) });
     }
 
+    // Who deals with a booking nobody confirmed. Default is 'owner' — she
+    // asked to make that call herself rather than have a timer put a client
+    // in front of an artist who never accepted them.
+    if (method === 'PUT' && action === 'claim_mode') {
+      const mode = String((req.body || {}).mode || '') === 'auto' ? 'auto' : 'owner';
+      await execute("INSERT INTO site_settings (key,value) VALUES ('claim_unclaimed_action',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", [mode]);
+      return res.json({ ok: true, mode });
+    }
+
+    // Her own number, so a booking left hanging can reach her by text too.
+    if (method === 'PUT' && action === 'owner_phone') {
+      const phone = String((req.body || {}).phone || '').trim();
+      await execute("INSERT INTO site_settings (key,value) VALUES ('owner_phone',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", [phone]);
+      return res.json({ ok: true, phone });
+    }
+
     if (method === 'GET' && action === 'shifts') {
       const from = req.query.from || '0000-00-00';
       const to = req.query.to || '9999-12-31';
