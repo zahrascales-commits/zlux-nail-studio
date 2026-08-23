@@ -770,7 +770,8 @@
           <div class="page-desc">How the last week and month actually went.</div>
         </div>
       </div>
-      <div class="cards" id="rp-stats"></div>
+      <div id="rp-content"></div>
+      <div class="cards" id="rp-stats" style="display:none"></div>
       <div class="page-head" style="margin-top:2rem;"><div><div class="page-title" style="font-size:1.15rem;">Where people drop off</div>
       <div class="page-desc">Each step of the booking flow, and how many left there.</div></div></div>
       <div id="rp-funnel"></div>
@@ -4118,33 +4119,89 @@ function mountOwnerPush(){
 }
 
 /* ══════════════ RECORDS ══════════════ */
+// Every count here opens. "19 bookings, 15 clients, 2 came back" is only
+// useful if she can see which nineteen, which fifteen, and which two.
 let RECORDS = null;
-
-function rcRow(r){
-  const rev = cmoney(r.revenue_cents);
-  const dep = cmoney(r.deposits_cents);
-  const tiers = Object.entries(r.members_by_tier || {})
-    .map(function(e){ return e[1] + ' ' + String(e[0]).toLowerCase().replace('_',' '); }).join(', ');
-  return '<div class="member-card" style="--mc:#B6A588">'
-    + '<div class="mc-top"><div style="flex:1">'
-      + '<div class="mc-name">' + esc(rcLabel(r)) + '</div>'
-      + '<div class="mc-role">' + r.bookings + ' booking' + (r.bookings===1?'':'s')
-        + (r.cancelled ? ' · ' + r.cancelled + ' cancelled' : '')
-        + ' · ' + r.unique_clients + ' client' + (r.unique_clients===1?'':'s')
-        + (r.repeat_clients ? ' · ' + r.repeat_clients + ' came back' : '')
-      + '</div></div>'
-      + '<span class="status-pill status-on">' + rev + '</span></div>'
-    + '<div style="font-size:0.72rem;color:var(--muted);margin-top:0.45rem">'
-      + dep + ' taken as deposits'
-      + (r.members_joined ? ' · ' + r.members_joined + ' joined' + (tiers ? ' (' + esc(tiers) + ')' : '') : '')
-    + '</div></div>';
-}
 
 function rcLabel(r){
   if(r.kind === 'year') return r.key;
   const p = String(r.key).split('-');
   return new Date(Number(p[0]), Number(p[1]) - 1, 1)
     .toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
+function rcChip(label, n, onclick){
+  if(!n) return '<span style="font-size:0.7rem;color:var(--muted);margin-right:0.8rem">' + label + ' 0</span>';
+  return '<button class="btn btn-ghost btn-sm" style="margin:0.25rem 0.35rem 0 0" onclick="' + onclick + '">'
+    + n + ' ' + label + '</button>';
+}
+
+function rcRow(r, i){
+  return '<div class="member-card" style="--mc:#B6A588">'
+    + '<div class="mc-top"><div style="flex:1">'
+      + '<div class="mc-name">' + esc(rcLabel(r)) + '</div>'
+      + '<div class="mc-role">' + cmoney(r.revenue_cents) + ' earned · '
+        + cmoney(r.deposits_cents) + ' of that taken as deposits</div>'
+    + '</div><span class="status-pill status-on">' + cmoney(r.revenue_cents) + '</span></div>'
+    + '<div style="margin-top:0.5rem">'
+      + rcChip('bookings', r.bookings, "drillRecord(" + i + ",'bookings')")
+      + rcChip('clients', r.unique_clients, "drillRecord(" + i + ",'clients')")
+      + rcChip('came back', r.repeat_clients, "drillRecord(" + i + ",'repeat')")
+      + rcChip('joined', r.members_joined, "drillRecord(" + i + ",'members')")
+      + (r.cancelled ? '<span style="font-size:0.7rem;color:var(--muted);margin-left:0.5rem">'
+          + r.cancelled + ' cancelled</span>' : '')
+    + '</div></div>';
+}
+
+function drillRecord(i, what){
+  const r = (RECORDS.rows || [])[i];
+  if(!r) return;
+  const d = r.detail || {};
+  const label = rcLabel(r);
+  if(what === 'bookings') return showDrill(label + ' · every booking', d.bookings || [], r.revenue_cents);
+  if(what === 'clients')  return showClientList(label + ' · every client', d.clients || []);
+  if(what === 'repeat')   return showClientList(label + ' · came back more than once', d.repeat || []);
+  if(what === 'members')  return showMemberList(label + ' · joined this period', d.members || []);
+}
+
+// Clients as people, not rows — each one opens their whole profile.
+function showClientList(title, list){
+  document.getElementById('drill-veil').classList.add('open');
+  document.getElementById('drill-box').innerHTML =
+    '<div class="drill-head"><div><div class="drill-title">' + esc(title) + '</div>'
+    + '<div class="drill-sub">' + list.length + ' ' + (list.length === 1 ? 'person' : 'people')
+    + ' · tap any name for their full profile</div></div>'
+    + '<button class="drill-x" onclick="closeDrill()">&times;</button></div>'
+    + '<div class="drill-body">'
+    + (list.length ? list.map(function(c){
+        return '<div class="member-card" style="--mc:#B6A588"><div class="mc-top"><div style="flex:1">'
+          + '<div class="mc-name">' + clientLink(c.name, { email: c.email || '', phone: c.phone || '' }) + '</div>'
+          + '<div class="mc-role">' + (c.phone ? esc(c.phone) + ' · ' : '') + esc(c.email || 'no email on file') + '</div>'
+          + (c.services && c.services.length
+              ? '<div style="font-size:0.68rem;color:var(--muted);margin-top:0.2rem">' + esc(c.services.join(', ')) + '</div>'
+              : '')
+        + '</div><div style="text-align:right">'
+          + '<div class="status-pill status-on">' + c.visits + (c.visits === 1 ? ' visit' : ' visits') + '</div>'
+          + '<div style="font-size:0.66rem;color:var(--muted);margin-top:0.3rem">' + cmoney(c.spent_cents || 0) + '</div>'
+        + '</div></div></div>';
+      }).join('') : '<div class="empty">Nobody here.</div>')
+    + '</div>';
+}
+
+function showMemberList(title, list){
+  document.getElementById('drill-veil').classList.add('open');
+  document.getElementById('drill-box').innerHTML =
+    '<div class="drill-head"><div><div class="drill-title">' + esc(title) + '</div>'
+    + '<div class="drill-sub">' + list.length + ' joined</div></div>'
+    + '<button class="drill-x" onclick="closeDrill()">&times;</button></div>'
+    + '<div class="drill-body">'
+    + (list.length ? list.map(function(mm){
+        return '<div class="member-card" style="--mc:#B6A588"><div class="mc-top"><div style="flex:1">'
+          + '<div class="mc-name">' + clientLink(mm.name, { email: mm.email || '', phone: mm.phone || '' }) + '</div>'
+          + '<div class="mc-role">' + esc(mm.member_id) + (mm.phone ? ' · ' + esc(mm.phone) : '') + '</div>'
+        + '</div><span class="status-pill status-on">' + esc(String(mm.tier || '').replace('_',' ')) + '</span></div></div>';
+      }).join('') : '<div class="empty">Nobody joined in this period.</div>')
+    + '</div>';
 }
 
 async function loadRecords(){
@@ -4162,32 +4219,49 @@ async function loadRecords(){
     const allBk = years.reduce(function(s,r){ return s + r.bookings; }, 0);
 
     t.innerHTML = [
-      statCard(cmoney(allRev), 'Booked all time'),
-      statCard(allBk, 'Bookings all time'),
+      statCard(cmoney(allRev), 'Earned all time'),
+      statCard(allBk, 'Bookings earned'),
       statCard(d.total_members||0, 'Members'),
       statCard(d.inventory_items||0, 'Inventory items'),
-      statCard(d.inventory_units||0, 'Units in stock'),
-    ].join('');
+    ].join('')
+      + ((d.unconfirmed && d.unconfirmed.count)
+          ? '<div class="stat-card" style="cursor:pointer;border-color:#d66" onclick="showDrill(\'Never paid a deposit\', RECORDS.unconfirmed.bookings, RECORDS.unconfirmed.cents)">'
+            + '<div class="stat-num">' + d.unconfirmed.count + '</div>'
+            + '<div class="stat-label">Never paid</div>'
+            + '<div style="font-size:0.64rem;color:var(--muted);margin-top:0.3rem">not counted anywhere</div></div>'
+          : '');
 
-    y.innerHTML = years.length ? years.map(rcRow).join('') : emptyBox('📅','Nothing on the books yet.');
-    mo.innerHTML = months.length ? months.map(rcRow).join('') : emptyBox('📅','No months yet.');
+    const rowsOf = (list, offset) => list.map(function(r){
+      return rcRow(r, (RECORDS.rows || []).indexOf(r));
+    }).join('');
+
+    y.innerHTML = years.length ? rowsOf(years) : emptyBox('📅','Nothing earned yet.');
+    mo.innerHTML = months.length ? rowsOf(months) : emptyBox('📅','No months yet.');
+
     ar.innerHTML = (d.artists||[]).length
-      ? d.artists.map(function(a){
+      ? d.artists.map(function(a,i){
           return '<div class="member-card" style="--mc:#B6A588"><div class="mc-top"><div style="flex:1">'
             + '<div class="mc-name">' + esc(a.artist) + '</div>'
-            + '<div class="mc-role">' + a.clients + ' different client' + (a.clients===1?'':'s') + '</div></div>'
+            + '<div class="mc-role">' + cmoney(a.revenue_cents) + ' earned · '
+              + a.clients + ' different client' + (a.clients===1?'':'s') + '</div></div>'
             + '<span class="status-pill status-on">' + a.appointments + ' appt' + (a.appointments===1?'':'s') + '</span>'
-            + '</div></div>';
+            + '</div>'
+            + '<button class="btn btn-ghost btn-sm" style="margin-top:0.5rem" onclick="drillArtist(' + i + ')">See every booking</button>'
+            + '</div>';
         }).join('')
-      : emptyBox('👥','Nothing assigned to an artist yet.');
+      : emptyBox('👥','Nothing earned by an artist yet.');
   }catch(_){
     t.innerHTML = emptyBox('⚠️','Could not load the records.');
     y.innerHTML = mo.innerHTML = ar.innerHTML = '';
   }
 }
 
-// Download so the books can go to an accountant, or just be kept somewhere
-// that is not only this website.
+function drillArtist(i){
+  const a = (RECORDS.artists || [])[i];
+  if(!a) return;
+  showDrill(a.artist + ' · every booking', (a.detail || {}).bookings || [], a.revenue_cents);
+}
+
 function exportRecords(){
   if(!RECORDS){ toast('Still loading'); return; }
   const head = ['Period','Type','Bookings','Cancelled','Revenue','Deposits','Clients','Repeat clients','Members joined'];
@@ -4200,9 +4274,9 @@ function exportRecords(){
     ].join(','));
   });
   lines.push('');
-  lines.push(['Artist','Appointments','Clients'].join(','));
+  lines.push(['Artist','Appointments','Clients','Revenue'].join(','));
   (RECORDS.artists||[]).forEach(function(a){
-    lines.push([JSON.stringify(a.artist), a.appointments, a.clients].join(','));
+    lines.push([JSON.stringify(a.artist), a.appointments, a.clients, (a.revenue_cents/100).toFixed(2)].join(','));
   });
   const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
@@ -4336,6 +4410,17 @@ async function loadReports(){
                 + '<span class="status-pill status-on">' + s[1] + '</span></div></div>';
             }).join('')
           : emptyBox('💅', 'Nothing earned yet, so nothing to rank.'));
+    const fu = document.getElementById('rp-funnel');
+    if (fu) {
+      const steps = d.funnelByStep || [];
+      fu.innerHTML = steps.length
+        ? steps.map(function(s){
+            return '<div class="member-card" style="--mc:#B6A588"><div class="mc-top"><div style="flex:1">'
+              + '<div class="mc-name">Step ' + esc(s[0]) + '</div></div>'
+              + '<span class="status-pill status-on">' + s[1] + '</span></div></div>';
+          }).join('')
+        : emptyBox('📉','No drop-off data yet.');
+    }
   }catch(_){ el.innerHTML = emptyBox('⚠️', 'Could not load reports.'); }
 }
 

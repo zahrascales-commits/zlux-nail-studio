@@ -198,11 +198,18 @@ async function boardFor(memberId) {
       counted = 'auto';
     }
 
+    // A jar is always worth exactly one percent. Zahra sets how much each
+    // unit contributes; the target is simply how many it takes to fill it,
+    // and the jar pays 1% when full — never more, never a fraction more.
+    // Letting the jar be worth target x rate meant a typo in either field
+    // could quietly hand somebody a nine percent raise.
+    const JAR_WORTH = 1;
     const target = Number(g.target) || 0;
     const pct = Number(g.pct_per_unit) || 0;
     const done = target > 0 && count >= target;
-    // Capped at the target: overfilling a jar does not print money.
-    const worth = Math.min(count, target) * pct;
+    // How full it is, not how much it is worth — the worth is fixed at 1%.
+    const fill = target > 0 ? Math.min(1, count / target) : 0;
+    const worth = fill * JAR_WORTH;
 
     rows.push({
       id: g.id,
@@ -216,12 +223,14 @@ async function boardFor(memberId) {
       target,
       count: Math.round(count * 100) / 100,
       pct_per_unit: pct,
-      full_value: Math.round(target * pct * 100) / 100,
+      full_value: JAR_WORTH,
+      // What one of these is worth towards filling the jar, as she set it.
+      per_unit_pct: pct,
       // What is banked so far, and what actually counts towards her pay.
       accrued_pct: Math.round(worth * 100) / 100,
       unlocked_pct: done ? Math.round(worth * 100) / 100 : 0,
       complete: done,
-      progress: target > 0 ? Math.min(1, count / target) : 0,
+      progress: fill,
     });
   }
 
@@ -238,7 +247,7 @@ async function boardFor(memberId) {
       open: unlockedSoFar,
       goals: inLevel.length,
       done: inLevel.filter(r => r.complete).length,
-      value: Math.round(inLevel.reduce((s, r) => s + r.full_value, 0) * 100) / 100,
+      value: inLevel.length * JAR_WORTH,
     };
     unlockedSoFar = unlockedSoFar && allDone;
   }
