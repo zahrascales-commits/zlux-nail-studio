@@ -585,7 +585,8 @@
       </div>
 
       <!-- Card payment (Stripe) -->
-      <div id="card-section" style="display:none;margin:1.25rem 0;">
+      <div id="covered-note" style="display:none;background:rgba(182,165,136,0.12);border:1px solid rgba(182,165,136,0.45);padding:1rem 1.1rem;margin-bottom:1.1rem;font-family:'Josefin Sans',sans-serif;font-size:0.88rem;line-height:1.7;color:var(--espresso);"></div>
+        <div id="card-section" style="display:none;margin:1.25rem 0;">
         <div class="ap-hint" id="ap-hint" style="display:none;"> Apple Pay available — double-tap to pay, no typing</div>
         <label class="luxury-label">Pay your deposit — Apple Pay or card</label>
         <div id="payment-element" style="background:#fff;border:1px solid rgba(140,122,94,0.22);padding:1rem;"></div>
@@ -1645,10 +1646,14 @@ async function initPayment() {
         action: 'multi_deposit_intent',
         items,
         member_tier: booking.memberTier || null,
+        // Without this the server cannot read her usage counter, so the
+        // included services she is paying a membership for never apply.
+        member_id: (booking.memberId || localStorage.getItem('zola_member_id') || '').trim().toUpperCase() || null,
         customer_name: document.getElementById('client-name').value.trim(),
         customer_email: document.getElementById('client-email').value.trim(),
       })
     })).json();
+    showCoveredNote(intent);
     if (!intent.client_secret) return;
     _paymentIntentId = intent.payment_intent_id;
     _stripe = Stripe(cfg.publishable_key);
@@ -1663,6 +1668,22 @@ async function initPayment() {
     }
     _payEnabled = true;
   } catch (_) { /* payments unavailable — booking still works without card */ }
+}
+
+// What the membership just took off the bill. Shown rather than left as a
+// smaller number, because a discount nobody notices is a discount nobody
+// renews for.
+function showCoveredNote(intent){
+  const box = document.getElementById('covered-note');
+  if (!box) return;
+  const covered = Number(intent && intent.covered_cents) || 0;
+  if (covered <= 0) { box.style.display = 'none'; return; }
+  const money = '$' + (covered / 100).toFixed(2);
+  box.innerHTML = intent.fully_covered
+    ? '<strong>Your membership covers this visit in full.</strong><br>' + money
+      + ' taken off — nothing to pay today, no deposit.'
+    : '<strong>Your membership took ' + money + ' off this visit.</strong><br>Applied automatically. You never need a code.';
+  box.style.display = 'block';
 }
 
 function showSubmitError(msg) {

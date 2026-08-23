@@ -113,6 +113,15 @@ function monthKey(d) {
   return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0');
 }
 
+// How many services a tier includes each month. Derived from the perk list
+// so there is exactly one definition — it was written separately in _pay,
+// _bookings and booking.html, and two of the three disagreed.
+function includedCount(tier) {
+  const t = TIERS[String(tier || '').toUpperCase()];
+  if (!t) return 0;
+  return t.perks.filter(x => x.kind === 'free_service').reduce((s, x) => s + (x.value || 0), 0);
+}
+
 function tierConfig(tier) {
   return TIERS[String(tier || '').toUpperCase()] || null;
 }
@@ -298,6 +307,7 @@ module.exports = async function (req, res) {
 
 module.exports.TIERS = TIERS;
 module.exports.walletFor = walletFor;
+module.exports.includedCount = includedCount;
 module.exports.windowFor = windowFor;
 module.exports.tierConfig = tierConfig;
 module.exports.publicDays = publicDays;

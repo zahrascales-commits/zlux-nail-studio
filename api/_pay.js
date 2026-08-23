@@ -63,16 +63,51 @@ function findAddon(name) {
     || addons.find(a => n.includes(norm(a.name)) || norm(a.name).includes(n));
 }
 
-function computeDeposit({ service_name, addon_names = [], member_tier }) {
+// `free_service` means this member still has an included service left this
+// month. The booking page has always tagged those "Included" and the
+// memberships page sells them as free, but the full price was still being
+// charged — the membership covered the service everywhere except on the bill.
+// The caller decides entitlement, because only it has read the usage counter.
+function computeDeposit({ service_name, addon_names = [], member_tier, free_service }) {
   const svc = findService(service_name);
   if (!svc) return null;
   const pct = member_tier ? (ADDON_DISCOUNT[member_tier] || 0) : 0;
-  let total = svc.price_cents;
+  let total = free_service ? 0 : svc.price_cents;
+  let covered = free_service ? svc.price_cents : 0;
   for (const name of addon_names) {
     const a = findAddon(name);
-    if (a) total += Math.round(a.price_cents * (1 - pct));
+    if (!a) continue;
+    total += Math.round(a.price_cents * (1 - pct));
+    covered += Math.round(a.price_cents * pct);
   }
-  return { total_cents: total, deposit_cents: Math.max(50, Math.ceil(total * 0.5)) };
+  return {
+    total_cents: total,
+    // Nothing to pay means nothing to deposit. The 50c floor exists because
+    // Stripe will not take a smaller charge — applying it to a visit the
+    // membership already covers would bill someone 50c for something they
+    // were just told was free.
+    deposit_cents: total <= 0 ? 0 : Math.max(50, Math.ceil(total * 0.5)),
+    // What the membership just took off — shown to the member and recorded,
+    // rather than silently disappearing into a smaller number.
+    service_list_cents: svc.price_cents,
+    covered_cents: covered,
+  };
+}
+
+// How many included services this member has left this month. The count
+// itself comes from _perks so the bill, the wallet and the welcome reveal
+// all read the same definition; the counter is the one the booking flow
+// increments, so what is charged and what is spent cannot disagree.
+async function freeServicesLeft(member_id, member_tier) {
+  if (!member_id || !member_tier) return 0;
+  const limit = require('./_perks').includedCount(member_tier);
+  if (!limit) return 0;
+  try {
+    const { queryOne } = require('./_db');
+    const monthYear = new Date().toISOString().slice(0, 7);
+    const row = await queryOne('SELECT services_used FROM service_usage WHERE member_id = ? AND month_year = ?', [member_id, monthYear]);
+    return Math.max(0, limit - Number((row && row.services_used) || 0));
+  } catch (_) { return 0; }
 }
 
 module.exports = async function (req, res) {
@@ -93,16 +128,30 @@ module.exports = async function (req, res) {
     // covering the summed deposits, each recomputed server-side.
     if (req.method === 'POST' && action === 'multi_deposit_intent') {
       if (!stripeKey()) return res.status(400).json({ error: 'Payments not configured' });
-      const { items, customer_name, customer_email, member_tier } = req.body || {};
+      const { items, customer_name, customer_email, member_tier, member_id } = req.body || {};
       if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: 'items required' });
-      let total = 0, deposit = 0;
+      let total = 0, deposit = 0, covered = 0;
+      // The allowance is spent one service at a time across the cart — a
+      // member with one left booking three does not get all three free.
+      let freeLeft = await freeServicesLeft(member_id, member_tier);
       const lines = [];
       for (const it of items.slice(0, 10)) {
-        const calc = computeDeposit({ service_name: it.service_name, addon_names: it.addon_names || [], member_tier: member_tier || null });
+        const useFree = freeLeft > 0;
+        if (useFree) freeLeft--;
+        const calc = computeDeposit({ service_name: it.service_name, addon_names: it.addon_names || [], member_tier: member_tier || null, free_service: useFree });
         if (!calc) return res.status(400).json({ error: 'Unknown service: ' + it.service_name });
         total += calc.total_cents;
         deposit += calc.deposit_cents;
+        covered += calc.covered_cents || 0;
         lines.push((it.for_name ? it.for_name + ': ' : '') + it.service_name);
+      }
+      // The membership covered everything. There is no payment to set up,
+      // and asking Stripe for a zero charge is an error, not a free visit.
+      if (deposit <= 0) {
+        return res.json({
+          client_secret: null, payment_intent_id: null,
+          deposit_cents: 0, total_cents: total, covered_cents: covered, fully_covered: true,
+        });
       }
       const params = {
         amount: String(deposit),
@@ -114,13 +163,14 @@ module.exports = async function (req, res) {
       };
       if (customer_email && /@/.test(customer_email)) params.receipt_email = customer_email;
       const pi = await stripeApi('payment_intents', params);
-      return res.json({ client_secret: pi.client_secret, payment_intent_id: pi.id, deposit_cents: deposit, total_cents: total });
+      return res.json({ client_secret: pi.client_secret, payment_intent_id: pi.id, deposit_cents: deposit, total_cents: total, covered_cents: covered });
     }
 
     if (req.method === 'POST' && action === 'deposit_intent') {
       if (!stripeKey()) return res.status(400).json({ error: 'Payments not configured' });
-      const { service_name, addon_names, member_tier, customer_name, customer_email } = req.body || {};
-      const calc = computeDeposit({ service_name, addon_names, member_tier });
+      const { service_name, addon_names, member_tier, member_id, customer_name, customer_email } = req.body || {};
+      const calc = computeDeposit({ service_name, addon_names, member_tier,
+        free_service: (await freeServicesLeft(member_id, member_tier)) > 0 });
       if (!calc) return res.status(400).json({ error: 'Unknown service' });
       const params = {
         amount: String(calc.deposit_cents),

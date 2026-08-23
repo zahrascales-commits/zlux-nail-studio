@@ -173,18 +173,20 @@ module.exports = async (req, res) => {
       }
     } catch (_) {}
 
-    // Enforce monthly service limits for members
+    // How many included services this member has left. Running out never
+    // blocks a booking any more. It used to return a 422 and refuse the
+    // sale outright, which turned "two included a month" into "two a month,
+    // then go somewhere else". The allowance simply stops applying and the
+    // visit is charged at the normal price.
+    let freeService = false;
     if (member_id && member_tier) {
-      const TIER_LIMIT = { SIGNATURE: 1, LUXE: 2, BLACK_CARD: 2 };
-      const limit = TIER_LIMIT[member_tier];
+      const limit = require('./_perks').includedCount(member_tier);
       if (limit) {
         const monthYear = new Date().toISOString().slice(0, 7);
         try {
           const usage = await queryOne('SELECT services_used FROM service_usage WHERE member_id = ? AND month_year = ?', [member_id, monthYear]);
           const used = usage ? Number(usage.services_used) : 0;
-          if (used >= limit) {
-            return res.status(422).json({ error: `You've used all ${limit} service${limit > 1 ? 's' : ''} included in your ${member_tier.replace('_',' ')} membership this month. Additional services are available at full price without your member discount.` });
-          }
+          freeService = used < limit;
         } catch (_) {}
       }
     }
@@ -193,7 +195,7 @@ module.exports = async (req, res) => {
     // never trusted. This also fixes a long-standing units bug where the
     // booking page sent dollars and the server recorded them as cents.
     let total_cents, deposit_cents;
-    const calc = require('./_pay').computeDeposit({ service_name, addon_names, member_tier });
+    const calc = require('./_pay').computeDeposit({ service_name, addon_names, member_tier, free_service: freeService });
     if (calc) {
       total_cents = calc.total_cents;
       deposit_cents = calc.deposit_cents;
