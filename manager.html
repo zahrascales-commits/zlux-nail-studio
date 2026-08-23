@@ -2836,8 +2836,10 @@ function renderMembers(){
         <button class="btn btn-ghost btn-sm" onclick="regenPin(${m.id})">New PIN</button>
         <button class="btn btn-ghost btn-sm" onclick="editMember(${m.id})">Edit</button>
         <button class="btn btn-ghost btn-sm" onclick="openSkillsModal(${m.id})">Services${Number(m.restricted)?' ('+(m.skills||[]).length+')':''}</button>
+        <button class="btn btn-gold btn-sm" onclick="toggleGoals(${m.id})">Commission &amp; Goals</button>
         <button class="btn btn-danger btn-sm" onclick="delMember(${m.id},'${esc(m.name)}')">Remove</button>
       </div>
+      <div id="goals-${m.id}"></div>
     </div>`).join('');
 }
 function openMemberModal(){
@@ -3765,6 +3767,172 @@ async function mkRemove(id){
 
   
 
+
+
+/* ══════════════ COMMISSION & GOALS ══════════════ */
+// A goal is a jar. Each unit put in is worth a fraction of a percentage
+// point; the whole amount unlocks into her rate when the jar is full. Half a
+// jar pays nothing, which is exactly what makes anyone finish one.
+let openGoalsFor = null;
+
+const METRICS = [
+  { v:'memberships',  t:'Memberships sold',        auto:true,  unit:'memberships' },
+  { v:'appointments', t:'Appointments completed',  auto:true,  unit:'appointments' },
+  { v:'revenue',      t:'Money brought in',        auto:true,  unit:'dollars' },
+  { v:'manual',       t:'Anything else (she logs it)', auto:false, unit:'times' },
+];
+
+function toggleGoals(id){
+  openGoalsFor = openGoalsFor === id ? null : id;
+  document.querySelectorAll('[id^="goals-"]').forEach(function(e){ e.innerHTML=''; });
+  if(openGoalsFor) loadWorkerGoals(openGoalsFor);
+}
+
+async function loadWorkerGoals(id){
+  const el = document.getElementById('goals-' + id);
+  if(!el) return;
+  el.innerHTML = '<div class="empty" style="padding:1rem">Loading…</div>';
+  let b;
+  try{ b = await (await api('/api/goals?action=board&member_id=' + id)).json(); }
+  catch(_){ el.innerHTML = '<div class="empty" style="padding:1rem">Could not load.</div>'; return; }
+
+  const goals = b.goals || [];
+  const rows = goals.map(function(g){
+    const auto = g.counted === 'auto';
+    return '<div style="border-top:1px solid var(--border);padding:0.7rem 0">'
+      + '<div style="display:flex;gap:0.6rem;align-items:baseline;flex-wrap:wrap">'
+        + '<div style="flex:1;min-width:150px">'
+          + '<div style="font-size:0.88rem;color:var(--cream)">' + esc(g.title||'Goal') + '</div>'
+          + '<div style="font-size:0.7rem;color:var(--muted)">Level ' + g.level + ' · '
+            + (auto ? 'counts itself' : 'she logs it') + ' · per ' + esc(g.period) + '</div>'
+        + '</div>'
+        + '<div style="font-size:0.8rem;color:' + (g.complete?'#7ec98a':'var(--gold)') + '">'
+          + (g.metric==='revenue'?'$':'') + Math.round(g.count) + ' / ' + (g.metric==='revenue'?'$':'') + g.target
+          + ' · ' + g.pct_per_unit + '% each → ' + g.full_value + '%'
+        + '</div>'
+        + '<button class="btn btn-ghost btn-sm" onclick="editGoal(' + id + ',' + g.id + ')">Edit</button>'
+        + '<button class="btn btn-danger btn-sm" onclick="delGoal(' + id + ',' + g.id + ')">Delete</button>'
+      + '</div></div>';
+  }).join('');
+
+  el.innerHTML = '<div class="site-card" style="margin:0.8rem 0 0.2rem;animation:fadeUp 0.25s ease">'
+    + '<h3>Commission &amp; Goals</h3>'
+    + '<p>Her rate is the base plus everything she has actually finished. A jar that is part-full is worth nothing until she fills it — that is what makes her come back to it.</p>'
+    + '<div style="display:flex;gap:0.8rem;flex-wrap:wrap;margin:0.9rem 0">'
+      + '<div><label class="fld-label">Base commission</label>'
+        + '<div style="display:flex;gap:0.4rem;align-items:center"><input id="base-' + id + '" type="number" step="0.5" min="0" max="100" value="' + (b.base_pct||0) + '" style="max-width:100px" /><span style="color:var(--latte)">%</span>'
+        + '<button class="btn btn-ghost btn-sm" onclick="saveBase(' + id + ')">Save</button></div></div>'
+      + '<div style="flex:1;min-width:170px"><label class="fld-label">Right now she earns</label>'
+        + '<div style="font-family:Cinzel,serif;font-size:1.6rem;color:var(--cream)">' + (b.total_pct||0) + '%</div>'
+        + '<div style="font-size:0.7rem;color:var(--muted)">' + (b.base_pct||0) + '% base + ' + (b.earned_pct||0) + '% earned'
+        + (b.waiting_pct ? ' · ' + b.waiting_pct + '% still in unfinished jars' : '') + '</div></div>'
+    + '</div>'
+    + (rows || '<div style="font-size:0.78rem;color:var(--muted);padding:0.6rem 0">No goals yet.</div>')
+    + '<button class="btn btn-gold btn-sm" style="margin-top:0.9rem" onclick="editGoal(' + id + ',0)">+ Add a goal</button>'
+    + '</div>';
+}
+
+function editGoal(memberId, goalId){
+  const el = document.getElementById('goals-' + memberId);
+  const g = goalId
+    ? (((window.__lastBoard||{}).goals)||[]).find(function(x){ return x.id===goalId; })
+    : null;
+  // Re-read from the card rather than caching: whatever is on screen is what
+  // she just looked at.
+  api('/api/goals?action=board&member_id=' + memberId).then(function(r){ return r.json(); }).then(function(b){
+    const cur = goalId ? (b.goals||[]).find(function(x){ return x.id===goalId; }) : null;
+    const opts = METRICS.map(function(mm){
+      return '<option value="' + mm.v + '"' + (cur && cur.metric===mm.v ? ' selected':'') + '>' + mm.t + '</option>';
+    }).join('');
+    const per = ['month','week','all'].map(function(p){
+      return '<option value="' + p + '"' + (cur && cur.period===p?' selected':'') + '>'
+        + (p==='month'?'Every month':(p==='week'?'Every week':'All time')) + '</option>';
+    }).join('');
+    const box = document.createElement('div');
+    box.className = 'site-card';
+    box.style.cssText = 'margin:0.8rem 0;animation:fadeUp 0.2s ease;border-color:var(--gold)';
+    box.innerHTML = '<h3>' + (goalId?'Edit goal':'New goal') + '</h3>'
+      + '<div class="field"><label class="fld-label">What is she working towards?</label>'
+        + '<input id="g-title" placeholder="Sell 7 Signature spots" value="' + esc((cur&&cur.title)||'') + '" /></div>'
+      + '<div class="field two">'
+        + '<div><label class="fld-label">How it gets counted</label><select id="g-metric">' + opts + '</select></div>'
+        + '<div><label class="fld-label">Only this tier (memberships)</label>'
+          + '<input id="g-filter" placeholder="SIGNATURE, LUXE, BLACK_CARD — or blank for any" value="' + esc((cur&&cur.metric_filter)||'') + '" /></div>'
+      + '</div>'
+      + '<div class="field two">'
+        + '<div><label class="fld-label">Fills the jar at</label><input id="g-target" type="number" step="1" min="1" value="' + ((cur&&cur.target)||7) + '" /></div>'
+        + '<div><label class="fld-label">Each one is worth</label>'
+          + '<div style="display:flex;gap:0.4rem;align-items:center"><input id="g-pct" type="number" step="0.1" min="0" value="' + ((cur&&cur.pct_per_unit)||0.5) + '" /><span style="color:var(--latte)">%</span></div></div>'
+      + '</div>'
+      + '<div class="field two">'
+        + '<div><label class="fld-label">Level</label><input id="g-level" type="number" min="1" max="9" value="' + ((cur&&cur.level)||1) + '" /></div>'
+        + '<div><label class="fld-label">Resets</label><select id="g-period">' + per + '</select></div>'
+      + '</div>'
+      + '<div id="g-preview" style="font-size:0.78rem;color:var(--gold);margin-bottom:0.8rem"></div>'
+      + '<div style="display:flex;gap:0.5rem;flex-wrap:wrap">'
+        + '<button class="btn btn-gold btn-sm" onclick="saveGoal(' + memberId + ',' + (goalId||0) + ')">Save goal</button>'
+        + '<button class="btn btn-ghost btn-sm" onclick="loadWorkerGoals(' + memberId + ')">Cancel</button>'
+      + '</div>';
+    el.innerHTML = '';
+    el.appendChild(box);
+
+    // She is setting a number that decides pay, so show her what it adds up
+    // to before she saves rather than after.
+    const preview = function(){
+      const t = Number(document.getElementById('g-target').value)||0;
+      const p = Number(document.getElementById('g-pct').value)||0;
+      const mv = document.getElementById('g-metric').value;
+      const unit = (METRICS.find(function(x){return x.v===mv;})||{}).unit || 'times';
+      document.getElementById('g-preview').textContent =
+        t + ' ' + unit + ' × ' + p + '% = ' + (Math.round(t*p*100)/100) + '% added to her commission when the jar is full.';
+    };
+    ['g-target','g-pct','g-metric'].forEach(function(idd){
+      document.getElementById(idd).addEventListener('input', preview);
+      document.getElementById(idd).addEventListener('change', preview);
+    });
+    preview();
+  });
+}
+
+async function saveGoal(memberId, goalId){
+  const body = {
+    action:'save',
+    id: goalId || undefined,
+    member_id: memberId,
+    title: (document.getElementById('g-title')||{}).value || '',
+    metric: (document.getElementById('g-metric')||{}).value || 'manual',
+    metric_filter: (document.getElementById('g-filter')||{}).value || '',
+    target: Number((document.getElementById('g-target')||{}).value)||0,
+    pct_per_unit: Number((document.getElementById('g-pct')||{}).value)||0,
+    level: Number((document.getElementById('g-level')||{}).value)||1,
+    period: (document.getElementById('g-period')||{}).value || 'month',
+  };
+  if(!body.title.trim()){ toast('Give it a name'); return; }
+  if(body.target <= 0){ toast('It has to fill at something above zero'); return; }
+  try{
+    const d = await (await api('/api/goals?action=save',{method:'POST',body:JSON.stringify(body)})).json();
+    toast(d.ok ? 'Saved ✦' : (d.error||'Could not save'));
+    loadWorkerGoals(memberId);
+  }catch(_){ toast('Could not save'); }
+}
+
+async function delGoal(memberId, goalId){
+  if(!confirm('Delete this goal? Anything she already earned from it stops counting.')) return;
+  try{
+    await api('/api/goals?action=goal',{method:'DELETE',body:JSON.stringify({action:'goal',id:goalId})});
+    toast('Deleted');
+    loadWorkerGoals(memberId);
+  }catch(_){ toast('Could not delete'); }
+}
+
+async function saveBase(memberId){
+  const v = Number((document.getElementById('base-'+memberId)||{}).value)||0;
+  try{
+    await api('/api/goals?action=base',{method:'PUT',body:JSON.stringify({action:'base',member_id:memberId,base_pct:v})});
+    toast('Base commission saved ✦');
+    loadWorkerGoals(memberId);
+  }catch(_){ toast('Could not save'); }
+}
 
 /* ══════════════ DISPATCH — FIRST TO CONFIRM ══════════════ */
 let CLAIMS = null;

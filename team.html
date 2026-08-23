@@ -117,6 +117,37 @@
   .wc-sw.dot{background:#9a6fc4;border-radius:50%;border-color:#9a6fc4}
   .wc-day{margin-top:0.9rem}
 
+  /* ── COMMISSION JARS ──
+     A jar that visibly fills. The point of the shape is that an unfinished
+     one looks unfinished from across the room. */
+  .rate-card{background:linear-gradient(160deg,rgba(182,165,136,0.16),rgba(154,111,196,0.1));
+    border:1px solid var(--border-hi);border-radius:14px;padding:1.3rem 1.2rem;margin-bottom:1.5rem;text-align:center}
+  .rate-num{font-family:'Cinzel',serif;font-size:2.6rem;line-height:1;color:var(--cream);letter-spacing:0.02em}
+  .rate-lbl{font-size:0.62rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);margin-top:0.45rem}
+  .rate-sub{font-size:0.74rem;color:var(--muted);margin-top:0.6rem;line-height:1.6}
+  .rate-wait{color:#c9a9e0}
+  .lvl-head{display:flex;align-items:center;gap:0.6rem;margin:1.6rem 0 0.8rem}
+  .lvl-name{font-family:'Cinzel',serif;font-size:1rem;color:var(--cream)}
+  .lvl-pill{font-size:0.58rem;letter-spacing:0.14em;text-transform:uppercase;padding:0.2rem 0.5rem;border-radius:20px;
+    border:1px solid var(--border-hi);color:var(--muted)}
+  .lvl-pill.open{color:var(--gold);border-color:var(--gold)}
+  .lvl-pill.done{color:#8fc79c;border-color:#8fc79c}
+  .jar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0.85rem}
+  .jar-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:0.95rem 0.8rem;text-align:center;
+    transition:border-color 0.2s,transform 0.2s}
+  .jar-card.full{border-color:#8fc79c;box-shadow:0 0 0 1px rgba(143,199,156,0.25),0 6px 22px rgba(143,199,156,0.12)}
+  .jar-card.locked{opacity:0.42}
+  .jar-svg{width:64px;height:78px;display:block;margin:0 auto 0.5rem}
+  .jar-liquid{transition:y 0.7s cubic-bezier(0.4,0,0.2,1),height 0.7s cubic-bezier(0.4,0,0.2,1)}
+  .jar-title{font-family:'Cinzel',serif;font-size:0.86rem;color:var(--cream);line-height:1.35;min-height:2.3em}
+  .jar-count{font-size:0.78rem;color:var(--gold);margin-top:0.3rem}
+  .jar-worth{font-size:0.64rem;color:var(--muted);margin-top:0.2rem;line-height:1.5}
+  .jar-won{font-size:0.66rem;color:#8fc79c;margin-top:0.35rem;letter-spacing:0.06em;text-transform:uppercase}
+  .jar-auto{font-size:0.58rem;color:var(--muted);margin-top:0.3rem;letter-spacing:0.1em;text-transform:uppercase}
+  .jar-btn{margin-top:0.55rem;width:100%;background:var(--gold);color:#0B0B0B;border:none;padding:0.5rem;border-radius:7px;
+    font-family:'Josefin Sans',sans-serif;font-size:0.64rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer}
+  .jar-btn:disabled{opacity:0.5;cursor:default}
+
   /* CHAT SHEET */
   .overlay{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,0.75);backdrop-filter:blur(3px);display:none;align-items:flex-end;justify-content:center}
   .overlay.open{display:flex;animation:fadeIn 0.2s ease}
@@ -199,6 +230,7 @@
   </div>
   <div class="tabs">
     <button class="tab active" data-t="schedule" onclick="showTab('schedule')">My Schedule</button>
+    <button class="tab" data-t="goals" onclick="showTab('goals')">My Goals</button>
     <button class="tab" data-t="chats" onclick="showTab('chats')">Client Chats</button>
     <button class="tab" data-t="clients" onclick="showTab('clients')">Clients</button>
     <button class="tab" data-t="inspo" onclick="showTab('inspo')">Inspo</button>
@@ -228,6 +260,10 @@
       <div id="team-checkins"></div>
       <div class="label-sm" id="sched-label">Upcoming Appointments</div>
       <div id="sched"><div class="loading">Loading…</div></div>
+    </section>
+    <section class="panel" id="panel-goals">
+      <div id="goals-head"></div>
+      <div id="goals-body"><div class="loading">Loading…</div></div>
     </section>
     <section class="panel" id="panel-chats">
       <div class="label-sm">Your Client Conversations</div>
@@ -372,12 +408,113 @@ function showTab(t){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+t).classList.add('active');
   if(t==='schedule'){loadSchedule();loadMyHours();loadCheckins();}
+  if(t==='goals')loadGoals();
   if(t==='chats')loadChats();
   if(t==='clients')loadTeamClients();
   if(t==='inspo')loadTeamInspo();
   if(t==='inventory')loadTeamInv();
 }
 
+
+
+/* ══════════════ COMMISSION JARS ══════════════ */
+let BOARD = null;
+
+// A jar drawn as a jar. The liquid rises from the bottom, so a half-full one
+// reads as half-full at a glance and an untouched one reads as untouched.
+function jarSvg(pct, full){
+  const p = Math.max(0, Math.min(1, pct));
+  const top = 20, bot = 74, span = bot - top;
+  const h = span * p;
+  const y = bot - h;
+  const fill = full ? '#8fc79c' : (p > 0 ? '#9a6fc4' : 'transparent');
+  return '<svg class="jar-svg" viewBox="0 0 56 82" aria-hidden="true">'
+    + '<defs><clipPath id="jc"><path d="M10 20 h36 v48 a8 8 0 0 1 -8 8 h-20 a8 8 0 0 1 -8 -8 z"/></clipPath></defs>'
+    + '<rect x="16" y="6" width="24" height="8" rx="3" fill="none" stroke="var(--border-hi)" stroke-width="2"/>'
+    + '<rect class="jar-liquid" x="8" y="' + y.toFixed(1) + '" width="40" height="' + h.toFixed(1) + '" fill="' + fill + '" opacity="0.85" clip-path="url(#jc)"/>'
+    + '<path d="M10 20 h36 v48 a8 8 0 0 1 -8 8 h-20 a8 8 0 0 1 -8 -8 z" fill="none" stroke="' + (full ? '#8fc79c' : 'var(--border-hi)') + '" stroke-width="2"/>'
+    + '<text x="28" y="52" text-anchor="middle" font-family="Cinzel,serif" font-size="13" fill="var(--cream)">' + Math.round(p*100) + '%</text>'
+    + '</svg>';
+}
+
+function metricUnit(g){
+  if(g.metric === 'revenue') return '$';
+  return '';
+}
+function fmtCount(g, n){
+  return g.metric === 'revenue' ? ('$' + Math.round(n)) : String(Math.round(n * 100) / 100);
+}
+
+async function loadGoals(){
+  const head = document.getElementById('goals-head');
+  const body = document.getElementById('goals-body');
+  if(!head || !MID) return;
+  try{
+    const r = await fetch('/api/goals?action=board&member_id='+MID+'&pin='+PIN);
+    BOARD = await r.json();
+  }catch(_){ body.innerHTML = '<div class="empty">Could not load your goals.</div>'; return; }
+
+  const b = BOARD || {};
+  head.innerHTML =
+    '<div class="rate-card">'
+    + '<div class="rate-num">' + (b.total_pct || 0) + '%</div>'
+    + '<div class="rate-lbl">Your commission right now</div>'
+    + '<div class="rate-sub">'
+      + (b.base_pct || 0) + '% base'
+      + (b.earned_pct ? ' + <strong style="color:#8fc79c">' + b.earned_pct + '% earned</strong>' : '')
+      + (b.waiting_pct ? '<br><span class="rate-wait">' + b.waiting_pct + '% is sitting in jars you haven\'t finished</span>' : '')
+    + '</div></div>';
+
+  const goals = b.goals || [];
+  if(!goals.length){
+    body.innerHTML = '<div class="empty"><div class="big">🏆</div>No goals set yet.<br>'
+      + '<span style="font-size:0.72rem">Zahra sets these — ask her what you can work towards.</span></div>';
+    return;
+  }
+
+  const levels = (b.levels || []).slice().sort(function(x,y){ return x.level - y.level; });
+  body.innerHTML = levels.map(function(lv){
+    const mine = goals.filter(function(g){ return g.level === lv.level; });
+    const allDone = lv.done === lv.goals && lv.goals > 0;
+    const pill = allDone
+      ? '<span class="lvl-pill done">Complete</span>'
+      : (lv.open ? '<span class="lvl-pill open">' + lv.done + ' of ' + lv.goals + ' done</span>'
+                 : '<span class="lvl-pill">Locked · finish level ' + (lv.level - 1) + '</span>');
+    return '<div class="lvl-head"><div class="lvl-name">Level ' + lv.level + '</div>' + pill
+      + '<div style="flex:1"></div><div style="font-size:0.7rem;color:var(--gold)">worth ' + lv.value + '%</div></div>'
+      + '<div class="jar-grid">' + mine.map(jarCard).join('') + '</div>';
+  }).join('');
+}
+
+function jarCard(g){
+  const cls = 'jar-card' + (g.complete ? ' full' : '') + (g.locked ? ' locked' : '');
+  return '<div class="' + cls + '">'
+    + jarSvg(g.progress, g.complete)
+    + '<div class="jar-title">' + esc(g.title || 'Goal') + '</div>'
+    + '<div class="jar-count">' + fmtCount(g, g.count) + ' of ' + fmtCount(g, g.target) + '</div>'
+    + '<div class="jar-worth">+' + g.pct_per_unit + '% each · ' + g.full_value + '% when it\'s full</div>'
+    + (g.complete
+        ? '<div class="jar-won">✦ ' + g.unlocked_pct + '% yours</div>'
+        : '<div class="jar-worth" style="color:#c9a9e0">' + g.accrued_pct + '% waiting</div>')
+    + (g.counted === 'auto'
+        ? '<div class="jar-auto">Counts itself</div>'
+        : '<button class="jar-btn" onclick="logGoal(' + g.id + ',this)"' + (g.locked ? ' disabled' : '') + '>+ Log one</button>')
+    + '</div>';
+}
+
+async function logGoal(id, btn){
+  if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
+  try{
+    const r = await fetch('/api/goals?action=log',{method:'POST',headers:hdr(),
+      body:JSON.stringify({action:'log',goal_id:id,delta:1})});
+    const d = await r.json();
+    toast(d.why || 'Logged');
+    await loadGoals();
+  }catch(_){
+    toast('Could not save that');
+    if(btn){ btn.disabled = false; btn.textContent = '+ Log one'; }
+  }
+}
 
 /* ══════════════ OPEN APPOINTMENTS — FIRST TO CONFIRM ══════════════ */
 // Everything listed here has already been filtered to what she can actually

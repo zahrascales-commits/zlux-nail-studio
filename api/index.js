@@ -70,6 +70,7 @@ app.all('/api/pressons',         require('./_pressons'));
 app.all('/api/shopig',           require('./_shopig'));
 app.all('/api/promo',            require('./_promo').handler);
 app.all('/api/push',             require('./_push').handler);
+app.all('/api/goals',            require('./_goals'));
 app.all('/api/careers',          require('./_careers'));
 app.all('/api/marketing',        require('./_marketing'));
 app.all('/api/classes',          require('./_classes'));
