@@ -446,6 +446,58 @@ module.exports = async function (req, res) {
     /* ── DISPATCH: who a booking went out to, and who took it ──────────
        Her view of the race. Anything still open she can hand to whoever
        she wants without waiting for the timer.                          */
+    /* ── A membership to walk through, without paying for one ──────
+       Real row, real member ID, real perks — the only difference is
+       demo=1, which keeps it out of every revenue figure. Fixed ID so
+       running this twice refreshes the same account instead of
+       littering the members list. */
+    if (method === 'POST' && action === 'demo_member') {
+      const tier = String((req.body || {}).tier || 'BLACK_CARD').toUpperCase();
+      if (!['SIGNATURE', 'LUXE', 'BLACK_CARD'].includes(tier)) {
+        return res.status(400).json({ error: 'Unknown tier' });
+      }
+      const db = require('./_db');
+      try { await db.execute('ALTER TABLE members ADD COLUMN demo INTEGER DEFAULT 0'); } catch (_) {}
+
+      const memberId = 'ZOLA-DEMO';
+      const now = new Date();
+      const next = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+      const iso = d => d.toISOString().slice(0, 10);
+      const crypto = require('crypto');
+
+      const existing = await db.queryOne('SELECT member_id FROM members WHERE member_id = ?', [memberId]);
+      if (existing) {
+        await db.execute(
+          "UPDATE members SET tier=?, demo=1, flagged=0, membership_started_at=?, next_billing_at=? WHERE member_id=?",
+          [tier, iso(now), iso(next), memberId]);
+      } else {
+        const bcrypt = require('bcryptjs');
+        await db.execute(
+          `INSERT INTO members (full_name, email, phone, date_of_birth, heard_about, tier, member_id,
+             password_hash, qr_secret, referral_code, membership_started_at, next_billing_at, demo)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1)`,
+          ['Zahra (preview)', 'preview@zolanailstudio.com', '', '1990-01-01', 'preview', tier, memberId,
+           bcrypt.hashSync(crypto.randomBytes(16).toString('hex'), 8),
+           crypto.randomBytes(16).toString('hex'), 'PREVIEW',
+           iso(now), iso(next)]);
+      }
+      // A fresh month every time she opens it, so the free services are
+      // always there to look at rather than spent by an earlier test.
+      try {
+        await db.execute('DELETE FROM service_usage WHERE member_id = ?', [memberId]);
+      } catch (_) {}
+      // And show the walkthrough again rather than remembering it was seen.
+      try {
+        await db.execute('DELETE FROM perk_reveal WHERE member_id = ?', [memberId]);
+      } catch (_) {}
+
+      return res.json({
+        ok: true, member_id: memberId, tier,
+        welcome: '/welcome.html?m=' + memberId,
+        portal: '/client-portal.html',
+      });
+    }
+
     if (method === 'GET' && action === 'claims') {
       return res.json(await require('./_claims').claimsOverview());
     }

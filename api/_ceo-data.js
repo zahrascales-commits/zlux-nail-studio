@@ -69,7 +69,7 @@ module.exports = async (req, res) => {
 
     if (section === 'overview') {
       let members = [];
-      try { members = await query('SELECT tier FROM members'); } catch (_) {}
+      try { members = await query('SELECT tier FROM members WHERE COALESCE(demo,0)=0'); } catch (_) {}
       const PRICE = { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900 };
       const mrr = members.reduce((s, m) => s + (PRICE[m.tier] || 0), 0);
       const byTier = { SIGNATURE: 0, LUXE: 0, BLACK_CARD: 0 };
@@ -135,7 +135,7 @@ module.exports = async (req, res) => {
 
       let members = [];
       try {
-        members = await query('SELECT member_id, full_name, tier, membership_started_at FROM members');
+        members = await query('SELECT member_id, full_name, tier, membership_started_at FROM members WHERE COALESCE(demo,0)=0');
       } catch (_) {}
 
       let team = [], teamAppts = [];
@@ -223,7 +223,7 @@ module.exports = async (req, res) => {
     if (section === 'giftcards') return res.json({ giftCards: store.giftCards });
     if (section === 'goals') {
       let members = [];
-      try { members = await query('SELECT tier FROM members'); } catch (_) {}
+      try { members = await query('SELECT tier FROM members WHERE COALESCE(demo,0)=0'); } catch (_) {}
       const byTier = { SIGNATURE: 0, LUXE: 0, BLACK_CARD: 0 };
       members.forEach(m => { if (byTier[m.tier] !== undefined) byTier[m.tier]++; });
       const PRICE = { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900 };
