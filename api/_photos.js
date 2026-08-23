@@ -104,8 +104,44 @@ module.exports = async function (req, res) {
         if (id && pin) allowed = !!(await queryOne('SELECT id FROM team_members WHERE id=? AND pin=? AND active=1', [id, pin]));
       }
       if (!allowed) return res.status(401).json({ error: 'Unauthorized' });
-      const rows = await query('SELECT * FROM client_inspo ORDER BY ts DESC LIMIT 60');
-      return res.json({ inspo: rows });
+      const rows = await query('SELECT * FROM client_inspo ORDER BY ts DESC LIMIT 120');
+      if (isOwner) return res.json({ inspo: rows });
+
+      // An artist sees a client's inspiration photo in exactly two cases: the
+      // appointment is hers, or it is still open to her and she is deciding
+      // whether she can do that design. Anything else is somebody else's
+      // client, and their photo is not the whole team's to browse.
+      const memberId = Number(req.headers['x-team-id'] || req.query.member_id);
+      const mine = new Set();     // hers now — the client belongs to her
+      const deciding = new Set(); // still up for grabs, shown so she can judge it
+
+      try {
+        const claims = await query('SELECT confirmation, claimed_by, offered, status FROM booking_claims');
+        for (const c of claims) {
+          if (!c.confirmation) continue;
+          if (Number(c.claimed_by) === memberId) { mine.add(c.confirmation); continue; }
+          if (c.claimed_by) continue;                      // somebody else took it
+          if (String(c.status) !== 'open') continue;
+          let offered = [];
+          try { offered = JSON.parse(c.offered || '[]').map(Number); } catch (_) {}
+          if (offered.includes(memberId)) deciding.add(c.confirmation);
+        }
+      } catch (_) { /* no dispatch table yet */ }
+
+      // Bookings that never went out for claim — the client picked her, or
+      // Zahra assigned it — carry the confirmation in the appointment note.
+      try {
+        const appts = await query('SELECT notes FROM team_appointments WHERE team_member_id=?', [memberId]);
+        for (const a of appts) {
+          const hit = String(a.notes || '').match(/ZOLA-\d+/);
+          if (hit) mine.add(hit[0]);
+        }
+      } catch (_) {}
+
+      const visible = rows
+        .filter(r => mine.has(r.confirmation) || deciding.has(r.confirmation))
+        .map(r => ({ ...r, mine: mine.has(r.confirmation) }));
+      return res.json({ inspo: visible });
     }
 
     // ── OWNER: delete an inspo photo ──

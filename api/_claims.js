@@ -406,19 +406,30 @@ async function openJobsFor(memberId) {
   await sweep();
   const rows = await query(
     "SELECT * FROM booking_claims WHERE status='open' AND claimed_by IS NULL ORDER BY date, time");
-  return rows
-    .filter(r => JSON.parse(r.offered || '[]').map(Number).includes(Number(memberId)))
-    .map(r => ({
-      confirmation: r.confirmation,
-      service: r.service,
-      date: r.date,
-      time: r.time,
-      date_label: r.date_label,
-      time_label: r.time_label,
-      client_name: r.client_name,
-      offered_to: JSON.parse(r.offered || '[]').length,
-      expires_ts: Number(r.expires_ts) || 0,
-    }));
+  const open = rows.filter(r => JSON.parse(r.offered || '[]').map(Number).includes(Number(memberId)));
+
+  // The design comes with the offer. Deciding whether she can do a set is the
+  // whole reason to look before confirming, and asking her to commit first
+  // and find out afterwards is how a client ends up with the wrong artist.
+  const inspo = {};
+  try {
+    for (const r of await query('SELECT confirmation, data_url FROM client_inspo ORDER BY ts DESC LIMIT 120')) {
+      if (r.confirmation && !inspo[r.confirmation]) inspo[r.confirmation] = r.data_url;
+    }
+  } catch (_) {}
+
+  return open.map(r => ({
+    confirmation: r.confirmation,
+    service: r.service,
+    date: r.date,
+    time: r.time,
+    date_label: r.date_label,
+    time_label: r.time_label,
+    client_name: r.client_name,
+    offered_to: JSON.parse(r.offered || '[]').length,
+    expires_ts: Number(r.expires_ts) || 0,
+    inspo: inspo[r.confirmation] || '',
+  }));
 }
 
 // The owner's view: everything still open, plus what happened to the rest.

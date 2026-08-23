@@ -102,15 +102,19 @@
     border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:0.78rem;cursor:pointer;transition:all 0.15s}
   .wc-cell.blank{border:none;background:none;cursor:default}
   .wc-cell.today{border-color:var(--gold)}
-  /* purple = clients booked; the quieter tint = rostered but nothing booked yet */
-  .wc-cell.busy{background:rgba(146,110,178,0.24);border-color:rgba(146,110,178,0.5);color:#e6d5f2;font-weight:600}
-  .wc-cell.work{background:var(--gold-faint);border-color:var(--border-hi);color:var(--cream)}
-  .wc-cell.sel{outline:1px solid var(--gold)}
-  .wc-cell .n{font-size:0.5rem;line-height:1;margin-top:2px;color:#c9a9e0}
+  /* Blue square = rostered in. Purple dot on top = clients booked that day.
+     They stack rather than replace each other: a working day with clients is
+     still a working day, and hiding that was the old calendar's mistake. */
+  .wc-cell.work{background:rgba(96,142,196,0.26);border-color:rgba(96,142,196,0.55);color:#dbe8f7;font-weight:600}
+  .wc-cell.dot{position:relative}
+  .wc-cell.dot::after{content:'';position:absolute;bottom:5px;left:50%;transform:translateX(-50%);
+    width:7px;height:7px;border-radius:50%;background:#9a6fc4;box-shadow:0 0 0 2px rgba(154,111,196,0.28)}
+  .wc-cell.dot span:first-child{transform:translateY(-3px)}
+  .wc-cell.sel{outline:2px solid var(--gold);outline-offset:-2px}
   .wc-key{display:flex;gap:1rem;flex-wrap:wrap;margin-top:0.6rem;font-size:0.64rem;color:var(--muted)}
   .wc-sw{display:inline-block;width:11px;height:11px;vertical-align:-1px;margin-right:0.25rem;border:1px solid var(--border-hi)}
-  .wc-sw.busy{background:rgba(146,110,178,0.5)}
-  .wc-sw.work{background:var(--gold-faint)}
+  .wc-sw.work{background:rgba(96,142,196,0.5);border-color:rgba(96,142,196,0.7)}
+  .wc-sw.dot{background:#9a6fc4;border-radius:50%;border-color:#9a6fc4}
   .wc-day{margin-top:0.9rem}
 
   /* CHAT SHEET */
@@ -213,8 +217,8 @@
       <div class="wc-dows"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
       <div class="wc-cells" id="wc-cells"></div>
       <div class="wc-key">
-        <span><i class="wc-sw busy"></i> Clients booked</span>
-        <span><i class="wc-sw work"></i> Rostered in</span>
+        <span><i class="wc-sw work"></i> You're working</span>
+        <span><i class="wc-sw dot"></i> You have clients</span>
       </div>
       <div id="wc-day" class="wc-day"></div>
 
@@ -222,7 +226,6 @@
       <p style="font-family:'Josefin Sans',sans-serif;font-size:0.76rem;color:var(--muted);margin-bottom:0.8rem;line-height:1.7;">When you're rostered in. Set by Zahra — your appointments are below.</p>
       <div id="my-hours" style="margin-bottom:1.75rem;"><div class="loading">Loading…</div></div>
       <div id="team-checkins"></div>
-      <div class="mini-cal" id="mini-cal"></div>
       <div class="label-sm" id="sched-label">Upcoming Appointments</div>
       <div id="sched"><div class="loading">Loading…</div></div>
     </section>
@@ -330,9 +333,12 @@ function renderBell(){
 /* ── MINI MONTH CALENDAR (dots = days you're booked) ── */
 function calShift(n){
   const d=new Date(calCursor+'T12:00:00');d.setMonth(d.getMonth()+n);
-  calCursor=d.toISOString().slice(0,10);renderMiniCal();
+  calCursor=d.toISOString().slice(0,10);
 }
 function renderMiniCal(){
+  // The month view moved into the work calendar above; this stays as a no-op
+  // so any older call site cannot throw.
+  if(!document.getElementById('mini-cal')) return;
   const d=new Date(calCursor+'T12:00:00');
   const y=d.getFullYear(),mo=d.getMonth();
   const first=new Date(y,mo,1).getDay();
@@ -359,7 +365,7 @@ function pickDay(ds){
   document.getElementById('sched-label').textContent=selDay
     ? new Date(selDay+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})
     : 'Upcoming Appointments';
-  renderMiniCal();renderSchedule();
+  renderSchedule();
 }
 function showTab(t){
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.t===t));
@@ -404,6 +410,8 @@ async function loadJobs(){
     + '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.76rem;color:var(--muted);line-height:1.7;margin-bottom:0.9rem;">First to confirm takes it. These are already matched to your services and your rostered hours.</p>'
     + JOBS.map(function(j){
         return '<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:0.9rem 1rem;margin-bottom:0.7rem;">'
+          + (j.inspo ? '<img src="' + j.inspo + '" alt="" style="width:100%;height:150px;object-fit:cover;border-radius:6px;display:block;margin-bottom:0.6rem">'
+              + '<div style="font-size:0.66rem;color:var(--muted);margin-bottom:0.5rem">What she wants — check you are happy with it before you confirm.</div>' : '')
           + '<div style="font-family:Cinzel,serif;font-size:0.98rem;color:var(--cream);letter-spacing:0.03em;">' + esc(j.service||'Appointment') + '</div>'
           + '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;color:var(--gold);margin-top:0.25rem;">' + esc(j.date_label||j.date) + ' · ' + esc(j.time_label||j.time) + '</div>'
           + '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.76rem;color:var(--muted);margin-top:0.2rem;">'
@@ -570,6 +578,7 @@ async function loadTeamInspo(){
         +'<img src="'+p.data_url+'" style="width:100%;height:140px;object-fit:cover;display:block" alt="">'
         +'<div style="font-family:\'Cinzel\',serif;font-size:0.85rem;color:var(--cream);margin-top:0.4rem">'+esc(p.client_name||'Client')+'</div>'
         +'<div style="font-size:0.62rem;color:var(--muted)">'+esc(p.service||'')+(p.appt_date?' · '+p.appt_date:'')+'</div>'
+        +(p.mine?'<div style="font-size:0.6rem;color:#8fc79c;margin-top:0.2rem">Yours</div>':'<div style="font-size:0.6rem;color:var(--gold);margin-top:0.2rem">Still open — confirm to keep it</div>')
         +'</div>').join('')+'</div>';
   }catch{el.innerHTML='<div class="empty">Could not load inspo.</div>';}
 }
@@ -600,11 +609,14 @@ function renderWorkCal(){
     const ds = wcDs(y,m,d);
     const n = (wcAppts[ds]||[]).length;
     const cls = ['wc-cell'];
-    if(n) cls.push('busy'); else if(wcShifts[ds]) cls.push('work');
+    // Both, not one or the other — a working day with clients is still a
+    // working day, and she needs to see the shift as well as the people.
+    if(wcShifts[ds]) cls.push('work');
+    if(n) cls.push('dot');
     if(ds===today) cls.push('today');
     if(ds===wcSel) cls.push('sel');
     html += '<button class="'+cls.join(' ')+'" onclick="wcPick(\''+ds+'\')">'
-      + '<span>'+d+'</span>' + (n?'<span class="n">'+n+'</span>':'') + '</button>';
+      + '<span>'+d+'</span></button>';
   }
   el.innerHTML = html;
   if(wcSel) wcRenderDay();
@@ -616,18 +628,32 @@ function wcRenderDay(){
   const el = document.getElementById('wc-day');
   const sh = wcShifts[wcSel];
   const list = (wcAppts[wcSel]||[]).slice().sort((a,b)=>String(a.time).localeCompare(String(b.time)));
-  let html = '<div style="border:1px solid var(--border-hi);background:var(--card);padding:0.9rem 1rem">'
-    + '<div style="font-family:\'Cinzel\',serif;font-size:1rem;color:var(--cream);margin-bottom:0.4rem">'+fmtDate(wcSel)+'</div>';
+
+  let html = '<div style="border:1px solid var(--border-hi);background:var(--card);padding:1rem 1.1rem;border-radius:10px">'
+    + '<div style="font-family:\'Cinzel\',serif;font-size:1.05rem;color:var(--cream);margin-bottom:0.55rem">'+fmtDate(wcSel)+'</div>';
+
+  // The hours she is expected in come first — that is the question she opens
+  // the day to answer, whether or not anyone is booked.
   html += sh
-    ? '<div style="font-size:0.74rem;color:var(--gold);margin-bottom:0.6rem">Rostered '+fmtTime(sh.start_time)+' – '+fmtTime(sh.end_time)
-      + (sh.lunch_start&&sh.lunch_end ? ' · lunch '+fmtTime(sh.lunch_start)+'–'+fmtTime(sh.lunch_end) : '') + '</div>'
-    : '<div style="font-size:0.74rem;color:var(--muted);margin-bottom:0.6rem">Not rostered this day</div>';
+    ? '<div style="display:inline-block;background:rgba(96,142,196,0.2);border:1px solid rgba(96,142,196,0.45);'
+      + 'color:#dbe8f7;padding:0.4rem 0.7rem;border-radius:7px;font-size:0.78rem;margin-bottom:0.8rem">'
+      + 'Working ' + fmtTime(sh.start_time) + ' – ' + fmtTime(sh.end_time)
+      + (sh.lunch_start&&sh.lunch_end ? ' · lunch ' + fmtTime(sh.lunch_start) + '–' + fmtTime(sh.lunch_end) : '')
+      + '</div>'
+    : '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.8rem">You are not working this day.</div>';
+
   html += list.length
-    ? list.map(a =>
-        '<div style="border-top:1px solid var(--border);padding:0.55rem 0">'
-        + '<div style="font-size:0.85rem;color:var(--cream)">'+fmtTime(a.time)+' · '+esc(a.client_name||'Open')+'</div>'
-        + '<div style="font-size:0.72rem;color:var(--muted)">'+esc(a.service||'—')+'</div></div>').join('')
-    : '<div style="font-size:0.76rem;color:var(--muted)">No clients booked.</div>';
+    ? '<div style="font-size:0.62rem;letter-spacing:0.16em;text-transform:uppercase;color:#c9a9e0;margin-bottom:0.4rem">'
+        + list.length + ' client' + (list.length===1?'':'s') + '</div>'
+      + list.map(a =>
+        '<div style="display:flex;gap:0.7rem;align-items:flex-start;border-top:1px solid var(--border);padding:0.6rem 0">'
+        + '<div style="min-width:74px;font-size:0.82rem;color:#c9a9e0;font-weight:600">'+fmtTime(a.time)+'</div>'
+        + '<div style="flex:1">'
+          + '<div style="font-size:0.88rem;color:var(--cream)">'+esc(a.client_name||'Client')+'</div>'
+          + '<div style="font-size:0.73rem;color:var(--muted)">'+esc(a.service||'—')+'</div>'
+        + '</div></div>').join('')
+    : (sh ? '<div style="font-size:0.78rem;color:var(--muted)">No clients booked yet — your hours are still yours.</div>' : '');
+
   el.innerHTML = html + '</div>';
 }
 
@@ -683,7 +709,7 @@ async function loadSchedule(){
     wcAppts={};
     for(const a of schedule){ (wcAppts[a.date]=wcAppts[a.date]||[]).push(a); }
     renderWorkCal();
-    renderMiniCal();renderSchedule();
+    renderSchedule();
   }catch{el.innerHTML='<div class="empty">Connection error.</div>';}
 }
 function renderSchedule(){
