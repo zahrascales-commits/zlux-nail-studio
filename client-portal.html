@@ -75,7 +75,58 @@
     .countdown-label { font-family:'Josefin Sans',sans-serif; font-size:0.72rem; color:var(--latte); }
     .countdown-clock { font-family:'Cinzel',serif; font-size:1.75rem; color:var(--champagne); }
     @media (max-width:600px) { .portal-nav-links { gap:0.75rem; } .stat-grid { grid-template-columns:1fr 1fr; } }
-  </style>
+    /* ── NAIL STATE ──
+     One number they can watch move, the way a fitness ring does. The ring
+     is drawn rather than described because a score you have to read twice
+     is a score nobody checks. */
+  .ns-card{background:linear-gradient(150deg,rgba(182,165,136,0.14),rgba(182,165,136,0.03));
+    border:1px solid rgba(182,165,136,0.28);padding:1.6rem 1.4rem;margin-bottom:1.25rem;text-align:center}
+  .ns-ring{width:168px;height:168px;margin:0 auto 0.9rem;display:block}
+  .ns-ring circle{fill:none;stroke-width:11;stroke-linecap:round}
+  .ns-track{stroke:rgba(182,165,136,0.18)}
+  .ns-arc{transition:stroke-dashoffset 1.1s cubic-bezier(0.22,1,0.36,1)}
+  .ns-num{font-family:'Cinzel',serif;font-size:2.6rem;fill:var(--espresso)}
+  .ns-of{font-family:'Josefin Sans',sans-serif;font-size:0.72rem;fill:var(--latte);letter-spacing:0.12em}
+  .ns-band{font-family:'Cinzel',serif;font-size:1.35rem;color:var(--espresso);margin-bottom:0.3rem}
+  .ns-line{font-family:'Josefin Sans',sans-serif;font-size:0.88rem;color:var(--latte);line-height:1.75;max-width:400px;margin:0 auto}
+  .ns-when{font-family:'Josefin Sans',sans-serif;font-size:0.7rem;color:var(--latte);margin-top:0.7rem;letter-spacing:0.1em;text-transform:uppercase}
+
+  .nf-row{display:flex;align-items:center;gap:0.75rem;padding:0.75rem 0;border-top:1px solid rgba(182,165,136,0.18)}
+  .nf-lab{flex:1;min-width:0}
+  .nf-name{font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:var(--espresso)}
+  .nf-hint{font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:var(--latte)}
+  .nf-scale{display:flex;gap:4px;flex-shrink:0}
+  .nf-scale button{width:30px;height:30px;border:1px solid rgba(182,165,136,0.35);background:transparent;
+    font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:var(--latte);cursor:pointer;border-radius:6px}
+  .nf-scale button.on{background:var(--espresso);color:var(--champagne);border-color:var(--espresso)}
+
+  .np-cols{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  @media (max-width:640px){ .np-cols{grid-template-columns:1fr} }
+  .np-col{background:var(--soft-white);border:1px solid rgba(182,165,136,0.22);padding:1.15rem 1.2rem}
+  .np-h{font-family:'Josefin Sans',sans-serif;font-size:0.64rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--champagne);margin-bottom:0.8rem}
+  .np-col li{font-family:'Josefin Sans',sans-serif;font-size:0.86rem;line-height:1.75;color:var(--espresso);
+    list-style:none;padding-left:1.1rem;position:relative;margin-bottom:0.7rem}
+  .np-col li::before{content:'✦';position:absolute;left:0;color:var(--champagne);font-size:0.7rem;top:0.35rem}
+  .np-care{background:rgba(200,120,120,0.08);border:1px solid rgba(200,120,120,0.3);padding:1rem 1.15rem;margin-top:1rem;
+    font-family:'Josefin Sans',sans-serif;font-size:0.8rem;line-height:1.7;color:#7a4040}
+
+  /* ── PERK WALLET ── */
+  .pw{background:linear-gradient(140deg,rgba(26,20,12,0.96),rgba(60,48,32,0.9));border:1px solid rgba(182,165,136,0.34);
+    padding:1.35rem 1.3rem;margin-bottom:1.5rem;color:#F5EEE8}
+  .pw-top{display:flex;justify-content:space-between;align-items:baseline;gap:0.8rem;flex-wrap:wrap;margin-bottom:1rem}
+  .pw-tier{font-family:'Cinzel',serif;font-size:1.25rem;color:#DDD0B8}
+  .pw-see{font-family:'Josefin Sans',sans-serif;font-size:0.68rem;letter-spacing:0.16em;text-transform:uppercase;
+    color:#C4A882;text-decoration:none;border-bottom:1px solid rgba(196,168,130,0.4);padding-bottom:2px}
+  .pw-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.7rem;margin-bottom:1rem}
+  .pw-stat{background:rgba(255,255,255,0.05);border:1px solid rgba(196,168,130,0.22);padding:0.85rem 0.7rem;text-align:center;border-radius:8px}
+  .pw-n{font-family:'Cinzel',serif;font-size:1.7rem;color:#DDD0B8;line-height:1}
+  .pw-l{font-family:'Josefin Sans',sans-serif;font-size:0.6rem;letter-spacing:0.13em;text-transform:uppercase;color:#a4967c;margin-top:0.35rem}
+  .pw-list{display:flex;flex-wrap:wrap;gap:0.4rem}
+  .pw-chip{font-family:'Josefin Sans',sans-serif;font-size:0.7rem;color:#DDD0B8;border:1px solid rgba(196,168,130,0.3);
+    padding:0.35rem 0.65rem;border-radius:100px}
+  .pw-chip.spent{opacity:0.42;text-decoration:line-through}
+  .pw-note{font-family:'Josefin Sans',sans-serif;font-size:0.74rem;color:#b8a889;line-height:1.7;margin-top:0.9rem}
+</style>
 </head>
 <body>
 
@@ -140,6 +191,7 @@
   <div class="portal-content">
 
     <div class="portal-tab active" id="tab-home">
+      <div id="perk-wallet"></div>
       <!-- Social-profile-style header -->
       <div id="profile-hero" style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;margin-bottom:1.75rem;padding:1.5rem;background:linear-gradient(135deg,rgba(182,165,136,0.10),rgba(182,165,136,0.02));border:1px solid rgba(182,165,136,0.2);">
         <div id="profile-avatar" style="width:78px;height:78px;border-radius:50%;background:linear-gradient(135deg,#C9B896,#8C7A5E);display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:2rem;color:#1A140C;flex-shrink:0;">—</div>
@@ -244,21 +296,10 @@
 
     <div class="portal-tab" id="tab-health">
       <h2 style="font-family:'Cinzel',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:0.4rem;">Your Nail Health</h2>
-      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:var(--latte);margin-bottom:1.5rem;max-width:560px;">A little journal, just for you. Log how your nails feel each visit and watch them get stronger over time — the whole point of the ZOLA method.</p>
-      <div id="health-trend" class="p-card" style="display:none;text-align:center;background:linear-gradient(135deg,rgba(182,165,136,0.12),transparent);"></div>
-      <div class="p-card">
-        <div class="p-card-title">How are your nails feeling today?</div>
-        <div id="health-stars" style="display:flex;gap:0.35rem;margin:0.5rem 0 1rem;font-size:2rem;cursor:pointer;">
-          <span data-r="1">☆</span><span data-r="2">☆</span><span data-r="3">☆</span><span data-r="4">☆</span><span data-r="5">☆</span>
-        </div>
-        <textarea id="health-note" rows="2" placeholder="Optional — stronger this month? less breakage? longer? Note anything you notice." style="width:100%;background:var(--soft-white);border:1px solid rgba(182,165,136,0.25);padding:0.75rem 1rem;font-family:'Josefin Sans',sans-serif;font-size:0.85rem;outline:none;resize:vertical;"></textarea>
-        <button class="btn-login" style="margin-top:0.75rem;" onclick="logHealth()">Log this check-in</button>
-        <div id="health-msg" style="display:none;font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:#3c8c50;margin-top:0.5rem;"></div>
-      </div>
-      <div class="p-card">
-        <div class="p-card-title">Your journey</div>
-        <div id="health-timeline"><div style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);">No check-ins yet. Your first one starts the story ✦</div></div>
-      </div>
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:var(--latte);margin-bottom:1.5rem;max-width:560px;">Tell us what state your nails are actually in. You get back two lists — what you can do this week, and what we'll do in the chair.</p>
+      <div id="nail-state"></div>
+      <div id="nail-plan"></div>
+      <div id="nail-history"></div>
     </div>
 
     <div class="portal-tab" id="tab-messages">
@@ -304,6 +345,7 @@
 <script src="js/analytics.js"></script>
 <script>
 let authToken = '';
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 let profileData = {};
 let qrInterval = null;
 let qrExpireInterval = null;
@@ -350,6 +392,8 @@ function doLogout() {
 }
 
 async function loadDashboard(member) {
+  // What their membership is giving them, on the screen they land on.
+  loadWallet();
   document.getElementById('portal-login').style.display = 'none';
   document.getElementById('portal-dashboard').style.display = 'block';
   profileData = member;
@@ -518,67 +562,194 @@ function setAccent(color) {
   if (profileData && profileData.memberId) localStorage.setItem('zlux_accent_' + profileData.memberId, color);
 }
 
-// ── Nail Health tracker (Black Card) ──
-let healthRating = 0;
-document.addEventListener('click', e => {
-  const s = e.target.closest && e.target.closest('#health-stars span');
-  if (!s) return;
-  healthRating = Number(s.dataset.r);
-  document.querySelectorAll('#health-stars span').forEach(x => { x.textContent = Number(x.dataset.r) <= healthRating ? '★' : '☆'; });
-});
-async function loadHealth() {
+
+/* ══════════════════════════════════════════════════════════════════
+   THE WALLET — what your membership is giving you, on the screen you
+   land on. A benefit nobody can see is a benefit nobody renews for.
+   ══════════════════════════════════════════════════════════════════ */
+let WALLET = null;
+
+async function loadWallet(){
+  const el = document.getElementById('perk-wallet');
+  if (!el) return;
+  const id = (localStorage.getItem('zlux_member_id') || localStorage.getItem('zola_member_id') || '').trim().toUpperCase();
+  if (!id) { el.innerHTML = ''; return; }
+  try{
+    const r = await fetch('/api/perks?action=wallet&member_id=' + encodeURIComponent(id));
+    if (!r.ok) throw new Error('none');
+    WALLET = await r.json();
+  }catch(_){ el.innerHTML = ''; return; }
+
+  const w = WALLET;
+  const free = w.free_services;
+  const chips = w.perks
+    .filter(function(p){ return p.kind !== 'free_service'; })
+    .map(function(p){ return '<span class="pw-chip">' + esc(p.label) + '</span>'; }).join('');
+  const extras = (w.extras || []).map(function(x){
+    return '<span class="pw-chip" style="border-color:#C4A882">' + esc(x.label) + '</span>';
+  }).join('');
+
+  el.innerHTML =
+    '<div class="pw">'
+    + '<div class="pw-top"><div class="pw-tier">' + esc(w.tier_label) + '</div>'
+      + '<a class="pw-see" href="welcome.html?m=' + encodeURIComponent(w.member_id) + '">See it all again</a></div>'
+    + '<div class="pw-grid">'
+      + '<div class="pw-stat"><div class="pw-n">' + free.left + '</div><div class="pw-l">free ' + (free.left === 1 ? 'service' : 'services') + ' left</div></div>'
+      + '<div class="pw-stat"><div class="pw-n">' + (w.addon_discount_pct === 100 ? 'FREE' : w.addon_discount_pct + '%') + '</div><div class="pw-l">every add-on</div></div>'
+      + '<div class="pw-stat"><div class="pw-n">' + w.window.days_ahead + '</div><div class="pw-l">days of calendar</div></div>'
+    + '</div>'
+    + '<div class="pw-list">' + extras + chips + '</div>'
+    + '<div class="pw-note">'
+      + (free.left > 0
+          ? 'Your ' + free.left + ' free ' + (free.left === 1 ? 'service applies' : 'services apply') + ' automatically at checkout — no code to remember.'
+          : 'You have used all ' + free.total + ' this month. They come back on ' + (w.next_billing_at ? niceD(w.next_billing_at) : 'your renewal') + '.')
+      + (w.window.extra > 0 ? ' You also see ' + w.window.extra + ' days further than guests.' : '')
+    + '</div></div>';
+}
+
+function niceD(s){
+  const d = new Date(String(s).slice(0,10) + 'T12:00:00');
+  return isNaN(d) ? String(s) : d.toLocaleDateString('en-US',{month:'long',day:'numeric'});
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   NAIL HEALTH — where they are, and what each of us does about it.
+   ══════════════════════════════════════════════════════════════════ */
+let NAIL = null, nailAnswers = {}, nailGoal = '';
+
+async function loadHealth(){
   if (!authToken) return;
-  try {
-    const r = await fetch('/api/nail-health', { headers:{'Authorization':'Bearer '+authToken} });
-    if (!r.ok) return;
-    const d = await r.json();
-    renderHealth(d);
-  } catch (_) {}
+  const state = document.getElementById('nail-state');
+  if (!state) return;
+  try{
+    const r = await fetch('/api/nail-health?action=assessment', { headers:{'Authorization':'Bearer '+authToken} });
+    NAIL = await r.json();
+  }catch(_){ state.innerHTML = '<div class="p-card">Could not load your nail health.</div>'; return; }
+  if (NAIL.latest){ nailAnswers = NAIL.latest.answers || {}; nailGoal = NAIL.latest.goal || ''; }
+  renderNail();
 }
-function starStr(n) { return '★★★★★☆☆☆☆☆'.slice(5 - n, 10 - n); }
-function renderHealth(d) {
-  const entries = d.entries || [];
-  const tl = document.getElementById('health-timeline');
-  const trendBox = document.getElementById('health-trend');
-  if (!entries.length) {
-    tl.innerHTML = '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.85rem;color:var(--latte);">No check-ins yet. Your first one starts the story ✦</div>';
-    trendBox.style.display = 'none';
-    return;
-  }
-  if (entries.length > 1) {
-    trendBox.style.display = 'block';
-    const t = d.trend;
-    const msg = t > 0 ? `Your nails are <strong style="color:var(--champagne);">healthier</strong> than when you started — up ${t} point${t!==1?'s':''} ✦ Keep going.`
-      : t === 0 ? 'Holding steady — consistency is how nails truly grow. ✦'
-      : 'A dip this stretch — let\'s talk about it at your next visit so we can adjust.';
-    trendBox.innerHTML = `<div style="font-family:'Cinzel',serif;font-size:1.1rem;color:var(--espresso);margin-bottom:0.35rem;">${entries.length} check-ins logged</div><div style="font-family:'Josefin Sans',sans-serif;font-size:0.86rem;color:var(--latte);line-height:1.6;">${msg}</div>`;
-  } else {
-    trendBox.style.display = 'none';
-  }
-  tl.innerHTML = entries.slice().reverse().map(e => `
-    <div class="health-entry">
-      <div class="health-stars-sm">${starStr(e.rating)}</div>
-      <div style="flex:1;">
-        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.75rem;color:var(--latte);">${new Date(e.created_at.replace(' ','T')+'Z').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</div>
-        ${e.note ? `<div style="font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:var(--espresso);margin-top:0.15rem;">${e.note.replace(/</g,'&lt;')}</div>` : ''}
-      </div>
-    </div>`).join('');
+
+// The score as a ring, because a number you have to read twice is a number
+// nobody checks. Colour follows the band rather than being decorative.
+function nailRing(score){
+  const R = 68, C = 2 * Math.PI * R;
+  const pct = Math.max(0, Math.min(100, score)) / 100;
+  const colour = score >= 85 ? '#5f9e6e' : (score >= 68 ? '#8C9E5F' : (score >= 45 ? '#C4A882' : '#c48282'));
+  return '<svg class="ns-ring" viewBox="0 0 168 168">'
+    + '<circle class="ns-track" cx="84" cy="84" r="' + R + '"/>'
+    + '<circle class="ns-arc" cx="84" cy="84" r="' + R + '" stroke="' + colour + '"'
+      + ' stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - pct)).toFixed(1) + '"'
+      + ' transform="rotate(-90 84 84)"/>'
+    + '<text class="ns-num" x="84" y="88" text-anchor="middle">' + score + '</text>'
+    + '<text class="ns-of" x="84" y="108" text-anchor="middle">OUT OF 100</text>'
+    + '</svg>';
 }
-async function logHealth() {
-  if (!healthRating) { const m=document.getElementById('health-msg'); m.style.display='block'; m.style.color='#b43232'; m.textContent='Tap a star first — how do your nails feel?'; return; }
-  const note = document.getElementById('health-note').value.trim();
-  try {
-    const r = await fetch('/api/nail-health', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+authToken}, body: JSON.stringify({ rating: healthRating, note }) });
+
+function renderNail(){
+  const state = document.getElementById('nail-state');
+  const planEl = document.getElementById('nail-plan');
+  const histEl = document.getElementById('nail-history');
+  const L = NAIL.latest;
+
+  state.innerHTML = L
+    ? '<div class="ns-card">' + nailRing(L.score)
+      + '<div class="ns-band">' + esc(L.band) + '</div>'
+      + '<div class="ns-line">' + esc(L.plan.band_line) + '</div>'
+      + '<div class="ns-when">Last checked ' + niceD(new Date(L.created_ts).toISOString()) + '</div></div>'
+    : '<div class="ns-card"><div class="ns-band">Let\'s find out where you are</div>'
+      + '<div class="ns-line">Answer eight quick questions and you\'ll get a plan — what you do at home, and what we do in the chair.</div></div>';
+
+  // The questionnaire. Kept on screen after the first answer rather than
+  // hidden behind an edit button, because nails change and re-checking
+  // should be as easy as the first time.
+  state.innerHTML += '<div class="p-card">'
+    + '<div class="p-card-title">How are they right now?</div>'
+    + '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.76rem;color:var(--latte);margin-bottom:0.5rem;">'
+      + 'None · A little · Quite a bit · A lot</div>'
+    + (NAIL.factors || []).map(function(f){
+        const v = Number(nailAnswers[f.key]) || 0;
+        return '<div class="nf-row"><div class="nf-lab">'
+          + '<div class="nf-name">' + esc(f.label) + '</div>'
+          + '<div class="nf-hint">' + esc(f.hint) + '</div></div>'
+          + '<div class="nf-scale">'
+          + [0,1,2,3].map(function(n){
+              return '<button class="' + (v === n ? 'on' : '') + '" onclick="setNail(\'' + f.key + '\',' + n + ')">'
+                + ['–','1','2','3'][n] + '</button>';
+            }).join('')
+          + '</div></div>';
+      }).join('')
+    + '<div style="margin-top:1.1rem;"><div class="nf-name" style="margin-bottom:0.5rem;">What do you actually want?</div>'
+      + '<div class="pw-list">' + (NAIL.goals || []).map(function(g){
+          return '<button class="pw-chip" style="cursor:pointer;color:' + (nailGoal === g.key ? '#1A140C' : 'var(--latte)')
+            + ';background:' + (nailGoal === g.key ? 'var(--champagne)' : 'transparent')
+            + ';border-color:rgba(182,165,136,0.4)" onclick="setGoal(\'' + g.key + '\')">' + esc(g.label) + '</button>';
+        }).join('') + '</div></div>'
+    + '<button class="btn-login" style="margin-top:1.1rem;" onclick="saveNail(this)">'
+      + (L ? 'Update my plan' : 'Build my plan') + '</button>'
+    + '</div>';
+
+  planEl.innerHTML = L ? planHtml(L.plan) : '';
+
+  // History is what proves it is working, which is the whole point of
+  // tracking it — so it is Black Card's, along with Zahra's notes.
+  const hist = NAIL.history || [];
+  histEl.innerHTML = (NAIL.full_access && hist.length > 1)
+    ? '<div class="p-card"><div class="p-card-title">Your progress</div>'
+      + hist.slice().reverse().map(function(h){
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.55rem 0;border-top:1px solid rgba(182,165,136,0.18);font-family:\'Josefin Sans\',sans-serif;font-size:0.85rem;">'
+            + '<span style="color:var(--latte)">' + niceD(new Date(h.created_ts).toISOString()) + '</span>'
+            + '<span style="color:var(--espresso)">' + h.score + ' · ' + esc(h.band) + '</span></div>';
+        }).join('')
+      + ((NAIL.notes || []).length
+          ? '<div style="margin-top:1rem;"><div class="np-h">From Zahra</div>'
+            + NAIL.notes.map(function(n){
+                return '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.86rem;line-height:1.75;color:var(--espresso);padding:0.5rem 0;">'
+                  + esc(n.note) + '</div>';
+              }).join('') + '</div>'
+          : '')
+      + '</div>'
+    : (!NAIL.full_access && L
+        ? '<div class="p-card" style="text-align:center;"><div class="p-card-title">Watch it improve</div>'
+          + '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.85rem;color:var(--latte);line-height:1.75;">'
+          + 'Black Card keeps every check-in, so you can see the line move — plus a quarterly assessment Zahra writes herself.</p>'
+          + '<a href="memberships.html" class="btn-login" style="display:inline-block;text-decoration:none;margin-top:0.7rem;">See Black Card</a></div>'
+        : '');
+}
+
+function planHtml(p){
+  return '<div class="np-cols">'
+    + '<div class="np-col"><div class="np-h">What you can do</div><ul>'
+      + p.home.map(function(l){ return '<li>' + esc(l) + '</li>'; }).join('') + '</ul></div>'
+    + '<div class="np-col"><div class="np-h">What we\'ll do in the chair</div><ul>'
+      + p.studio.map(function(l){ return '<li>' + esc(l) + '</li>'; }).join('') + '</ul></div>'
+    + '</div>'
+    // Nail care is not medicine, and the difference matters most to the
+    // person who has the thing this cannot help with.
+    + '<div class="np-care"><strong>This is nail care, not medical advice.</strong> '
+      + 'See a doctor rather than us for ' + p.red_flags.join(', ') + '.'
+      + (p.see_someone ? ' You told us your nails are tender — please get that looked at before your next set.' : '')
+    + '</div>';
+}
+
+function setNail(key, v){ nailAnswers[key] = v; renderNail(); }
+function setGoal(g){ nailGoal = g; renderNail(); }
+
+async function saveNail(btn){
+  if (btn){ btn.disabled = true; btn.textContent = 'Working it out…'; }
+  try{
+    const r = await fetch('/api/nail-health', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+authToken},
+      body: JSON.stringify({ action:'assessment', answers: nailAnswers, goal: nailGoal }),
+    });
     const d = await r.json();
-    const m = document.getElementById('health-msg');
-    m.style.display = 'block';
-    if (r.ok) {
-      m.style.color = '#3c8c50'; m.textContent = 'Logged ✦ Your journey is updating.';
-      healthRating = 0; document.getElementById('health-note').value = '';
-      document.querySelectorAll('#health-stars span').forEach(x => x.textContent = '☆');
-      loadHealth();
-    } else { m.style.color = '#b43232'; m.textContent = d.error || 'Could not save — try again.'; }
-  } catch (_) {}
+    if (d.error) throw new Error(d.error);
+    await loadHealth();
+    document.getElementById('nail-plan').scrollIntoView({ behavior:'smooth', block:'start' });
+  }catch(e){
+    if (btn){ btn.disabled = false; btn.textContent = 'Build my plan'; }
+    alert(e.message || 'Could not save that.');
+  }
 }
 
 function startQrCycle() {

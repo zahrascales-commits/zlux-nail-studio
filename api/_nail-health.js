@@ -52,6 +52,56 @@ module.exports = async (req, res) => {
       return res.json({ ok: true });
     }
 
+    /* ── THE ASSESSMENT ───────────────────────────────────────────
+       What state are your nails actually in, and what do we each do
+       about it. The plan is rules-based and lives in _nail-plan, so
+       the same answers always give the same advice and Zahra can read
+       every rule and disagree with any of it. */
+    const plan = require('./_nail-plan');
+    await plan.ensurePlanTables();
+
+    if (req.method === 'GET' && req.query.action === 'assessment') {
+      const rows = await query(
+        'SELECT id, answers, score, band, goal, created_ts FROM nail_assessments WHERE member_id = ? ORDER BY created_ts DESC LIMIT 24',
+        [memberId]);
+      const latest = rows[0] || null;
+      let notes = [];
+      try {
+        notes = await query('SELECT note, author, created_ts FROM nail_notes WHERE member_id = ? ORDER BY created_ts DESC LIMIT 10', [memberId]);
+      } catch (_) {}
+      return res.json({
+        factors: plan.FACTORS,
+        goals: plan.GOALS,
+        red_flags: plan.RED_FLAGS,
+        // Everyone can see where they stand; the full programme and the
+        // history that shows it working are what Black Card is for.
+        full_access: isBlackCard,
+        latest: latest ? {
+          id: latest.id,
+          score: Number(latest.score),
+          band: latest.band,
+          goal: latest.goal,
+          answers: JSON.parse(latest.answers || '{}'),
+          created_ts: Number(latest.created_ts),
+          plan: plan.buildPlan(JSON.parse(latest.answers || '{}'), latest.goal),
+        } : null,
+        history: (isBlackCard ? rows : rows.slice(0, 1)).map(function (r) {
+          return { id: r.id, score: Number(r.score), band: r.band, created_ts: Number(r.created_ts) };
+        }),
+        notes: isBlackCard ? notes : [],
+      });
+    }
+
+    if (req.method === 'POST' && (req.body || {}).action === 'assessment') {
+      const answers = (req.body || {}).answers || {};
+      const goal = String((req.body || {}).goal || '');
+      const built = plan.buildPlan(answers, goal);
+      await execute(
+        'INSERT INTO nail_assessments (member_id, answers, score, band, goal, created_ts) VALUES (?,?,?,?,?,?)',
+        [memberId, JSON.stringify(answers), built.score, built.band, goal, Date.now()]);
+      return res.json({ ok: true, score: built.score, band: built.band, plan: built });
+    }
+
     if (req.method === 'DELETE') {
       const { id } = req.body || {};
       await execute('DELETE FROM nail_health WHERE id = ? AND member_id = ?', [Number(id), memberId]);
