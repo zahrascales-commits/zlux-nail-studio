@@ -61,6 +61,231 @@ async function handler(req, res) {
       return res.json({ found: true, client: row });
     }
 
+    /* ── ONE CLIENT, FROM ANYWHERE ────────────────────────────────────
+       Any screen that names a client can open this — Studio Manager, and
+       the artists' own portal. Artists see the same history Zahra sees,
+       because somebody about to do a set needs to know what happened last
+       time. They can add notes; they cannot edit the record.            */
+    async function whoIsAsking() {
+      if (req.headers['x-ceo-password'] === CEO_PASSWORD) return { owner: true, name: 'Zahra' };
+      const tid = Number(req.headers['x-team-id'] || req.query.member_id || (req.body || {}).member_id);
+      const pin = String(req.headers['x-team-pin'] || req.query.pin || (req.body || {}).pin || '');
+      if (!tid || !pin) return null;
+      const a = await queryOne('SELECT id, name FROM team_members WHERE id=? AND pin=? AND active=1', [tid, pin]);
+      return a ? { owner: false, name: a.name, member_id: a.id } : null;
+    }
+
+    // Found by whatever the calling screen happens to know about them.
+    async function findClient(q) {
+      const id = Number(q.id) || 0;
+      const nm = String(q.name || '').trim();
+      const em = String(q.email || '').trim().toLowerCase();
+      const ph = String(q.phone || '').replace(/\D/g, '');
+      let c = null;
+      if (id) c = await queryOne('SELECT * FROM clients WHERE id=?', [id]);
+      if (!c && em) c = await queryOne('SELECT * FROM clients WHERE lower(email)=?', [em]);
+      if (!c && ph) c = await queryOne(
+        "SELECT * FROM clients WHERE replace(replace(replace(replace(phone,'-',''),' ',''),'(',''),')','')=?", [ph]);
+      if (!c && nm) c = await queryOne('SELECT * FROM clients WHERE lower(name)=lower(?)', [nm]);
+      return c;
+    }
+
+    async function ensureNotes() {
+      await execute(`CREATE TABLE IF NOT EXISTS client_notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER, client_name TEXT, note TEXT, author TEXT,
+        pinned INTEGER DEFAULT 0, ts INTEGER
+      )`).catch(() => {});
+    }
+
+    /* Every visit a client has ever had: when, who did it, what they had,
+       and what they paid. Assembled from two tables because that is where
+       the truth lives — the money sits on the booking, the artist sits on
+       the studio calendar, and neither alone can answer "who did her nails
+       in March and what did she spend". Written once so the owner's view
+       and the artist's view can never drift apart. */
+    async function buildHistory(client) {
+      const em = String(client.email || '').trim().toLowerCase();
+      const nm = String(client.name || '').trim();
+      const ph = String(client.phone || '').replace(/\D/g, '');
+
+      let teamRows = [];
+      try {
+        teamRows = await query(
+          `SELECT a.id, a.client_name, a.client_phone, a.service, a.date, a.time, a.notes, a.status,
+                  m.name AS provider
+             FROM team_appointments a
+             LEFT JOIN team_members m ON m.id = a.team_member_id
+            WHERE (? <> '' AND lower(a.client_name) = lower(?))
+               OR (? <> '' AND replace(replace(replace(replace(a.client_phone,'-',''),' ',''),'(',''),')','') = ?)
+            ORDER BY a.date DESC, a.time DESC`,
+          [nm, nm, ph, ph]);
+      } catch (_) {}
+
+      let payRows = [];
+      try {
+        const main = require('./_db');
+        payRows = await main.query(
+          `SELECT guest_name, guest_email, service, addons, appointment_date, appointment_time,
+                  status, total_cents, deposit_cents, deposit_paid
+             FROM appointments
+            WHERE (? <> '' AND lower(COALESCE(guest_email,'')) = ?)
+               OR (? <> '' AND lower(COALESCE(guest_name,'')) = lower(?))
+            ORDER BY appointment_date DESC, appointment_time DESC`,
+          [em, em, nm, nm]);
+      } catch (_) {}
+
+      const money = {};
+      for (const p of payRows) money[p.appointment_date + ' ' + p.appointment_time] = p;
+
+      const seen = new Set();
+      const visits = [];
+      const add = (v) => {
+        const k = v.date + ' ' + v.time;
+        if (seen.has(k)) return;
+        seen.add(k);
+        visits.push(v);
+      };
+
+      for (const t of teamRows) {
+        const p = money[t.date + ' ' + t.time];
+        const conf = (String(t.notes || '').match(/ZOLA-\d+/) || [''])[0];
+        let addons = [];
+        try { addons = JSON.parse((p && p.addons) || '[]'); } catch (_) {}
+        add({
+          date: t.date, time: t.time,
+          service: t.service || (p && p.service) || '',
+          addons, provider: t.provider || '',
+          total_cents: p ? Number(p.total_cents) || 0 : null,
+          deposit_cents: p ? Number(p.deposit_cents) || 0 : 0,
+          deposit_paid: p ? !!Number(p.deposit_paid) : false,
+          status: t.status || (p && p.status) || 'scheduled',
+          confirmation: conf,
+        });
+      }
+      for (const p of payRows) {
+        let addons = [];
+        try { addons = JSON.parse(p.addons || '[]'); } catch (_) {}
+        add({
+          date: p.appointment_date, time: p.appointment_time,
+          service: p.service || '', addons, provider: '',
+          total_cents: Number(p.total_cents) || 0,
+          deposit_cents: Number(p.deposit_cents) || 0,
+          deposit_paid: !!Number(p.deposit_paid),
+          status: p.status || 'scheduled', confirmation: '',
+        });
+      }
+
+      visits.sort((a, b) => String(b.date + b.time).localeCompare(String(a.date + a.time)));
+      const counted = visits.filter(v => String(v.status || '').toLowerCase() !== 'cancelled');
+      // Only deposit-paid visits count as money spent, the same rule the
+      // dashboard uses. A client's lifetime value and the studio's revenue
+      // disagreeing would make both of them useless.
+      const paid = counted.filter(v => v.deposit_paid);
+      return {
+        visits,
+        totals: {
+          visits: counted.length,
+          cancelled: visits.length - counted.length,
+          paid_visits: paid.length,
+          spent_cents: paid.reduce((s2, v) => s2 + (v.total_cents || 0), 0),
+          first_visit: counted.length ? counted[counted.length - 1].date : '',
+          last_visit: counted.length ? counted[0].date : '',
+        },
+      };
+    }
+
+    if (req.method === 'GET' && action === 'profile') {
+      const who = await whoIsAsking();
+      if (!who) return res.status(401).json({ error: 'Unauthorized' });
+      await ensureNotes();
+
+      let client = await findClient(req.query);
+      // Somebody who has booked but was never filed. Show what we know
+      // rather than a dead end — a missing row is not a missing person.
+      if (!client) {
+        client = {
+          id: 0, name: String(req.query.name || '').trim(),
+          email: String(req.query.email || ''), phone: String(req.query.phone || ''),
+          likes: '', dislikes: '', notes: '', visits: 0, unfiled: true,
+        };
+      }
+
+      let notes = [];
+      try {
+        notes = await query(
+          `SELECT id, note, author, pinned, ts FROM client_notes
+            WHERE (client_id > 0 AND client_id = ?) OR (? <> '' AND lower(client_name) = lower(?))
+            ORDER BY pinned DESC, ts DESC LIMIT 60`,
+          [Number(client.id) || 0, client.name || '', client.name || '']);
+      } catch (_) {}
+
+      let visits = [], totals = {};
+      try {
+        const built = await buildHistory(client);
+        visits = built.visits; totals = built.totals;
+      } catch (_) {}
+
+      // Membership, if any. An artist should know before someone sits down
+      // whether this visit is already covered.
+      let membership = null;
+      try {
+        const main = require('./_db');
+        const mem = await main.queryOne(
+          'SELECT member_id, tier, date_of_birth, membership_started_at FROM members WHERE lower(email)=? OR lower(full_name)=lower(?)',
+          [String(client.email || '').toLowerCase(), client.name || '']);
+        if (mem) {
+          let age = null;
+          const dob = String(mem.date_of_birth || '').slice(0, 10);
+          if (/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+            const d = new Date(dob + 'T12:00:00'), n = new Date();
+            age = n.getFullYear() - d.getFullYear() -
+              ((n.getMonth() < d.getMonth() || (n.getMonth() === d.getMonth() && n.getDate() < d.getDate())) ? 1 : 0);
+          }
+          membership = { member_id: mem.member_id, tier: mem.tier, since: mem.membership_started_at, age };
+        }
+      } catch (_) {}
+
+      return res.json({ client, notes, visits, totals, membership, can_edit: who.owner, viewer: who.name });
+    }
+
+    // Notes are append-only and signed. A note that decides how somebody's
+    // nails get done should say who wrote it and never be quietly rewritten.
+    if (req.method === 'POST' && action === 'note') {
+      const who = await whoIsAsking();
+      if (!who) return res.status(401).json({ error: 'Unauthorized' });
+      const body = req.body || {};
+      const text = String(body.note || '').trim();
+      if (!text) return res.status(400).json({ error: 'Write something first.' });
+      await ensureNotes();
+      const client = await findClient(body);
+      await execute(
+        'INSERT INTO client_notes (client_id, client_name, note, author, pinned, ts) VALUES (?,?,?,?,?,?)',
+        [Number(client && client.id) || 0, String((client && client.name) || body.name || ''),
+         text.slice(0, 800), who.name, body.pinned ? 1 : 0, Date.now()]);
+      return res.json({ ok: true });
+    }
+
+    if (req.method === 'PUT' && action === 'pin_note') {
+      const who = await whoIsAsking();
+      if (!who || !who.owner) return res.status(401).json({ error: 'Unauthorized' });
+      const b = req.body || {};
+      await execute('UPDATE client_notes SET pinned=? WHERE id=?', [b.pinned ? 1 : 0, Number(b.id)]);
+      return res.json({ ok: true });
+    }
+
+    // Kept for the owner's Clients tab, now built on the shared assembly.
+    if (req.method === 'GET' && action === 'history') {
+      if (req.headers['x-ceo-password'] !== CEO_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
+      const client = await queryOne('SELECT * FROM clients WHERE id=?', [Number(req.query.id)]);
+      if (!client) return res.status(404).json({ error: 'No such client' });
+      const built = await buildHistory(client);
+      return res.json({
+        client: { id: client.id, name: client.name, email: client.email, phone: client.phone },
+        visits: built.visits, totals: built.totals,
+      });
+    }
+
     // ── OWNER ONLY ──
     if (req.headers['x-ceo-password'] !== CEO_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -89,109 +314,6 @@ async function handler(req, res) {
     if (req.method === 'DELETE') {
       await execute('DELETE FROM clients WHERE id=?', [Number((req.body || {}).id)]);
       return res.json({ ok: true });
-    }
-
-    /* ── OWNER: one client's whole history ────────────────────────────
-       Every visit they have ever had: when, who did it, what they had,
-       and what they paid. Assembled from two tables because that is where
-       the truth actually lives — the money is on the booking, the artist
-       is on the studio calendar — and neither alone can answer "who did
-       her nails in March and what did she spend". */
-    if (req.method === 'GET' && action === 'history') {
-      if (req.headers['x-ceo-password'] !== CEO_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
-      const client = await queryOne('SELECT * FROM clients WHERE id=?', [Number(req.query.id)]);
-      if (!client) return res.status(404).json({ error: 'No such client' });
-
-      const em = String(client.email || '').trim().toLowerCase();
-      const nm = String(client.name || '').trim();
-      const ph = String(client.phone || '').replace(/\D/g, '');
-
-      // The studio calendar: who served them, and when.
-      let teamRows = [];
-      try {
-        teamRows = await query(
-          `SELECT a.id, a.client_name, a.client_phone, a.service, a.date, a.time, a.notes, a.status,
-                  m.name AS provider
-             FROM team_appointments a
-             LEFT JOIN team_members m ON m.id = a.team_member_id
-            WHERE (? <> '' AND lower(a.client_name) = lower(?))
-               OR (? <> '' AND replace(replace(replace(replace(a.client_phone,'-',''),' ',''),'(',''),')','') = ?)
-            ORDER BY a.date DESC, a.time DESC`,
-          [nm, nm, ph, ph]);
-      } catch (_) {}
-
-      // The booking ledger: what it came to.
-      let payRows = [];
-      try {
-        const main = require('./_db');
-        payRows = await main.query(
-          `SELECT guest_name, guest_email, service, addons, appointment_date, appointment_time,
-                  status, total_cents, deposit_cents, deposit_paid
-             FROM appointments
-            WHERE (? <> '' AND lower(COALESCE(guest_email,'')) = ?)
-               OR (? <> '' AND lower(COALESCE(guest_name,'')) = lower(?))
-            ORDER BY appointment_date DESC, appointment_time DESC`,
-          [em, em, nm, nm]);
-      } catch (_) {}
-
-      // Same visit, two records. Date plus time is the join.
-      const money = {};
-      for (const p of payRows) money[p.appointment_date + ' ' + p.appointment_time] = p;
-
-      const seen = new Set();
-      const visits = [];
-      const add = (v) => {
-        const k = v.date + ' ' + v.time;
-        if (seen.has(k)) return;
-        seen.add(k);
-        visits.push(v);
-      };
-
-      for (const t of teamRows) {
-        const p = money[t.date + ' ' + t.time];
-        const conf = (String(t.notes || '').match(/ZOLA-\d+/) || [''])[0];
-        let addons = [];
-        try { addons = JSON.parse((p && p.addons) || '[]'); } catch (_) {}
-        add({
-          date: t.date, time: t.time,
-          service: t.service || (p && p.service) || '',
-          addons,
-          provider: t.provider || '',
-          total_cents: p ? Number(p.total_cents) || 0 : null,
-          deposit_cents: p ? Number(p.deposit_cents) || 0 : 0,
-          deposit_paid: p ? !!Number(p.deposit_paid) : false,
-          status: t.status || (p && p.status) || 'scheduled',
-          confirmation: conf,
-        });
-      }
-      // Anything on the ledger with no calendar entry still belongs in her
-      // history — dropping it would understate what she has spent.
-      for (const p of payRows) {
-        let addons = [];
-        try { addons = JSON.parse(p.addons || '[]'); } catch (_) {}
-        add({
-          date: p.appointment_date, time: p.appointment_time,
-          service: p.service || '', addons, provider: '',
-          total_cents: Number(p.total_cents) || 0,
-          deposit_cents: Number(p.deposit_cents) || 0,
-          deposit_paid: !!Number(p.deposit_paid),
-          status: p.status || 'scheduled', confirmation: '',
-        });
-      }
-
-      visits.sort((a, b) => String(b.date + b.time).localeCompare(String(a.date + a.time)));
-      const counted = visits.filter(v => String(v.status || '').toLowerCase() !== 'cancelled');
-      return res.json({
-        client: { id: client.id, name: client.name, email: client.email, phone: client.phone },
-        visits,
-        totals: {
-          visits: counted.length,
-          cancelled: visits.length - counted.length,
-          spent_cents: counted.reduce((s, v) => s + (v.total_cents || 0), 0),
-          first_visit: counted.length ? counted[counted.length - 1].date : '',
-          last_visit: counted.length ? counted[0].date : '',
-        },
-      });
     }
 
     // ── OWNER: list every client for the mass-message picker ──
