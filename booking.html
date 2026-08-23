@@ -1535,10 +1535,14 @@ async function loadBookingWindow(tier){
 
 // The last date this person may book, as a plain YYYY-MM-DD.
 function bkHorizon(){
-  if(!BK_WINDOW || !Number.isFinite(Number(BK_WINDOW.days_ahead))) return null;
+  // Fail open. If the window is missing, zero, or nonsense, the calendar
+  // stays fully bookable — a booking page that locks every date because a
+  // setting looked odd loses real money, and no perk is worth that.
+  const days = Number(BK_WINDOW && BK_WINDOW.days_ahead);
+  if(!Number.isFinite(days) || days < 1) return null;
   const d = new Date();
   d.setHours(12,0,0,0);
-  d.setDate(d.getDate() + Number(BK_WINDOW.days_ahead));
+  d.setDate(d.getDate() + days);
   return localDs(d);
 }
 

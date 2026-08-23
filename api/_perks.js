@@ -72,11 +72,20 @@ const TIERS = {
 const DEFAULT_PUBLIC_DAYS = 7;
 let PUBLIC_DAYS_AHEAD = DEFAULT_PUBLIC_DAYS;
 
+// Deliberately NOT the old `public_days_ahead` key. That one already exists
+// with the opposite meaning — in the old scheduling config it was a delay
+// before booking opened, and its stored value is 0. Read as a horizon it
+// turned "no delay for guests" into "guests may book zero days ahead", which
+// is every date locked and no public bookings at all. Same name, inverted
+// sense, live site: a separate key is the only safe way to hold this.
 async function publicDays() {
   try {
-    const row = await queryOne("SELECT value FROM site_settings WHERE key='public_days_ahead'");
+    const row = await queryOne("SELECT value FROM site_settings WHERE key='public_booking_horizon_days'");
     const n = Number(row && row.value);
-    if (Number.isFinite(n) && n >= 0 && n <= 365) { PUBLIC_DAYS_AHEAD = n; return n; }
+    // A horizon of zero closes the calendar to everyone who is not a member.
+    // If she ever wants that it has to be typed deliberately, not inherited
+    // from a setting that used to mean something else.
+    if (Number.isFinite(n) && n >= 1 && n <= 365) { PUBLIC_DAYS_AHEAD = n; return n; }
   } catch (_) {}
   return DEFAULT_PUBLIC_DAYS;
 }
@@ -273,9 +282,9 @@ module.exports = async function (req, res) {
     // Hand someone something extra — a make-good, a gift, a one-off offer.
     if (req.method === 'PUT' && action === 'public_window') {
       const n = Number((req.body || {}).days);
-      if (!Number.isFinite(n) || n < 0 || n > 365) return res.status(400).json({ error: 'Pick between 0 and 365 days.' });
+      if (!Number.isFinite(n) || n < 1 || n > 365) return res.status(400).json({ error: 'Pick between 1 and 365 days.' });
       await execute(
-        "INSERT INTO site_settings (key,value) VALUES ('public_days_ahead',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        "INSERT INTO site_settings (key,value) VALUES ('public_booking_horizon_days',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
         [String(Math.round(n))]);
       return res.json({ ok: true, days: Math.round(n) });
     }
