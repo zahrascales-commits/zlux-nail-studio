@@ -94,11 +94,17 @@ module.exports = async function (req, res) {
           }
         }
         const starts = [];
-        for (let mins = shifts.hToMin(sh.start); mins < shifts.hToMin(sh.end); mins += 60) {
+        const endMin = shifts.hToMin(sh.end);
+        for (let mins = shifts.hToMin(sh.start); mins < endMin; mins += 60) {
+          // The whole appointment has to finish inside the shift, not merely
+          // start inside it. Checking only that each hour begins before the
+          // end lets the last slot run over — a 7:30 start on a shift ending
+          // at 9:00 would have her working until 9:30.
+          if (mins + shifts.APPT_MINUTES > endMin) break;
           let fits = true;
           for (let k = 0; k * 60 < shifts.APPT_MINUTES; k++) {
             const step = shifts.minToH(mins + k * 60);
-            if (step >= sh.end || busy.has(step)) { fits = false; break; }
+            if (busy.has(step)) { fits = false; break; }
             if (sh.lunchStart && sh.lunchEnd && step >= sh.lunchStart && step < sh.lunchEnd) { fits = false; break; }
           }
           if (fits) starts.push(shifts.minToH(mins));
