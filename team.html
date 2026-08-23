@@ -350,6 +350,9 @@ function enter(){
   document.documentElement.style.setProperty('--gold-faint',COLOR+'14');
   loadSchedule();loadMyHours();loadBell();
   startJobPolling();mountPush();
+  // Artists get the same client profile Zahra sees — someone about to do a
+  // set needs to know what happened last time.
+  if(window.ZolaClient) window.ZolaClient.init({ member_id: MID, pin: PIN });
   setInterval(loadBell,30000);
 }
 
@@ -471,7 +474,7 @@ function renderToday(){
     html += '<div class="today-list">' + list.map(function(a){
       return '<div class="today-row">'
         + '<div class="today-time">' + fmtTime(a.time) + '</div>'
-        + '<div style="flex:1"><div class="today-who">' + esc(a.client_name||'Client') + '</div>'
+        + '<div style="flex:1"><div class="today-who">' + clientLink(a.client_name||'Client',{phone:a.client_phone||''}) + '</div>'
         + '<div class="today-what">' + esc(a.service||'—') + '</div></div></div>';
     }).join('') + '</div>';
   }
@@ -615,7 +618,7 @@ async function loadJobs(){
           + '<div style="font-family:Cinzel,serif;font-size:0.98rem;color:var(--cream);letter-spacing:0.03em;">' + esc(j.service||'Appointment') + '</div>'
           + '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;color:var(--gold);margin-top:0.25rem;">' + esc(j.date_label||j.date) + ' · ' + esc(j.time_label||j.time) + '</div>'
           + '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.76rem;color:var(--muted);margin-top:0.2rem;">'
-            + esc(j.client_name||'Client')
+            + clientLink(j.client_name||'Client')
             + ' · offered to ' + j.offered_to + ' · ' + jobCountdown(j.expires_ts)
           + '</div>'
           + '<button class="mini mini-gold" style="margin-top:0.75rem;width:100%;" onclick="takeJob(\'' + esc(j.confirmation) + '\',this)">Confirm — take this one</button>'
@@ -776,7 +779,7 @@ async function loadTeamInspo(){
     el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0.8rem">'
       +rows.map(p=>'<div style="border:1px solid var(--border);background:var(--card);padding:0.5rem">'
         +'<img src="'+p.data_url+'" style="width:100%;height:140px;object-fit:cover;display:block" alt="">'
-        +'<div style="font-family:\'Cinzel\',serif;font-size:0.85rem;color:var(--cream);margin-top:0.4rem">'+esc(p.client_name||'Client')+'</div>'
+        +'<div style="font-family:\'Cinzel\',serif;font-size:0.85rem;color:var(--cream);margin-top:0.4rem">'+clientLink(p.client_name||'Client')+'</div>'
         +'<div style="font-size:0.62rem;color:var(--muted)">'+esc(p.service||'')+(p.appt_date?' · '+p.appt_date:'')+'</div>'
         +(p.mine?'<div style="font-size:0.6rem;color:#8fc79c;margin-top:0.2rem">Yours</div>':'<div style="font-size:0.6rem;color:var(--gold);margin-top:0.2rem">Still open — confirm to keep it</div>')
         +'</div>').join('')+'</div>';
@@ -850,7 +853,7 @@ function wcRenderDay(){
         '<div style="display:flex;gap:0.7rem;align-items:flex-start;border-top:1px solid var(--border);padding:0.6rem 0">'
         + '<div style="min-width:74px;font-size:0.82rem;color:#c9a9e0;font-weight:600">'+fmtTime(a.time)+'</div>'
         + '<div style="flex:1">'
-          + '<div style="font-size:0.88rem;color:var(--cream)">'+esc(a.client_name||'Client')+'</div>'
+          + '<div style="font-size:0.88rem;color:var(--cream)">'+clientLink(a.client_name||'Client',{phone:a.client_phone||''})+'</div>'
           + '<div style="font-size:0.73rem;color:var(--muted)">'+esc(a.service||'—')+'</div>'
         + '</div></div>').join('')
     : (sh ? '<div style="font-size:0.78rem;color:var(--muted)">No clients booked yet — your hours are still yours.</div>' : '');
@@ -988,6 +991,15 @@ async function sendMsg(){
 }
 
 function hdr(){return{'Content-Type':'application/json','X-Team-Id':String(MID),'X-Team-Pin':PIN};}
+// Any client name in the portal opens their profile.
+function openClient(who){ if(window.ZolaClient) window.ZolaClient.open(who); }
+function clientLink(name, extra){
+  if(!name) return 'Client';
+  const d = Object.assign({name:name}, extra||{});
+  return '<a href="#" onclick="event.preventDefault();event.stopPropagation();openClient('
+    + esc(JSON.stringify(d)).replace(/"/g,'&quot;') + ')" '
+    + 'style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--gold)">' + esc(name) + '</a>';
+}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2400);}
 
@@ -1023,6 +1035,7 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
   if(s){try{const o=JSON.parse(s);MID=o.MID;PIN=o.PIN;NAME=o.NAME;COLOR=o.COLOR||'#B6A588';enter();}catch{}}
 })();
 </script>
+<script src="js/client-profile.js"></script>
 <script src="js/push.js"></script>
 <script src="js/pwa.js"></script>
 </body>

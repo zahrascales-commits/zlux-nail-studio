@@ -510,6 +510,19 @@
     .tier-grid{grid-template-columns:1fr;gap:0.7rem}
     .tier-count{font-size:2.2rem}
   }
+  /* A sheet for opening any figure. Same shape as the client profile so the
+     two never feel like different products. */
+  .drill-veil{position:fixed;inset:0;z-index:8500;background:rgba(0,0,0,0.62);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;padding:1rem}
+  .drill-veil.open{display:flex}
+  .drill-box{background:var(--surface);border:1px solid var(--border-hi);border-radius:14px;
+    width:100%;max-width:640px;max-height:86vh;overflow:auto}
+  .drill-head{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);
+    padding:1.1rem 1.2rem;display:flex;align-items:flex-start;gap:0.8rem;z-index:2}
+  .drill-title{font-family:'Cinzel',serif;font-size:1.15rem;color:var(--cream)}
+  .drill-sub{font-size:0.74rem;color:var(--muted);margin-top:0.2rem}
+  .drill-x{margin-left:auto;background:none;border:none;color:var(--muted);font-size:1.5rem;cursor:pointer;line-height:1}
+  .drill-body{padding:1rem 1.2rem 1.4rem}
 </style>
 </head>
 <body>
@@ -735,6 +748,7 @@
       <div id="ov-dispatch"></div>
       <div class="page-head" style="margin-top:2rem;"><div><div class="page-title" style="font-size:1.15rem;">Coming up</div></div></div>
       <div id="ov-upcoming"></div>
+      <div id="ov-awaiting"></div>
     </section>
 
     <!-- ALL BOOKINGS -->
@@ -1757,6 +1771,18 @@ let activeThreadId=null;
 let activeThreadToken=null;
 
 /* ── AUTH ── */
+// Any client name on any screen opens the same profile.
+function openClient(who){
+  if(window.ZolaClient) window.ZolaClient.open(who);
+}
+function clientLink(name, extra){
+  if(!name) return 'Guest';
+  const d = Object.assign({name:name}, extra||{});
+  return '<a href="#" onclick="event.preventDefault();event.stopPropagation();openClient('
+    + esc(JSON.stringify(d)).replace(/"/g,'&quot;') + ')" '
+    + 'style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--gold)">' + esc(name) + '</a>';
+}
+
 function api(path,opts={}){return fetch(path,{...opts,headers:{'Content-Type':'application/json','X-CEO-Password':PWD,...(opts.headers||{})}});}
 async function login(){
   const pwd=document.getElementById('pwd').value.trim();
@@ -1792,6 +1818,9 @@ function logout(){sessionStorage.removeItem('zm_pwd');location.reload();}
 /* ── TABS ── */
 // Reloading a screen is now defined once, so the tab switch, the Refresh
 // button and the auto-refresh timer can never drift apart.
+// The profile sheet needs to know who is asking before it can open anything.
+if(window.ZolaClient) window.ZolaClient.init({ pass: PWD });
+
 const TAB_LOADERS = {
   overview:   () => { loadOverview(); loadDispatch(); },
   records:    () => loadRecords(),
@@ -4217,12 +4246,21 @@ async function loadOverview(){
     ].join('');
     const up = d.upcomingBookings || [];
     u.innerHTML = up.length
-      ? up.map(b => '<div class="member-card" style="--mc:#B6A588"><div class="mc-top"><div style="flex:1">'
-          + '<div class="mc-name">' + esc(b.guest_name || b.client_name || 'Client') + '</div>'
-          + '<div class="mc-role">' + esc(b.service || '—') + ' · ' + esc(b.appointment_date || b.date || '')
-          + (b.appointment_time || b.time ? ' at ' + fmtTime(b.appointment_time || b.time) : '') + '</div>'
-          + '</div></div></div>').join('')
-      : emptyBox('📅', 'Nothing booked yet.');
+      ? up.map(b => bookingRow(b)).join('')
+      : emptyBox('📅', 'Nothing paid for and coming up.');
+
+    // Requests that never paid a deposit. Shown, never counted — and now
+    // impossible to create, so this should only ever hold old rows.
+    const aw = document.getElementById('ov-awaiting');
+    if (aw) {
+      aw.innerHTML = d.awaitingDeposit
+        ? '<div class="page-head" style="margin-top:2rem;"><div>'
+          + '<div class="page-title" style="font-size:1.15rem;">Never paid a deposit ✦ ' + d.awaitingDeposit + '</div>'
+          + '<div class="page-desc">These were booked without a deposit, so they have never counted as income — '
+          + cmoney(d.awaitingDepositValue) + ' of requests. New bookings can no longer be made this way.</div>'
+          + '</div><button class="btn btn-ghost btn-sm" onclick="openDrill(\'unconfirmed\')">See them</button></div>'
+        : '';
+    }
   }catch(_){ s.innerHTML = emptyBox('⚠️', 'Could not load the overview.'); u.innerHTML = ''; }
 }
 
@@ -4248,40 +4286,113 @@ async function loadAllBookings(){
 }
 
 async function loadReports(){
-  const s = document.getElementById('rp-stats');
-  const f = document.getElementById('rp-funnel');
-  s.innerHTML = '<div class="empty">Loading…</div>';
+  const el = document.getElementById('rp-content');
+  el.innerHTML = '<div class="empty">Loading…</div>';
   try{
     const d = await ceo('reports');
-    s.innerHTML = [
-      statCard(d.weeklyBookings||0, 'Bookings this week'),
-      statCard(cmoney(d.weeklyRevenue), 'This week'),
-      statCard(d.monthlyBookings||0, 'Bookings this month'),
-      statCard(cmoney(d.monthlyRevenue), 'This month'),
-      statCard(d.totalBookings||0, 'All time'),
-    ].join('');
-    const steps = d.funnelByStep || {};
-    const names = { 1:'Opened booking', 2:'Picked a service', 3:'Picked a time', 4:'Paid deposit' };
-    const keys = Object.keys(steps);
-    f.innerHTML = keys.length
-      ? keys.map(k => {
-          const st = steps[k] || {};
-          const reached = Number(st.reached||0), dropped = Number(st.dropped||0);
-          const pct = reached ? Math.round((dropped/reached)*100) : 0;
-          return '<div style="padding:0.7rem 0;border-bottom:1px solid var(--border)">'
-            + '<div style="display:flex;justify-content:space-between;gap:1rem;font-size:0.85rem;color:var(--cream)">'
-            + '<span>' + (names[k] || ('Step ' + k)) + '</span>'
-            + '<span style="color:var(--muted)">' + reached + ' reached · ' + dropped + ' left</span></div>'
-            + '<div style="height:5px;background:var(--surface);margin-top:0.4rem;border-radius:3px;overflow:hidden">'
-            + '<div style="height:100%;width:' + Math.min(100, pct) + '%;background:' + (pct>50?'#e08a8a':'var(--gold)') + '"></div></div></div>';
-        }).join('')
-      : emptyBox('📈', 'No funnel data yet — it fills in as people book.');
-  }catch(_){ s.innerHTML = emptyBox('⚠️', 'Could not load reports.'); f.innerHTML = ''; }
+    REPORTS = d;
+
+    // Earned means the deposit was paid AND the appointment has happened.
+    // Anything else is shown on its own so it can never be mistaken for
+    // income — that confusion is what had this page reporting $1,015 of
+    // bookings nobody had paid for.
+    const card = (key, label, sub) => {
+      const b = d[key] || { count: 0, cents: 0 };
+      return '<div class="stat-card" style="cursor:pointer" onclick="openDrill(\'' + key + '\')">'
+        + '<div class="stat-num">' + cmoney(b.cents) + '</div>'
+        + '<div class="stat-label">' + label + '</div>'
+        + '<div style="font-size:0.66rem;color:var(--muted);margin-top:0.3rem">'
+          + b.count + ' booking' + (b.count === 1 ? '' : 's') + ' · ' + sub + '</div>'
+        + '</div>';
+    };
+
+    el.innerHTML =
+      '<div class="page-head"><div>'
+      + '<div class="page-title" style="font-size:1.15rem;">Money you have actually earned</div>'
+      + '<div class="page-desc">Deposit paid, and the appointment already happened. Tap any figure to see exactly which bookings are in it.</div>'
+      + '</div></div>'
+      + '<div class="cards">'
+        + card('week', 'Last 7 days', 'tap to open')
+        + card('month', 'Last 30 days', 'tap to open')
+        + card('year', 'This year', 'tap to open')
+        + card('all_time', 'All time', 'tap to open')
+      + '</div>'
+
+      + '<div class="page-head" style="margin-top:2rem;"><div>'
+      + '<div class="page-title" style="font-size:1.15rem;">Not earned yet</div>'
+      + '<div class="page-desc">Real, but not takings. Keeping these out is the difference between a number you can trust and one you cannot.</div>'
+      + '</div></div>'
+      + '<div class="cards">'
+        + card('upcoming', 'Paid, not yet happened', 'money already taken')
+        + card('unconfirmed', 'Never paid a deposit', 'never counted as income')
+        + card('cancelled', 'Cancelled', 'excluded everywhere')
+      + '</div>'
+
+      + '<div class="page-head" style="margin-top:2rem;"><div><div class="page-title" style="font-size:1.15rem;">Most booked</div></div></div>'
+      + ((d.servicePopularity || []).length
+          ? (d.servicePopularity || []).map(function(s){
+              return '<div class="member-card" style="--mc:#B6A588"><div class="mc-top"><div style="flex:1">'
+                + '<div class="mc-name">' + esc(s[0] || '—') + '</div></div>'
+                + '<span class="status-pill status-on">' + s[1] + '</span></div></div>';
+            }).join('')
+          : emptyBox('💅', 'Nothing earned yet, so nothing to rank.'));
+  }catch(_){ el.innerHTML = emptyBox('⚠️', 'Could not load reports.'); }
 }
 
-// The menu, grouped the way the website shows it, with each service's two
-// photos attached to it. Uploading a photo is the thing she does most often
-// here, so it belongs on the service rather than buried in another tab.
+let REPORTS = null;
+
+// A number nobody can open is a number nobody can check.
+function openDrill(key){
+  const b = (REPORTS || {})[key];
+  if(!b){ toast('Nothing to show'); return; }
+  const titles = {
+    week:'Earned · last 7 days', month:'Earned · last 30 days', year:'Earned · this year',
+    all_time:'Earned · all time', upcoming:'Paid, not yet happened',
+    unconfirmed:'Never paid a deposit', cancelled:'Cancelled',
+  };
+  showDrill(titles[key] || 'Bookings', b.bookings || [], b.cents);
+}
+
+function showDrill(title, rows, cents){
+  const box = document.getElementById('drill-box');
+  document.getElementById('drill-veil').classList.add('open');
+  box.innerHTML =
+    '<div class="drill-head"><div>'
+      + '<div class="drill-title">' + esc(title) + '</div>'
+      + '<div class="drill-sub">' + rows.length + ' booking' + (rows.length === 1 ? '' : 's')
+        + (cents != null ? ' · ' + cmoney(cents) : '') + '</div>'
+    + '</div><button class="drill-x" onclick="closeDrill()">&times;</button></div>'
+    + '<div class="drill-body">'
+      + (rows.length ? rows.map(bookingRow).join('') : '<div class="empty">Nothing here.</div>')
+    + '</div>';
+}
+function closeDrill(){ document.getElementById('drill-veil').classList.remove('open'); }
+
+// One row renderer for every list of bookings on every screen, so they always
+// show the same facts about the same booking.
+function bookingRow(b){
+  const paid = b.deposit_paid;
+  const state = {
+    earned:'#7ec98a', upcoming:'#B6A588', unconfirmed:'#d66', cancelled:'#888', no_show:'#d66',
+  }[b.state] || '#B6A588';
+  return '<div class="member-card" style="--mc:' + state + '">'
+    + '<div class="mc-top"><div style="flex:1">'
+      + '<div class="mc-name">' + clientLink(b.client || 'Guest', { email: b.email || '', phone: b.phone || '' }) + '</div>'
+      + '<div class="mc-role">' + esc(b.service || '—')
+        + (b.addons && b.addons.length ? ' + ' + esc(b.addons.join(', ')) : '')
+        + ' · ' + esc(b.date || '') + (b.time ? ' at ' + fmtTime(b.time) : '')
+        + (b.artist ? ' · ' + esc(b.artist) : '') + '</div>'
+      + '<div style="font-size:0.68rem;color:var(--muted);margin-top:0.25rem">'
+        + (b.phone ? esc(b.phone) + ' · ' : '') + esc(b.email || 'no email on file')
+        + (b.member_id ? ' · member ' + esc(b.member_id) : '') + '</div>'
+    + '</div>'
+    + '<div style="text-align:right">'
+      + '<div class="status-pill" style="background:rgba(182,165,136,0.16);color:var(--cream)">' + cmoney(b.total_cents) + '</div>'
+      + '<div style="font-size:0.62rem;color:' + (paid ? '#7ec98a' : '#d68a8a') + ';margin-top:0.3rem">'
+        + (paid ? cmoney(b.deposit_cents) + ' deposit paid' : 'no deposit') + '</div>'
+    + '</div></div></div>';
+}
+
 async function loadServicesTab(){
   const el = document.getElementById('sv-list');
   const ad = document.getElementById('sv-addons');
@@ -5049,8 +5160,12 @@ async function copy(text,msg){try{await navigator.clipboard.writeText(text);toas
 /* ── INIT ── */
 (function(){const saved=sessionStorage.getItem('zm_pwd');if(saved){document.getElementById('pwd').value=saved;login();}})();
 </script>
+<script src="js/client-profile.js"></script>
 <script src="js/service-groups.js"></script>
 <script src="js/push.js"></script>
 <script src="js/pwa.js"></script>
+<div class="drill-veil" id="drill-veil" onclick="if(event.target===this)closeDrill()">
+  <div class="drill-box" id="drill-box"></div>
+</div>
 </body>
 </html>
