@@ -117,6 +117,20 @@
   .wc-sw.dot{background:#9a6fc4;border-radius:50%;border-color:#9a6fc4}
   .wc-day{margin-top:0.9rem}
 
+  /* ── TODAY ── the first thing on the screen */
+  .today-card{background:linear-gradient(155deg,rgba(96,142,196,0.14),rgba(182,165,136,0.08));
+    border:1px solid var(--border-hi);border-radius:14px;padding:1.15rem 1.15rem 1rem;margin-bottom:1.5rem}
+  .today-when{font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold)}
+  .today-hours{font-family:'Cinzel',serif;font-size:1.3rem;color:var(--cream);margin-top:0.3rem;line-height:1.3}
+  .today-sub{font-size:0.76rem;color:var(--muted);margin-top:0.35rem;line-height:1.6}
+  .today-list{margin-top:0.9rem}
+  .today-row{display:flex;gap:0.75rem;align-items:flex-start;border-top:1px solid var(--border);padding:0.6rem 0}
+  .today-time{min-width:76px;font-size:0.82rem;color:#c9a9e0;font-weight:600}
+  .today-who{font-size:0.88rem;color:var(--cream)}
+  .today-what{font-size:0.72rem;color:var(--muted)}
+  .today-next{margin-top:0.85rem;font-size:0.72rem;color:var(--muted);line-height:1.6;
+    border-top:1px solid var(--border);padding-top:0.7rem}
+
   /* ── COMMISSION JARS ──
      A jar that visibly fills. The point of the shape is that an unfinished
      one looks unfinished from across the room. */
@@ -238,6 +252,7 @@
   </div>
   <div class="wrap">
     <section class="panel active" id="panel-schedule">
+      <div id="today-card"></div>
       <div id="open-jobs"></div>
       <div id="push-setup" style="margin-bottom:1.75rem;"></div>
       <div class="label-sm">My Month</div>
@@ -416,6 +431,54 @@ function showTab(t){
 }
 
 
+
+
+/* ══════════════ TODAY ══════════════ */
+// Built from what the calendar already loaded, so it costs nothing extra and
+// can never disagree with the month underneath it.
+function renderToday(){
+  const el = document.getElementById('today-card');
+  if(!el) return;
+  const now = new Date();
+  const p = function(n){ return String(n).padStart(2,'0'); };
+  const ds = now.getFullYear()+'-'+p(now.getMonth()+1)+'-'+p(now.getDate());
+
+  const sh = wcShifts[ds];
+  const list = (wcAppts[ds]||[]).slice().sort(function(a,b){ return String(a.time).localeCompare(String(b.time)); });
+
+  // The next day she is actually in, so a day off does not read as a dead end.
+  let nextDay = '';
+  const upcoming = Object.keys(wcShifts).filter(function(d){ return d > ds; }).sort();
+  if(upcoming.length){
+    const nd = upcoming[0], ns = wcShifts[nd];
+    nextDay = 'Next in ' + fmtDate(nd) + ', ' + fmtTime(ns.start_time) + ' – ' + fmtTime(ns.end_time)
+      + ((wcAppts[nd]||[]).length ? ' · ' + (wcAppts[nd]||[]).length + ' booked' : ' · nothing booked yet');
+  }
+
+  let html = '<div class="today-card">'
+    + '<div class="today-when">Today · ' + now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}) + '</div>';
+
+  html += sh
+    ? '<div class="today-hours">' + fmtTime(sh.start_time) + ' – ' + fmtTime(sh.end_time) + '</div>'
+      + '<div class="today-sub">'
+        + (sh.lunch_start&&sh.lunch_end ? 'Lunch ' + fmtTime(sh.lunch_start) + '–' + fmtTime(sh.lunch_end) + ' · ' : '')
+        + (list.length ? list.length + ' client' + (list.length===1?'':'s') + ' booked' : 'Nobody booked yet')
+      + '</div>'
+    : '<div class="today-hours">You\'re off today</div>'
+      + '<div class="today-sub">Nothing rostered.</div>';
+
+  if(list.length){
+    html += '<div class="today-list">' + list.map(function(a){
+      return '<div class="today-row">'
+        + '<div class="today-time">' + fmtTime(a.time) + '</div>'
+        + '<div style="flex:1"><div class="today-who">' + esc(a.client_name||'Client') + '</div>'
+        + '<div class="today-what">' + esc(a.service||'—') + '</div></div></div>';
+    }).join('') + '</div>';
+  }
+
+  if(nextDay) html += '<div class="today-next">' + esc(nextDay) + '</div>';
+  el.innerHTML = html + '</div>';
+}
 
 /* ══════════════ COMMISSION JARS ══════════════ */
 let BOARD = null;
@@ -756,6 +819,7 @@ function renderWorkCal(){
       + '<span>'+d+'</span></button>';
   }
   el.innerHTML = html;
+  renderToday();
   if(wcSel) wcRenderDay();
 }
 

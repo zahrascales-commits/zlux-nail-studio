@@ -441,9 +441,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const esc = s => String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+    // A card with no photo yet gets a proper monogram plate rather than a
+    // faded letter — an artist who has not sent a headshot in should still
+    // look like she belongs on the page.
     const card = (m, href, label) =>
       '<article class="team-col">' +
-        '<div class="team-photo">' +
+        '<div class="team-photo' + (m.photo ? '' : ' team-photo-empty') + '">' +
           (m.photo
             ? '<img src="' + esc(m.photo) + '" alt="' + esc(m.name) + '" loading="lazy">'
             : '<span class="team-photo-initial" style="color:' + esc(m.color) + '">' + esc(m.initial) + '</span>') +
@@ -451,6 +454,9 @@ document.addEventListener('DOMContentLoaded', () => {
         '<h3 class="team-name">' + esc(m.name) + '</h3>' +
         '<div class="team-role">' + esc(m.title) + '</div>' +
         (m.bio ? '<p class="team-bio">' + esc(m.bio) + '</p>' : '') +
+        ((m.does && m.does.length)
+          ? '<div class="team-does">' + m.does.map(function(s){ return '<span>' + esc(s) + '</span>'; }).join('') + '</div>'
+          : '') +
         '<a href="' + href + '" class="btn-outline-dark team-cta">' + label + '</a>' +
       '</article>';
 

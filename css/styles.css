@@ -1854,6 +1854,26 @@ ul { list-style: none; }
   color: var(--latte); margin: 0 0 1.35rem;
 }
 .team-cta { font-size: 0.66rem; padding: 0.75rem 1.5rem; }
+/* What she actually does, when there is no bio written yet. */
+.team-does {
+  display: flex; flex-wrap: wrap; gap: 0.35rem; justify-content: center;
+  margin: 0 0 1.25rem;
+}
+.team-does span {
+  font-family: 'Josefin Sans', sans-serif; font-size: 0.6rem; font-weight: 600;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--latte);
+  border: 1px solid rgba(182,165,136,0.32); padding: 0.32rem 0.6rem;
+}
+/* An artist with no headshot yet should read as deliberate, not missing. */
+.team-photo-empty {
+  background: linear-gradient(150deg, var(--blush) 0%, rgba(182,165,136,0.16) 100%);
+}
+.team-photo-empty::after {
+  content: ''; position: absolute; inset: 10px;
+  border: 1px solid rgba(182,165,136,0.3); pointer-events: none;
+}
+.team-col .team-photo { transition: border-color 0.35s ease, transform 0.35s ease; }
+.team-col:hover .team-photo { border-color: rgba(182,165,136,0.65); transform: translateY(-4px); }
 @media (max-width: 860px) {
   .team-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.75rem; }
 }
