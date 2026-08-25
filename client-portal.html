@@ -775,6 +775,25 @@ function renderNail(){
     : '';
 }
 
+// The two lists side by side, and the line about what is not ours to treat.
+function planHtml(p){
+  return '<div class="np-cols">'
+    + '<div class="np-col"><div class="np-h">What you can do</div><ul>'
+      + p.home.map(function(l){ return '<li>' + esc(l) + '</li>'; }).join('') + '</ul></div>'
+    + '<div class="np-col"><div class="np-h">What we will do in the chair</div><ul>'
+      + p.studio.map(function(l){ return '<li>' + esc(l) + '</li>'; }).join('') + '</ul></div>'
+    + '</div>'
+    // Nail care is not medicine, and the difference matters most to the
+    // person who has the thing this cannot help with.
+    + '<div class="np-care"><strong>This is nail care, not medical advice.</strong> '
+      + 'See a doctor rather than us for ' + p.red_flags.join(', ') + '.'
+      + (p.see_someone ? ' You told us your nails are tender — please get that looked at before your next set.' : '')
+    + '</div>';
+}
+
+function setNail(key, v){ nailAnswers[key] = v; renderNail(); }
+function setGoal(g){ nailGoal = g; renderNail(); }
+
 function setCtx(k, v){
   nailContext[k] = v;
   // Text boxes must not redraw on every keystroke — it would take the
