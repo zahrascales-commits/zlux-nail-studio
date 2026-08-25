@@ -685,7 +685,17 @@
 
     document.getElementById('price-display').textContent = TIER_AMOUNT[selectedTier];
     renewalLine();
-    document.getElementById('payment-sub').textContent = `You're joining the ${TIER_LABEL[selectedTier]} at ${TIER_PRICE[selectedTier]}. Your first month is charged today.`;
+    // Has to agree with the authorisation directly beneath it. Saying
+    // "$299/mo" under a line that says "$2,999 every year" reads as a bait
+    // and switch, on the one screen where trust decides whether the card
+    // comes out at all.
+    const payYearly = billing === 'yearly';
+    const payAmount = (payYearly
+      ? { SIGNATURE: 99900, LUXE: 199900, BLACK_CARD: 299900, TEST: 1580 }
+      : { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900, TEST: 158 })[selectedTier] || 0;
+    document.getElementById('payment-sub').textContent =
+      "You're joining the " + TIER_LABEL[selectedTier] + ' at ' + money(payAmount)
+      + (payYearly ? ' for the year. Charged today.' : ' a month. Your first month is charged today.');
 
     goToStep(2);
     initStripe();
