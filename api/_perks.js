@@ -145,11 +145,29 @@ function tierConfig(tier) {
 // How far ahead this person may book. A tier's `daysAhead` is the bonus on
 // top of the public window, not the total — so raising the public window
 // moves everyone forward together and nobody's perk quietly shrinks.
+// Whether the calendar opens in stages at all. Off right now: there are no
+// members yet, so staging it would only mean turning paying customers away
+// to protect a queue with nobody in it. Once memberships are selling she
+// turns this on and the order becomes Black Card, then Luxe, then Signature,
+// then everyone else.
+async function tierPriorityOn() {
+  try {
+    const row = await queryOne("SELECT value FROM site_settings WHERE key='tier_priority'");
+    return String(row && row.value) === 'on';
+  } catch (_) { return false; }
+}
+
 async function windowFor(tier) {
   const pub = await publicDays();
+  // Priority off means one calendar for everybody — a guest sees exactly
+  // what a Black Card member sees.
+  if (!(await tierPriorityOn())) {
+    const open = pub + TIERS.BLACK_CARD.daysAhead;
+    return { days_ahead: open, public_days_ahead: open, extra: 0, staged: false };
+  }
   const t = tierConfig(tier);
   const extra = t ? t.daysAhead : 0;
-  return { days_ahead: pub + extra, public_days_ahead: pub, extra };
+  return { days_ahead: pub + extra, public_days_ahead: pub, extra, staged: true };
 }
 
 /* ── THE WALLET ─────────────────────────────────────────────────────
@@ -296,6 +314,14 @@ module.exports = async function (req, res) {
       return res.json({ ok: true, days: Math.round(n) });
     }
 
+    if (req.method === 'PUT' && action === 'tier_priority') {
+      const on = (req.body || {}).on ? 'on' : 'off';
+      await execute(
+        "INSERT INTO site_settings (key,value) VALUES ('tier_priority',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        [on]);
+      return res.json({ ok: true, tier_priority: on });
+    }
+
     if (req.method === 'POST' && action === 'grant') {
       const b = req.body || {};
       await execute(
@@ -327,3 +353,4 @@ module.exports.includedCount = includedCount;
 module.exports.windowFor = windowFor;
 module.exports.tierConfig = tierConfig;
 module.exports.publicDays = publicDays;
+module.exports.tierPriorityOn = tierPriorityOn;
