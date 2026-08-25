@@ -244,6 +244,28 @@
       .who-svc { font-family:'Cinzel',serif; font-size:0.95rem; color:var(--espresso); margin-bottom:0.4rem; }
 
       /* Apple Pay hint */
+      /* How much to pay, and the tip. Both live under the card box so the
+         amount is decided before the button is reached. */
+      .pay-choice{display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin:1rem 0 0.25rem;}
+      .pay-opt{border:1px solid rgba(182,165,136,0.35);background:#fff;padding:0.9rem 0.8rem;
+        cursor:pointer;text-align:left;font:inherit;width:100%;transition:border-color 0.2s,box-shadow 0.2s;}
+      .pay-opt:hover{border-color:var(--champagne);}
+      .pay-opt.on{border-color:var(--espresso);border-width:2px;padding:calc(0.9rem - 1px) calc(0.8rem - 1px);
+        box-shadow:0 6px 20px rgba(26,20,12,0.10);}
+      .pay-opt .po-l{font-family:'Josefin Sans',sans-serif;font-size:0.62rem;letter-spacing:0.16em;
+        text-transform:uppercase;color:var(--latte);}
+      .pay-opt .po-a{font-family:'Cinzel',serif;font-size:1.3rem;color:var(--espresso);margin-top:0.25rem;}
+      .pay-opt .po-s{font-family:'Josefin Sans',sans-serif;font-size:0.7rem;color:var(--latte);margin-top:0.2rem;line-height:1.5;}
+      .tip-wrap{display:none;margin-top:1rem;}
+      .tip-wrap.show{display:block;}
+      .tip-row{display:flex;gap:0.45rem;flex-wrap:wrap;margin-top:0.5rem;}
+      .tip-btn{border:1px solid rgba(182,165,136,0.4);background:#fff;padding:0.55rem 0.85rem;cursor:pointer;
+        font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--espresso);}
+      .tip-btn.on{background:var(--espresso);color:var(--champagne);border-color:var(--espresso);}
+      .pay-total{margin-top:1rem;padding-top:0.9rem;border-top:1px solid rgba(182,165,136,0.25);
+        display:flex;justify-content:space-between;align-items:baseline;
+        font-family:'Josefin Sans',sans-serif;font-size:0.88rem;color:var(--latte);}
+      .pay-total b{font-family:'Cinzel',serif;font-size:1.5rem;color:var(--espresso);font-weight:400;}
       .ap-hint { display:flex; align-items:center; gap:0.5rem; font-family:'Josefin Sans',sans-serif; font-size:0.74rem; color:var(--latte); margin:0.5rem 0 0.75rem; }
 
       /* inspo uploader on success */
@@ -602,8 +624,25 @@
       <div id="covered-note" style="display:none;background:rgba(182,165,136,0.12);border:1px solid rgba(182,165,136,0.45);padding:1rem 1.1rem;margin-bottom:1.1rem;font-family:'Josefin Sans',sans-serif;font-size:0.88rem;line-height:1.7;color:var(--espresso);"></div>
         <div id="card-section" style="display:none;margin:1.25rem 0;">
         <div class="ap-hint" id="ap-hint" style="display:none;"> Apple Pay available — double-tap to pay, no typing</div>
-        <label class="luxury-label">Pay your deposit — Apple Pay or card</label>
+        <label class="luxury-label">How would you like to pay?</label>
+        <div class="pay-choice" id="pay-choice"></div>
+
+        <div class="tip-wrap" id="tip-wrap">
+          <label class="luxury-label" style="margin-bottom:0.2rem;">Add a tip?</label>
+          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.76rem;color:var(--latte);">Completely optional — it goes straight to your artist.</div>
+          <div class="tip-row" id="tip-row"></div>
+        </div>
+
+        <div class="pay-total" id="pay-total"></div>
+
+        <label class="luxury-label" style="margin-top:1.25rem;">Card or Apple Pay</label>
         <div id="payment-element" style="background:#fff;border:1px solid rgba(140,122,94,0.22);padding:1rem;"></div>
+        <!-- Stripe's own line after picking a wallet reads like an error.
+             This says what to actually do next. -->
+        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:var(--latte);line-height:1.7;margin-top:0.6rem;">
+          Thank you — payment method chosen. Fill in anything left below, then tap
+          <strong style="color:var(--espresso);">Pay &amp; Confirm</strong> at the bottom to finish.
+        </div>
         <div id="card-errors" style="display:none;font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:#c0524a;margin-top:0.5rem;"></div>
       </div>
 
@@ -1610,6 +1649,74 @@ function pickArtistTime(name, time){
   }
 }
 
+
+/* ══════════════ HOW MUCH TO PAY, AND THE TIP ══════════════
+   Priced on the server either way — the browser only ever says which
+   option was chosen and how much tip. It never says what anything costs. */
+let payFull = false, tipCents = 0, _payTotals = { total: 0, deposit: 0 };
+
+function bkMoney(c){ return '$' + (Number(c || 0) / 100).toFixed(2); }
+
+function renderPayChoice(){
+  const el = document.getElementById('pay-choice');
+  if(!el) return;
+  const t = _payTotals;
+  if(!t.total){ el.innerHTML = ''; return; }
+
+  el.innerHTML =
+    '<button type="button" class="pay-opt' + (payFull ? '' : ' on') + '" onclick="setPayFull(false)">'
+      + '<div class="po-l">Deposit now</div>'
+      + '<div class="po-a">' + bkMoney(t.deposit) + '</div>'
+      + '<div class="po-s">' + bkMoney(t.total - t.deposit) + ' due at your appointment</div>'
+    + '</button>'
+    + '<button type="button" class="pay-opt' + (payFull ? ' on' : '') + '" onclick="setPayFull(true)">'
+      + '<div class="po-l">Pay in full</div>'
+      + '<div class="po-a">' + bkMoney(t.total) + '</div>'
+      + '<div class="po-s">Nothing to pay when you arrive</div>'
+    + '</button>';
+
+  document.getElementById('tip-wrap').classList.toggle('show', payFull);
+  renderTips();
+  renderPayTotal();
+}
+
+// Percentages of the service, plus a clear way out. A tip screen with no
+// "no thank you" is a tip screen people resent.
+function renderTips(){
+  const row = document.getElementById('tip-row');
+  if(!row) return;
+  const base = _payTotals.total || 0;
+  const opts = [0, 0.18, 0.20, 0.25].map(function(p){
+    return { pct: p, cents: Math.round(base * p) };
+  });
+  row.innerHTML = opts.map(function(o){
+    const on = tipCents === o.cents;
+    return '<button type="button" class="tip-btn' + (on ? ' on' : '') + '" onclick="setTip(' + o.cents + ')">'
+      + (o.pct === 0 ? 'No tip' : Math.round(o.pct * 100) + '% · ' + bkMoney(o.cents))
+      + '</button>';
+  }).join('');
+}
+
+function renderPayTotal(){
+  const el = document.getElementById('pay-total');
+  if(!el) return;
+  const due = (payFull ? _payTotals.total : _payTotals.deposit) + (payFull ? tipCents : 0);
+  el.innerHTML = '<span>Charged today</span><b>' + bkMoney(due) + '</b>';
+  const btn = document.querySelector('[onclick="submitBooking()"]');
+  if(btn) btn.textContent = (payFull ? 'Pay ' + bkMoney(due) : 'Pay Deposit') + ' & Confirm';
+}
+
+function setPayFull(v){ payFull = v; if(!v) tipCents = 0; renderPayChoice(); repriceIntent(); }
+function setTip(c){ tipCents = c; renderTips(); renderPayTotal(); repriceIntent(); }
+
+// The amount changed, so the payment has to be rebuilt against the new one.
+// Charging an amount the client never saw is the one thing this must not do.
+let _repriceTimer = null;
+function repriceIntent(){
+  clearTimeout(_repriceTimer);
+  _repriceTimer = setTimeout(function(){ setupPayment(); }, 250);
+}
+
 /* ══════════════ HOW FAR AHEAD YOU MAY BOOK ══════════════
    A guest sees a short window. Each tier adds days on top. This is the
    perk the memberships page sells, so it has to bite here or it is not a
@@ -1745,11 +1852,15 @@ async function initPayment() {
         // Without this the server cannot read her usage counter, so the
         // included services she is paying a membership for never apply.
         member_id: (booking.memberId || localStorage.getItem('zola_member_id') || '').trim().toUpperCase() || null,
+        pay_full: payFull,
+        tip_cents: payFull ? tipCents : 0,
         customer_name: document.getElementById('client-name').value.trim(),
         customer_email: document.getElementById('client-email').value.trim(),
       })
     })).json();
     showCoveredNote(intent);
+    _payTotals = { total: intent.total_cents || 0, deposit: intent.deposit_cents || 0 };
+    renderPayChoice();
     if (!intent.client_secret) return;
     _paymentIntentId = intent.payment_intent_id;
     _stripe = Stripe(cfg.publishable_key);

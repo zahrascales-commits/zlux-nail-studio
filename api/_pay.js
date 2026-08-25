@@ -128,7 +128,7 @@ module.exports = async function (req, res) {
     // covering the summed deposits, each recomputed server-side.
     if (req.method === 'POST' && action === 'multi_deposit_intent') {
       if (!stripeKey()) return res.status(400).json({ error: 'Payments not configured' });
-      const { items, customer_name, customer_email, member_tier, member_id } = req.body || {};
+      const { items, customer_name, customer_email, member_tier, member_id, pay_full, tip_cents } = req.body || {};
       if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: 'items required' });
       let total = 0, deposit = 0, covered = 0;
       // The allowance is spent one service at a time across the cart — a
@@ -145,25 +145,43 @@ module.exports = async function (req, res) {
         covered += calc.covered_cents || 0;
         lines.push((it.for_name ? it.for_name + ': ' : '') + it.service_name);
       }
-      // The membership covered everything. There is no payment to set up,
-      // and asking Stripe for a zero charge is an error, not a free visit.
-      if (deposit <= 0) {
+      /* Paying in full, and the tip.
+         The browser says which option was picked and how much tip — never
+         what anything costs. The service total is still the one worked out
+         here from the menu, so the only figure a tampered request can move
+         is a tip somebody is volunteering. Even that is capped: a runaway
+         value would be a charge nobody agreed to. */
+      const wantsFull = !!pay_full;
+      const tip = Math.max(0, Math.min(Math.round(Number(tip_cents) || 0), total * 2));
+      const charge = (wantsFull ? total : deposit) + tip;
+
+      // Nothing to collect — the membership covered it and no tip was added.
+      // Asking Stripe for a zero charge is an error, not a free visit.
+      if (charge <= 0) {
         return res.json({
           client_secret: null, payment_intent_id: null,
-          deposit_cents: 0, total_cents: total, covered_cents: covered, fully_covered: true,
+          deposit_cents: 0, total_cents: total, covered_cents: covered,
+          tip_cents: 0, charged_cents: 0, paid_in_full: wantsFull, fully_covered: true,
         });
       }
       const params = {
-        amount: String(deposit),
+        amount: String(charge),
         currency: 'usd',
         'automatic_payment_methods[enabled]': 'true',
-        description: `ZOLA deposit — ${lines.join(' + ')}`.slice(0, 300),
+        description: ((wantsFull ? 'ZOLA — ' : 'ZOLA deposit — ') + lines.join(' + ')
+          + (tip ? ' (incl. tip)' : '')).slice(0, 300),
         'metadata[services]': lines.join(' | ').slice(0, 480),
         'metadata[client]': customer_name || '',
+        'metadata[paid_in_full]': wantsFull ? 'yes' : 'no',
+        'metadata[tip_cents]': String(tip),
       };
       if (customer_email && /@/.test(customer_email)) params.receipt_email = customer_email;
       const pi = await stripeApi('payment_intents', params);
-      return res.json({ client_secret: pi.client_secret, payment_intent_id: pi.id, deposit_cents: deposit, total_cents: total, covered_cents: covered });
+      return res.json({
+        client_secret: pi.client_secret, payment_intent_id: pi.id,
+        deposit_cents: deposit, total_cents: total, covered_cents: covered,
+        tip_cents: tip, charged_cents: charge, paid_in_full: wantsFull,
+      });
     }
 
     if (req.method === 'POST' && action === 'deposit_intent') {

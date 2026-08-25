@@ -290,6 +290,9 @@ module.exports = async (req, res) => {
       }
       const isMember = !!member_id;
       try { await execute('ALTER TABLE appointments ADD COLUMN deposit_paid INTEGER DEFAULT 0'); } catch (_) {}
+      // Tips and full payments arrived later than this table did.
+      try { await execute('ALTER TABLE appointments ADD COLUMN tip_cents INTEGER DEFAULT 0'); } catch (_) {}
+      try { await execute('ALTER TABLE appointments ADD COLUMN paid_in_full INTEGER DEFAULT 0'); } catch (_) {}
       await execute(
         `INSERT INTO appointments (member_id, guest_name, guest_email, staff_id, service, addons, appointment_date, appointment_time, status, total_cents, deposit_cents, deposit_paid)
          VALUES (?,?,?,?,?,?,?,?,'SCHEDULED',?,?,?)`,
