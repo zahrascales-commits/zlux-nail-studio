@@ -523,6 +523,37 @@
   .drill-sub{font-size:0.74rem;color:var(--muted);margin-top:0.2rem}
   .drill-x{margin-left:auto;background:none;border:none;color:var(--muted);font-size:1.5rem;cursor:pointer;line-height:1}
   .drill-body{padding:1rem 1.2rem 1.4rem}
+  /* Three membership columns and the drop-ins, side by side. The whole
+     point is seeing at a glance who is where. */
+  .ppl-cols{display:grid;gap:1rem;grid-template-columns:1fr;margin-top:1rem}
+  @media(min-width:900px){ .ppl-cols{grid-template-columns:repeat(3,1fr)} }
+  .ppl-col{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem 0.9rem}
+  .ppl-col.black{border-color:rgba(196,168,130,0.5);background:linear-gradient(160deg,rgba(196,168,130,0.1),var(--card))}
+  .ppl-h{display:flex;align-items:baseline;gap:0.5rem;margin-bottom:0.15rem}
+  .ppl-t{font-family:'Cinzel',serif;font-size:1.05rem;color:var(--cream)}
+  .ppl-n{font-family:'Cinzel',serif;font-size:1.5rem;color:var(--gold);margin-left:auto}
+  .ppl-sub{font-size:0.66rem;color:var(--muted);margin-bottom:0.8rem}
+  .ppl-row{width:100%;text-align:left;background:var(--bg);border:1px solid var(--border);
+    border-radius:8px;padding:0.65rem 0.75rem;margin-bottom:0.45rem;cursor:pointer;font:inherit;
+    transition:border-color 0.15s}
+  .ppl-row:hover{border-color:var(--gold)}
+  .ppl-row.off{opacity:0.5}
+  .ppl-name{font-size:0.88rem;color:var(--cream)}
+  .ppl-meta{font-size:0.68rem;color:var(--muted);margin-top:0.15rem}
+  .ppl-empty{font-size:0.76rem;color:var(--muted);padding:0.5rem 0}
+
+  /* One person, everything known. */
+  .pp-grid{display:grid;gap:0.55rem;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));margin-bottom:1rem}
+  .pp-cell{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.55rem;text-align:center}
+  .pp-cell b{display:block;font-family:'Cinzel',serif;font-size:1.15rem;color:var(--cream);line-height:1.1}
+  .pp-cell span{font-size:0.58rem;letter-spacing:0.11em;text-transform:uppercase;color:var(--muted);display:block;margin-top:0.3rem}
+  .pp-sec{font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);margin:1.2rem 0 0.55rem}
+  .pp-line{display:flex;gap:0.8rem;padding:0.45rem 0;border-top:1px solid var(--border);font-size:0.84rem}
+  .pp-line .k{min-width:130px;color:var(--muted)}
+  .pp-line .v{flex:1;color:var(--cream)}
+  .pp-flag{display:inline-block;font-size:0.66rem;border:1px solid var(--border-hi);border-radius:100px;
+    padding:0.2rem 0.55rem;margin:0.2rem 0.25rem 0 0;color:var(--cream)}
+  .pp-flag.hi{border-color:#d66;color:#ffb3b3}
 </style>
 </head>
 <body>
@@ -559,6 +590,7 @@
     <button class="tab" data-tab="schedule" onclick="showTab('schedule')">Calendar</button>
     <button class="tab" data-tab="bookings" onclick="showTab('bookings')">All Bookings</button>
     <button class="tab" data-tab="reports" onclick="showTab('reports')">Reports</button>
+    <button class="tab" data-tab="people" onclick="showTab('people')">Members</button>
     <button class="tab" data-tab="insights" onclick="showTab('insights')">Insights</button>
     <button class="tab" data-tab="records" onclick="showTab('records')">Records</button>
     <button class="tab" data-tab="payouts2" onclick="showTab('payouts2')">Payouts</button>
@@ -777,6 +809,18 @@
       <div class="page-head" style="margin-top:2rem;"><div><div class="page-title" style="font-size:1.15rem;">Where people drop off</div>
       <div class="page-desc">Each step of the booking flow, and how many left there.</div></div></div>
       <div id="rp-funnel"></div>
+    </section>
+
+    <!-- MEMBERS & DROP-INS -->
+    <section class="panel" id="panel-people">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Members &amp; Drop-Ins</div>
+          <div class="page-desc">Everyone who pays you, and everything you know about them. Tap any name.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadPeople()">↻ Refresh</button>
+      </div>
+      <div id="ppl-body"><div class="empty">Loading…</div></div>
     </section>
 
     <!-- INSIGHTS -->
@@ -1858,6 +1902,7 @@ const TAB_LOADERS = {
   overview:   () => { loadOverview(); loadDispatch(); },
   records:    () => loadRecords(),
   insights:   () => loadInsights(),
+  people:     () => loadPeople(),
   payouts2:   () => loadPayoutsStripe(),
   bookings:   () => loadAllBookings(),
   reports:    () => loadReports(),
@@ -4120,6 +4165,201 @@ function mountOwnerPush(){
     const s = (d && d.settings) || {};
     if(el && s.owner_phone) el.value = s.owner_phone;
   }).catch(function(){});
+}
+
+
+
+/* ══════════════ MEMBERS & DROP-INS ══════════════ */
+let PEOPLE = null;
+
+function pplMoney(c){ return cmoney(c || 0); }
+function pplWhen(ds){
+  if(!ds) return '—';
+  const d = new Date(String(ds).slice(0,10) + 'T12:00:00');
+  return isNaN(d) ? String(ds) : d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+
+async function loadPeople(){
+  const el = document.getElementById('ppl-body');
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try{
+    PEOPLE = await (await api('/api/people')).json();
+    if(PEOPLE.error) throw new Error(PEOPLE.error);
+  }catch(err){ el.innerHTML = emptyBox('⚠️','Could not load: ' + esc(err.message)); return; }
+
+  const t = PEOPLE.totals, dt = PEOPLE.dropin_totals;
+
+  const col = (tier, label, note) => {
+    const rows = PEOPLE.columns[tier] || [];
+    const active = rows.filter(function(r){ return r.active; }).length;
+    return '<div class="ppl-col' + (tier === 'BLACK_CARD' ? ' black' : '') + '">'
+      + '<div class="ppl-h"><div class="ppl-t">' + label + '</div>'
+        + '<div class="ppl-n">' + active + '</div></div>'
+      + '<div class="ppl-sub">' + note + (rows.length > active ? ' · ' + (rows.length - active) + ' cancelled' : '') + '</div>'
+      + (rows.length
+          ? rows.map(function(r,i){
+              return '<button class="ppl-row' + (r.active ? '' : ' off') + '" onclick="openPerson(\'' + tier + '\',' + i + ')">'
+                + '<div class="ppl-name">' + esc(r.name) + (r.active ? '' : ' · cancelled') + '</div>'
+                + '<div class="ppl-meta">' + esc(r.member_id) + ' · ' + pplMoney(r.monthly_cents) + '/mo · '
+                  + r.months_paid + ' month' + (r.months_paid === 1 ? '' : 's') + ' paid'
+                + '</div></button>';
+            }).join('')
+          : '<div class="ppl-empty">Nobody yet.</div>')
+      + '</div>';
+  };
+
+  el.innerHTML =
+    '<div class="cards">'
+      + statCard(pplMoney(t.mrr_cents), 'Monthly from memberships')
+      + statCard(t.active_members, 'Active members')
+      + statCard(pplMoney(t.membership_paid_to_date_cents), 'Membership income to date')
+      + statCard(dt.count, 'Drop-in clients')
+    + '</div>'
+
+    + '<div class="ppl-cols">'
+      + col('SIGNATURE', 'Signature', '$99 a month')
+      + col('LUXE', 'Luxe', '$199 a month')
+      + col('BLACK_CARD', 'Black Card', '$299 a month')
+    + '</div>'
+
+    + '<div class="page-head" style="margin-top:2rem;"><div>'
+      + '<div class="page-title" style="font-size:1.15rem;">Drop-Ins ✦ ' + dt.count + '</div>'
+      + '<div class="page-desc">' + dt.lapsed + ' have not been in for 90 days or more. '
+      + pplMoney(dt.deposits_cents) + ' in deposits taken across all of them.</div>'
+      + '</div><input id="ppl-search" placeholder="Search a name or number…" oninput="renderDropins()" '
+      + 'style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:0.55rem 0.75rem;max-width:230px;outline:none;" />'
+      + '</div>'
+    + '<div id="ppl-dropins"></div>';
+
+  renderDropins();
+}
+
+function renderDropins(){
+  const el = document.getElementById('ppl-dropins');
+  if(!el || !PEOPLE) return;
+  const q = ((document.getElementById('ppl-search')||{}).value || '').toLowerCase().trim();
+  const list = (PEOPLE.dropins || []).filter(function(d){
+    if(!q) return true;
+    return String(d.name).toLowerCase().includes(q)
+      || String(d.phone).includes(q)
+      || String(d.email).toLowerCase().includes(q);
+  });
+  el.innerHTML = list.length ? list.map(function(d,i){
+    const idx = (PEOPLE.dropins || []).indexOf(d);
+    // Somebody who has not been in for three months is the most useful row
+    // on this screen, so it says so rather than making her work it out.
+    const lapsed = d.days_since != null && d.days_since > 90;
+    return '<div class="member-card" style="--mc:' + (lapsed ? '#d66' : '#B6A588') + '">'
+      + '<div class="mc-top"><div style="flex:1">'
+        + '<div class="mc-name"><a href="#" onclick="event.preventDefault();openPerson(\'DROPIN\',' + idx + ')" '
+          + 'style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--gold)">' + esc(d.name) + '</a></div>'
+        + '<div class="mc-role">' + (d.phone ? esc(d.phone) + ' · ' : '') + esc(d.email || 'no email')
+          + (d.usual_service ? ' · ' + esc(d.usual_service) : '') + '</div>'
+        + '<div style="font-size:0.68rem;color:var(--muted);margin-top:0.2rem">'
+          + d.visits + ' visit' + (d.visits === 1 ? '' : 's')
+          + ' · last ' + pplWhen(d.last_visit)
+          + (d.days_since != null ? ' (' + d.days_since + ' days ago)' : '')
+          + (d.cancelled ? ' · ' + d.cancelled + ' cancelled' : '')
+        + '</div>'
+      + '</div><div style="text-align:right">'
+        + '<div class="status-pill" style="background:rgba(182,165,136,0.16);color:var(--cream)">'
+          + pplMoney(d.deposits_cents || d.spent_cents) + '</div>'
+        + (lapsed ? '<div style="font-size:0.62rem;color:#d68a8a;margin-top:0.3rem">gone quiet</div>' : '')
+      + '</div></div></div>';
+  }).join('') : emptyBox('👥','Nobody matches that.');
+}
+
+// Everything about one person, in the same sheet the drill-downs use.
+function openPerson(where, i){
+  const p = where === 'DROPIN'
+    ? (PEOPLE.dropins || [])[i]
+    : ((PEOPLE.columns[where] || [])[i]);
+  if(!p) return;
+
+  const isMember = where !== 'DROPIN';
+  const n = p.nails;
+
+  const line = (k, v) => v ? '<div class="pp-line"><div class="k">' + k + '</div><div class="v">' + esc(v) + '</div></div>' : '';
+
+  let html =
+    '<div class="drill-head"><div>'
+      + '<div class="drill-title">' + esc(p.name) + '</div>'
+      + '<div class="drill-sub">' + (isMember
+          ? esc(p.tier_label) + ' · ' + esc(p.member_id) + (p.active ? '' : ' · CANCELLED')
+          : 'Drop-in client') + '</div>'
+    + '</div><button class="drill-x" onclick="closeDrill()">&times;</button></div>'
+    + '<div class="drill-body">';
+
+  // The money, first, because that is why this screen exists.
+  html += '<div class="pp-grid">'
+    + (isMember ? '<div class="pp-cell"><b>' + pplMoney(p.monthly_cents) + '</b><span>a month</span></div>' : '')
+    + (isMember ? '<div class="pp-cell"><b>' + pplMoney(p.paid_to_date_cents) + '</b><span>paid to date</span></div>' : '')
+    + '<div class="pp-cell"><b>' + p.visits + '</b><span>visits</span></div>'
+    + '<div class="pp-cell"><b>' + pplMoney(p.spent_cents || p.deposits_cents) + '</b><span>' + (p.spent_cents ? 'spent here' : 'deposits') + '</span></div>'
+    + (p.tips_cents ? '<div class="pp-cell"><b>' + pplMoney(p.tips_cents) + '</b><span>tipped</span></div>' : '')
+    + (p.avg_ticket_cents ? '<div class="pp-cell"><b>' + pplMoney(p.avg_ticket_cents) + '</b><span>average ticket</span></div>' : '')
+    + '</div>';
+
+  html += '<div class="pp-sec">How to reach them</div>'
+    + line('Phone', p.phone) + line('Email', p.email)
+    + (isMember ? line('Member ID', p.member_id) : '')
+    + (isMember ? line('Referral code', p.referral_code) : '')
+    + line('Card on file', p.card_on_file ? 'Yes' : 'No');
+
+  if(isMember){
+    html += '<div class="pp-sec">Membership</div>'
+      + line('Tier', p.tier_label + ' · ' + pplMoney(p.monthly_cents) + ' a month')
+      + line('Started', pplWhen(p.started))
+      + line('Months paid', String(p.months_paid))
+      + line('Paid to date', pplMoney(p.paid_to_date_cents))
+      + (p.active ? line('Renews', pplWhen(p.renews)) : line('Cancelled', pplWhen(p.cancelled_at) + ' — stopped paying then'))
+      + line('Status', p.active ? 'Active' : 'Cancelled');
+  }
+
+  html += '<div class="pp-sec">Their visits</div>'
+    + line('First came', pplWhen(p.first_visit))
+    + line('Last came', pplWhen(p.last_visit) + (p.days_since != null ? '  (' + p.days_since + ' days ago)' : ''))
+    + line('Usual service', p.usual_service)
+    + (p.cancelled ? line('Cancelled visits', String(p.cancelled)) : '');
+
+  // What an artist needs before this person sits down.
+  const hasPrefs = p.likes || p.dislikes || p.notes || (n && (n.allergy || n.dislikes || n.wants || n.shape || n.length || n.job || (n.flagged || []).length));
+  if(hasPrefs){
+    html += '<div class="pp-sec">What they want, and what to avoid</div>';
+    if(n){
+      html += line('Nail health', n.score ? n.score + '/100 · ' + n.band : '')
+        + line('Their goal', n.goal)
+        + line('Shape they like', n.shape)
+        + line('Length they like', n.length)
+        + line('Hands at work', n.job);
+      if((n.flagged || []).length){
+        html += '<div class="pp-line"><div class="k">Nail issues</div><div class="v">'
+          + n.flagged.map(function(f){
+              return '<span class="pp-flag' + (f.severity >= 2 ? ' hi' : '') + '">' + esc(f.label)
+                + ' · ' + ['','a little','quite a bit','a lot'][f.severity] + '</span>';
+            }).join('')
+          + '</div></div>';
+      }
+      html += line('Allergies / sensitivities', n.allergy)
+        + line('Never do again', n.dislikes)
+        + line('Dream set', n.wants);
+    }
+    html += line('Likes', p.likes) + line('Avoid', p.dislikes) + line('Notes', p.notes);
+  } else {
+    html += '<div class="pp-sec">What they want, and what to avoid</div>'
+      + '<div class="ppl-empty">Nothing recorded yet. '
+      + (isMember ? 'They can fill in the nail questionnaire from their account.' : 'Add notes from their client profile.')
+      + '</div>';
+  }
+
+  html += '<button class="btn btn-ghost btn-sm" style="margin-top:1.2rem" onclick="closeDrill();openClient('
+    + esc(JSON.stringify({ name: p.name, email: p.email || '', phone: p.phone || '' })).replace(/"/g,'&quot;')
+    + ')">Open full client profile</button>';
+
+  html += '</div>';
+
+  document.getElementById('drill-veil').classList.add('open');
+  document.getElementById('drill-box').innerHTML = html;
 }
 
 

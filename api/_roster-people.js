@@ -48,7 +48,7 @@ async function loadEverything() {
     try {
       members = await query(
         `SELECT member_id, full_name, email, phone, tier, date_of_birth,
-                membership_started_at, next_billing_at, referral_code, flagged
+                membership_started_at, next_billing_at, referral_code, flagged, demo
            FROM members ORDER BY membership_started_at DESC`);
     } catch (_) {}
   }
