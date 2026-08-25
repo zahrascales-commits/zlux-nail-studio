@@ -463,13 +463,13 @@
       <div class="error-msg" id="err-2"></div>
 
       <div class="policy-note">
-        <strong>6-month minimum commitment.</strong> Your membership will auto-renew monthly via Stripe. You may cancel after 6 months with 30 days written notice. No refunds on months already billed. By continuing you agree to these terms.
+        <strong>Three-month minimum.</strong> Your membership renews automatically via Stripe until you cancel. After your first three months you can cancel any time from your account. No refunds on months already billed. By continuing you agree to these terms.
       </div>
 
       <div id="signup-price-display" style="text-align:center;margin-bottom:1.5rem;">
         <div style="font-family:'Josefin Sans',sans-serif;font-size:0.68rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--latte);margin-bottom:0.25rem;">Today's Charge</div>
         <div id="price-display" style="font-family:'Cinzel',serif;font-size:3rem;color:var(--champagne);"></div>
-        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.75rem;color:var(--latte);">then monthly — cancel after 6 months</div>
+        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.75rem;color:var(--latte);">then renews automatically — cancel any time after three months</div>
       </div>
 
       <div class="form-field">
@@ -666,7 +666,7 @@ setTimeout(function(){
       + '<button type="button" class="plan' + (billing === 'monthly' ? ' on' : '') + '" onclick="pickBilling(\'monthly\')">'
         + '<div class="plan-when">Pay monthly</div>'
         + '<div class="plan-amt">' + planMoney(p.monthly) + '<small> /month</small></div>'
-        + '<div class="plan-note">' + planMoney(twelve) + ' over a year. Cancel any time.</div>'
+        + '<div class="plan-note">Cancel any time after three months.</div>'
       + '</button>';
   }
 
@@ -1014,7 +1014,7 @@ setTimeout(function(){
       + 'I authorise ZOLA Nail Studio to charge this card <strong style="color:var(--espresso);">'
       + money(monthly) + ' today</strong> and <strong style="color:var(--espresso);">'
       + money(monthly) + (yearly ? ' every year' : ' every month') + '</strong> from ' + next + ', until I cancel. '
-      + 'I can cancel any time from my account.'
+      + 'I can cancel any time after my first three months.'
       + (appliedPromo && appliedPromo.kind === 'fixed_total'
           ? '<br><span style="color:var(--champagne);">Your ' + money(monthly)
             + ' rate stays the same for as long as you keep your membership.</span>'
