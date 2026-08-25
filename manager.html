@@ -559,7 +559,9 @@
     <button class="tab" data-tab="schedule" onclick="showTab('schedule')">Calendar</button>
     <button class="tab" data-tab="bookings" onclick="showTab('bookings')">All Bookings</button>
     <button class="tab" data-tab="reports" onclick="showTab('reports')">Reports</button>
+    <button class="tab" data-tab="insights" onclick="showTab('insights')">Insights</button>
     <button class="tab" data-tab="records" onclick="showTab('records')">Records</button>
+    <button class="tab" data-tab="payouts2" onclick="showTab('payouts2')">Payouts</button>
     <button class="tab" data-tab="sales" onclick="showTab('sales')">Sales</button>
     <button class="tab" data-tab="deposits" onclick="showTab('deposits')">Deposits <span class="dot" id="dep-dot" style="display:none">0</span></button>
     <button class="tab" data-tab="inventory" onclick="showTab('inventory')">Inventory <span class="dot" id="inv-dot" style="display:none">0</span></button>
@@ -775,6 +777,34 @@
       <div class="page-head" style="margin-top:2rem;"><div><div class="page-title" style="font-size:1.15rem;">Where people drop off</div>
       <div class="page-desc">Each step of the booking flow, and how many left there.</div></div></div>
       <div id="rp-funnel"></div>
+    </section>
+
+    <!-- INSIGHTS -->
+    <section class="panel" id="panel-insights">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Insights</div>
+          <div class="page-desc">How the studio is actually doing. Every figure comes from your own bookings.</div>
+        </div>
+        <div style="display:flex;gap:0.4rem;">
+          <button class="btn btn-ghost btn-sm" id="ins-week" onclick="setInsightPeriod('week')">Week</button>
+          <button class="btn btn-gold btn-sm" id="ins-month" onclick="setInsightPeriod('month')">Month</button>
+          <button class="btn btn-ghost btn-sm" id="ins-year" onclick="setInsightPeriod('year')">Year</button>
+        </div>
+      </div>
+      <div id="ins-body"><div class="empty">Loading…</div></div>
+    </section>
+
+    <!-- PAYOUTS (Stripe) -->
+    <section class="panel" id="panel-payouts2">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Payouts</div>
+          <div class="page-desc">Money on its way to your bank, straight from Stripe.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadPayoutsStripe()">↻ Refresh</button>
+      </div>
+      <div id="po-body"><div class="empty">Loading…</div></div>
     </section>
 
     <!-- RECORDS -->
@@ -1827,6 +1857,8 @@ function logout(){sessionStorage.removeItem('zm_pwd');location.reload();}
 const TAB_LOADERS = {
   overview:   () => { loadOverview(); loadDispatch(); },
   records:    () => loadRecords(),
+  insights:   () => loadInsights(),
+  payouts2:   () => loadPayoutsStripe(),
   bookings:   () => loadAllBookings(),
   reports:    () => loadReports(),
   services:   () => loadServicesTab(),
@@ -4089,6 +4121,142 @@ function mountOwnerPush(){
     if(el && s.owner_phone) el.value = s.owner_phone;
   }).catch(function(){});
 }
+
+
+/* ══════════════ INSIGHTS ══════════════ */
+let INSIGHT_PERIOD = 'month', INSIGHTS = null;
+
+function setInsightPeriod(p){
+  INSIGHT_PERIOD = p;
+  ['week','month','year'].forEach(function(x){
+    const b = document.getElementById('ins-' + x);
+    if(b) b.className = 'btn btn-sm ' + (x === p ? 'btn-gold' : 'btn-ghost');
+  });
+  loadInsights();
+}
+
+// A movement arrow only where there is a real baseline to compare against.
+// "+100%" against a month with nothing in it is noise dressed as progress.
+function insChange(v){
+  if(v == null) return '<div style="font-size:0.66rem;color:var(--muted);margin-top:0.3rem">no comparison yet</div>';
+  const up = v >= 0;
+  return '<div style="font-size:0.68rem;margin-top:0.3rem;color:' + (up ? '#7ec98a' : '#d68a8a') + '">'
+    + (up ? '▲' : '▼') + ' ' + Math.abs(v) + '% vs the period before</div>';
+}
+
+function insCard(label, value, change, sub){
+  return '<div class="stat-card">'
+    + '<div class="stat-num">' + value + '</div>'
+    + '<div class="stat-label">' + label + '</div>'
+    + (sub ? '<div style="font-size:0.66rem;color:var(--muted);margin-top:0.3rem">' + sub + '</div>' : '')
+    + (change !== undefined ? insChange(change) : '')
+    + '</div>';
+}
+
+// The split bar. Seeing that gratuities are a seventh of the take is the
+// point of the number, and a row of percentages does not show that.
+function insSplit(split){
+  const parts = [
+    { k: 'Service',    v: split.service,    c: '#B6A588' },
+    { k: 'Gratuities', v: split.gratuities, c: '#9a6fc4' },
+    { k: 'Other',      v: split.other,      c: '#6a8fbf' },
+  ].filter(function(p){ return p.v.pct > 0; });
+  if(!parts.length) return '';
+  return '<div style="margin-top:0.9rem">'
+    + '<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--card)">'
+      + parts.map(function(p){ return '<div style="width:' + p.v.pct + '%;background:' + p.c + '"></div>'; }).join('')
+    + '</div>'
+    + '<div style="display:flex;gap:0.9rem;flex-wrap:wrap;margin-top:0.5rem">'
+      + parts.map(function(p){
+          return '<span style="font-size:0.68rem;color:var(--muted)">'
+            + '<i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:' + p.c + ';margin-right:0.3rem"></i>'
+            + p.k + ' ' + p.v.pct + '% · ' + cmoney(p.v.cents) + '</span>';
+        }).join('')
+    + '</div></div>';
+}
+
+async function loadInsights(){
+  const el = document.getElementById('ins-body');
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try{
+    const r = await api('/api/insights?period=' + INSIGHT_PERIOD);
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+    INSIGHTS = d;
+
+    const u = d.booking_utilization;
+    el.innerHTML =
+      '<div class="cards">'
+        + insCard('Net revenue', cmoney(d.net_revenue.cents), d.net_revenue.change)
+        + insCard('Projected this period', cmoney(d.projected_revenue.cents), d.projected_revenue.change,
+            'if the rest goes like so far')
+        + insCard('Service revenue', cmoney(d.service_revenue.cents), d.service_revenue.change)
+        + insCard('Retail revenue', cmoney(d.retail_revenue.cents))
+      + '</div>'
+      + insSplit(d.net_revenue.split)
+      + '<div class="cards" style="margin-top:1.2rem">'
+        + insCard('Client retention', d.client_retention.pct + '%', undefined,
+            d.client_retention.returning + ' of ' + d.client_retention.of + ' came back')
+        + insCard('Booking utilisation', (u.pct == null ? '—' : u.pct + '%'), u.pct == null ? undefined : u.change,
+            u.booked_hours + 'h booked of ' + u.available_hours + 'h rostered')
+        + insCard('Average ticket', cmoney(d.average_ticket.cents), d.average_ticket.change)
+        + insCard('Total bookings', d.total_bookings.count, d.total_bookings.change)
+      + '</div>'
+      + (d.caveats.length
+          ? '<div style="margin-top:1.5rem;background:var(--card);border:1px solid var(--border);padding:1rem 1.15rem;border-radius:10px">'
+            + '<div style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold);margin-bottom:0.6rem">Worth knowing</div>'
+            + d.caveats.map(function(c){
+                return '<div style="font-size:0.8rem;color:var(--muted);line-height:1.7;margin-bottom:0.4rem">· ' + esc(c) + '</div>';
+              }).join('')
+            + '</div>'
+          : '');
+  }catch(err){ el.innerHTML = emptyBox('⚠️', 'Could not load insights: ' + esc(err.message)); }
+}
+
+/* ══════════════ PAYOUTS ══════════════ */
+async function loadPayoutsStripe(){
+  const el = document.getElementById('po-body');
+  el.innerHTML = '<div class="empty">Asking Stripe…</div>';
+  try{
+    const d = await (await api('/api/manager?action=stripe_health')).json();
+    if(!d.ok){
+      el.innerHTML = emptyBox('💳', d.reason === 'no_key'
+        ? 'Connect Stripe in Settings and your payouts appear here.'
+        : 'Stripe said: ' + esc(d.detail || d.reason || 'something went wrong'));
+      return;
+    }
+    const bank = (d.bank || [])[0];
+    const bal = d.balance || { available: 0, pending: 0 };
+
+    el.innerHTML =
+      '<div class="cards">'
+        + insCard('Available now', '$' + Number(bal.available).toFixed(2), undefined, 'ready to pay out')
+        + insCard('On its way', '$' + Number(bal.pending).toFixed(2), undefined, 'still clearing')
+        + insCard('Payout schedule', esc((d.payout_schedule && d.payout_schedule.interval) || '—'), undefined,
+            d.payouts_enabled ? 'payouts are on' : 'payouts are OFF')
+        + insCard('Goes to', bank ? esc(bank.name || 'Bank') + ' ····' + esc(bank.last4) : 'No bank yet', undefined,
+            bank ? (bank.default ? 'default account' : '') : 'add one in Stripe to get paid')
+      + '</div>'
+      + (!d.payouts_enabled
+          ? '<div style="margin-top:1.2rem;background:rgba(214,102,102,0.12);border:1px solid rgba(214,102,102,0.4);padding:1rem 1.15rem;border-radius:10px;font-size:0.85rem;line-height:1.7;color:#ffb3b3">'
+            + '<strong>Payouts are switched off.</strong> Money can still come in, but none of it reaches your bank until Stripe has what it needs'
+            + ((d.currently_due || []).length ? ': ' + esc(d.currently_due.join(', ')) : '.')
+            + '</div>'
+          : '')
+      + '<div class="page-head" style="margin-top:2rem;"><div><div class="page-title" style="font-size:1.15rem;">Every payout</div></div></div>'
+      + ((d.payouts || []).length
+          ? d.payouts.map(function(p){
+              const failed = /fail|cancel/i.test(p.status);
+              return '<div class="member-card" style="--mc:' + (failed ? '#d66' : '#7ec98a') + '">'
+                + '<div class="mc-top"><div style="flex:1">'
+                  + '<div class="mc-name">$' + Number(p.amount).toFixed(2) + '</div>'
+                  + '<div class="mc-role">' + esc(p.date) + (p.failure ? ' · ' + esc(p.failure) : '') + '</div>'
+                + '</div><span class="status-pill ' + (failed ? '' : 'status-on') + '">' + esc(p.status) + '</span></div></div>';
+            }).join('')
+          : emptyBox('🏦', 'No payouts yet. They start once money comes in.'));
+  }catch(err){ el.innerHTML = emptyBox('⚠️', 'Could not reach Stripe: ' + esc(err.message)); }
+}
+
 
 /* ══════════════ RECORDS ══════════════ */
 // Every count here opens. "19 bookings, 15 clients, 2 came back" is only
