@@ -4234,9 +4234,26 @@ async function loadPayoutsStripe(){
         + insCard('On its way', '$' + Number(bal.pending).toFixed(2), undefined, 'still clearing')
         + insCard('Payout schedule', esc((d.payout_schedule && d.payout_schedule.interval) || '—'), undefined,
             d.payouts_enabled ? 'payouts are on' : 'payouts are OFF')
-        + insCard('Goes to', bank ? esc(bank.name || 'Bank') + ' ····' + esc(bank.last4) : 'No bank yet', undefined,
-            bank ? (bank.default ? 'default account' : '') : 'add one in Stripe to get paid')
+        // 'could not check' and 'there is none' are completely different
+        // answers. Showing a permissions error as 'No bank yet' told Zahra
+        // her money had nowhere to land when it was on its way.
+        + insCard('Goes to',
+            bank ? esc(bank.name || 'Bank') + ' ····' + esc(bank.last4)
+                 : (d.bank_checked ? 'No bank yet' : (d.payouts_enabled ? 'Set up in Stripe' : 'Unknown')),
+            undefined,
+            bank ? (bank.default ? 'default account' : '')
+                 : (d.bank_checked
+                     ? 'add one in Stripe to get paid'
+                     : (d.payouts_enabled
+                         ? 'Stripe has one — this key cannot read which'
+                         : 'could not check with this key')))
       + '</div>'
+      + (!d.bank_checked && d.payouts_enabled
+          ? '<div style="margin-top:1.2rem;background:var(--card);border:1px solid var(--border);padding:0.9rem 1.1rem;border-radius:10px;font-size:0.8rem;line-height:1.7;color:var(--muted)">'
+            + 'Stripe says payouts are enabled, which means your bank details are in place. '
+            + 'Your API key is a restricted one that cannot read the account list, so the last four digits cannot be shown here.'
+            + '</div>'
+          : '')
       + (!d.payouts_enabled
           ? '<div style="margin-top:1.2rem;background:rgba(214,102,102,0.12);border:1px solid rgba(214,102,102,0.4);padding:1rem 1.15rem;border-radius:10px;font-size:0.85rem;line-height:1.7;color:#ffb3b3">'
             + '<strong>Payouts are switched off.</strong> Money can still come in, but none of it reaches your bank until Stripe has what it needs'
