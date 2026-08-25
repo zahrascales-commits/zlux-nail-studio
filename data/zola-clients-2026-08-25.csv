@@ -1,67 +1,67 @@
-client_name,total_appointments,completed,checkout,cancelled,first_appointment,last_appointment,most_common_service,card_on_file,card_expiration,total_deposits_collected
-Katelynn Boydstun,17,1,15,1,10/27/2025,08/12/2026,Organic Structured Manicure (Regular appointment),Yes,3/2029,559.0
-Greenley Wilson,11,0,10,1,12/23/2025,08/12/2026,Organic Structured Manicure (Regular appointment),Yes,11/2026,391.0
-Des Gomez,8,2,6,0,11/01/2025,06/03/2026,Organic Structured Manicure (Regular appointment),Yes,8/2026,200.0
-clarice B,8,1,7,0,11/01/2025,04/16/2026,Organic Structured Manicure,Yes,7/2027,313.0
-Rosalinda Ruiz,8,0,8,0,11/15/2025,07/02/2026,Medium Acrylic (Medium acrylic ),Yes,11/2026,305.0
-Joanna Villanueva,8,0,8,0,11/17/2025,05/14/2026,Small Gel-X Full set,No,,363.0
-Jaelyn Estrada,8,0,8,0,11/24/2025,05/20/2026,Small Gel-X Full set,Yes,8/2029,373.0
-Alia Chavez,7,1,6,0,11/01/2025,08/21/2026,Small Acrylic (Small acrylic ),Yes,3/2031,190.0
-Ladonna,7,0,7,0,11/06/2025,07/22/2026,"Organic Structured Manicure (Regular appointment), Classic Spa Pedicure (Classic Spa Pedicure)",No,,398.0
-Amber Delussa,7,0,7,0,11/27/2025,06/18/2026,Removal + Organic structured mani,Yes,6/2027,282.0
-Yadira Jimenez,7,0,7,0,04/01/2026,08/18/2026,Organic Structured Manicure (Regular appointment),Yes,4/2027,440.0
-Mommy,6,0,6,0,11/30/2025,03/30/2026,Organic Structured Manicure,No,,321.0
-Ana Pena,6,0,6,0,12/15/2025,04/20/2026,#1 BEST SELLER Russian Manicure,Yes,12/2028,250.0
-hannah💅🏻,6,0,6,0,01/07/2026,07/19/2026,Organic Structured Manicure (Regular appointment),Yes,5/2029,240.0
-Iliana,5,0,5,0,11/05/2025,03/07/2026,Organic Structured Manicure,No,,0.0
-adriana ocampo,5,0,5,0,12/01/2025,07/27/2026,Organic Structured Manicure (Regular appointment),Yes,2/2028,130.0
-JayyLashes,4,0,4,0,11/13/2025,01/10/2026,Small Acrylic,No,,63.0
-Des medrano,4,0,4,0,11/19/2025,02/28/2026,Organic Structured Manicure,No,,80.0
-Kimberly Tapia,4,0,4,0,11/29/2025,02/14/2026,Organic Structured Manicure (Regular appointment),Yes,8/2028,80.0
-Lorena💅🏻,4,0,4,0,12/12/2025,07/31/2026,Organic Structured Manicure,Yes,7/2031,98.0
-Valarie Damariss,4,1,3,0,12/24/2025,05/30/2026,Medium Acrylic (Medium acrylic ),Yes,3/2031,182.0
-Adriana Figueroa,4,0,4,0,12/24/2025,02/28/2026,Organic Structured Manicure (Regular appointment),Yes,10/2028,163.0
-neli orozco,4,0,4,0,02/06/2026,04/24/2026,Organic Structured Manicure (Russian manicure ),Yes,2/2030,227.0
-Elsa Herrera,4,0,3,1,05/21/2026,08/13/2026,"Medium Gel-X Full set (Russian manicure ), Small Gel-X Full set (Russian manicure )",Yes,1/2027,244.0
-andrea💅🏻,3,0,3,0,11/03/2025,12/15/2025,Healthy Removal + Small Acrylic Set,No,,0.0
-Betty Pena,3,0,2,1,11/05/2025,05/14/2026,Organic Structured Manicure,Yes,1/2028,63.0
-Mina,3,1,2,0,11/15/2025,01/24/2026,Organic Structured Manicure,No,,40.0
-monica,3,0,3,0,11/24/2025,08/21/2026,Organic Structured Manicure,Yes,3/2031,101.0
-Maria,3,0,3,0,11/29/2025,03/30/2026,Organic Structured Manicure,Yes,1/2029,40.0
-Lily Byers,3,0,3,0,12/20/2025,02/18/2026,"Classic Spa Pedicure, Small Gel-X Full set",Yes,4/2030,121.0
-Clarice Balangue,3,0,3,0,05/13/2026,07/16/2026,"Hydro Free Pedicure (Hydro Free Pedicure), Organic Structured Manicure (Regular appointment)",Yes,9/2027,209.0
-Lilia Shimer,3,0,3,0,06/09/2026,08/18/2026,Healthy Removal + Small Acrylic Set (Healthy Removal + Small Acrylic Set),Yes,3/2027,146.0
-Danniella ibarra,2,0,2,0,11/05/2025,11/25/2025,Organic Structured Manicure,No,,0.0
-Betty,2,0,2,0,11/12/2025,12/03/2025,Healthy Removal,No,,0.0
-Perla Ramírez,2,0,1,1,12/12/2025,12/12/2025,Medium Gel-X Full set,No,,0.0
-anabel,2,0,1,1,12/17/2025,01/24/2026,Medium Acrylic (Medium acrylic ),No,,96.0
-Sofia Jeronimo,2,1,1,0,12/25/2025,05/15/2026,Hydro Free Pedicure,Yes,4/2030,38.0
-Aurora Chavez,2,0,0,2,12/28/2025,12/28/2025,Classic Spa Pedicure,No,,0.0
-Avery Wingfield,2,2,0,0,01/12/2026,01/31/2026,Small Gel-X Full set (Regular appointment ),Yes,7/2029,136.0
-Yesenia Vega,2,0,2,0,03/07/2026,06/11/2026,Small Gel-X Full set (Regular appointment ),Yes,7/2028,90.0
-Zoriah Johnson,2,0,1,1,03/26/2026,04/23/2026,Healthy Removal + Long Acrylic (Russian manicure),Yes,12/2028,151.0
-katrina zacarias,2,1,1,0,04/10/2026,04/28/2026,Medium Gel-X Full set (Russian manicure ),Yes,10/2030,140.0
-Debbie Landers,2,1,1,0,05/21/2026,06/30/2026,Classic Spa Pedicure (Classic Spa Pedicure),Yes,1/2028,43.0
-Shelby Rubio,1,1,0,0,10/29/2025,10/29/2025,Small Gel-X Full set,No,,0.0
-adirana ocampo,1,1,0,0,10/30/2025,10/30/2025,Organic Structured Manicure,No,,0.0
-natalia,1,0,1,0,11/05/2025,11/05/2025,Small Gel-X Full set,No,,0.0
-zoriah,1,0,1,0,11/09/2025,11/09/2025,Long Acrylic,No,,0.0
-sandra,1,0,1,0,11/11/2025,11/11/2025,Organic Structured Manicure,No,,0.0
-Mireya,1,0,1,0,11/21/2025,11/21/2025,Medium Acrylic,No,,0.0
-Aziza Peralta,1,0,1,0,12/19/2025,12/19/2025,Medium Gel-X Full set,No,,0.0
-Ceadra Dakheil,1,0,1,0,12/22/2025,12/22/2025,Soak off + Medium Gel-X (Soak off + Medium Gel-X),Yes,1/2030,60.0
-Maria Cadena,1,0,1,0,02/02/2026,02/02/2026,Organic Structured Manicure (Regular appointment),Yes,6/2028,40.0
-Lili Viola,1,0,1,0,02/12/2026,02/12/2026,Medium Gel-X Full set (Fast appointment),Yes,7/2027,50.0
-Lily Bermudez,1,0,1,0,02/28/2026,02/28/2026,#1 BEST SELLER Russian Manicure,Yes,7/2028,50.0
-Reece Henry,1,0,1,0,03/08/2026,03/08/2026,Classic Spa Pedicure (Classic Spa Pedicure),Yes,12/2028,43.0
-Mailei Manning,1,0,1,0,03/27/2026,03/27/2026,Medium Acrylic (Medium acrylic ),Yes,11/2027,48.0
-Fabiola Millan,1,1,0,0,03/29/2026,03/29/2026,Small Acrylic (Russian manicure ),Yes,4/2030,58.0
-grace funderburk,1,0,0,1,04/20/2026,04/20/2026,Medium Gel-X Full set (Russian manicure ),Yes,5/2029,65.0
-Monica Robles,1,0,1,0,04/29/2026,04/29/2026,Organic Structured Manicure (Regular appointment),Yes,3/2031,40.0
-Ariel 🩷🧡,1,0,1,0,05/07/2026,05/07/2026,Organic Structured Manicure (Regular appointment),No,,40.0
-maria m,1,0,1,0,05/12/2026,05/12/2026,Organic Structured Manicure (Russian manicure ),No,,58.0
-Pearl,1,0,1,0,05/29/2026,05/29/2026,Medium Gel-X Full set (Regular appointment),No,,48.0
-Paloma Gomez,1,1,0,0,06/26/2026,06/26/2026,"Soak off + Small Gel-X (Russian manicure ), Hydro Free Pedicure (Hydro Free Pedicure)",Yes,10/2027,136.0
-isabella mendoza,1,0,1,0,07/18/2026,07/18/2026,"#1 BEST SELLER Russian Manicure, Small Gel-X Full set (Regular appointment )",Yes,7/2027,95.0
-Elizabeth Banuelos,1,0,1,0,07/24/2026,07/24/2026,Small Gel-X Full set (Russian manicure ),Yes,12/2029,63.0
-Diana Jacuinde,1,1,0,0,08/14/2026,08/14/2026,#1 BEST SELLER Russian Manicure,Yes,6/2029,50.0
+client_name,phone,email,total_appointments,completed,checkout,cancelled,first_appointment,last_appointment,most_common_service,card_on_file,card_expiration,total_deposits_collected
+Katelynn Boydstun,5597915752,katelynn0725@gmail.com,17,1,15,1,10/27/2025,08/12/2026,Organic Structured Manicure (Regular appointment),Yes,3/2029,559.0
+Greenley Wilson,5597936045,grnlywlsn@icloud.com,11,0,10,1,12/23/2025,08/12/2026,Organic Structured Manicure (Regular appointment),Yes,11/2026,391.0
+Des Gomez,5597892925,desiraejenae12@gmail.com,8,2,6,0,11/01/2025,06/03/2026,Organic Structured Manicure (Regular appointment),Yes,8/2026,200.0
+clarice B,5597887884,cbalangue12354@icloud.com,8,1,7,0,11/01/2025,04/16/2026,Organic Structured Manicure,Yes,7/2027,313.0
+Rosalinda Ruiz,5593619610,rosalindaruiz1999@gmail.com,8,0,8,0,11/15/2025,07/02/2026,Medium Acrylic (Medium acrylic ),Yes,11/2026,305.0
+Joanna Villanueva,5593614308,joanna.villanueva26@gmail.com,8,0,8,0,11/17/2025,05/14/2026,Small Gel-X Full set,No,,363.0
+Jaelyn Estrada,5593612444,jaelynroseestrada@gmail.com,8,0,8,0,11/24/2025,05/20/2026,Small Gel-X Full set,Yes,8/2029,373.0
+Alia Chavez,5593107026,chavezalia52@gmail.com,7,1,6,0,11/01/2025,08/21/2026,Small Acrylic (Small acrylic ),Yes,3/2031,190.0
+Ladonna,5593592088,,7,0,7,0,11/06/2025,07/22/2026,"Organic Structured Manicure (Regular appointment), Classic Spa Pedicure (Classic Spa Pedicure)",No,,398.0
+Amber Delussa,5595424079,amberdelussa14@gmail.com,7,0,7,0,11/27/2025,06/18/2026,Removal + Organic structured mani,Yes,6/2027,282.0
+Yadira Jimenez,7205265973,itzz.yaya2001@gmail.com,7,0,7,0,04/01/2026,08/18/2026,Organic Structured Manicure (Regular appointment),Yes,4/2027,440.0
+Mommy,5592027393,,6,0,6,0,11/30/2025,03/30/2026,Organic Structured Manicure,No,,321.0
+Ana Pena,5593591644,apena80@yahoo.com,6,0,6,0,12/15/2025,04/20/2026,#1 BEST SELLER Russian Manicure,Yes,12/2028,250.0
+hannah💅🏻,5593618584,hannah.e.a.lee123@gmail.com,6,0,6,0,01/07/2026,07/19/2026,Organic Structured Manicure (Regular appointment),Yes,5/2029,240.0
+Iliana,6619327644,ilianaacorral@gmail.com,5,0,5,0,11/05/2025,03/07/2026,Organic Structured Manicure,No,,0.0
+adriana ocampo,5593339518,lopez.123.559@gmail.com,5,0,5,0,12/01/2025,07/27/2026,Organic Structured Manicure (Regular appointment),Yes,2/2028,130.0
+JayyLashes,5595449950,,4,0,4,0,11/13/2025,01/10/2026,Small Acrylic,No,,63.0
+Des medrano,5593104345,desmedrano04@gmail.com,4,0,4,0,11/19/2025,02/28/2026,Organic Structured Manicure,No,,80.0
+Kimberly Tapia,5592025203,kimbo.070309@gmail.com,4,0,4,0,11/29/2025,02/14/2026,Organic Structured Manicure (Regular appointment),Yes,8/2028,80.0
+Lorena💅🏻,5597197886,salas0203@gmail.com,4,0,4,0,12/12/2025,07/31/2026,Organic Structured Manicure,Yes,7/2031,98.0
+Valarie Damariss,5595864270,valeriearredondo0@gmail.com,4,1,3,0,12/24/2025,05/30/2026,Medium Acrylic (Medium acrylic ),Yes,3/2031,182.0
+Adriana Figueroa,5592395906,adriana8ka@gmail.com,4,0,4,0,12/24/2025,02/28/2026,Organic Structured Manicure (Regular appointment),Yes,10/2028,163.0
+neli orozco,5593338995,almanmoreno12@gmail.com,4,0,4,0,02/06/2026,04/24/2026,Organic Structured Manicure (Russian manicure ),Yes,2/2030,227.0
+Elsa Herrera,5593598094,elsa.herrera6@yahoo.com,4,0,3,1,05/21/2026,08/13/2026,"Medium Gel-X Full set (Russian manicure ), Small Gel-X Full set (Russian manicure )",Yes,1/2027,244.0
+andrea💅🏻,5597889718,andreagarciazirangua@gmail.com,3,0,3,0,11/03/2025,12/15/2025,Healthy Removal + Small Acrylic Set,No,,0.0
+Betty Pena,5593599360,bettyp3@ymail.com,3,0,2,1,11/05/2025,05/14/2026,Organic Structured Manicure,Yes,1/2028,63.0
+Mina,5594838007,,3,1,2,0,11/15/2025,01/24/2026,Organic Structured Manicure,No,,40.0
+monica,5593107334,monicalrobles29@gmail.com,3,0,3,0,11/24/2025,08/21/2026,Organic Structured Manicure,Yes,3/2031,101.0
+Maria,5596316022,mariahernandez238@icloud.com,3,0,3,0,11/29/2025,03/30/2026,Organic Structured Manicure,Yes,1/2029,40.0
+Lily Byers,5593593473,lilyrose12705@gmail.com,3,0,3,0,12/20/2025,02/18/2026,"Classic Spa Pedicure, Small Gel-X Full set",Yes,4/2030,121.0
+Clarice Balangue,5597887884,claricexo10@gmail.com,3,0,3,0,05/13/2026,07/16/2026,"Hydro Free Pedicure (Hydro Free Pedicure), Organic Structured Manicure (Regular appointment)",Yes,9/2027,209.0
+Lilia Shimer,5593334297,shimerlily@gmail.com,3,0,3,0,06/09/2026,08/18/2026,Healthy Removal + Small Acrylic Set (Healthy Removal + Small Acrylic Set),Yes,3/2027,146.0
+Danniella ibarra,5593105926,danniguiza99@gmail.com,2,0,2,0,11/05/2025,11/25/2025,Organic Structured Manicure,No,,0.0
+Betty,5593599360,,2,0,2,0,11/12/2025,12/03/2025,Healthy Removal,No,,0.0
+Perla Ramírez,5597935996,rivasedith619@gmail.com,2,0,1,1,12/12/2025,12/12/2025,Medium Gel-X Full set,No,,0.0
+anabel,5593065372,anabelguevara2007@gmail.com,2,0,1,1,12/17/2025,01/24/2026,Medium Acrylic (Medium acrylic ),No,,96.0
+Sofia Jeronimo,5595423507,sofiajer09@gmail.com,2,1,1,0,12/25/2025,05/15/2026,Hydro Free Pedicure,Yes,4/2030,38.0
+Aurora Chavez,5593103485,aserrato2510@gmail.com,2,0,0,2,12/28/2025,12/28/2025,Classic Spa Pedicure,No,,0.0
+Avery Wingfield,5595449513,wingfieldavery@gmail.com,2,2,0,0,01/12/2026,01/31/2026,Small Gel-X Full set (Regular appointment ),Yes,7/2029,136.0
+Yesenia Vega,5593107104,vega.yesenia38@gmail.com,2,0,2,0,03/07/2026,06/11/2026,Small Gel-X Full set (Regular appointment ),Yes,7/2028,90.0
+Zoriah Johnson,9103186487,zorjohnson3@gmail.com,2,0,1,1,03/26/2026,04/23/2026,Healthy Removal + Long Acrylic (Russian manicure),Yes,12/2028,151.0
+katrina zacarias,5598277474,kzacarias0828@gmail.com,2,1,1,0,04/10/2026,04/28/2026,Medium Gel-X Full set (Russian manicure ),Yes,10/2030,140.0
+Debbie Landers,5593593442,dlanders3442@gmail.com,2,1,1,0,05/21/2026,06/30/2026,Classic Spa Pedicure (Classic Spa Pedicure),Yes,1/2028,43.0
+Shelby Rubio,5593596269,shelbyraerubio.12@gmail.com,1,1,0,0,10/29/2025,10/29/2025,Small Gel-X Full set,No,,0.0
+adirana ocampo,5593339518,,1,1,0,0,10/30/2025,10/30/2025,Organic Structured Manicure,No,,0.0
+natalia,5593595484,,1,0,1,0,11/05/2025,11/05/2025,Small Gel-X Full set,No,,0.0
+zoriah,9103186487,,1,0,1,0,11/09/2025,11/09/2025,Long Acrylic,No,,0.0
+sandra,5597891034,,1,0,1,0,11/11/2025,11/11/2025,Organic Structured Manicure,No,,0.0
+Mireya,5593599486,,1,0,1,0,11/21/2025,11/21/2025,Medium Acrylic,No,,0.0
+Aziza Peralta,5599206387,azizaperalta13@gmail.com,1,0,1,0,12/19/2025,12/19/2025,Medium Gel-X Full set,No,,0.0
+Ceadra Dakheil,5593593843,cdakheil225@gmail.com,1,0,1,0,12/22/2025,12/22/2025,Soak off + Medium Gel-X (Soak off + Medium Gel-X),Yes,1/2030,60.0
+Maria Cadena,5595429717,mariacadena313@gmail.com,1,0,1,0,02/02/2026,02/02/2026,Organic Structured Manicure (Regular appointment),Yes,6/2028,40.0
+Lili Viola,5593106637,lilirose.viola@gmail.com,1,0,1,0,02/12/2026,02/12/2026,Medium Gel-X Full set (Fast appointment),Yes,7/2027,50.0
+Lily Bermudez,5593334224,lily.bermudez@yahoo.com,1,0,1,0,02/28/2026,02/28/2026,#1 BEST SELLER Russian Manicure,Yes,7/2028,50.0
+Reece Henry,5593615815,henryreece49@gmail.com,1,0,1,0,03/08/2026,03/08/2026,Classic Spa Pedicure (Classic Spa Pedicure),Yes,12/2028,43.0
+Mailei Manning,5593338620,mei.manning.77@gmail.com,1,0,1,0,03/27/2026,03/27/2026,Medium Acrylic (Medium acrylic ),Yes,11/2027,48.0
+Fabiola Millan,5597935223,fabmil613@gmail.com,1,1,0,0,03/29/2026,03/29/2026,Small Acrylic (Russian manicure ),Yes,4/2030,58.0
+grace funderburk,5597199889,fundergrace27@gmail.com,1,0,0,1,04/20/2026,04/20/2026,Medium Gel-X Full set (Russian manicure ),Yes,5/2029,65.0
+Monica Robles,5596333616,monicalrobles29@gmail.com,1,0,1,0,04/29/2026,04/29/2026,Organic Structured Manicure (Regular appointment),Yes,3/2031,40.0
+Ariel 🩷🧡,5594831221,,1,0,1,0,05/07/2026,05/07/2026,Organic Structured Manicure (Regular appointment),No,,40.0
+maria m,5593299930,,1,0,1,0,05/12/2026,05/12/2026,Organic Structured Manicure (Russian manicure ),No,,58.0
+Pearl,5593616818,,1,0,1,0,05/29/2026,05/29/2026,Medium Gel-X Full set (Regular appointment),No,,48.0
+Paloma Gomez,5593105210,flagordasmom@gmail.com,1,1,0,0,06/26/2026,06/26/2026,"Soak off + Small Gel-X (Russian manicure ), Hydro Free Pedicure (Hydro Free Pedicure)",Yes,10/2027,136.0
+isabella mendoza,5593799236,bella.mendoza067@gmail.com,1,0,1,0,07/18/2026,07/18/2026,"#1 BEST SELLER Russian Manicure, Small Gel-X Full set (Regular appointment )",Yes,7/2027,95.0
+Elizabeth Banuelos,5597889993,banuelos578@yahoo.com,1,0,1,0,07/24/2026,07/24/2026,Small Gel-X Full set (Russian manicure ),Yes,12/2029,63.0
+Diana Jacuinde,5595423529,jacuindediana346@gmail.com,1,1,0,0,08/14/2026,08/14/2026,#1 BEST SELLER Russian Manicure,Yes,6/2029,50.0

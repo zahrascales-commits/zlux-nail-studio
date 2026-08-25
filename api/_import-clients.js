@@ -105,6 +105,10 @@ function shape() {
 
   const clients = clientsCsv.map(c => ({
     name: (c.client_name || '').trim(),
+    // Digits only, so a number typed as (559) 791-5752 and one typed as
+    // 5597915752 are the same person when we look them up later.
+    phone: String(c.phone || '').replace(/[^0-9+]/g, ''),
+    email: String(c.email || '').trim().toLowerCase(),
     total_appointments: Number(c.total_appointments) || 0,
     completed: Number(c.completed) || 0,
     checkout: Number(c.checkout) || 0,
@@ -126,7 +130,7 @@ function shape() {
     const list = byName[k];
     const dates = list.map(v => v.date).sort();
     clients.push({
-      name: list[0].client_name,
+      name: list[0].client_name, phone: '', email: '',
       total_appointments: list.length, completed: 0, checkout: 0, cancelled: 0,
       first_appointment: dates[0], last_appointment: dates[dates.length - 1],
       most_common_service: list[0].service, card_on_file: 0, card_expiration: '',
@@ -180,6 +184,8 @@ async function run({ dryRun }) {
     csv_appointments: data.csvAppts,
     clients_parsed: data.clients.length,
     visits_parsed: data.visits.length,
+    with_phone: data.clients.filter(c => c.phone).length,
+    with_email: data.clients.filter(c => c.email).length,
     dropped_appointments: data.csvAppts - data.visits.length,
   };
   if (dryRun) return { ...report, dry_run: true };
@@ -192,14 +198,18 @@ async function run({ dryRun }) {
     const existing = await queryOne('SELECT id FROM clients WHERE lower(name)=lower(?)', [c.name]);
     if (existing) {
       await execute(
+        // COALESCE on the contact fields: an import must never blank out a
+        // phone or email somebody typed in by hand. A later export missing a
+        // column would otherwise wipe real contact details on a re-run.
         `UPDATE clients SET total_appointments=?, completed_count=?, checkout_count=?, cancelled_count=?,
            first_appointment=?, last_appointment=?, most_common_service=?, card_on_file=?,
-           card_expiration=?, deposits_cents=?, imported_from=?, visits=?, last_service=?, last_visit=?
+           card_expiration=?, deposits_cents=?, imported_from=?, visits=?, last_service=?, last_visit=?,
+           phone=COALESCE(NULLIF(?,''), phone), email=COALESCE(NULLIF(?,''), email)
          WHERE id=?`,
         [c.total_appointments, c.completed, c.checkout, c.cancelled, c.first_appointment,
          c.last_appointment, c.most_common_service, c.card_on_file, c.card_expiration,
          c.deposits_cents, 'zola-2026-08-25', c.total_appointments, c.most_common_service,
-         c.last_appointment, existing.id]);
+         c.last_appointment, c.phone || '', c.email || '', existing.id]);
       idByName[key(c.name)] = existing.id;
       updated++;
     } else {
@@ -207,8 +217,8 @@ async function run({ dryRun }) {
         `INSERT INTO clients (name, email, phone, visits, last_service, last_visit, marketing_opt_in, created_ts,
            total_appointments, completed_count, checkout_count, cancelled_count, first_appointment,
            last_appointment, most_common_service, card_on_file, card_expiration, deposits_cents, imported_from)
-         VALUES (?,'','',?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [c.name, c.total_appointments, c.most_common_service, c.last_appointment, Date.now(),
+         VALUES (?,?,?,?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [c.name, c.email || '', c.phone || '', c.total_appointments, c.most_common_service, c.last_appointment, Date.now(),
          c.total_appointments, c.completed, c.checkout, c.cancelled, c.first_appointment,
          c.last_appointment, c.most_common_service, c.card_on_file, c.card_expiration,
          c.deposits_cents, 'zola-2026-08-25']);
