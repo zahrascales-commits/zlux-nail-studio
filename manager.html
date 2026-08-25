@@ -1876,20 +1876,15 @@ async function refreshCurrent(manual){
   if(btn) btn.disabled = false;
 }
 
-// Quietly re-check once a minute, but only while the tab is actually on
-// screen — polling a backgrounded tab burns database reads for nobody.
-let _autoTimer = null;
-function startAutoRefresh(){
-  if(_autoTimer) return;
-  _autoTimer = setInterval(() => {
-    if(document.visibilityState !== 'visible') return;
-    if(typeof schedDirty !== 'undefined' && schedDirty) return; // never clobber unsaved edits
-    refreshCurrent(false);
-  }, 60000);
-  document.addEventListener('visibilitychange', () => {
-    if(document.visibilityState === 'visible') refreshCurrent(false);
-  });
-}
+/* ── REFRESHING IS HER DECISION ─────────────────────────────────────
+   This used to re-check every sixty seconds. Refreshing a screen while
+   somebody is halfway through typing into it throws their work away,
+   and no amount of freshness is worth that. The Refresh button at the
+   top is the only thing that reloads a screen now.
+
+   The notification bell still polls on its own — it only ever adds to a
+   list and can never wipe something being edited.                    */
+function startAutoRefresh(){ /* deliberately does nothing */ }
 
 function showTab(name){
   fillTime12Selects();
