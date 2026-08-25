@@ -472,6 +472,18 @@
         <div style="font-family:'Josefin Sans',sans-serif;font-size:0.75rem;color:var(--latte);">then renews automatically — cancel any time after three months</div>
       </div>
 
+      <!-- Apple Pay / Google Pay. Hidden until Stripe confirms this device
+           can actually offer one — an empty grey box where a wallet button
+           should be reads as broken. -->
+      <div id="wallet-wrap" style="display:none;margin-bottom:1.25rem;">
+        <div id="wallet-button"></div>
+        <div style="display:flex;align-items:center;gap:0.75rem;margin:1.1rem 0 0.25rem;">
+          <div style="flex:1;height:1px;background:rgba(182,165,136,0.25);"></div>
+          <span style="font-family:'Josefin Sans',sans-serif;font-size:0.7rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--latte);">or pay by card</span>
+          <div style="flex:1;height:1px;background:rgba(182,165,136,0.25);"></div>
+        </div>
+      </div>
+
       <div class="form-field">
         <label>Card Details</label>
         <div id="stripe-card-element"></div>
@@ -601,7 +613,9 @@ setTimeout(function(){
   let appliedPromo = null;
 
   let signupData = {};
-  let stripe, cardElement;
+  // Shared with initWallet(): the payment-request button has to come from
+  // the same elements instance as the card field.
+  let stripe, cardElement, elements;
 
   const TIER_PRICE = { SIGNATURE: '$99/mo', LUXE: '$199/mo', BLACK_CARD: '$299/mo', TEST: '$1.58/mo' };
   const TIER_LABEL = { SIGNATURE: 'Signature Club', LUXE: 'Luxe Club', BLACK_CARD: 'Black Card', TEST: 'Test Membership' };
@@ -742,7 +756,7 @@ setTimeout(function(){
     // signup form from hard-crashing, but this is test-mode and should
     // never be hit once /api/pay is live.
     stripe = Stripe(pk || 'pk_test_51ThhZRQ9pYWoKTNtWDpFLPKeTno3SbRe9MaWWqfw4TdHoYKmMMPcFwgoHMnDo9gp70XQemo1V7IMPT2bxYgUyqOB006z1OkhRZ');
-    const elements = stripe.elements();
+    elements = stripe.elements();
     cardElement = elements.create('card', {
       style: {
         base: {
@@ -755,6 +769,9 @@ setTimeout(function(){
       }
     });
     cardElement.mount('#stripe-card-element');
+    // Wallets need the amount, which is only known once a tier and period
+    // have been chosen — so this runs here rather than on page load.
+    initWallet().catch(function(){});
     cardElement.on('change', e => {
       document.getElementById('stripe-card-errors').textContent = e.error ? e.error.message : '';
     });
@@ -792,6 +809,22 @@ setTimeout(function(){
         return;
       }
 
+      await finishSignup(paymentMethod.id, btn);
+    } catch (err) {
+      showError('err-2', 'Network error. Please check your connection and try again.');
+      btn.disabled = false;
+      btn.textContent = 'Pay & Join Zola →';
+    }
+  }
+
+  /* Everything after a payment method exists, whichever way it was made.
+     Shared so Apple Pay and a typed card cannot end up creating subtly
+     different memberships. */
+  async function finishSignup(paymentMethodId, btn) {
+    const reset = () => {
+      if (btn) { btn.disabled = false; btn.textContent = 'Pay & Join Zola →'; }
+    };
+    try {
       const res = await fetch('/api/member-signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -806,34 +839,31 @@ setTimeout(function(){
           referralCode: signupData.referralCode || undefined,
           promoCode: (document.getElementById('promo-code') || {}).value || undefined,
           billing: billing,
-          stripePaymentMethodId: paymentMethod.id,
+          stripePaymentMethodId: paymentMethodId,
         })
       });
 
       const data = await res.json();
       if (!res.ok) {
         showError('err-2', data.error || 'Sign-up failed. Please try again.');
-        btn.disabled = false;
-        btn.textContent = 'Pay & Join Zola →';
-        return;
+        reset();
+        return false;
       }
 
       // Confirm the payment — this is what actually charges the card
       if (data.clientSecret) {
         const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(data.clientSecret, {
-          payment_method: paymentMethod.id
+          payment_method: paymentMethodId
         });
         if (confirmError) {
           showError('err-2', confirmError.message);
-          btn.disabled = false;
-          btn.textContent = 'Pay & Join Zola →';
-          return;
+          reset();
+          return false;
         }
         if (paymentIntent && paymentIntent.status !== 'succeeded') {
           showError('err-2', 'Payment could not be completed. Please try a different card.');
-          btn.disabled = false;
-          btn.textContent = 'Pay & Join Zola →';
-          return;
+          reset();
+          return false;
         }
       }
 
@@ -858,12 +888,75 @@ setTimeout(function(){
       document.getElementById('display-tier').textContent = TIER_LABEL[signupData.tier];
       document.getElementById('display-email').textContent = signupData.email;
       goToStep(3);
+      return true;
 
     } catch (err) {
       showError('err-2', 'Network error. Please check your connection and try again.');
-      btn.disabled = false;
-      btn.textContent = 'Pay & Join Zola →';
+      reset();
+      return false;
     }
+  }
+
+  /* ── APPLE PAY / GOOGLE PAY ──────────────────────────────────────────
+     Only offered once Stripe confirms the device can actually pay — an
+     empty box where a wallet button should be is worse than no button.
+     The sheet shows the real amount, including whatever a discount code
+     has taken off, because a wallet showing one figure while the card is
+     charged another is how a chargeback starts. */
+  function walletAmount() {
+    const yearly = billing === 'yearly';
+    const base = (yearly
+      ? { SIGNATURE: 99900, LUXE: 199900, BLACK_CARD: 299900, TEST: 1580 }
+      : { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900, TEST: 158 })[selectedTier] || 0;
+    return appliedPromo && appliedPromo.monthly_cents != null && !yearly
+      ? appliedPromo.monthly_cents
+      : base;
+  }
+
+  let paymentRequest = null;
+  async function initWallet() {
+    if (!stripe || paymentRequest) return;
+    const amount = walletAmount();
+    // Apple Pay refuses a zero total, so a fully discounted test run simply
+    // stays on the card path rather than showing a button that cannot work.
+    if (amount <= 0) return;
+
+    paymentRequest = stripe.paymentRequest({
+      country: 'US',
+      currency: 'usd',
+      total: {
+        label: 'ZOLA ' + (TIER_LABEL[selectedTier] || 'Membership')
+          + (billing === 'yearly' ? ' — one year' : ' — first month'),
+        amount: amount,
+      },
+      requestPayerName: true,
+      requestPayerEmail: true,
+    });
+
+    const can = await paymentRequest.canMakePayment();
+    if (!can) { paymentRequest = null; return; }
+
+    const prButton = elements.create('paymentRequestButton', {
+      paymentRequest,
+      style: { paymentRequestButton: { type: 'default', theme: 'dark', height: '48px' } },
+    });
+    prButton.mount('#wallet-button');
+    document.getElementById('wallet-wrap').style.display = 'block';
+
+    paymentRequest.on('paymentmethod', async (ev) => {
+      // The authorisation still has to have been agreed to. A wallet is a
+      // faster way to pay, not a way around the terms.
+      const agree = document.getElementById('agree-recurring');
+      if (agree && !agree.checked) {
+        ev.complete('fail');
+        showError('err-2', 'Please tick the box to authorise the charge, then tap Apple Pay again.');
+        return;
+      }
+      showError('err-2', '');
+      const ok = await finishSignup(ev.paymentMethod.id, null);
+      // Tell the sheet before anything else, or it hangs on the phone.
+      ev.complete(ok ? 'success' : 'fail');
+    });
   }
 
   function copyMemberId() {
