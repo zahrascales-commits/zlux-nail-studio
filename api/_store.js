@@ -15,7 +15,7 @@ const services = [
 
 const addons = [
   { id: 1, name: 'Removal',           price_cents: 3500 },
-  { id: 2, name: 'Russian Manicure',  price_cents: 3000 },
+  { id: 2, name: 'Russian Manicure',  price_cents: 2000 },
   { id: 3, name: 'Nail Art',          price_cents: 2500 },
   { id: 4, name: 'Scrub Treatment',   price_cents: 2000 },
   { id: 5, name: 'Lotion Massage',    price_cents: 1500 },
