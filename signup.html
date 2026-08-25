@@ -589,9 +589,16 @@
     document.querySelectorAll('.tier-opt').forEach(el => {
       el.classList.toggle('selected', el.dataset.tier === t);
     });
-    // The pay choice comes before the details, not after them.
+    // The pay choice comes before the details, not after them — but it must
+    // never be a dead end. The first version revealed the choice below the
+    // fold and hid the Continue button, so on a phone you tapped a tier and
+    // nothing appeared to happen. Now the default is applied immediately,
+    // everything below it opens, and the page scrolls to what changed.
     renderPlans();
-    document.getElementById('plan-wrap').classList.add('show');
+    const wrap = document.getElementById('plan-wrap');
+    wrap.classList.add('show');
+    pickBilling(billing);
+    wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   /* ── HOW YOU PAY ────────────────────────────────────────────────────
@@ -643,11 +650,11 @@
     signupData.billing = b;
     renderPlans();
     renewalLine();
-    // Only now do we ask for their details.
+    // Everything below opens as soon as there is a choice on the table.
+    // No focus stealing and no scroll jump here: this runs on the first tier
+    // tap too, and being thrown down the page then is disorienting.
     document.getElementById('details-wrap').classList.add('show');
     document.getElementById('step1-continue').style.display = '';
-    document.getElementById('full-name').focus({ preventScroll: true });
-    document.getElementById('details-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function showError(id, msg) {
