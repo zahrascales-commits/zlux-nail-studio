@@ -41,7 +41,7 @@ const TIERS = [
     name: 'Tier 2',
     tagline: 'Simple design',
     detail: 'French tips, polka dots, lines, an accent nail or two.',
-    minutes: 15,
+    minutes: 25,
     price_cents: 1000,
   },
   {
@@ -49,7 +49,7 @@ const TIERS = [
     name: 'Tier 3',
     tagline: 'Full design',
     detail: '3D beads, gems, chrome, hand-painted — anything beyond simple.',
-    minutes: 30,
+    minutes: 45,
     price_cents: 2000,
   },
 ];

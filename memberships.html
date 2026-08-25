@@ -105,6 +105,20 @@
 </div>
 
 <!-- TIER LADDER — each tier shows only what's newly unlocked at that level -->
+<!-- ALREADY A MEMBER — sign in with a Member ID -->
+<div style="background:var(--espresso);border-bottom:1px solid rgba(182,165,136,0.15);padding:1.35rem 1.5rem;">
+  <div class="container" style="max-width:640px;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;justify-content:center;">
+    <div style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--champagne);white-space:nowrap;">Already a member?</div>
+    <div style="display:flex;gap:0.5rem;flex:1;min-width:250px;max-width:430px;">
+      <input id="mp-member-id" placeholder="Your Member ID — e.g. ZL-XXXXXX"
+        style="flex:1;background:rgba(245,238,232,0.06);border:1px solid rgba(182,165,136,0.3);color:var(--cream);font-family:'Josefin Sans',sans-serif;font-size:0.85rem;padding:0.7rem 0.9rem;outline:none;min-height:44px;"
+        onkeydown="if(event.key==='Enter')mpMemberLogin()" />
+      <button class="btn-gold" style="animation:none;white-space:nowrap;min-height:44px;" onclick="mpMemberLogin()">Log In</button>
+    </div>
+  </div>
+  <div id="mp-member-err" style="display:none;text-align:center;font-family:'Josefin Sans',sans-serif;font-size:0.76rem;color:#e07070;margin-top:0.6rem;"></div>
+</div>
+
 <section class="section section-espresso" id="compare">
   <div class="container" style="max-width:1020px;">
     <div class="section-header" style="text-align:center;margin-bottom:2.5rem;">
@@ -686,6 +700,34 @@
     setSpot('m-lux-prev', 'm-lux-cur', 'm-lux-fill', lux);
     setSpot('m-blk-prev', 'm-blk-cur', 'm-blk-fill', blk);
   })();
+</script>
+<script>
+// Signs in with a Member ID and hands the session to the Client Portal —
+// the same localStorage key the portal already reads on load, so it opens
+// straight into their dashboard rather than asking again.
+async function mpMemberLogin() {
+  const input = document.getElementById('mp-member-id');
+  const errEl = document.getElementById('mp-member-err');
+  const id = (input.value || '').trim().toUpperCase();
+  errEl.style.display = 'none';
+  if (!id) { errEl.textContent = 'Enter your Member ID first.'; errEl.style.display = 'block'; return; }
+  try {
+    const res = await fetch('/api/member-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ memberId: id }),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Member ID not found.'; errEl.style.display = 'block'; return; }
+    localStorage.setItem('zlux_token', data.token);
+    localStorage.setItem('zlux_member_id', id);
+    window.location.href = 'client-portal.html';
+  } catch (_) {
+    errEl.textContent = 'Connection error — try again.';
+    errEl.style.display = 'block';
+  }
+}
+window.mpMemberLogin = mpMemberLogin;
 </script>
 </body>
 </html>

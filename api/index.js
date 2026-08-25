@@ -74,6 +74,7 @@ app.all('/api/goals',            require('./_goals'));
 app.all('/api/perks',            require('./_perks'));
 app.all('/api/client-link',      require('./_client-link-api'));
 app.all('/api/insights',         require('./_insights'));
+app.all('/api/people',           require('./_roster-people'));
 app.all('/api/careers',          require('./_careers'));
 app.all('/api/marketing',        require('./_marketing'));
 app.all('/api/classes',          require('./_classes'));

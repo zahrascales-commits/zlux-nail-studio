@@ -1311,7 +1311,7 @@ function slotRange(slot) {
 //   base 1h30, + Russian manicure 15, + design tier, + 10 min grace.
 // Nothing chosen adds nothing: a plain set with no art really is 1h30.
 const BASE_MINUTES = 90, GRACE_MINUTES = 10;
-const TIER_MINUTES = { tier1: 10, tier2: 15, tier3: 30 };
+const TIER_MINUTES = { tier1: 10, tier2: 25, tier3: 45 };
 function addonMinutes(){
   return (booking.selectedAddons || []).reduce(function(t, a){
     return t + (/russian/i.test(a.name || '') ? 15 : 0);
@@ -1735,10 +1735,10 @@ const TIER_OPTIONS = [
     minutes:10, price:500 },
   { key:'tier2', name:'Tier 2', title:'Simple design',
     detail:'French tips, polka dots, lines, an accent nail or two.',
-    minutes:15, price:1000 },
+    minutes:25, price:1000 },
   { key:'tier3', name:'Tier 3', title:'Full design',
     detail:'3D beads, gems, chrome, hand-painted — anything beyond simple.',
-    minutes:30, price:2000 },
+    minutes:45, price:2000 },
 ];
 
 function tierOf(k){ return TIER_OPTIONS.find(function(t){ return t.key === k; }) || null; }
