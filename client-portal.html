@@ -234,7 +234,7 @@
       <div class="stat-grid">
         <div class="stat-box"><div class="stat-num" id="stat-services-left">—</div><div class="stat-label">Services Left This Month</div></div>
         <div class="stat-box"><div class="stat-num" id="stat-upcoming">—</div><div class="stat-label">Upcoming Appointments</div></div>
-        <div class="stat-box"><div class="stat-num" id="stat-next-billing-day">—</div><div class="stat-label">Next Billing Date</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-visits-year">—</div><div class="stat-label">Visits This Year</div></div>
         <div class="stat-box" style="cursor:pointer;" onclick="showTab('tab-profile')"><div class="stat-num" id="stat-referrals">0</div><div class="stat-label">Referrals Made</div></div>
       </div>
       <!-- "Last service → what's next" prompt (all tiers) -->
@@ -318,6 +318,16 @@
       <div class="p-card">
         <div class="p-card-title">Account Details</div>
         <div id="profile-details"></div>
+        <!-- Tucked at the bottom of a collapsed block on purpose. It is
+             their information and they can have it, but a renewal date is
+             not something to greet somebody with. -->
+        <details style="margin-top:1rem;border-top:1px solid rgba(182,165,136,0.2);padding-top:0.9rem;">
+          <summary style="font-family:'Josefin Sans',sans-serif;font-size:0.76rem;color:var(--latte);cursor:pointer;">Billing &amp; renewal</summary>
+          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--espresso);line-height:1.8;margin-top:0.7rem;">
+            Your membership renews on <strong id="profile-renews">—</strong>.
+            <br><span style="color:var(--latte);font-size:0.8rem;">Manage or cancel any time after your first three months — just message the studio.</span>
+          </div>
+        </details>
         <div style="display:grid;gap:0.75rem;grid-template-columns:1fr 1fr;margin-top:1.25rem;">
           <div class="pf" style="grid-column:1/-1;"><label>Preferred Nail Shape</label><input id="pref-shape" placeholder="almond, square, coffin…" /></div>
           <div class="pf"><label>Preferred Length</label><input id="pref-length" placeholder="short / medium / long" /></div>
@@ -473,12 +483,27 @@ function populatePortal(d) {
     banner.style.background = 'rgba(140,122,94,0.08)';
     document.getElementById('appts-left-headline').textContent = '0 appointments left this month';
     document.getElementById('appts-left-sub').textContent =
-      'You\'ve used all ' + tierMax + ' included service' + (tierMax === 1 ? '' : 's') + ' this month. Extra visits are available at the regular price, and your services reset next billing date.';
+      'You\'ve used all ' + tierMax + ' included service' + (tierMax === 1 ? '' : 's') + ' this month. Extra visits are available at the regular price, and your services come back next month.';
     cta.style.display = 'inline-block';
     cta.textContent = 'Book Extra';
   }
   document.getElementById('stat-upcoming').textContent = upcoming.length;
-  document.getElementById('stat-next-billing-day').textContent = member.nextBilling ? new Date(member.nextBilling).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+  // The renewal date lives in Profile now rather than on the screen they land
+  // on. Nobody enjoying their membership needs a countdown to the next charge
+  // in front of them — it is there if they go looking, which is the point.
+  const renewEl = document.getElementById('profile-renews');
+  if (renewEl) {
+    renewEl.textContent = member.nextBilling
+      ? new Date(member.nextBilling).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      : '—';
+  }
+  const vy = document.getElementById('stat-visits-year');
+  if (vy) {
+    const thisYear = String(new Date().getFullYear());
+    vy.textContent = String((history || []).filter(function (h) {
+      return String(h.created_at || '').slice(0, 4) === thisYear;
+    }).length);
+  }
 
   const ul = document.getElementById('upcoming-list');
   if (upcoming.length) {
@@ -620,7 +645,7 @@ function niceD(s){
 /* ══════════════════════════════════════════════════════════════════
    NAIL HEALTH — where they are, and what each of us does about it.
    ══════════════════════════════════════════════════════════════════ */
-let NAIL = null, nailAnswers = {}, nailGoal = '';
+let NAIL = null, nailAnswers = {}, nailGoal = '', nailContext = {};
 
 async function loadHealth(){
   if (!authToken) return;
@@ -630,7 +655,12 @@ async function loadHealth(){
     const r = await fetch('/api/nail-health?action=assessment', { headers:{'Authorization':'Bearer '+authToken} });
     NAIL = await r.json();
   }catch(_){ state.innerHTML = '<div class="p-card">Could not load your nail health.</div>'; return; }
-  if (NAIL.latest){ nailAnswers = NAIL.latest.answers || {}; nailGoal = NAIL.latest.goal || ''; }
+  if (NAIL.latest){
+    const saved = NAIL.latest.answers || {};
+    nailAnswers = saved;
+    nailContext = saved._context || {};
+    nailGoal = NAIL.latest.goal || '';
+  }
   renderNail();
 }
 
@@ -662,41 +692,70 @@ function renderNail(){
       + '<div class="ns-line">' + esc(L.plan.band_line) + '</div>'
       + '<div class="ns-when">Last checked ' + niceD(new Date(L.created_ts).toISOString()) + '</div></div>'
     : '<div class="ns-card"><div class="ns-band">Let\'s find out where you are</div>'
-      + '<div class="ns-line">Answer eight quick questions and you\'ll get a plan — what you do at home, and what we do in the chair.</div></div>';
+      + '<div class="ns-line">A few questions about your nails, how they wear, and how you live. '
+      + 'You get back a plan — what you do at home, and what we do in the chair.</div></div>';
 
-  // The questionnaire. Kept on screen after the first answer rather than
-  // hidden behind an edit button, because nails change and re-checking
-  // should be as easy as the first time.
-  state.innerHTML += '<div class="p-card">'
-    + '<div class="p-card-title">How are they right now?</div>'
-    + '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.76rem;color:var(--latte);margin-bottom:0.5rem;">'
-      + 'None · A little · Quite a bit · A lot</div>'
-    + (NAIL.factors || []).map(function(f){
-        const v = Number(nailAnswers[f.key]) || 0;
-        return '<div class="nf-row"><div class="nf-lab">'
-          + '<div class="nf-name">' + esc(f.label) + '</div>'
-          + '<div class="nf-hint">' + esc(f.hint) + '</div></div>'
-          + '<div class="nf-scale">'
-          + [0,1,2,3].map(function(n){
-              return '<button class="' + (v === n ? 'on' : '') + '" onclick="setNail(\'' + f.key + '\',' + n + ')">'
-                + ['–','1','2','3'][n] + '</button>';
-            }).join('')
-          + '</div></div>';
+  // Grouped into sections. Fifteen sliders in one column is a wall nobody
+  // finishes, and an abandoned questionnaire tells us nothing at all.
+  let html = '';
+  (NAIL.sections || []).forEach(function(sec){
+    html += '<div class="p-card">'
+      + '<div class="p-card-title">' + esc(sec.title) + '</div>'
+      + '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.78rem;color:var(--latte);line-height:1.6;margin-bottom:0.6rem;">'
+        + esc(sec.hint) + '</div>'
+      + '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.72rem;color:var(--latte);margin-bottom:0.3rem;">'
+        + 'None · A little · Quite a bit · A lot</div>'
+      + sec.factors.map(function(f){
+          const v = Number(nailAnswers[f.key]) || 0;
+          return '<div class="nf-row"><div class="nf-lab">'
+            + '<div class="nf-name">' + esc(f.label) + '</div>'
+            + '<div class="nf-hint">' + esc(f.hint) + '</div></div>'
+            + '<div class="nf-scale">'
+            + [0,1,2,3].map(function(n){
+                return '<button class="' + (v === n ? 'on' : '') + '" onclick="setNail(\'' + f.key + '\',' + n + ')">'
+                  + ['–','1','2','3'][n] + '</button>';
+              }).join('')
+            + '</div></div>';
+        }).join('')
+      + '</div>';
+  });
+
+  // What they want, in their own words. An artist reading this before a
+  // client sits down is the whole point of collecting it.
+  html += '<div class="p-card">'
+    + '<div class="p-card-title">What you want</div>'
+    + '<div style="margin-bottom:0.9rem;"><div class="nf-name" style="margin-bottom:0.5rem;">Your main goal right now</div>'
+    + '<div class="pw-list">' + (NAIL.goals || []).map(function(g){
+        return '<button class="pw-chip" style="cursor:pointer;color:' + (nailGoal === g.key ? '#1A140C' : 'var(--latte)')
+          + ';background:' + (nailGoal === g.key ? 'var(--champagne)' : 'transparent')
+          + ';border-color:rgba(182,165,136,0.4)" onclick="setGoal(\'' + g.key + '\')">' + esc(g.label) + '</button>';
+      }).join('') + '</div></div>'
+    + (NAIL.context || []).map(function(c){
+        const val = nailContext[c.key] || '';
+        if(c.type === 'choice'){
+          return '<div style="margin-bottom:0.9rem;"><div class="nf-name" style="margin-bottom:0.45rem;">' + esc(c.label) + '</div>'
+            + '<div class="pw-list">' + c.options.map(function(o){
+                const on = val === o;
+                return '<button class="pw-chip" style="cursor:pointer;color:' + (on ? '#1A140C' : 'var(--latte)')
+                  + ';background:' + (on ? 'var(--champagne)' : 'transparent')
+                  + ';border-color:rgba(182,165,136,0.4)" onclick="setCtx(\'' + c.key + '\',\'' + esc(o) + '\')">'
+                  + esc(o) + '</button>';
+              }).join('') + '</div></div>';
+        }
+        return '<div style="margin-bottom:0.9rem;"><div class="nf-name" style="margin-bottom:0.45rem;">' + esc(c.label) + '</div>'
+          + '<textarea class="cp-add" rows="2" placeholder="' + esc(c.placeholder || '') + '"'
+          + ' oninput="setCtx(\'' + c.key + '\', this.value)"'
+          + ' style="width:100%;background:var(--soft-white);border:1px solid rgba(182,165,136,0.25);padding:0.7rem 0.85rem;'
+          + 'font-family:\'Josefin Sans\',sans-serif;font-size:0.86rem;color:var(--espresso);outline:none;resize:vertical;">'
+          + esc(val) + '</textarea></div>';
       }).join('')
-    + '<div style="margin-top:1.1rem;"><div class="nf-name" style="margin-bottom:0.5rem;">What do you actually want?</div>'
-      + '<div class="pw-list">' + (NAIL.goals || []).map(function(g){
-          return '<button class="pw-chip" style="cursor:pointer;color:' + (nailGoal === g.key ? '#1A140C' : 'var(--latte)')
-            + ';background:' + (nailGoal === g.key ? 'var(--champagne)' : 'transparent')
-            + ';border-color:rgba(182,165,136,0.4)" onclick="setGoal(\'' + g.key + '\')">' + esc(g.label) + '</button>';
-        }).join('') + '</div></div>'
-    + '<button class="btn-login" style="margin-top:1.1rem;" onclick="saveNail(this)">'
+    + '<button class="btn-login" style="margin-top:0.6rem;" onclick="saveNail(this)">'
       + (L ? 'Update my plan' : 'Build my plan') + '</button>'
     + '</div>';
 
+  state.innerHTML += html;
   planEl.innerHTML = L ? planHtml(L.plan) : '';
 
-  // History is what proves it is working, which is the whole point of
-  // tracking it — so it is Black Card's, along with Zahra's notes.
   const hist = NAIL.history || [];
   histEl.innerHTML = (NAIL.full_access && hist.length > 1)
     ? '<div class="p-card"><div class="p-card-title">Your progress</div>'
@@ -713,31 +772,16 @@ function renderNail(){
               }).join('') + '</div>'
           : '')
       + '</div>'
-    : (!NAIL.full_access && L
-        ? '<div class="p-card" style="text-align:center;"><div class="p-card-title">Watch it improve</div>'
-          + '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.85rem;color:var(--latte);line-height:1.75;">'
-          + 'Black Card keeps every check-in, so you can see the line move — plus a quarterly assessment Zahra writes herself.</p>'
-          + '<a href="memberships.html" class="btn-login" style="display:inline-block;text-decoration:none;margin-top:0.7rem;">See Black Card</a></div>'
-        : '');
+    : '';
 }
 
-function planHtml(p){
-  return '<div class="np-cols">'
-    + '<div class="np-col"><div class="np-h">What you can do</div><ul>'
-      + p.home.map(function(l){ return '<li>' + esc(l) + '</li>'; }).join('') + '</ul></div>'
-    + '<div class="np-col"><div class="np-h">What we\'ll do in the chair</div><ul>'
-      + p.studio.map(function(l){ return '<li>' + esc(l) + '</li>'; }).join('') + '</ul></div>'
-    + '</div>'
-    // Nail care is not medicine, and the difference matters most to the
-    // person who has the thing this cannot help with.
-    + '<div class="np-care"><strong>This is nail care, not medical advice.</strong> '
-      + 'See a doctor rather than us for ' + p.red_flags.join(', ') + '.'
-      + (p.see_someone ? ' You told us your nails are tender — please get that looked at before your next set.' : '')
-    + '</div>';
+function setCtx(k, v){
+  nailContext[k] = v;
+  // Text boxes must not redraw on every keystroke — it would take the
+  // cursor away mid-sentence.
+  const isText = (NAIL.context || []).some(function(c){ return c.key === k && c.type !== 'choice'; });
+  if(!isText) renderNail();
 }
-
-function setNail(key, v){ nailAnswers[key] = v; renderNail(); }
-function setGoal(g){ nailGoal = g; renderNail(); }
 
 async function saveNail(btn){
   if (btn){ btn.disabled = true; btn.textContent = 'Working it out…'; }
@@ -745,7 +789,13 @@ async function saveNail(btn){
     const r = await fetch('/api/nail-health', {
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+authToken},
-      body: JSON.stringify({ action:'assessment', answers: nailAnswers, goal: nailGoal }),
+      // The free-text answers ride along with the scores so an artist opening
+      // this client sees what they asked for, not just what is wrong.
+      body: JSON.stringify({
+        action:'assessment',
+        answers: Object.assign({}, nailAnswers, { _context: nailContext }),
+        goal: nailGoal,
+      }),
     });
     const d = await r.json();
     if (d.error) throw new Error(d.error);

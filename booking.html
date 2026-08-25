@@ -533,7 +533,7 @@
     </div>
 
     <!-- ══ STEP 3: Date + Time ══ -->
-        <div class="promo-row" style="margin-top:1.25rem;">
+        <div class="promo-row" id="promo-row" style="margin-top:1.25rem;">
         <label class="luxury-label" style="margin-bottom:0.4rem;">Have a discount code?</label>
         <div style="display:flex;gap:0.5rem;">
           <input class="luxury-input" id="promo-input" placeholder="e.g. TRAIN20" style="flex:1;text-transform:uppercase;" onkeydown="if(event.key==='Enter'){event.preventDefault();applyPromo();}" />
@@ -956,6 +956,16 @@ async function validateMemberId() {
   const rules = TIER_RULES[member.tier];
   booking.type = 'member';
   booking.memberTier = member.tier;
+  // A member is already paying a membership price, so no code stacks on top
+  // of it — including the trainee discount. Hiding the box is kinder than
+  // letting somebody type a code and be told no.
+  const promoRow = document.getElementById('promo-row');
+  if (promoRow) promoRow.style.display = 'none';
+  promoTraineeOnly = false;
+  const promoInput = document.getElementById('promo-input');
+  if (promoInput) promoInput.value = '';
+  const promoMsg = document.getElementById('promo-msg');
+  if (promoMsg) promoMsg.textContent = '';
   // Their tier just widened the calendar — redraw it against the new horizon.
   loadBookingWindow(member.tier);
   booking.memberLabel = rules.label;
@@ -981,6 +991,10 @@ async function validateMemberId() {
   const artistSec = document.getElementById('artist-pref-section');
   if (member.tier === 'BLACK_CARD') { artistSec.style.display = 'block'; }
   else { artistSec.style.display = 'none'; booking.worker = null; }
+  if (!member || !member.tier) {
+    const pr = document.getElementById('promo-row');
+    if (pr) pr.style.display = '';
+  }
 
   // Birthday is set ONCE at signup (from date of birth) and never editable
   // here — we just auto-activate the gift if this is their birthday month.

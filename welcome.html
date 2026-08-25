@@ -45,8 +45,9 @@
     transform:scaleX(0);transform-origin:left;
   }
   .rail i.done::after{transform:scaleX(1)}
-  .rail i.now::after{animation:fill var(--dwell,5200ms) linear forwards}
-  @keyframes fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  /* Filled, not filling: the rail marks where you are, it is no longer a
+     countdown to being moved on. */
+  .rail i.now::after{transform:scaleX(1);opacity:0.55}
 
   .top{padding:1.1rem 1.5rem 0;text-align:center;flex-shrink:0}
   .wordmark{font-family:'Cinzel',serif;font-size:1.05rem;letter-spacing:0.42em;color:var(--gold);text-indent:0.42em}
@@ -116,6 +117,43 @@
   .token .t-n{font-family:'Cinzel',serif;font-size:1.5rem;color:var(--gold);line-height:1}
   .token .t-l{font-size:0.55rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);margin-top:0.3rem}
 
+  /* The perk being shown is the loudest thing on screen — enlarged, lit
+     from behind, and given room. Somebody reading this has just paid; the
+     least the page can do is let them see what for. */
+  .headline{
+    animation:liftIn 700ms cubic-bezier(0.22,1,0.36,1) both;
+  }
+  @keyframes liftIn{ from{opacity:0;transform:translateY(14px) scale(0.94)} to{opacity:1;transform:none} }
+  .slide.in .headline{
+    text-shadow:0 0 42px rgba(196,168,130,0.45);
+  }
+  .glowbox{
+    position:relative;display:inline-block;padding:1.4rem 1.6rem;margin-bottom:0.3rem;
+    border:1px solid var(--line-hi);border-radius:16px;
+    background:radial-gradient(ellipse at center, rgba(196,168,130,0.16), rgba(196,168,130,0.03) 70%);
+    animation:glowPulse 2.6s ease-in-out infinite alternate;
+  }
+  @keyframes glowPulse{
+    from{box-shadow:0 0 0 rgba(196,168,130,0);border-color:rgba(196,168,130,0.3)}
+    to{box-shadow:0 0 46px rgba(196,168,130,0.22);border-color:rgba(196,168,130,0.62)}
+  }
+
+  /* ── moving it on ── */
+  .nav{display:flex;gap:0.7rem;align-items:center;justify-content:center;padding:0 1.5rem 1.2rem;flex-shrink:0}
+  .next{
+    background:var(--gold);color:var(--ink);border:none;border-radius:100px;
+    padding:1rem 2.4rem;cursor:pointer;font-family:'Josefin Sans',sans-serif;
+    font-size:0.74rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;
+    box-shadow:0 8px 26px rgba(196,168,130,0.28);
+  }
+  .next:active{transform:translateY(1px)}
+  .back{
+    background:none;border:1px solid var(--line);color:var(--latte);border-radius:100px;
+    padding:1rem 1.4rem;cursor:pointer;font-family:'Josefin Sans',sans-serif;
+    font-size:0.68rem;letter-spacing:0.16em;text-transform:uppercase;
+  }
+  .back:disabled{opacity:0.3;cursor:default}
+
   /* ── foot ── */
   .foot{padding:0 1.5rem 1.5rem;text-align:center;flex-shrink:0}
   .skip{
@@ -160,6 +198,10 @@
     <div class="tierline" id="tierline">Loading your membership…</div>
   </div>
   <div class="frame"><div class="slide" id="slide"></div></div>
+  <div class="nav" id="nav">
+    <button class="back" id="back" onclick="prev()">Back</button>
+    <button class="next" id="next" onclick="next()">Next</button>
+  </div>
   <div class="foot"><button class="skip" id="skip" onclick="finish()">Skip to my account →</button></div>
 </div>
 
@@ -180,11 +222,7 @@ const esc = s => String(s == null ? '' : s)
 const params = new URLSearchParams(location.search);
 const MEMBER_ID = (params.get('m') || localStorage.getItem('zola_member_id') || '').trim().toUpperCase();
 
-let WALLET = null, SLIDES = [], idx = -1, timer = null, advancing = false;
-
-// How long each kind of slide holds. The ones with something to watch get
-// longer, because cutting away from an animation mid-way reads as a glitch.
-const DWELL = { open: 4200, calendar: 6200, free_service: 5600, final: 99999, default: 5000 };
+let WALLET = null, SLIDES = [], idx = -1, advancing = false;
 
 function lockSvg(){
   return '<div class="lockwrap"><svg class="lock" viewBox="0 0 100 116" aria-hidden="true">'
@@ -271,13 +309,14 @@ function build(w){
 function render(){
   const s = SLIDES[idx];
   const el = document.getElementById('slide');
-  const dwell = DWELL[s.kind] || DWELL.default;
 
   el.className = 'slide' + (s.final ? ' final' : '');
   el.innerHTML =
     s.art
     + '<div class="count">' + esc(s.count) + '</div>'
-    + '<h1 class="headline">' + esc(s.headline) + '</h1>'
+    + (s.final
+        ? '<h1 class="headline">' + esc(s.headline) + '</h1>'
+        : '<div class="glowbox"><h1 class="headline">' + esc(s.headline) + '</h1></div>')
     + '<p class="detail">' + esc(s.detail) + '</p>'
     + (s.stamp ? '<div class="stamp">' + esc(s.stamp) + '</div>' : '')
     + (s.final
@@ -290,44 +329,52 @@ function render(){
   void el.offsetWidth;
   el.classList.add('in');
 
-  // The rail is the only thing telling them how much is left.
+  // The rail marks where they are. It is not a countdown any more.
   const rail = document.getElementById('rail').children;
   for (let i = 0; i < rail.length; i++){
     rail[i].className = i < idx ? 'done' : (i === idx ? 'now' : '');
-    if (i === idx) rail[i].style.setProperty('--dwell', dwell + 'ms');
   }
+
+  const back = document.getElementById('back');
+  const nextBtn = document.getElementById('next');
+  if (back) back.disabled = idx === 0;
+  if (nextBtn) nextBtn.textContent = (idx >= SLIDES.length - 2) ? 'Finish' : 'Next';
 
   if (s.final) {
     document.getElementById('skip').style.display = 'none';
+    document.getElementById('nav').style.display = 'none';
     markSeen();
-    return;
   }
-  clearTimeout(timer);
-  timer = setTimeout(next, dwell);
 }
 
-function next(){
-  if (advancing || idx >= SLIDES.length - 1) return;
+function go(step){
+  if (advancing) return;
+  const target = idx + step;
+  if (target < 0 || target > SLIDES.length - 1) return;
   advancing = true;
   const el = document.getElementById('slide');
   el.classList.remove('in');
   el.classList.add('out');
   setTimeout(function(){
-    idx++;
+    idx = target;
     advancing = false;
     render();
-  }, 420);
+  }, 380);
 }
+function next(){ go(1); }
+function prev(){ go(-1); }
 
 // Tapping should move it along rather than do nothing — some people will
 // not wait, and making them wait is worse than letting them skip ahead.
-document.addEventListener('click', function(e){
-  if (e.target.closest('a,button')) return;
-  if (SLIDES.length && idx < SLIDES.length - 1) { clearTimeout(timer); next(); }
+// Arrow keys and space, for anyone on a laptop. Tapping the body no longer
+// advances anything — it used to skip past a perk somebody was still reading.
+document.addEventListener('keydown', function(e){
+  if (!SLIDES.length) return;
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); next(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
 });
 
 function finish(){
-  clearTimeout(timer);
   markSeen();
   location.href = 'client-portal.html';
 }

@@ -36,22 +36,6 @@ module.exports = async (req, res) => {
     const member = await queryOne('SELECT tier FROM members WHERE member_id = ?', [memberId]);
     const isBlackCard = member && member.tier === 'BLACK_CARD';
 
-    if (req.method === 'GET') {
-      const entries = await query('SELECT id, rating, note, created_at FROM nail_health WHERE member_id = ? ORDER BY created_at ASC', [memberId]);
-      const first = entries[0], last = entries[entries.length - 1];
-      const trend = (first && last && entries.length > 1) ? (last.rating - first.rating) : 0;
-      return res.json({ entries, trend, count: entries.length });
-    }
-
-    if (req.method === 'POST') {
-      if (!isBlackCard) return res.status(403).json({ error: 'Nail-health tracking is a Black Card feature.' });
-      const { rating, note } = req.body || {};
-      const r = Math.max(1, Math.min(5, Number(rating) || 0));
-      if (!r) return res.status(400).json({ error: 'Pick a rating from 1 to 5.' });
-      await execute('INSERT INTO nail_health (member_id, rating, note) VALUES (?,?,?)', [memberId, r, String(note || '').slice(0, 400)]);
-      return res.json({ ok: true });
-    }
-
     /* ── THE ASSESSMENT ───────────────────────────────────────────
        What state are your nails actually in, and what do we each do
        about it. The plan is rules-based and lives in _nail-plan, so
@@ -70,7 +54,9 @@ module.exports = async (req, res) => {
         notes = await query('SELECT note, author, created_ts FROM nail_notes WHERE member_id = ? ORDER BY created_ts DESC LIMIT 10', [memberId]);
       } catch (_) {}
       return res.json({
+        sections: plan.SECTIONS,
         factors: plan.FACTORS,
+        context: plan.CONTEXT,
         goals: plan.GOALS,
         red_flags: plan.RED_FLAGS,
         // Everyone can see where they stand; the full programme and the
@@ -100,6 +86,22 @@ module.exports = async (req, res) => {
         'INSERT INTO nail_assessments (member_id, answers, score, band, goal, created_ts) VALUES (?,?,?,?,?,?)',
         [memberId, JSON.stringify(answers), built.score, built.band, goal, Date.now()]);
       return res.json({ ok: true, score: built.score, band: built.band, plan: built });
+    }
+
+    if (req.method === 'GET') {
+      const entries = await query('SELECT id, rating, note, created_at FROM nail_health WHERE member_id = ? ORDER BY created_at ASC', [memberId]);
+      const first = entries[0], last = entries[entries.length - 1];
+      const trend = (first && last && entries.length > 1) ? (last.rating - first.rating) : 0;
+      return res.json({ entries, trend, count: entries.length });
+    }
+
+    if (req.method === 'POST') {
+      if (!isBlackCard) return res.status(403).json({ error: 'Nail-health tracking is a Black Card feature.' });
+      const { rating, note } = req.body || {};
+      const r = Math.max(1, Math.min(5, Number(rating) || 0));
+      if (!r) return res.status(400).json({ error: 'Pick a rating from 1 to 5.' });
+      await execute('INSERT INTO nail_health (member_id, rating, note) VALUES (?,?,?)', [memberId, r, String(note || '').slice(0, 400)]);
+      return res.json({ ok: true });
     }
 
     if (req.method === 'DELETE') {

@@ -59,7 +59,11 @@ const TIERS = {
       { key: 'calendar',     kind: 'calendar',     label: '20 days of calendar, unlocked',  detail: 'You are three weeks ahead of the room. Nothing is gone by the time you look.', value: 20 },
       { key: 'nail_program', kind: 'program',      label: 'Your nail health programme',     detail: 'Tell us the state of your nails and get a plan — what you do at home, what we do in the chair.' },
       { key: 'account',      kind: 'account',      label: 'Your own account',               detail: 'Your visits, your perks, your nail record, your plan.' },
-      { key: 'locked_rate',  kind: 'access',       label: 'Your rate, locked forever',      detail: 'This price never rises for you. Not when it rises for everyone else.' },
+      // Deliberately not listed on their own account. Telling somebody their
+      // price is locked forever invites them to wonder how long forever is,
+      // and puts the cost in their head on the one screen that should be
+      // about their nails. It stays on the memberships page, where it is a
+      // reason to join rather than a reminder of a bill.
       { key: 'channel',      kind: 'access',       label: 'First access to everything',     detail: 'New techniques, new gel systems, seasonal collections — you see them first.' },
     ],
   },
