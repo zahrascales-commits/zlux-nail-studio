@@ -498,6 +498,19 @@ module.exports = async function (req, res) {
       });
     }
 
+    /* ── IMPORT THE OLD BOOKING SYSTEM ────────────────────────────
+       Runs here rather than from a laptop: the database credentials
+       live in Vercel, and pasting them onto a command line to run a
+       script once is how credentials end up in shell history.
+       Safe to repeat — clients match on name, visits on the old
+       system's appointment id. */
+    if (method === 'GET' && action === 'import_preview') {
+      return res.json(await require('./_import-clients').run({ dryRun: true }));
+    }
+    if (method === 'POST' && action === 'import_clients') {
+      return res.json(await require('./_import-clients').run({ dryRun: false }));
+    }
+
     if (method === 'GET' && action === 'claims') {
       return res.json(await require('./_claims').claimsOverview());
     }

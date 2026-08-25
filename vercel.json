@@ -1,8 +1,19 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/index.js" }
+    {
+      "source": "/api/:path*",
+      "destination": "/api/index.js"
+    }
   ],
   "crons": [
-    { "path": "/api/reminders?key=ZOLA-REMIND-2026", "schedule": "0 8 * * *" }
-  ]
+    {
+      "path": "/api/reminders?key=ZOLA-REMIND-2026",
+      "schedule": "0 8 * * *"
+    }
+  ],
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "data/**"
+    }
+  }
 }
