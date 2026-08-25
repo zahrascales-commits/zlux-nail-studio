@@ -557,6 +557,25 @@
 
 </div><!-- /signup-wrap -->
 
+<script>
+/* A dead signup page is the most expensive bug this site can have, so it
+   gets a floor under it. If anything above threw before the details were
+   revealed, show them anyway — a form somebody can fill in beats a page
+   that silently does nothing, and the plan choice is still right there. */
+setTimeout(function(){
+  try{
+    var d = document.getElementById('details-wrap');
+    var c = document.getElementById('step1-continue');
+    if(d && d.className.indexOf('show') < 0){
+      d.classList.add('show');
+      if(c) c.style.display = '';
+      var w = document.getElementById('plan-wrap');
+      if(w) w.classList.add('show');
+      if(typeof renderPlans === 'function') { try { renderPlans(); } catch(e){} }
+    }
+  }catch(e){}
+}, 1200);
+</script>
 <script src="js/main.js"></script>
 <script src="js/search.js"></script>
 <script src="js/analytics.js"></script>
@@ -564,6 +583,19 @@
 <script>
   // ─── State ───
   let selectedTier = '';
+
+  /* ── HOW YOU PAY ────────────────────────────────────────────────────
+     Nothing here is invented. The yearly figure is a real price and the
+     saving is the difference between it and twelve monthly payments —
+     which lands within a few dollars of two months free on every tier. */
+  const PLANS = {
+    SIGNATURE:  { monthly: 9900,  yearly: 99900  },
+    LUXE:       { monthly: 19900, yearly: 199900 },
+    BLACK_CARD: { monthly: 29900, yearly: 299900 },
+    TEST:       { monthly: 158,   yearly: 1580   },
+  };
+  let billing = 'yearly';
+
   let signupData = {};
   let stripe, cardElement;
 
@@ -601,17 +633,6 @@
     wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  /* ── HOW YOU PAY ────────────────────────────────────────────────────
-     Nothing here is invented. The yearly figure is a real price and the
-     saving is the difference between it and twelve monthly payments —
-     which lands within a few dollars of two months free on every tier. */
-  const PLANS = {
-    SIGNATURE:  { monthly: 9900,  yearly: 99900  },
-    LUXE:       { monthly: 19900, yearly: 199900 },
-    BLACK_CARD: { monthly: 29900, yearly: 299900 },
-    TEST:       { monthly: 158,   yearly: 1580   },
-  };
-  let billing = 'yearly';
 
   function planMoney(c){
     const v = Number(c || 0) / 100;
