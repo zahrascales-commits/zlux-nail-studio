@@ -9,6 +9,40 @@ const TIER_PRICES = {
   BLACK_CARD: 'price_black_card_monthly',
 };
 
+// What each tier costs per month, in cents. The Stripe price is the real
+// source of truth; this is the fallback used to work out a discount when the
+// price object cannot be read.
+const TIER_CENTS = { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900, TEST: 158 };
+
+// Turns a code into a Stripe coupon that repeats every month.
+//
+// Built per code AND per amount, because "make it $100" is a different
+// discount on Luxe than on Black Card. Reused once created — Stripe keeps
+// coupons forever, and minting a new one per signup would litter the account.
+async function couponFor(stripe, promo, tier, monthlyCents) {
+  const { valueAgainst } = require('./_promo');
+  const off = valueAgainst(promo, monthlyCents);
+  if (off <= 0) return null;
+
+  const id = ('zola_' + promo.code + '_' + tier + '_' + off).toLowerCase().replace(/[^a-z0-9_]/g, '');
+  try {
+    const found = await stripe.coupons.retrieve(id);
+    if (found && !found.deleted) return found.id;
+  } catch (_) { /* not created yet */ }
+
+  const created = await stripe.coupons.create({
+    id,
+    amount_off: off,
+    currency: 'usd',
+    // Forever, not once. A founding rate that lapses after one month is not
+    // a founding rate, and nobody would notice until the second invoice.
+    duration: 'forever',
+    name: promo.code + ' — ' + tier.replace('_', ' '),
+    metadata: { code: promo.code, tier, kind: promo.kind || 'amount_off' },
+  });
+  return created.id;
+}
+
 function generateMemberId(fullName) {
   const parts = fullName.trim().split(/\s+/);
   const initials = parts.map(p => p[0].toUpperCase()).join('').slice(0, 3);
@@ -31,7 +65,7 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { fullName, email, phone, dateOfBirth, heardAbout, tier, password, referralCode, stripePaymentMethodId, action } = req.body;
+  const { fullName, email, phone, dateOfBirth, heardAbout, tier, password, referralCode, promoCode, stripePaymentMethodId, action } = req.body;
 
   // Re-send member ID via SMS
   if (action === 'resend_sms') {
@@ -100,12 +134,45 @@ module.exports = async (req, res) => {
     if (!priceId) priceId = process.env[`STRIPE_PRICE_${tier}`] || null;
     if (!priceId) priceId = TIER_PRICES[tier];
 
+    /* ── Discount code ─────────────────────────────────────────────────
+       Validated server-side against the tier being bought. The browser
+       only ever says WHICH code — never what it is worth — so a tampered
+       request cannot talk its way to a cheaper membership. A bad code
+       stops the signup rather than quietly charging full price to
+       somebody who thinks they are on a founding rate.               */
+    let couponId = null, appliedPromo = null;
+    if (promoCode && String(promoCode).trim()) {
+      const promoLib = require('./_promo');
+      await promoLib.ensure();
+      const p = await promoLib.lookup(promoCode);
+      if (!p.ok) return res.status(400).json({ error: p.why || 'That code is not recognised.' });
+      const allowed = promoLib.allows(p, { forMembership: true, tier });
+      if (!allowed.ok) return res.status(400).json({ error: allowed.why });
+
+      // Ask Stripe what this actually costs rather than trusting a table.
+      let monthly = TIER_CENTS[tier] || 0;
+      try {
+        const price = await stripe.prices.retrieve(priceId);
+        if (price && price.unit_amount) monthly = price.unit_amount;
+      } catch (_) {}
+
+      couponId = await couponFor(stripe, p, tier, monthly);
+      if (couponId) {
+        appliedPromo = { code: p.code, label: p.label, monthly_cents: Math.max(0, monthly - promoLib.valueAgainst(p, monthly)) };
+        try { await promoLib.redeem(p.code); } catch (_) {}
+      }
+    }
+
     const subscription = await stripe.subscriptions.create({
       customer: customer.id,
       items: [{ price: priceId }],
+      ...(couponId ? { coupon: couponId } : {}),
       payment_behavior: 'default_incomplete',
       expand: ['latest_invoice.payment_intent'],
-      metadata: { tier, memberEmail: email },
+      metadata: {
+        tier, memberEmail: email,
+        ...(appliedPromo ? { promo_code: appliedPromo.code } : {}),
+      },
     });
 
     const memberId = generateMemberId(fullName);
@@ -147,6 +214,7 @@ module.exports = async (req, res) => {
       memberId,
       tier,
       referralCode: referral,
+      promo: appliedPromo,
       nextBillingDate: nextBilling,
       clientSecret: subscription.latest_invoice?.payment_intent?.client_secret || null,
     });

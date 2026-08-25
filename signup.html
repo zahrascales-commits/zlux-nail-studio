@@ -401,6 +401,16 @@
         <input type="text" id="referral-code" placeholder="e.g. ZL-AB1234" style="text-transform:uppercase;" />
       </div>
 
+      <div class="form-field">
+        <label for="promo-code">Discount Code <span style="opacity:0.6;font-weight:400;">— optional</span></label>
+        <div style="display:flex;gap:0.5rem;">
+          <input type="text" id="promo-code" placeholder="If you were given one" style="text-transform:uppercase;flex:1;"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();checkPromo();}" />
+          <button type="button" class="btn-signup" style="width:auto;padding:0 1.2rem;white-space:nowrap;" onclick="checkPromo()">Apply</button>
+        </div>
+        <div id="promo-msg" style="font-family:'Josefin Sans',sans-serif;font-size:0.8rem;margin-top:0.5rem;line-height:1.6;"></div>
+      </div>
+
       <button class="btn-signup" onclick="goToStep2()">Continue to Payment →</button>
     </div>
   </div>
@@ -429,6 +439,7 @@
         <div id="stripe-card-errors"></div>
       </div>
 
+      <div id="renewal-terms" style="background:rgba(182,165,136,0.08);border:1px solid rgba(182,165,136,0.3);padding:0.9rem 1rem;margin-bottom:1rem;"></div>
       <button class="btn-signup" id="pay-btn" onclick="submitPayment()">Pay &amp; Join Zola →</button>
       <div style="text-align:center;margin-top:1rem;">
         <button onclick="goToStep(1)" style="background:none;border:none;font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);cursor:pointer;text-decoration:underline;">← Back</button>
@@ -568,6 +579,7 @@
     signupData.tier = selectedTier;
 
     document.getElementById('price-display').textContent = TIER_AMOUNT[selectedTier];
+    renewalLine();
     document.getElementById('payment-sub').textContent = `You're joining the ${TIER_LABEL[selectedTier]} at ${TIER_PRICE[selectedTier]}. Your first month is charged today.`;
 
     goToStep(2);
@@ -609,6 +621,14 @@
   }
 
   async function submitPayment() {
+  // Nobody gets charged on a repeating basis without saying yes to it in
+  // words. This is also the difference between a renewal and a chargeback.
+  const agree = document.getElementById('agree-recurring');
+  if (agree && !agree.checked) {
+    showError('err-2', 'Please tick the box to authorise the monthly charge.');
+    agree.focus();
+    return;
+  }
     const btn = document.getElementById('pay-btn');
     btn.disabled = true;
     btn.textContent = 'Processing…';
@@ -644,6 +664,7 @@
           tier:       signupData.tier,
           password:   signupData.password,
           referralCode: signupData.referralCode || undefined,
+          promoCode: (document.getElementById('promo-code') || {}).value || undefined,
           stripePaymentMethodId: paymentMethod.id,
         })
       });
@@ -785,6 +806,69 @@
     document.querySelectorAll('#step-4 a').forEach(function(a){
       if (a.id !== 'see-perks') a.addEventListener('click', stop);
     });
+  }
+
+  /* ── DISCOUNT CODE ──────────────────────────────────────────────────
+     Checked against the tier being bought, because a code can be valid
+     and still not apply here — THEOG is Black Card only. The browser
+     never learns what a code is worth beyond what it is shown; the
+     server prices it again at signup, so nothing typed here can talk
+     its way to a cheaper membership. */
+  let appliedPromo = null;
+
+  async function checkPromo(){
+    const el = document.getElementById('promo-code');
+    const msg = document.getElementById('promo-msg');
+    const code = (el.value || '').trim().toUpperCase();
+    el.value = code;
+    appliedPromo = null;
+    if(!code){ msg.textContent = ''; renewalLine(); return; }
+    msg.style.color = 'var(--latte)';
+    msg.textContent = 'Checking…';
+    try{
+      const r = await fetch('/api/promo?action=check&code=' + encodeURIComponent(code)
+        + '&tier=' + encodeURIComponent(selectedTier || '') + '&membership=1');
+      const d = await r.json();
+      if(!d.ok){
+        msg.style.color = '#b43232';
+        msg.textContent = d.why || 'That code is not recognised.';
+      }else{
+        appliedPromo = d;
+        msg.style.color = '#3c8c50';
+        msg.textContent = d.label
+          ? d.label + ' — you will pay ' + money(d.monthly_cents) + ' a month.'
+          : 'Applied — you will pay ' + money(d.monthly_cents) + ' a month.';
+      }
+    }catch(_){
+      msg.style.color = '#b43232';
+      msg.textContent = 'Could not check that code — try again.';
+    }
+    renewalLine();
+  }
+
+  function money(c){ return '$' + (Number(c||0)/100).toFixed(2).replace(/\.00$/, ''); }
+
+  // What they are agreeing to, in words, with the real number in it.
+  function renewalLine(){
+    const el = document.getElementById('renewal-terms');
+    if(!el || !selectedTier) return;
+    const base = { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900, TEST: 158 }[selectedTier] || 0;
+    const monthly = appliedPromo ? appliedPromo.monthly_cents : base;
+    const d = new Date(); d.setMonth(d.getMonth() + 1);
+    const next = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+    el.innerHTML =
+      '<label style="display:flex;gap:0.6rem;align-items:flex-start;cursor:pointer;">'
+      + '<input type="checkbox" id="agree-recurring" style="margin-top:0.25rem;flex-shrink:0;" />'
+      + '<span style="font-family:\'Josefin Sans\',sans-serif;font-size:0.82rem;line-height:1.7;color:var(--latte);">'
+      + 'I authorise ZOLA Nail Studio to charge this card <strong style="color:var(--espresso);">'
+      + money(monthly) + ' today</strong> and <strong style="color:var(--espresso);">'
+      + money(monthly) + ' every month</strong> from ' + next + ', until I cancel. '
+      + 'I can cancel any time from my account.'
+      + (appliedPromo && appliedPromo.kind === 'fixed_total'
+          ? '<br><span style="color:var(--champagne);">Your ' + money(monthly)
+            + ' rate stays the same for as long as you keep your membership.</span>'
+          : '')
+      + '</span></label>';
   }
 
   window.addEventListener('scroll', () => { document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60); });
