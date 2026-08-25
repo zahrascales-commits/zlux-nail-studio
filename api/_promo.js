@@ -50,6 +50,27 @@ async function ensure() {
   // flag off and the calendar unfiltered.
   await execute("UPDATE promo_codes SET trainee_only=1 WHERE code='TRAIN20'").catch(() => {});
 
+  // MASYNX2 — Zahra testing her own live checkout without spending $299.
+  // Makes any total zero, on services and memberships alike.
+  //
+  // Capped at 25 uses on purpose. A code that makes anything free is the
+  // single most damaging string on this site if it ever leaks — a screenshot,
+  // somebody reading over her shoulder — and on a membership it would hand
+  // out a Black Card that stays free every month, not just the first. The cap
+  // means a leak costs a bounded number of memberships rather than unlimited
+  // ones, and she can raise it whenever she needs more test runs.
+  const mine = await queryOne("SELECT code FROM promo_codes WHERE code='MASYNX2'").catch(() => null);
+  if (!mine) {
+    await execute(
+      `INSERT OR IGNORE INTO promo_codes
+         (code, label, amount_off_cents, active, max_uses, used_count, created_ts,
+          kind, fixed_total_cents, applies_to, tiers, note)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      ['MASYNX2', 'Owner test — makes the whole total zero', 0, 1, 25, 0, Date.now(),
+       'fixed_total', 0, 'both', JSON.stringify([]),
+       'PRIVATE — Zahra only. Makes any transaction free. Never put this on the site.']);
+  }
+
   // THEOG — the founding rate. Whatever Black Card costs, an OG pays $100 a
   // month, for as long as they stay. Seeded rather than left to be typed
   // because getting a fixed-price code wrong costs real money every month.
