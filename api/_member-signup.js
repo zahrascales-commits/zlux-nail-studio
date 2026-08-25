@@ -14,6 +14,32 @@ const TIER_PRICES = {
 // price object cannot be read.
 const TIER_CENTS = { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900, TEST: 158 };
 
+// Paying for the year. Roughly two months free on every tier — the saving is
+// the difference between these and twelve monthly payments, not a made-up
+// percentage.
+const TIER_YEARLY_CENTS = { SIGNATURE: 99900, LUXE: 199900, BLACK_CARD: 299900, TEST: 1580 };
+
+// The yearly Stripe price, created the first time somebody buys one so she
+// never has to set anything up by hand. Looked up by lookup_key so a second
+// signup reuses it instead of creating a duplicate price every time.
+async function yearlyPriceFor(stripe, tier) {
+  const amount = TIER_YEARLY_CENTS[tier];
+  if (!amount) return null;
+  const lookupKey = ('zola_' + tier + '_yearly_' + amount).toLowerCase();
+  try {
+    const found = await stripe.prices.list({ lookup_keys: [lookupKey], limit: 1 });
+    if (found && found.data && found.data[0]) return found.data[0].id;
+  } catch (_) {}
+  const created = await stripe.prices.create({
+    unit_amount: amount,
+    currency: 'usd',
+    recurring: { interval: 'year' },
+    lookup_key: lookupKey,
+    product_data: { name: 'ZOLA ' + tier.replace('_', ' ') + ' — yearly' },
+  });
+  return created.id;
+}
+
 // Turns a code into a Stripe coupon that repeats every month.
 //
 // Built per code AND per amount, because "make it $100" is a different
@@ -65,7 +91,7 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { fullName, email, phone, dateOfBirth, heardAbout, tier, password, referralCode, promoCode, stripePaymentMethodId, action } = req.body;
+  const { fullName, email, phone, dateOfBirth, heardAbout, tier, password, referralCode, promoCode, billing, stripePaymentMethodId, action } = req.body;
 
   // Re-send member ID via SMS
   if (action === 'resend_sms') {
@@ -134,6 +160,16 @@ module.exports = async (req, res) => {
     if (!priceId) priceId = process.env[`STRIPE_PRICE_${tier}`] || null;
     if (!priceId) priceId = TIER_PRICES[tier];
 
+    // Paying for the year swaps the price entirely. Done after the monthly
+    // lookup so a studio that has set its own monthly prices keeps them.
+    const yearly = String(billing || 'monthly') === 'yearly';
+    if (yearly) {
+      try {
+        const yid = await yearlyPriceFor(stripe, tier);
+        if (yid) priceId = yid;
+      } catch (_) { /* fall back to monthly rather than lose the signup */ }
+    }
+
     /* ── Discount code ─────────────────────────────────────────────────
        Validated server-side against the tier being bought. The browser
        only ever says WHICH code — never what it is worth — so a tampered
@@ -150,7 +186,7 @@ module.exports = async (req, res) => {
       if (!allowed.ok) return res.status(400).json({ error: allowed.why });
 
       // Ask Stripe what this actually costs rather than trusting a table.
-      let monthly = TIER_CENTS[tier] || 0;
+      let monthly = (yearly ? TIER_YEARLY_CENTS[tier] : TIER_CENTS[tier]) || 0;
       try {
         const price = await stripe.prices.retrieve(priceId);
         if (price && price.unit_amount) monthly = price.unit_amount;
@@ -170,7 +206,7 @@ module.exports = async (req, res) => {
       payment_behavior: 'default_incomplete',
       expand: ['latest_invoice.payment_intent'],
       metadata: {
-        tier, memberEmail: email,
+        tier, memberEmail: email, billing: yearly ? 'yearly' : 'monthly',
         ...(appliedPromo ? { promo_code: appliedPromo.code } : {}),
       },
     });

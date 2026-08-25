@@ -271,7 +271,37 @@
       .tier-selector { grid-template-columns: 1fr; }
       .signup-wrap { padding: 6rem 1rem 3rem; }
     }
-  </style>
+    /* ── HOW YOU PAY ──
+     Yearly first and visually louder. The saving is the headline because it
+     is the only number that changes anybody's mind. */
+  .plan-wrap{display:none;margin-bottom:1.5rem;}
+  .plan-wrap.show{display:block;animation:fadeUp 0.3s ease;}
+  .plan-grid{display:grid;gap:1rem;margin-top:0.75rem;}
+  @media(min-width:640px){ .plan-grid{grid-template-columns:1fr 1fr;} }
+  .plan{
+    position:relative;border:1px solid rgba(182,165,136,0.35);background:#fff;
+    padding:1.5rem 1.3rem;cursor:pointer;text-align:left;width:100%;font:inherit;
+    transition:border-color 0.2s,box-shadow 0.2s;
+  }
+  .plan:hover{border-color:var(--champagne);}
+  .plan.on{border-color:var(--espresso);border-width:2px;padding:calc(1.5rem - 1px) calc(1.3rem - 1px);
+    box-shadow:0 10px 34px rgba(26,20,12,0.13);}
+  .plan-best{position:absolute;top:-11px;left:1.1rem;background:var(--espresso);color:var(--champagne);
+    font-family:'Josefin Sans',sans-serif;font-size:0.56rem;font-weight:600;letter-spacing:0.18em;
+    text-transform:uppercase;padding:0.3rem 0.7rem;}
+  .plan-when{font-family:'Josefin Sans',sans-serif;font-size:0.6rem;letter-spacing:0.2em;
+    text-transform:uppercase;color:var(--latte);margin-bottom:0.45rem;}
+  .plan-amt{font-family:'Cinzel',serif;font-size:2rem;line-height:1;color:var(--espresso);}
+  .plan-amt small{font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);}
+  .plan-note{font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);
+    line-height:1.6;margin-top:0.6rem;}
+  .plan-save{display:inline-block;margin-top:0.8rem;background:rgba(182,165,136,0.18);
+    border:1px solid rgba(182,165,136,0.5);color:var(--espresso);
+    font-family:'Josefin Sans',sans-serif;font-size:0.75rem;font-weight:600;padding:0.42rem 0.72rem;}
+  .plan-strike{text-decoration:line-through;opacity:0.55;}
+  .details-wrap{display:none;}
+  .details-wrap.show{display:block;animation:fadeUp 0.3s ease;}
+</style>
 </head>
 <body>
 
@@ -358,6 +388,13 @@
         </div>
       </div>
 
+      <div class="plan-wrap" id="plan-wrap">
+        <div class="form-field" style="margin-bottom:0.25rem;"><label>How would you like to pay?</label></div>
+        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:var(--latte);margin:0;">Exactly the same membership either way. One of them costs less.</p>
+        <div class="plan-grid" id="plan-grid"></div>
+      </div>
+
+      <div class="details-wrap" id="details-wrap">
       <div class="form-field">
         <label>Full Name <span style="color:#b43232;">*</span></label>
         <input type="text" id="full-name" placeholder="Your full name" autocomplete="name" />
@@ -411,7 +448,9 @@
         <div id="promo-msg" style="font-family:'Josefin Sans',sans-serif;font-size:0.8rem;margin-top:0.5rem;line-height:1.6;"></div>
       </div>
 
-      <button class="btn-signup" onclick="goToStep2()">Continue to Payment →</button>
+      </div><!-- /details-wrap -->
+
+      <button class="btn-signup" id="step1-continue" style="display:none;" onclick="goToStep2()">Continue to Payment →</button>
     </div>
   </div>
 
@@ -550,6 +589,65 @@
     document.querySelectorAll('.tier-opt').forEach(el => {
       el.classList.toggle('selected', el.dataset.tier === t);
     });
+    // The pay choice comes before the details, not after them.
+    renderPlans();
+    document.getElementById('plan-wrap').classList.add('show');
+  }
+
+  /* ── HOW YOU PAY ────────────────────────────────────────────────────
+     Nothing here is invented. The yearly figure is a real price and the
+     saving is the difference between it and twelve monthly payments —
+     which lands within a few dollars of two months free on every tier. */
+  const PLANS = {
+    SIGNATURE:  { monthly: 9900,  yearly: 99900  },
+    LUXE:       { monthly: 19900, yearly: 199900 },
+    BLACK_CARD: { monthly: 29900, yearly: 299900 },
+    TEST:       { monthly: 158,   yearly: 1580   },
+  };
+  let billing = 'yearly';
+
+  function planMoney(c){
+    const v = Number(c || 0) / 100;
+    return '$' + (v % 1 === 0 ? v.toLocaleString('en-US') : v.toFixed(2));
+  }
+
+  function renderPlans(){
+    const grid = document.getElementById('plan-grid');
+    const p = PLANS[selectedTier];
+    if(!grid || !p) return;
+    const twelve = p.monthly * 12;
+    const save = twelve - p.yearly;
+    const months = save / p.monthly;
+
+    grid.innerHTML =
+      // Yearly first: on a phone this is the one under your thumb, on a
+      // desktop it is the one you read first.
+      '<button type="button" class="plan' + (billing === 'yearly' ? ' on' : '') + '" onclick="pickBilling(\'yearly\')">'
+        + '<span class="plan-best">Best value</span>'
+        + '<div class="plan-when">Pay for the year</div>'
+        + '<div class="plan-amt">' + planMoney(p.yearly) + '<small> /year</small></div>'
+        + '<div class="plan-note"><span class="plan-strike">' + planMoney(twelve) + '</span> paid monthly — '
+          + 'works out to ' + planMoney(Math.round(p.yearly / 12)) + ' a month.</div>'
+        + '<div class="plan-save">Save ' + planMoney(save) + ' · '
+          + (months >= 1.85 ? 'nearly two months free' : months.toFixed(1) + ' months free') + '</div>'
+      + '</button>'
+      + '<button type="button" class="plan' + (billing === 'monthly' ? ' on' : '') + '" onclick="pickBilling(\'monthly\')">'
+        + '<div class="plan-when">Pay monthly</div>'
+        + '<div class="plan-amt">' + planMoney(p.monthly) + '<small> /month</small></div>'
+        + '<div class="plan-note">' + planMoney(twelve) + ' over a year. Cancel any time.</div>'
+      + '</button>';
+  }
+
+  function pickBilling(b){
+    billing = b;
+    signupData.billing = b;
+    renderPlans();
+    renewalLine();
+    // Only now do we ask for their details.
+    document.getElementById('details-wrap').classList.add('show');
+    document.getElementById('step1-continue').style.display = '';
+    document.getElementById('full-name').focus({ preventScroll: true });
+    document.getElementById('details-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function showError(id, msg) {
@@ -665,6 +763,7 @@
           password:   signupData.password,
           referralCode: signupData.referralCode || undefined,
           promoCode: (document.getElementById('promo-code') || {}).value || undefined,
+          billing: billing,
           stripePaymentMethodId: paymentMethod.id,
         })
       });
@@ -852,17 +951,20 @@
   function renewalLine(){
     const el = document.getElementById('renewal-terms');
     if(!el || !selectedTier) return;
-    const base = { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900, TEST: 158 }[selectedTier] || 0;
+    const yearly = billing === 'yearly';
+    const base = (yearly ? { SIGNATURE: 99900, LUXE: 199900, BLACK_CARD: 299900, TEST: 1580 }
+                         : { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900, TEST: 158 })[selectedTier] || 0;
     const monthly = appliedPromo ? appliedPromo.monthly_cents : base;
-    const d = new Date(); d.setMonth(d.getMonth() + 1);
-    const next = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+    const d = new Date();
+    if (yearly) d.setFullYear(d.getFullYear() + 1); else d.setMonth(d.getMonth() + 1);
+    const next = d.toLocaleDateString('en-US', yearly ? { month: 'long', day: 'numeric', year: 'numeric' } : { month: 'long', day: 'numeric' });
     el.innerHTML =
       '<label style="display:flex;gap:0.6rem;align-items:flex-start;cursor:pointer;">'
       + '<input type="checkbox" id="agree-recurring" style="margin-top:0.25rem;flex-shrink:0;" />'
       + '<span style="font-family:\'Josefin Sans\',sans-serif;font-size:0.82rem;line-height:1.7;color:var(--latte);">'
       + 'I authorise ZOLA Nail Studio to charge this card <strong style="color:var(--espresso);">'
       + money(monthly) + ' today</strong> and <strong style="color:var(--espresso);">'
-      + money(monthly) + ' every month</strong> from ' + next + ', until I cancel. '
+      + money(monthly) + (yearly ? ' every year' : ' every month') + '</strong> from ' + next + ', until I cancel. '
       + 'I can cancel any time from my account.'
       + (appliedPromo && appliedPromo.kind === 'fixed_total'
           ? '<br><span style="color:var(--champagne);">Your ' + money(monthly)
