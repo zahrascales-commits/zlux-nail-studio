@@ -945,7 +945,15 @@
     renewalLine();
   }
 
-  function money(c){ return '$' + (Number(c||0)/100).toFixed(2).replace(/\.00$/, ''); }
+  // Thousands separators matter here. On the one line somebody has to tick
+  // before being charged three thousand dollars, "$2999" reads as a typo —
+  // and a price that looks like a typo is a price people abandon.
+  function money(c){
+    const v = Number(c || 0) / 100;
+    return '$' + (v % 1 === 0
+      ? v.toLocaleString('en-US')
+      : v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+  }
 
   // What they are agreeing to, in words, with the real number in it.
   function renewalLine(){
