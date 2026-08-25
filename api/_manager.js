@@ -511,6 +511,44 @@ module.exports = async function (req, res) {
       return res.json(await require('./_import-clients').run({ dryRun: false }));
     }
 
+    /* ── APPLE PAY / GOOGLE PAY ───────────────────────────────────
+       The wallet button only appears once the domain is registered
+       with Stripe. Everything else can be wired perfectly and the
+       button still will not show, which looks like a broken feature
+       rather than a missing setting. */
+    if (method === 'GET' && action === 'wallet_status') {
+      const rows = await query("SELECT key, value FROM site_settings WHERE key='stripe_secret'");
+      const secret = (rows[0] && rows[0].value) || process.env.STRIPE_SECRET_KEY || '';
+      if (!secret) return res.json({ ok: false, reason: 'no_key' });
+      const r = await fetch('https://api.stripe.com/v1/apple_pay/domains?limit=20', {
+        headers: { Authorization: 'Bearer ' + secret },
+      });
+      const body = await r.json();
+      if (!r.ok) return res.json({ ok: false, reason: 'stripe', detail: (body.error || {}).message || '' });
+      const domains = (body.data || []).map(d => ({ domain: d.domain_name, live: !!d.livemode }));
+      return res.json({ ok: true, domains });
+    }
+
+    if (method === 'POST' && action === 'wallet_register') {
+      const rows = await query("SELECT key, value FROM site_settings WHERE key='stripe_secret'");
+      const secret = (rows[0] && rows[0].value) || process.env.STRIPE_SECRET_KEY || '';
+      if (!secret) return res.status(400).json({ error: 'Stripe is not connected yet.' });
+      // Stripe wants a bare hostname, so strip any scheme or path somebody
+      // pasted along with it.
+      const domain = String((req.body || {}).domain || 'zolanailstudio.com')
+        .replace(/^https?:\/\//, '')
+        .split('/')[0]
+        .trim();
+      const r = await fetch('https://api.stripe.com/v1/apple_pay/domains', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + secret, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ domain_name: domain }).toString(),
+      });
+      const body = await r.json();
+      if (!r.ok) return res.status(400).json({ error: (body.error || {}).message || 'Stripe refused' });
+      return res.json({ ok: true, domain: body.domain_name, live: !!body.livemode });
+    }
+
     if (method === 'GET' && action === 'claims') {
       return res.json(await require('./_claims').claimsOverview());
     }
