@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Visits — ZOLA</title>
+<link rel="icon" href="/img/zola-icon.png" />
+<meta name="theme-color" content="#0D0D0D" />
+<!-- A private page. Never let it into a search result. -->
+<meta name="robots" content="noindex, nofollow" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@300;400;600&family=Josefin+Sans:wght@300;400;600&display=swap" rel="stylesheet" />
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --ink:#0D0D0D;--card:#1A1613;--gold:#C4A882;--gold-soft:#DDD0B8;
+    --cream:#F5EEE8;--latte:#8C7A5E;--line:rgba(196,168,130,0.2);
+  }
+  body{
+    background:var(--ink);color:var(--cream);
+    font-family:'Josefin Sans',sans-serif;min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:560px;margin:0 auto;padding:2.2rem 1.25rem 4rem}
+
+  .brand{text-align:center;margin-bottom:2.2rem}
+  .wordmark{font-family:'Cinzel',serif;font-size:1.1rem;letter-spacing:0.42em;color:var(--gold);text-indent:0.42em}
+  .tagline{font-size:0.58rem;letter-spacing:0.24em;text-transform:uppercase;color:var(--latte);margin-top:0.5rem}
+
+  .hello{text-align:center;margin-bottom:2rem}
+  .hello h1{font-family:'Cinzel',serif;font-weight:400;font-size:2rem;line-height:1.2;color:var(--cream)}
+  .hello p{font-size:0.9rem;color:var(--latte);margin-top:0.6rem;line-height:1.7}
+
+  .band{display:flex;gap:0.6rem;justify-content:center;flex-wrap:wrap;margin-bottom:2.2rem}
+  .chip{border:1px solid var(--line);border-radius:100px;padding:0.5rem 0.95rem;text-align:center}
+  .chip b{font-family:'Cinzel',serif;font-size:1rem;color:var(--gold-soft);font-weight:400;display:block}
+  .chip span{font-size:0.56rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--latte)}
+
+  .label{font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);margin-bottom:0.9rem}
+
+  /* A visit reads as a moment, not a line item. */
+  .visit{display:flex;gap:1rem;padding:1rem 0;border-top:1px solid var(--line)}
+  .visit:last-child{border-bottom:1px solid var(--line)}
+  .vd{min-width:92px;flex-shrink:0}
+  .vd b{font-family:'Cinzel',serif;font-size:1rem;color:var(--gold-soft);font-weight:400;display:block;line-height:1.25}
+  .vd span{font-size:0.7rem;color:var(--latte)}
+  .vs{flex:1;min-width:0}
+  .vs b{font-size:0.95rem;color:var(--cream);font-weight:400;display:block;line-height:1.45}
+  .vs span{font-size:0.74rem;color:var(--latte)}
+  .visit.off{opacity:0.42}
+  .visit.off .vs b::after{content:' · cancelled';color:var(--latte);font-size:0.78rem}
+
+  .year{font-family:'Cinzel',serif;font-size:0.8rem;color:var(--latte);letter-spacing:0.2em;
+    margin:1.8rem 0 0.4rem;padding-top:1.2rem;border-top:1px solid var(--line)}
+  .year:first-of-type{margin-top:0;padding-top:0;border-top:none}
+
+  .cta{display:block;text-align:center;background:var(--gold);color:var(--ink);text-decoration:none;
+    padding:1rem;margin-top:2.4rem;border-radius:2px;font-size:0.7rem;font-weight:600;
+    letter-spacing:0.2em;text-transform:uppercase}
+  .foot{text-align:center;font-size:0.72rem;color:var(--latte);margin-top:1.6rem;line-height:1.8}
+
+  .gate{text-align:center;padding:3.5rem 1rem}
+  .gate h1{font-family:'Cinzel',serif;font-weight:400;font-size:1.5rem;color:var(--cream);margin-bottom:0.8rem}
+  .gate p{font-size:0.9rem;color:var(--latte);line-height:1.8;max-width:340px;margin:0 auto}
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="brand">
+    <div class="wordmark">ZOLA</div>
+    <div class="tagline">Nail Studio · Porterville</div>
+  </div>
+  <div id="body"><div class="gate"><p>Opening your visits…</p></div></div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   A CLIENT'S OWN VISITS
+
+   Deliberately shows no money. No prices, no deposits, no totals, no
+   lifetime value. The server does not send those figures at all, so
+   there is nothing here that could accidentally render one — a number
+   the page has to remember not to show is a number that eventually
+   gets shown.
+   ══════════════════════════════════════════════════════════════════ */
+const esc = s => String(s == null ? '' : s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function niceDate(ds){
+  const d = new Date(String(ds).slice(0,10) + 'T12:00:00');
+  if (isNaN(d)) return String(ds || '');
+  return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+}
+function weekday(ds){
+  const d = new Date(String(ds).slice(0,10) + 'T12:00:00');
+  return isNaN(d) ? '' : d.toLocaleDateString('en-US', { weekday:'long' });
+}
+function monthYear(ds){
+  const d = new Date(String(ds).slice(0,10) + 'T12:00:00');
+  return isNaN(d) ? String(ds || '') : d.toLocaleDateString('en-US', { month:'short', year:'numeric' });
+}
+function time12(t){
+  if(!t) return '';
+  const p = String(t).split(':');
+  let h = Number(p[0]);
+  const ap = h >= 12 ? 'PM' : 'AM';
+  h = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+  return h + ':' + (p[1] || '00') + ' ' + ap;
+}
+
+function gate(title, msg){
+  document.getElementById('body').innerHTML =
+    '<div class="gate"><h1>' + esc(title) + '</h1><p>' + msg + '</p></div>';
+}
+
+(async function(){
+  const k = new URLSearchParams(location.search).get('k');
+  if(!k){
+    gate('This link is private',
+      'Ask the studio for your own link and it will open right here. '
+      + '<br><br><a href="booking.html" style="color:#C4A882">Book an appointment →</a>');
+    return;
+  }
+
+  let d;
+  try{
+    const r = await fetch('/api/client-link?action=visits&k=' + encodeURIComponent(k));
+    d = await r.json();
+    if(d.error) throw new Error(d.error);
+  }catch(err){
+    gate('That link has expired',
+      'Message the studio and we will send you a fresh one.');
+    return;
+  }
+
+  const first = String(d.name || '').trim().split(' ')[0] || 'there';
+
+  let html =
+    '<div class="hello">'
+    + '<h1>Hi ' + esc(first) + '</h1>'
+    + '<p>Every set we have done together, in one place.</p>'
+    + '</div>'
+    + '<div class="band">'
+      + '<div class="chip"><b>' + d.total + '</b><span>' + (d.total === 1 ? 'visit' : 'visits') + '</span></div>'
+      + (d.since ? '<div class="chip"><b>' + esc(monthYear(d.since)) + '</b><span>since</span></div>' : '')
+    + '</div>';
+
+  if(!d.visits.length){
+    html += '<div class="gate"><p>Nothing on your record yet — your first visit will show up here.</p></div>'
+      + '<a class="cta" href="booking.html">Book your first appointment</a>';
+    document.getElementById('body').innerHTML = html;
+    return;
+  }
+
+  // Grouped by year so a long history reads as a story rather than a list.
+  html += '<div class="label">Your visits</div>';
+  let lastYear = '';
+  d.visits.forEach(function(v){
+    const yr = String(v.date).slice(0,4);
+    if(yr !== lastYear){ html += '<div class="year">' + yr + '</div>'; lastYear = yr; }
+    html += '<div class="visit' + (v.cancelled ? ' off' : '') + '">'
+      + '<div class="vd"><b>' + esc(niceDate(v.date)) + '</b><span>' + esc(weekday(v.date)) + '</span></div>'
+      + '<div class="vs"><b>' + esc(v.service || 'Appointment') + '</b>'
+        + '<span>' + esc(time12(v.time)) + (v.artist ? ' · with ' + esc(v.artist) : '') + '</span></div>'
+      + '</div>';
+  });
+
+  html += '<a class="cta" href="booking.html">Book your next appointment</a>'
+    + '<div class="foot">This page is just for you. '
+    + (d.usual ? 'Your usual is ' + esc(d.usual) + '.' : '') + '</div>';
+
+  document.getElementById('body').innerHTML = html;
+})();
+</script>
+</body>
+</html>

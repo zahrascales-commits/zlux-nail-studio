@@ -135,6 +135,19 @@ async function handler(req, res) {
           [em, em, nm, nm]);
       } catch (_) {}
 
+      // Their history from the old booking system. Most of these clients
+      // have years of visits that never touched this site, and a profile
+      // that starts the day we switched over is not their history.
+      let legacy = [];
+      try {
+        legacy = await query(
+          `SELECT date, time, service, artist, status, deposit_cents, deposit_paid
+             FROM client_visits
+            WHERE (client_id > 0 AND client_id = ?) OR (? <> '' AND lower(client_name) = lower(?))
+            ORDER BY date DESC, time DESC`,
+          [Number(client.id) || 0, nm, nm]);
+      } catch (_) {}
+
       const money = {};
       for (const p of payRows) money[p.appointment_date + ' ' + p.appointment_time] = p;
 
@@ -173,6 +186,17 @@ async function handler(req, res) {
           deposit_cents: Number(p.deposit_cents) || 0,
           deposit_paid: !!Number(p.deposit_paid),
           status: p.status || 'scheduled', confirmation: '',
+        });
+      }
+
+      for (const l of legacy) {
+        add({
+          date: l.date, time: l.time, service: l.service || '', addons: [],
+          provider: l.artist || '',
+          total_cents: null,
+          deposit_cents: Number(l.deposit_cents) || 0,
+          deposit_paid: !!Number(l.deposit_paid),
+          status: l.status || 'completed', confirmation: '', legacy: true,
         });
       }
 

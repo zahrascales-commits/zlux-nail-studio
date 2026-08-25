@@ -4867,6 +4867,7 @@ function renderClients(){
       <label style="display:flex;gap:0.5rem;align-items:center;font-size:0.78rem;color:var(--muted);margin-bottom:0.9rem"><input type="checkbox" id="cl-optin" ${Number(c.marketing_opt_in)?'checked':''}/> Gets mass messages</label>
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
         <button class="btn btn-gold btn-sm" onclick="saveClient(${c.id})">Save Profile</button>
+        <button class="btn btn-ghost btn-sm" onclick="copyClientLink(${c.id})">Copy Their Private Link</button>
         <button class="btn btn-danger btn-sm" onclick="delClient(${c.id})">Delete</button>
       </div>
       <div id="cl-history" style="margin-top:1.2rem"><div class="empty" style="padding:1rem">Loading her visits…</div></div>
@@ -4874,6 +4875,18 @@ function renderClients(){
     </div>`;
   }).join('');
 }
+// Their own page. None of these clients has an email or phone on file yet,
+// so there is nothing to send a login code to — she texts them the link
+// instead, the same way the artists get theirs.
+async function copyClientLink(id){
+  try{
+    const d = await (await api('/api/client-link?action=link&id='+id)).json();
+    if(!d.link) throw new Error(d.error||'no link');
+    await navigator.clipboard.writeText(d.link);
+    toast('Link copied — text it to her');
+  }catch(_){ toast('Could not make a link'); }
+}
+
 function toggleClient(id){
   openClientId=openClientId===id?null:id;
   renderClients();
