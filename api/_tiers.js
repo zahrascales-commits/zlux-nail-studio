@@ -1,9 +1,32 @@
-// Design tiers — how detailed the set is, what it adds to the price, and how
-// much longer it takes.
+// How long an appointment actually takes, and what the extras cost.
 //
-// One definition, used by the booking page, the pricing, and the calendar.
-// A tier that costs $10 on the checkout and takes zero extra minutes on the
+// One definition, read by the booking page, the pricing and the calendar.
+// An extra that costs money on the checkout and takes no time on the
 // schedule is how a day silently runs an hour behind.
+//
+//   base                     1h30
+//   + Russian manicure       +15 min
+//   + design tier            +10 / +15 / +30 min
+//   + grace between clients  +10 min
+//
+// Nothing chosen is a real answer, not a missing one: a plain appointment
+// with no art is 1h30 and costs nothing extra. It just means nude colour.
+
+// Every appointment before any extras.
+const BASE_MINUTES = 90;
+
+// Breathing room between clients — cleaning down, seeing one out and the
+// next in. Without it a day that looks full on paper runs late by
+// mid-morning, and the person waiting is the one who pays for it.
+const GRACE_MINUTES = 10;
+
+// Add-ons that take real time in the chair. Anything not listed adds none.
+// Named by the loose spelling used across the menu and the booking page, so
+// "Russian Manicure" and "Russian Manicure Technique" both match.
+const ADDON_MINUTES = [
+  { match: /russian/i, minutes: 15 },
+];
+
 const TIERS = [
   {
     key: 'tier1',
@@ -31,55 +54,56 @@ const TIERS = [
   },
 ];
 
-// Every appointment before any design work.
-const BASE_MINUTES = 105;
-
-// Breathing room between clients: cleaning down, seeing one person out and
-// the next in. Without it a day that looks full on paper runs late by
-// mid-morning, and the person waiting is the one who pays for it.
-const GRACE_MINUTES = 10;
-
 function tierFor(key) {
   if (!key) return null;
   const k = String(key).toLowerCase().trim();
   return TIERS.find(t => t.key === k) || null;
 }
 
-// Somebody who skipped the question gets the shortest tier, because that is
-// the only one their booking has time for. Deciding this here rather than at
-// each call site means the calendar and the bill always agree about it.
-function effectiveTier(key) {
-  return tierFor(key) || TIERS[0];
+// Minutes the chosen add-ons add. Deliberately additive: booking a removal
+// and a Russian manicure takes longer than either alone.
+function addonMinutes(addonNames) {
+  const names = Array.isArray(addonNames) ? addonNames : [];
+  let mins = 0;
+  for (const n of names) {
+    for (const rule of ADDON_MINUTES) {
+      if (rule.match.test(String(n || ''))) { mins += rule.minutes; break; }
+    }
+  }
+  return mins;
 }
 
-// How long the chair is actually occupied.
-function minutesFor(key) {
-  return BASE_MINUTES + effectiveTier(key).minutes;
+// How long the chair is occupied. No tier adds nothing — that is somebody
+// having a plain set, not somebody who forgot to answer.
+function minutesFor(tierKey, addonNames) {
+  const t = tierFor(tierKey);
+  return BASE_MINUTES + (t ? t.minutes : 0) + addonMinutes(addonNames);
 }
 
 // And how long before the next client can start.
-function blockMinutes(key) {
-  return minutesFor(key) + GRACE_MINUTES;
+function blockMinutes(tierKey, addonNames) {
+  return minutesFor(tierKey, addonNames) + GRACE_MINUTES;
 }
 
-function priceFor(key) {
-  return effectiveTier(key).price_cents;
+// What the design tier adds to the bill. No tier costs nothing.
+function priceFor(tierKey) {
+  const t = tierFor(tierKey);
+  return t ? t.price_cents : 0;
 }
 
-// The booking grid still starts appointments on the hour, so this is how
-// many hour slots one consumes. Rounded up: a set that runs 2h05 has to hold
-// three slots, because releasing the third would let somebody book into the
-// last five minutes of it.
-function slotsFor(key) {
-  return Math.ceil(blockMinutes(key) / 60);
+// Hour slots one appointment consumes on the current booking grid. Rounded
+// up, because releasing a partly-used slot would let somebody book into the
+// last few minutes of an appointment already running.
+function slotsFor(tierKey, addonNames) {
+  return Math.ceil(blockMinutes(tierKey, addonNames) / 60);
 }
 
-function label(key) {
-  const t = effectiveTier(key);
-  return t.name + ' · ' + t.tagline;
+function label(tierKey) {
+  const t = tierFor(tierKey);
+  return t ? (t.name + ' · ' + t.tagline) : 'No art — nude colour';
 }
 
 module.exports = {
-  TIERS, BASE_MINUTES, GRACE_MINUTES,
-  tierFor, effectiveTier, minutesFor, blockMinutes, priceFor, slotsFor, label,
+  TIERS, BASE_MINUTES, GRACE_MINUTES, ADDON_MINUTES,
+  tierFor, addonMinutes, minutesFor, blockMinutes, priceFor, slotsFor, label,
 };

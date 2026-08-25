@@ -511,13 +511,14 @@
       <div style="margin-top:2rem;" id="tier-section">
         <div class="step-title" style="font-size:1.05rem;">Pick your design tier</div>
         <p style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--latte);line-height:1.7;">
-          How detailed do you want them? This sets how long we book you for, so please choose before picking a time.
+          How detailed do you want them? This sets how long we book you for, so please choose before picking a time. Adding a Russian manicure adds another 15 minutes.
         </p>
         <div class="tier-grid" id="tier-grid"></div>
+        <div id="tier-length" style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--espresso);margin-top:0.8rem;"></div>
         <div class="tier-warn" id="tier-warn">
-          <strong>If you don't pick one, you'll be booked for a solid colour.</strong>
+          <strong>If you don't pick a tier, you'll be booked for nude colour with no art.</strong>
           That's the shortest appointment, and there won't be time in the chair for
-          anything more detailed on the day.
+          any design work on the day.
           <label>
             <input type="checkbox" id="tier-understood" onchange="renderTierChoice()" />
             <span>I understand</span>
@@ -1249,6 +1250,10 @@ function toggleAddon(name, basePrice, checkbox) {
     }
     booking.selectedAddons.push({ name, basePrice, charged: chargedPrice });
   }
+  // A Russian manicure makes the appointment 15 minutes longer, so both the
+  // length note and the times on offer have to move with it.
+  if (typeof tierLengthNote === 'function') tierLengthNote();
+  if (booking.date && typeof renderTimeslots === 'function') renderTimeslots(booking.date);
 }
 
 // ═══════════════════════════════════════════
@@ -1288,14 +1293,17 @@ function slotRange(slot) {
 }
 
 // ── 2-hour appointment engine ──────────────────────────────────────────
-// How long an appointment holds the chair. 1h45 base, plus the design tier,
-// plus a ten-minute grace period so a day that looks full does not run late
-// by mid-morning. Start times are still on the hour, so this rounds up to
-// whole slots — releasing a partly-used slot would let somebody book into
-// the last few minutes of somebody else appointment.
-const BASE_MINUTES = 105, GRACE_MINUTES = 10;
+// How long an appointment holds the chair.
+//   base 1h30, + Russian manicure 15, + design tier, + 10 min grace.
+// Nothing chosen adds nothing: a plain set with no art really is 1h30.
+const BASE_MINUTES = 90, GRACE_MINUTES = 10;
 const TIER_MINUTES = { tier1: 10, tier2: 15, tier3: 30 };
-function apptMinutes(){ return BASE_MINUTES + (TIER_MINUTES[booking.tier] || 0); }
+function addonMinutes(){
+  return (booking.selectedAddons || []).reduce(function(t, a){
+    return t + (/russian/i.test(a.name || '') ? 15 : 0);
+  }, 0);
+}
+function apptMinutes(){ return BASE_MINUTES + (TIER_MINUTES[booking.tier] || 0) + addonMinutes(); }
 function blockMinutes(){ return apptMinutes() + GRACE_MINUTES; }
 function apptHours(){ return Math.ceil(blockMinutes() / 60); }
 let _slotData = { allSlots: [], booked: [], blocks: [], minAdvance: 0 };
@@ -1738,6 +1746,7 @@ function renderTierChoice(){
   // stops being a warning and starts being noise.
   const warn = document.getElementById('tier-warn');
   if(warn) warn.style.display = booking.tier ? 'none' : 'block';
+  tierLengthNote();
   updateStickyBar();
 }
 
@@ -1755,6 +1764,19 @@ function goToDates(){
     return;
   }
   goStep(3);
+}
+
+// The length in plain words, under the cards. Somebody choosing Tier 3
+// should see that it is a longer sitting before they choose a time, not
+// discover it when the slots look different.
+function tierLengthNote(){
+  const el = document.getElementById('tier-length');
+  if(!el) return;
+  const mins = apptMinutes();
+  const h = Math.floor(mins/60), mm = mins%60;
+  const extra = addonMinutes();
+  el.innerHTML = 'Your appointment will run <strong>' + h + 'h' + (mm?String(mm).padStart(2,'0'):'00')
+    + '</strong>' + (extra ? ' (including ' + extra + ' min for your Russian manicure)' : '') + '.';
 }
 
 function pickTier(k){
