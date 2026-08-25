@@ -1364,7 +1364,7 @@
         </div>
         <div class="site-card" style="grid-column:1/-1;">
           <h3>Site Photos 📸</h3>
-          <p>Tap any slot to upload a photo from your phone — it appears on the live website in seconds. Photos are auto-compressed for you. <strong>Service photos are also on the Services tab</strong>, right on each service.</p>
+          <p>Tap any slot to upload a photo from your phone — it appears on the live website in seconds. Photos are auto-compressed for you. </p>
           <div id="photo-slots" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.8rem;"></div>
         </div>
         <div class="site-card" style="grid-column:1/-1;">
@@ -3557,22 +3557,10 @@ async function deleteInq(){
 
 /* ── SITE PHOTOS (owner uploads into any image slot on the site) ── */
 // Grouped so the Site tab reads as sections rather than one long wall of
-// thumbnails. Each "Shop the Look" service takes two photos: the set on its
-// own, and the same set worn — the homepage swaps between them on hover.
-// Only used if the live menu can't be reached — the real list comes from
-// /api/services so a new service brings its own photo slot with it.
-const LOOK_FALLBACK=[
-  {name:'Regular Gel Manicure',price_cents:5500},
-  {name:'Organic Structured Manicure',price_cents:9000},
-  {name:'Short Gel X',price_cents:9500},
-  {name:'Medium Gel X',price_cents:10000},
-  {name:'Long Gel X',price_cents:11000},
-  {name:'Short Acrylic Set',price_cents:9500},
-  {name:'Medium Acrylic Set',price_cents:10000},
-  {name:'Long Acrylic Set',price_cents:11000},
-  {name:'Russian Dry Pedicure',price_cents:9500},
-];
-let LOOK_SERVICES=[];
+// thumbnails. The four page photos below are the only slots left — Shop the
+// Look came off the homepage, so per-service photos would be uploads nothing
+// ever reads.
+let sitePhotos={};
 const PHOTO_GROUPS=[
   {title:'Homepage & Pages', hint:'The big photos across your site. Tap any tile to swap it.', slots:[
     {slot:'home-hero',label:'Homepage Hero'},
@@ -3580,26 +3568,13 @@ const PHOTO_GROUPS=[
     {slot:'about-portrait',label:'About — Zahra'},
     {slot:'services-header',label:'Services Header'},
   ]},
-  {title:'Shop the Look — the set', hint:'The nails on their own. This is what shows first. One photo per service — it covers every length.', slots:[]},
-  {title:'Shop the Look — worn', hint:'The same set on a hand or model. This fades in when someone hovers.', slots:[]},
-  {title:'Instagram Strip', hint:'The six-photo row near the bottom of the homepage.', slots:[
-    {slot:'insta-1',label:'Instagram 1'},{slot:'insta-2',label:'Instagram 2'},
-    {slot:'insta-3',label:'Instagram 3'},{slot:'insta-4',label:'Instagram 4'},
-    {slot:'insta-5',label:'Instagram 5'},{slot:'insta-6',label:'Instagram 6'},
-  ]},
 ];
-let sitePhotos={};
 
-// Rebuilds the two Shop the Look groups from whatever is on the menu today.
-function syncLookSlots(services){
-  if(!window.ZolaServices) return;
-  const src=(services&&services.length)?services:LOOK_FALLBACK;
-  LOOK_SERVICES=window.ZolaServices.group(src).map(g=>({key:g.key,label:g.name}));
-  const set=PHOTO_GROUPS.find(g=>g.title==='Shop the Look — the set');
-  const worn=PHOTO_GROUPS.find(g=>g.title==='Shop the Look — worn');
-  if(set) set.slots=LOOK_SERVICES.map(s=>({slot:'look-'+s.key,label:s.label}));
-  if(worn) worn.slots=LOOK_SERVICES.map(s=>({slot:'look-'+s.key+'-alt',label:s.label+' (worn)'}));
-}
+// Shop the Look is gone from the homepage, so there are no per-service
+// photo slots to build. Kept as a no-op rather than deleted: loadSitePhotos
+// still calls it, and a missing function there would take the whole photo
+// screen down with it.
+function syncLookSlots(){ /* nothing to build any more */ }
 
 async function loadSitePhotos(){
   try{
@@ -4487,19 +4462,6 @@ async function loadServicesTab(){
   try{
     const d = await ceo('services');
     try{ const r = await fetch('/api/photos'); const pd = await r.json(); sitePhotos = pd.photos || {}; }catch(e){}
-
-    const tile = (slot, label) => {
-      const has = sitePhotos[slot];
-      return '<div style="flex:1;min-width:118px;max-width:170px;border:1px ' + (has ? 'solid' : 'dashed')
-        + ' var(--border-hi);border-radius:8px;padding:0.4rem;text-align:center;cursor:pointer;background:var(--bg);"'
-        + ' onclick="pickSlotPhoto(\'' + slot + '\')">'
-        + (has
-            ? '<img src="' + has + '" alt="" style="width:100%;height:88px;object-fit:cover;border-radius:5px;display:block;margin-bottom:0.35rem">'
-            : '<div style="height:88px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--muted)">+</div>')
-        + '<div style="font-size:0.58rem;letter-spacing:0.09em;text-transform:uppercase;color:var(--gold)">' + esc(label) + '</div>'
-        + (has ? '<button class="btn btn-danger btn-sm" style="margin-top:0.3rem" onclick="event.stopPropagation();clearSlotPhoto(\'' + slot + '\')">Remove</button>' : '')
-        + '</div>';
-    };
 
     const svc = (d.services || []).filter(x => !x.hidden);
     const groups = window.ZolaServices ? window.ZolaServices.group(svc, { includeHidden: true }) : [];
