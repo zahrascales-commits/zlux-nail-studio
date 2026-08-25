@@ -595,6 +595,10 @@ setTimeout(function(){
     TEST:       { monthly: 158,   yearly: 1580   },
   };
   let billing = 'yearly';
+  // Declared up here with the rest of the state it belongs to. Living
+  // further down meant renewalLine() read it before it existed, which threw
+  // on every arrival from a Join button.
+  let appliedPromo = null;
 
   let signupData = {};
   let stripe, cardElement;
@@ -951,7 +955,6 @@ setTimeout(function(){
      never learns what a code is worth beyond what it is shown; the
      server prices it again at signup, so nothing typed here can talk
      its way to a cheaper membership. */
-  let appliedPromo = null;
 
   async function checkPromo(){
     const el = document.getElementById('promo-code');
