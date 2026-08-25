@@ -68,11 +68,17 @@ function findAddon(name) {
 // memberships page sells them as free, but the full price was still being
 // charged — the membership covered the service everywhere except on the bill.
 // The caller decides entitlement, because only it has read the usage counter.
-function computeDeposit({ service_name, addon_names = [], member_tier, free_service }) {
+// The design tier is priced here with everything else. A tier that costs
+// $10 in the browser and $0 on the server is a discount nobody authorised.
+function computeDeposit({ service_name, addon_names = [], member_tier, free_service, design_tier }) {
   const svc = findService(service_name);
   if (!svc) return null;
   const pct = member_tier ? (ADDON_DISCOUNT[member_tier] || 0) : 0;
-  let total = free_service ? 0 : svc.price_cents;
+  const tiers = require('./_tiers');
+  // Charged even when the service itself is covered by a membership: the
+  // included service is the service, not the extra design work on top.
+  const tierCents = design_tier ? tiers.priceFor(design_tier) : 0;
+  let total = (free_service ? 0 : svc.price_cents) + tierCents;
   let covered = free_service ? svc.price_cents : 0;
   for (const name of addon_names) {
     const a = findAddon(name);
@@ -90,6 +96,7 @@ function computeDeposit({ service_name, addon_names = [], member_tier, free_serv
     // What the membership just took off — shown to the member and recorded,
     // rather than silently disappearing into a smaller number.
     service_list_cents: svc.price_cents,
+    tier_cents: tierCents,
     covered_cents: covered,
   };
 }
@@ -138,7 +145,7 @@ module.exports = async function (req, res) {
       for (const it of items.slice(0, 10)) {
         const useFree = freeLeft > 0;
         if (useFree) freeLeft--;
-        const calc = computeDeposit({ service_name: it.service_name, addon_names: it.addon_names || [], member_tier: member_tier || null, free_service: useFree });
+        const calc = computeDeposit({ service_name: it.service_name, addon_names: it.addon_names || [], member_tier: member_tier || null, free_service: useFree, design_tier: req.body.design_tier });
         if (!calc) return res.status(400).json({ error: 'Unknown service: ' + it.service_name });
         total += calc.total_cents;
         deposit += calc.deposit_cents;

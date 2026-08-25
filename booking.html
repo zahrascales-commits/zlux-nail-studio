@@ -266,6 +266,27 @@
         display:flex;justify-content:space-between;align-items:baseline;
         font-family:'Josefin Sans',sans-serif;font-size:0.88rem;color:var(--latte);}
       .pay-total b{font-family:'Cinzel',serif;font-size:1.5rem;color:var(--espresso);font-weight:400;}
+      /* Design tier. Three cards, each saying what it covers, what it adds
+         to the price, and how much longer it takes — because all three are
+         things somebody would want to know before choosing. */
+      .tier-grid{display:grid;gap:0.6rem;margin:0.75rem 0 0;}
+      @media(min-width:620px){ .tier-grid{grid-template-columns:repeat(3,1fr);} }
+      .tier-card{border:1px solid rgba(182,165,136,0.35);background:#fff;padding:1rem 0.95rem;
+        cursor:pointer;text-align:left;font:inherit;width:100%;transition:border-color 0.2s,box-shadow 0.2s;}
+      .tier-card:hover{border-color:var(--champagne);}
+      .tier-card.on{border-color:var(--espresso);border-width:2px;
+        padding:calc(1rem - 1px) calc(0.95rem - 1px);box-shadow:0 6px 20px rgba(26,20,12,0.10);}
+      .tier-n{font-family:'Josefin Sans',sans-serif;font-size:0.6rem;letter-spacing:0.18em;
+        text-transform:uppercase;color:var(--latte);}
+      .tier-t{font-family:'Cinzel',serif;font-size:1.1rem;color:var(--espresso);margin-top:0.2rem;}
+      .tier-d{font-family:'Josefin Sans',sans-serif;font-size:0.76rem;color:var(--latte);
+        line-height:1.6;margin-top:0.35rem;min-height:3.2em;}
+      .tier-m{font-family:'Josefin Sans',sans-serif;font-size:0.76rem;color:var(--espresso);
+        margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid rgba(182,165,136,0.25);}
+      .tier-warn{background:rgba(182,165,136,0.1);border:1px solid rgba(182,165,136,0.4);
+        padding:0.9rem 1rem;margin-top:0.9rem;font-family:'Josefin Sans',sans-serif;
+        font-size:0.82rem;line-height:1.7;color:var(--espresso);}
+      .tier-warn label{display:flex;gap:0.55rem;align-items:flex-start;cursor:pointer;margin-top:0.6rem;}
       .ap-hint { display:flex; align-items:center; gap:0.5rem; font-family:'Josefin Sans',sans-serif; font-size:0.74rem; color:var(--latte); margin:0.5rem 0 0.75rem; }
 
       /* inspo uploader on success */
@@ -485,10 +506,29 @@
       </div>
     </div>
 
+      <!-- Design tier — before the time, because it changes how long the
+           appointment is and therefore which times exist. -->
+      <div style="margin-top:2rem;" id="tier-section">
+        <div class="step-title" style="font-size:1.05rem;">Pick your design tier</div>
+        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--latte);line-height:1.7;">
+          How detailed do you want them? This sets how long we book you for, so please choose before picking a time.
+        </p>
+        <div class="tier-grid" id="tier-grid"></div>
+        <div class="tier-warn" id="tier-warn">
+          <strong>If you don't pick one, you'll be booked for a solid colour.</strong>
+          That's the shortest appointment, and there won't be time in the chair for
+          anything more detailed on the day.
+          <label>
+            <input type="checkbox" id="tier-understood" onchange="renderTierChoice()" />
+            <span>I understand</span>
+          </label>
+        </div>
+      </div>
+
     <!-- Sticky GG-style "Book N services" bar -->
     <div class="sticky-book" id="sticky-book">
       <div class="sb-info" id="sb-info"></div>
-      <button class="sb-btn" id="sb-btn" onclick="goStep(3)">Book 1 Service →</button>
+      <button class="sb-btn" id="sb-btn" onclick="goToDates()">Book 1 Service →</button>
     </div>
 
     <!-- ══ STEP 3: Date + Time ══ -->
@@ -968,6 +1008,7 @@ function selectGuest(btn) {
   document.getElementById('artist-pref-section').style.display = 'none';
   document.getElementById('member-id-error').style.display = 'none';
   booking.worker = null;
+  booking.tier = booking.tier || null;
   // guests don't need a second tap — straight to services
   setTimeout(() => goStep(2), 250);
 }
@@ -1247,7 +1288,16 @@ function slotRange(slot) {
 }
 
 // ── 2-hour appointment engine ──────────────────────────────────────────
-const APPT_HOURS = 2;                 // every appointment occupies 2 hours
+// How long an appointment holds the chair. 1h45 base, plus the design tier,
+// plus a ten-minute grace period so a day that looks full does not run late
+// by mid-morning. Start times are still on the hour, so this rounds up to
+// whole slots — releasing a partly-used slot would let somebody book into
+// the last few minutes of somebody else appointment.
+const BASE_MINUTES = 105, GRACE_MINUTES = 10;
+const TIER_MINUTES = { tier1: 10, tier2: 15, tier3: 30 };
+function apptMinutes(){ return BASE_MINUTES + (TIER_MINUTES[booking.tier] || 0); }
+function blockMinutes(){ return apptMinutes() + GRACE_MINUTES; }
+function apptHours(){ return Math.ceil(blockMinutes() / 60); }
 let _slotData = { allSlots: [], booked: [], blocks: [], minAdvance: 0 };
 booking.spacingMode = 'back_to_back'; // for multi-service
 booking.unitTimes = [];               // one start time per service-unit
@@ -1255,7 +1305,7 @@ booking.unitTimes = [];               // one start time per service-unit
 function hToMin(t){ const [h,m]=String(t).split(':').map(Number); return h*60+(m||0); }
 function minToH(m){ return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
 function fmtClock(t){ const [h,m]=String(t).split(':').map(Number); const ap=h>=12?'PM':'AM'; return (h>12?h-12:h||12)+':'+String(m).padStart(2,'0')+' '+ap; }
-function rangeLabel(t){ const s=hToMin(t); return fmtClock(t)+' – '+fmtClock(minToH(s+APPT_HOURS*60)); }
+function rangeLabel(t){ const s=hToMin(t); return fmtClock(t)+' – '+fmtClock(minToH(s+apptMinutes())); }
 function unitCount(){ return booking.items.reduce((s,it)=>s+it.qty,0); }
 function unitList(){ const u=[]; booking.items.forEach(it=>{ for(let i=0;i<it.qty;i++) u.push(it.service); }); return u; }
 
@@ -1266,7 +1316,7 @@ function occupiedSet(){
   const isAllBlocked = _slotData.blocks.some(b=>b.slot==='ALL');
   if (isAllBlocked) return 'ALL';
   _slotData.blocks.forEach(b=>{ if(b.slot!=='ALL') occ.add(b.slot); });
-  _slotData.booked.forEach(bt=>{ const s=hToMin(bt); for(let k=0;k<APPT_HOURS;k++) occ.add(minToH(s+k*60)); });
+  _slotData.booked.forEach(bt=>{ const s=hToMin(bt); for(let k=0;k<apptHours();k++) occ.add(minToH(s+k*60)); });
   return occ;
 }
 // Is a 2-hour block starting at `slot` fully open (within hours, not occupied,
@@ -1274,7 +1324,7 @@ function occupiedSet(){
 function blockFree(slot, occ, ignoreTimes){
   if (occ === 'ALL') return false;
   const s = hToMin(slot);
-  for (let k=0;k<APPT_HOURS;k++){
+  for (let k=0;k<apptHours();k++){
     const h = minToH(s+k*60);
     if (!_slotData.allSlots.includes(h)) return false; // outside open hours
     if (occ.has(h)) return false;
@@ -1285,7 +1335,7 @@ function blockFree(slot, occ, ignoreTimes){
   // don't overlap other units the client already placed
   for (const t of (booking.unitTimes||[])){
     if (t==null || (ignoreTimes && ignoreTimes.includes(t))) continue;
-    if (Math.abs(hToMin(t) - s) < APPT_HOURS*60) return false;
+    if (Math.abs(hToMin(t) - s) < apptMinutes()) return false;
   }
   return true;
 }
@@ -1336,20 +1386,20 @@ function renderStartGrid(){
   _slotData.allSlots.forEach(slot => {
     // For back-to-back, need N consecutive 2h blocks free from this start
     let ok = true;
-    for (let i=0;i<(multi?n:1);i++){ if(!blockFree(minToH(hToMin(slot)+i*APPT_HOURS*60), occ)){ ok=false; break; } }
+    for (let i=0;i<(multi?n:1);i++){ if(!blockFree(minToH(hToMin(slot)+i*apptMinutes()), occ)){ ok=false; break; } }
     if (!ok) return;
     shown++;
     const btn = document.createElement('button');
     btn.className = 'timeslot-btn';
     btn.textContent = multi
-      ? fmtClock(slot)+' → '+fmtClock(minToH(hToMin(slot)+n*APPT_HOURS*60))
+      ? fmtClock(slot)+' → '+fmtClock(minToH(hToMin(slot)+n*apptMinutes()))
       : rangeLabel(slot);
     btn.onclick = () => {
       document.querySelectorAll('#timeslots .timeslot-btn').forEach(b=>b.classList.remove('selected'));
       btn.classList.add('selected');
       // place every unit sequentially 2h apart from this start
       booking.unitTimes = [];
-      for (let i=0;i<n;i++) booking.unitTimes.push(minToH(hToMin(slot)+i*APPT_HOURS*60));
+      for (let i=0;i<n;i++) booking.unitTimes.push(minToH(hToMin(slot)+i*apptMinutes()));
       booking.time = booking.unitTimes[0];
     };
     grid.appendChild(btn);
@@ -1535,6 +1585,8 @@ function _trackFunnel(step, dropped) {
 }
 
 function goStep(n) {
+  // The tier cards live on the service step and must exist before it shows.
+  if(typeof renderTierChoice === 'function') { try { renderTierChoice(); } catch(_){} }
   // Leaving services without picking anything? Friendly stop.
   if (n === 3 && !booking.items.length) {
     alert('Tap a service first — then the gold Book button appears ✦');
@@ -1650,10 +1702,79 @@ function pickArtistTime(name, time){
 }
 
 
+
+/* ══════════════ DESIGN TIER ══════════════
+   Chosen before a time, because it decides how long the appointment runs.
+   Skipping is allowed, but never silently — an unanswered question here
+   means somebody sits down expecting gems in a solid-colour slot. */
+const TIER_OPTIONS = [
+  { key:'tier1', name:'Tier 1', title:'Solid colour',
+    detail:'One colour, or glitter. Clean and simple, no design work.',
+    minutes:10, price:500 },
+  { key:'tier2', name:'Tier 2', title:'Simple design',
+    detail:'French tips, polka dots, lines, an accent nail or two.',
+    minutes:15, price:1000 },
+  { key:'tier3', name:'Tier 3', title:'Full design',
+    detail:'3D beads, gems, chrome, hand-painted — anything beyond simple.',
+    minutes:30, price:2000 },
+];
+
+function tierOf(k){ return TIER_OPTIONS.find(function(t){ return t.key === k; }) || null; }
+
+function renderTierChoice(){
+  const grid = document.getElementById('tier-grid');
+  if(!grid) return;
+  grid.innerHTML = TIER_OPTIONS.map(function(t){
+    const on = booking.tier === t.key;
+    return '<button type="button" class="tier-card' + (on ? ' on' : '') + '" onclick="pickTier(\'' + t.key + '\')">'
+      + '<div class="tier-n">' + t.name + '</div>'
+      + '<div class="tier-t">' + t.title + '</div>'
+      + '<div class="tier-d">' + t.detail + '</div>'
+      + '<div class="tier-m">+$' + (t.price / 100) + ' · +' + t.minutes + ' min</div>'
+      + '</button>';
+  }).join('');
+
+  // The warning only matters while nothing is chosen. Once they pick, it
+  // stops being a warning and starts being noise.
+  const warn = document.getElementById('tier-warn');
+  if(warn) warn.style.display = booking.tier ? 'none' : 'block';
+  updateStickyBar();
+}
+
+// Blocks the step rather than the booking: they can still choose nothing,
+// they just have to have seen what that means.
+function goToDates(){
+  if(!tierAnswered()){
+    const warn = document.getElementById('tier-warn');
+    if(warn){
+      warn.style.borderColor = '#c0524a';
+      warn.scrollIntoView({ behavior:'smooth', block:'center' });
+      const chk = document.getElementById('tier-understood');
+      if(chk) chk.focus({ preventScroll:true });
+    }
+    return;
+  }
+  goStep(3);
+}
+
+function pickTier(k){
+  booking.tier = (booking.tier === k) ? null : k;
+  renderTierChoice();
+  // The length of the appointment just changed, so the times on offer have too.
+  if(booking.date) renderTimeslots(booking.date);
+}
+
+// Either pick a tier, or say out loud that you have read what happens if you
+// do not. Both are fine; drifting past the question is not.
+function tierAnswered(){
+  const chk = document.getElementById('tier-understood');
+  return !!booking.tier || !!(chk && chk.checked);
+}
+
 /* ══════════════ HOW MUCH TO PAY, AND THE TIP ══════════════
    Priced on the server either way — the browser only ever says which
    option was chosen and how much tip. It never says what anything costs. */
-let payFull = false, tipCents = 0, _payTotals = { total: 0, deposit: 0 };
+let payFull = false, tipCents = 0, tipCustom = false, _payTotals = { total: 0, deposit: 0 };
 
 function bkMoney(c){ return '$' + (Number(c || 0) / 100).toFixed(2); }
 
@@ -1689,12 +1810,39 @@ function renderTips(){
   const opts = [0, 0.18, 0.20, 0.25].map(function(p){
     return { pct: p, cents: Math.round(base * p) };
   });
+  const preset = opts.some(function(o){ return o.cents === tipCents; });
   row.innerHTML = opts.map(function(o){
-    const on = tipCents === o.cents;
+    const on = tipCents === o.cents && !(tipCustom && !preset);
     return '<button type="button" class="tip-btn' + (on ? ' on' : '') + '" onclick="setTip(' + o.cents + ')">'
       + (o.pct === 0 ? 'No tip' : Math.round(o.pct * 100) + '% · ' + bkMoney(o.cents))
       + '</button>';
-  }).join('');
+  }).join('')
+  // Percentages of a nail set are awkward numbers, and plenty of people
+  // have a figure in mind already. Making them work backwards from 18% to
+  // get to $20 is how a tip becomes no tip.
+  + '<button type="button" class="tip-btn' + (tipCustom ? ' on' : '') + '" onclick="openCustomTip()">Other</button>';
+
+  if(tipCustom){
+    row.innerHTML += '<div style="width:100%;display:flex;gap:0.45rem;align-items:center;margin-top:0.5rem">'
+      + '<span style="font-family:Cinzel,serif;font-size:1.1rem;color:var(--espresso)">$</span>'
+      + '<input id="tip-custom" type="number" min="0" step="1" inputmode="decimal" placeholder="0"'
+      + ' value="' + (tipCents ? (tipCents/100).toFixed(2).replace(/.00$/, '') : '') + '"'
+      + ' style="flex:1;max-width:130px;border:1px solid rgba(182,165,136,0.4);padding:0.5rem 0.7rem;'
+      + 'font-family:Josefin Sans,sans-serif;font-size:0.95rem;color:var(--espresso);outline:none"'
+      + ' oninput="setCustomTip(this.value)" />'
+      + '</div>';
+  }
+}
+
+function openCustomTip(){ tipCustom = true; tipCents = 0; renderTips(); renderPayTotal(); repriceIntent(); }
+
+// Capped at something sane. A mistyped tip is a charge somebody has to ring
+// up and ask to have reversed.
+function setCustomTip(v){
+  const dollars = Math.max(0, Math.min(Number(v) || 0, 500));
+  tipCents = Math.round(dollars * 100);
+  renderPayTotal();
+  repriceIntent();
 }
 
 function renderPayTotal(){
@@ -1707,7 +1855,7 @@ function renderPayTotal(){
 }
 
 function setPayFull(v){ payFull = v; if(!v) tipCents = 0; renderPayChoice(); repriceIntent(); }
-function setTip(c){ tipCents = c; renderTips(); renderPayTotal(); repriceIntent(); }
+function setTip(c){ tipCents = c; tipCustom = false; renderTips(); renderPayTotal(); repriceIntent(); }
 
 // The amount changed, so the payment has to be rebuilt against the new one.
 // Charging an amount the client never saw is the one thing this must not do.
@@ -1852,6 +2000,7 @@ async function initPayment() {
         // Without this the server cannot read her usage counter, so the
         // included services she is paying a membership for never apply.
         member_id: (booking.memberId || localStorage.getItem('zola_member_id') || '').trim().toUpperCase() || null,
+        design_tier: booking.tier || null,
         pay_full: payFull,
         tip_cents: payFull ? tipCents : 0,
         customer_name: document.getElementById('client-name').value.trim(),
@@ -1916,8 +2065,10 @@ function continueToCheckout() {
   if (booking.spacingMode === 'separate' && n > 1) {
     const mins = times.map(hToMin).sort((a, b) => a - b);
     for (let i = 1; i < mins.length; i++) {
-      if (mins[i] - mins[i - 1] < APPT_HOURS * 60) {
-        err.textContent = 'Two of your times overlap — each service needs 2 hours. Please spread them out ✦';
+      // Two of her own appointments have to clear each other with the grace
+      // period in between, same as anyone else.
+      if (mins[i] - mins[i - 1] < blockMinutes()) {
+        err.textContent = 'Two of your times overlap — each appointment needs ' + Math.round(blockMinutes()/5)*5 + ' minutes including the gap between clients. Please spread them out ✦';
         err.style.display = 'block'; return;
       }
     }
@@ -2051,6 +2202,7 @@ async function submitBooking() {
             ...unit,
             member_id: document.getElementById('member-id-input').value.trim().toUpperCase() || null,
             member_tier: booking.memberTier || null,
+            design_tier: booking.tier || null,
             date: booking.date, time_slot: unit.time_slot || booking.time,
             worker: booking.worker || null,
             payment_intent_id: paymentIntentId,
