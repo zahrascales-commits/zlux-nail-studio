@@ -598,6 +598,124 @@
 </section>
 
 <!-- FOOTER -->
+
+<!-- ══ NAIL JOURNEYS ══
+     The same hands, months apart. A before-and-after nobody can argue with
+     does more than any claim on a services page, because the client in the
+     photo started where the person reading this is standing now. -->
+<section class="nj-sec" id="nail-journeys" style="display:none;">
+  <div class="container">
+    <div class="nj-head">
+      <div class="nj-eyebrow">Real hands, real time</div>
+      <h2 class="nj-title">Nail Journeys</h2>
+      <p class="nj-sub">Swipe through what happens when nails are looked after properly.</p>
+    </div>
+    <div class="nj-rail" id="nj-rail"></div>
+  </div>
+</section>
+
+<style>
+  .nj-sec{padding:5rem 0;background:var(--espresso)}
+  .nj-head{text-align:center;margin-bottom:2.5rem}
+  .nj-eyebrow{font-family:'Josefin Sans',sans-serif;font-size:0.62rem;letter-spacing:0.28em;
+    text-transform:uppercase;color:var(--champagne);margin-bottom:0.75rem}
+  .nj-title{font-family:'Cinzel',serif;font-size:clamp(1.9rem,5vw,2.7rem);color:var(--cream);font-weight:300;margin-bottom:0.6rem}
+  .nj-sub{font-family:'Josefin Sans',sans-serif;font-size:0.92rem;color:var(--latte);max-width:420px;margin:0 auto}
+
+  /* One card per journey, each its own swipeable strip. Scroll-snap rather
+     than a JS carousel — a native swipe on a phone beats anything hand-rolled,
+     and it still works if the script never loads. */
+  .nj-rail{display:flex;gap:1.5rem;overflow-x:auto;scroll-snap-type:x mandatory;
+    padding:0.5rem 0 1.5rem;-webkit-overflow-scrolling:touch}
+  .nj-rail::-webkit-scrollbar{height:4px}
+  .nj-rail::-webkit-scrollbar-thumb{background:rgba(182,165,136,0.4);border-radius:4px}
+  .nj-card{flex:0 0 clamp(280px,86vw,380px);scroll-snap-align:center;
+    background:rgba(245,238,232,0.04);border:1px solid rgba(182,165,136,0.25);padding:1.1rem}
+  .nj-strip{display:flex;gap:0.6rem;overflow-x:auto;scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch;margin-bottom:0.9rem}
+  .nj-strip::-webkit-scrollbar{display:none}
+  .nj-shot{flex:0 0 100%;scroll-snap-align:center;position:relative}
+  .nj-shot img{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;background:#1a1410}
+  .nj-when{position:absolute;left:0.6rem;bottom:0.6rem;background:rgba(13,13,13,0.78);
+    font-family:'Josefin Sans',sans-serif;font-size:0.66rem;letter-spacing:0.12em;text-transform:uppercase;
+    color:var(--champagne);padding:0.3rem 0.6rem}
+  .nj-cap{position:absolute;right:0.6rem;bottom:0.6rem;left:auto;max-width:55%;text-align:right;
+    background:rgba(13,13,13,0.78);font-family:'Josefin Sans',sans-serif;font-size:0.66rem;
+    color:var(--cream);padding:0.3rem 0.6rem;line-height:1.5}
+  .nj-dots{display:flex;gap:5px;justify-content:center;margin-bottom:0.8rem}
+  .nj-dots i{width:6px;height:6px;border-radius:50%;background:rgba(182,165,136,0.3);transition:background 0.2s}
+  .nj-dots i.on{background:var(--champagne)}
+  .nj-name{font-family:'Cinzel',serif;font-size:1.15rem;color:var(--cream);margin-bottom:0.2rem}
+  .nj-span{font-family:'Josefin Sans',sans-serif;font-size:0.68rem;letter-spacing:0.16em;
+    text-transform:uppercase;color:var(--champagne);margin-bottom:0.5rem}
+  .nj-story{font-family:'Josefin Sans',sans-serif;font-size:0.85rem;line-height:1.75;color:var(--latte)}
+  .nj-hint{font-family:'Josefin Sans',sans-serif;font-size:0.7rem;color:var(--latte);
+    text-align:center;margin-top:0.5rem;opacity:0.75}
+</style>
+
+<script>
+// Loads the journeys and wires each strip's dots to its own scroll position.
+// Nothing renders at all if there are none — an empty "Nail Journeys"
+// heading with nothing under it is worse than no section.
+(async function(){
+  let list = [];
+  try{
+    const r = await fetch('/api/journeys');
+    const d = await r.json();
+    list = (d.journeys || []).filter(function(j){ return (j.steps || []).length >= 2; });
+  }catch(_){ return; }
+  if(!list.length) return;
+
+  const esc = function(s){ return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+  const when = function(ds){
+    if(!ds) return '';
+    const d = new Date(ds + 'T12:00:00');
+    return isNaN(d) ? '' : d.toLocaleDateString('en-US',{month:'short',year:'numeric'});
+  };
+
+  const rail = document.getElementById('nj-rail');
+  rail.innerHTML = list.map(function(j, ji){
+    return '<div class="nj-card">'
+      + '<div class="nj-strip" id="njs-' + ji + '">'
+        + j.steps.map(function(s){
+            return '<div class="nj-shot">'
+              + '<img src="' + esc(s.data_url) + '" alt="" loading="lazy">'
+              + (s.taken_on ? '<span class="nj-when">' + esc(when(s.taken_on)) + '</span>' : '')
+              + (s.caption ? '<span class="nj-cap">' + esc(s.caption) + '</span>' : '')
+              + '</div>';
+          }).join('')
+      + '</div>'
+      + '<div class="nj-dots" id="njd-' + ji + '">'
+        + j.steps.map(function(_, i){ return '<i class="' + (i ? '' : 'on') + '"></i>'; }).join('')
+      + '</div>'
+      + '<div class="nj-name">' + esc(j.title) + '</div>'
+      + (j.span ? '<div class="nj-span">' + esc(j.span) + ' apart</div>' : '')
+      + (j.story ? '<div class="nj-story">' + esc(j.story) + '</div>' : '')
+      + '</div>';
+  }).join('');
+
+  list.forEach(function(j, ji){
+    const strip = document.getElementById('njs-' + ji);
+    const dots = document.getElementById('njd-' + ji);
+    if(!strip || !dots) return;
+    strip.addEventListener('scroll', function(){
+      const i = Math.round(strip.scrollLeft / strip.clientWidth);
+      [].forEach.call(dots.children, function(dot, k){ dot.classList.toggle('on', k === i); });
+    }, { passive: true });
+  });
+
+  if(list.length > 1){
+    const hint = document.createElement('p');
+    hint.className = 'nj-hint';
+    hint.textContent = 'Swipe each photo to see the change — and swipe across for more journeys.';
+    rail.parentNode.appendChild(hint);
+  }
+
+  document.getElementById('nail-journeys').style.display = '';
+})();
+</script>
+
 <footer class="footer">
   <div class="container">
     <div class="footer-grid">

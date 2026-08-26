@@ -590,6 +590,30 @@
   .dl-card .ic{font-size:1.3rem;flex-shrink:0}
   .dl-card b{display:block;font-size:0.88rem;color:var(--cream);font-weight:400}
   .dl-card i{display:block;font-style:normal;font-size:0.68rem;color:var(--muted);margin-top:0.15rem;line-height:1.5}
+  /* ── NAIL JOURNEYS ── */
+  .jn-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.1rem;margin-bottom:1rem}
+  .jn-top{display:flex;gap:0.8rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:0.8rem}
+  .jn-name{font-family:'Cinzel',serif;font-size:1.15rem;color:var(--cream)}
+  .jn-meta{font-size:0.7rem;color:var(--muted);margin-top:0.15rem}
+  .jn-live{font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;border-radius:100px;
+    padding:0.25rem 0.6rem;border:1px solid;white-space:nowrap}
+  .jn-live.on{color:#7ec98a;border-color:#7ec98a}
+  .jn-live.off{color:var(--muted);border-color:var(--border-hi)}
+  .jn-shots{display:flex;gap:0.55rem;overflow-x:auto;padding-bottom:0.4rem;margin-bottom:0.8rem}
+  .jn-shot{flex:0 0 108px;position:relative}
+  .jn-shot img{width:108px;height:144px;object-fit:cover;border-radius:6px;display:block;background:var(--bg)}
+  .jn-shot span{display:block;font-size:0.62rem;color:var(--muted);margin-top:0.25rem;line-height:1.4}
+  .jn-shot button{position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.72);border:none;color:#fff;
+    width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:0.75rem;line-height:1;padding:0}
+  .jn-add{flex:0 0 108px;height:144px;border:1px dashed var(--border-hi);border-radius:6px;background:none;
+    color:var(--muted);cursor:pointer;font:inherit;font-size:0.72rem;display:flex;align-items:center;
+    justify-content:center;text-align:center;padding:0.5rem}
+  .jn-add:hover{border-color:var(--gold);color:var(--gold)}
+  .jn-acts{display:flex;gap:0.4rem;flex-wrap:wrap}
+  .jn-form{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1.5rem}
+  .jn-form input,.jn-form textarea{width:100%;background:var(--card);border:1px solid var(--border);
+    color:var(--text);padding:0.6rem 0.7rem;font:inherit;font-size:0.85rem;outline:none;margin-bottom:0.6rem}
+  .jn-form label{font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:0.25rem}
 </style>
 </head>
 <body>
@@ -627,6 +651,7 @@
     <button class="tab" data-tab="bookings" onclick="showTab('bookings')">All Bookings</button>
     <button class="tab" data-tab="reports" onclick="showTab('reports')">Reports</button>
     <button class="tab" data-tab="people" onclick="showTab('people')">Members</button>
+    <button class="tab" data-tab="journeys" onclick="showTab('journeys')">Journeys</button>
     <button class="tab" data-tab="insights" onclick="showTab('insights')">Insights</button>
     <button class="tab" data-tab="records" onclick="showTab('records')">Records</button>
     <button class="tab" data-tab="payouts2" onclick="showTab('payouts2')">Payouts</button>
@@ -851,6 +876,28 @@
 
     <!-- TODAY'S FLOOR — lives on Overview, loaded with it -->
     <!-- (markup is injected into #floor-board by loadFloor) -->
+
+    <!-- NAIL JOURNEYS -->
+    <section class="panel" id="panel-journeys">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Nail Journeys</div>
+          <div class="page-desc">The same hands, months apart. Nothing shows on the website until you publish it.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadJourneys()">↻ Refresh</button>
+      </div>
+      <div class="jn-form">
+        <label>Title — what the website calls it</label>
+        <input id="jn-title" placeholder="e.g. Six months of growing out bitten nails" />
+        <label>Client (only you see this)</label>
+        <input id="jn-client" placeholder="Whose hands these are" />
+        <label>The story, in your words</label>
+        <textarea id="jn-story" rows="2" placeholder="Where they started, what you did, where they are now."></textarea>
+        <button class="btn btn-sm" onclick="createJourney()">Start a journey</button>
+      </div>
+      <div id="jn-list"><div class="empty">Loading…</div></div>
+      <input type="file" id="jn-file" accept="image/*" style="display:none" />
+    </section>
 
     <!-- MEMBERS & DROP-INS -->
     <section class="panel" id="panel-people">
@@ -1944,6 +1991,7 @@ const TAB_LOADERS = {
   records:    () => loadRecords(),
   insights:   () => loadInsights(),
   people:     () => loadPeople(),
+  journeys:   () => loadJourneys(),
   payouts2:   () => loadPayoutsStripe(),
   bookings:   () => loadAllBookings(),
   reports:    () => { renderDownloads(); loadReports(); },
@@ -4349,6 +4397,159 @@ async function markFloor(ref, state){
     if(j.error) throw new Error(j.error);
   }catch(err){ alert('Could not update: ' + err.message); return; }
   loadFloor();
+}
+
+
+/* ══════════════ NAIL JOURNEYS ══════════════ */
+let JOURNEYS = [];
+
+async function loadJourneys(){
+  const el = document.getElementById('jn-list');
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try{
+    const d = await (await api('/api/journeys')).json();
+    if(d.error) throw new Error(d.error);
+    JOURNEYS = d.journeys || [];
+  }catch(err){ el.innerHTML = emptyBox('⚠️','Could not load: ' + esc(err.message)); return; }
+
+  if(!JOURNEYS.length){
+    el.innerHTML = emptyBox('🌱','No journeys yet. Start one above, then add photos to it.');
+    return;
+  }
+
+  el.innerHTML = JOURNEYS.map(function(j, i){
+    return '<div class="jn-card">'
+      + '<div class="jn-top"><div style="flex:1;min-width:160px">'
+        + '<div class="jn-name">' + esc(j.title) + '</div>'
+        + '<div class="jn-meta">' + (j.client_name ? esc(j.client_name) + ' · ' : '')
+          + j.steps.length + ' photo' + (j.steps.length === 1 ? '' : 's')
+          + (j.span ? ' · ' + esc(j.span) + ' apart' : '') + '</div>'
+      + '</div>'
+      + '<span class="jn-live ' + (j.published ? 'on' : 'off') + '">'
+        + (j.published ? 'Live on the site' : 'Not published') + '</span></div>'
+
+      + '<div class="jn-shots">'
+        + j.steps.map(function(s){
+            return '<div class="jn-shot">'
+              + '<img src="' + esc(s.data_url) + '" alt="">'
+              + '<button title="Remove" onclick="deleteStep(' + s.id + ')">×</button>'
+              + '<span>' + esc(s.taken_on || 'no date') + (s.caption ? '<br>' + esc(s.caption) : '') + '</span>'
+              + '</div>';
+          }).join('')
+        + '<button class="jn-add" onclick="addStep(' + j.id + ')">+ Add a photo</button>'
+      + '</div>'
+
+      + (j.story ? '<div style="font-size:0.84rem;color:var(--muted);line-height:1.7;margin-bottom:0.8rem">' + esc(j.story) + '</div>' : '')
+
+      + '<div class="jn-acts">'
+        + (j.steps.length >= 2
+            ? '<button class="btn btn-ghost btn-sm" onclick="publishJourney(' + i + ',' + (j.published ? 0 : 1) + ')">'
+              + (j.published ? 'Take it down' : 'Publish to the website') + '</button>'
+            : '<span style="font-size:0.72rem;color:var(--muted);align-self:center">Add a second photo before publishing — one photo is not a journey.</span>')
+        + '<button class="btn btn-ghost btn-sm" onclick="deleteJourney(' + j.id + ')">Delete</button>'
+      + '</div></div>';
+  }).join('');
+}
+
+async function createJourney(){
+  const title = (document.getElementById('jn-title').value || '').trim();
+  if(!title){ alert('Give it a title first — it is what the website shows.'); return; }
+  try{
+    const r = await api('/api/journeys?action=create', { method:'POST', body: JSON.stringify({
+      title: title,
+      client_name: (document.getElementById('jn-client').value || '').trim(),
+      story: (document.getElementById('jn-story').value || '').trim(),
+    })});
+    const j = await r.json();
+    if(j.error) throw new Error(j.error);
+  }catch(err){ alert('Could not create it: ' + err.message); return; }
+  document.getElementById('jn-title').value = '';
+  document.getElementById('jn-client').value = '';
+  document.getElementById('jn-story').value = '';
+  loadJourneys();
+}
+
+// Photos are resized in the browser before they go anywhere. A phone photo
+// is several megabytes; the row it has to fit in is under one.
+function shrinkImage(file, maxDim){
+  return new Promise(function(resolve, reject){
+    const reader = new FileReader();
+    reader.onerror = function(){ reject(new Error('Could not read that file')); };
+    reader.onload = function(){
+      const img = new Image();
+      img.onerror = function(){ reject(new Error('That file is not an image')); };
+      img.onload = function(){
+        let w = img.width, h = img.height;
+        const scale = Math.min(1, maxDim / Math.max(w, h));
+        w = Math.round(w * scale); h = Math.round(h * scale);
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', 0.82));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function addStep(journeyId){
+  const input = document.getElementById('jn-file');
+  input.value = '';
+  input.onchange = async function(){
+    const file = input.files && input.files[0];
+    if(!file) return;
+    const taken = prompt('What date was this photo taken? (YYYY-MM-DD)\nThis is what makes the gap real.', '');
+    if(taken === null) return;
+    const caption = prompt('A short caption? (optional)', '') || '';
+    try{
+      const dataUrl = await shrinkImage(file, 1100);
+      const r = await api('/api/journeys?action=add_step', { method:'POST', body: JSON.stringify({
+        journey_id: journeyId, taken_on: (taken || '').trim(), caption: caption.trim(), data_url: dataUrl,
+      })});
+      const j = await r.json();
+      if(j.error) throw new Error(j.error);
+    }catch(err){ alert('Could not add that photo: ' + err.message); return; }
+    loadJourneys();
+  };
+  input.click();
+}
+
+async function deleteStep(id){
+  if(!confirm('Remove this photo from the journey?')) return;
+  try{
+    const r = await api('/api/journeys?action=delete_step', { method:'POST', body: JSON.stringify({ id: id }) });
+    const j = await r.json();
+    if(j.error) throw new Error(j.error);
+  }catch(err){ alert('Could not remove it: ' + err.message); return; }
+  loadJourneys();
+}
+
+async function publishJourney(i, on){
+  const j = JOURNEYS[i];
+  if(!j) return;
+  // Publishing puts somebody's hands on a public page. Worth one question.
+  if(on && !confirm('Publish "' + j.title + '" to the website?\n\nMake sure ' +
+      (j.client_name || 'the client') + ' is happy for these photos to be public.')) return;
+  try{
+    const r = await api('/api/journeys?action=update', { method:'POST', body: JSON.stringify({
+      id: j.id, title: j.title, client_name: j.client_name, story: j.story,
+      published: on ? 1 : 0, sort_order: 0,
+    })});
+    const res = await r.json();
+    if(res.error) throw new Error(res.error);
+  }catch(err){ alert('Could not update it: ' + err.message); return; }
+  loadJourneys();
+}
+
+async function deleteJourney(id){
+  if(!confirm('Delete this journey and all its photos? This cannot be undone.')) return;
+  try{
+    const r = await api('/api/journeys', { method:'DELETE', body: JSON.stringify({ id: id }) });
+    const j = await r.json();
+    if(j.error) throw new Error(j.error);
+  }catch(err){ alert('Could not delete it: ' + err.message); return; }
+  loadJourneys();
 }
 
 /* ══════════════ MEMBERS & DROP-INS ══════════════ */
