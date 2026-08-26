@@ -73,7 +73,20 @@ async function loadRange(from, to) {
       [from, to]);
   } catch (_) {}
 
-  return { appts, team };
+  // The history imported from the old booking system. It carries visits and
+  // deposits but never carried ticket totals, so it is counted as visits and
+  // deposits only. Inventing the missing totals would be inventing income.
+  let legacy = [];
+  try {
+    const tdb = require('./_team-db');
+    legacy = await tdb.query(
+      `SELECT client_name AS client, date, time, service, artist, status,
+              deposit_cents, deposit_paid
+         FROM client_visits WHERE date >= ? AND date <= ? ORDER BY date, time`,
+      [from, to]);
+  } catch (_) {}
+
+  return { appts, team, legacy };
 }
 
 // ── SALES ─────────────────────────────────────────────────────────────
@@ -126,7 +139,7 @@ function salesReport({ appts, team }, from, to) {
 // ── APPOINTMENTS ──────────────────────────────────────────────────────
 // Everything booked, including what was cancelled — because the pattern of
 // cancellations is a report in itself.
-function appointmentsReport({ appts, team }, from, to) {
+function appointmentsReport({ appts, team, legacy }, from, to) {
   const rows = [];
   for (const a of appts) {
     let addons = '';
@@ -145,6 +158,10 @@ function appointmentsReport({ appts, team }, from, to) {
     rows.push([t.date, t.time || '', t.client || '', '', t.service || '', '', t.artist || '',
       'Studio-booked', t.status || '', 'n/a',
       Number(t.checked_in_ts) ? 'Yes' : 'No', Number(t.checked_out_ts) ? 'Yes' : 'No', '']);
+  }
+  for (const l of legacy || []) {
+    rows.push([l.date, l.time || '', l.client || '', '', l.service || '', '', l.artist || '',
+      'Imported history', l.status || '', Number(l.deposit_paid) ? 'Yes' : 'No', '', '', '']);
   }
   rows.sort((a, b) => (a[0] + a[1]).localeCompare(b[0] + b[1]));
 
@@ -165,7 +182,7 @@ function appointmentsReport({ appts, team }, from, to) {
 }
 
 // ── MOST VALUABLE CLIENTS ─────────────────────────────────────────────
-function valuableReport({ appts, team }, from, to) {
+function valuableReport({ appts, team, legacy }, from, to) {
   const by = {};
   const bump = (name, patch) => {
     const k = String(name || 'Guest').trim().toLowerCase();
@@ -195,6 +212,17 @@ function valuableReport({ appts, team }, from, to) {
     }));
   }
 
+  // Imported visits count as visits, and their deposits count as money
+  // taken — which they were. They just cannot say what the full ticket was.
+  for (const l of legacy || []) {
+    bump(l.client, o => ({
+      cancels: o.cancels + (isCancelled(l) ? 1 : 0),
+      visits: o.visits + (isCancelled(l) ? 0 : 1),
+      spend: o.spend + (Number(l.deposit_paid) ? (Number(l.deposit_cents) || 0) : 0),
+      last: !isCancelled(l) && String(l.date) > o.last ? String(l.date) : o.last,
+    }));
+  }
+
   const rows = Object.values(by)
     .sort((a, b) => (b.spend + b.tips) - (a.spend + a.tips))
     .map(o => [
@@ -212,6 +240,8 @@ function valuableReport({ appts, team }, from, to) {
     summary: [
       ['Clients in this range', String(rows.length)],
       ['Top client', rows.length ? rows[0][0] + ' — $' + rows[0][6] : '—'],
+      ['Note', 'Visits imported from the old system carry their deposit, not the full ticket — '
+        + 'so spend is understated for clients whose history predates this site.'],
     ],
   };
 }
