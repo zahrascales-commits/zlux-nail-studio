@@ -309,13 +309,11 @@
     </div>
 
     <!-- ══ STEP 1: Member ID or Guest ══ -->
-    <!-- SMS disclosure, visible the moment the page loads.
-         Carrier reviewers open this URL and do not click through the flow — if
-         the disclosure only appears at step 4 they see nothing and reject the
-         number. It is also simply fairer to say this before someone starts
-         entering their details rather than at the payment screen. -->
+    <!-- What booking actually sends, said before anybody starts typing.
+         Email only for now — the studio has no sending number, and the
+         honest version of this notice is the one that matches what arrives. -->
     <div class="sms-notice">
-      <strong>Booking sends you text messages.</strong> By booking you agree to receive appointment confirmations, reminders and updates from ZOLA Nail Studio at the number you provide. Message frequency varies. Message and data rates may apply. Reply <strong>STOP</strong> to opt out or <strong>HELP</strong> for help. Marketing texts are optional and opted into separately. See our <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy &amp; SMS Terms</a>.
+      <strong>Booking sends you email.</strong> By booking you agree to receive appointment confirmations, reminders and updates from ZOLA Nail Studio at the email address you provide. You can unsubscribe from anything optional at any time. See our <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.
     </div>
 
     <div class="booking-step active" id="step-1">
@@ -646,10 +644,10 @@
       <div style="margin:1.25rem 0;">
         <label class="luxury-label">Full Name</label>
         <input class="luxury-input" id="client-name" placeholder="Your name" autocomplete="name" autocapitalize="words" style="margin-bottom:0.75rem;" />
-        <label class="luxury-label">Phone Number</label>
-        <input class="luxury-input" id="client-phone" type="tel" inputmode="tel" placeholder="+1 (555) 000-0000" autocomplete="tel" style="margin-bottom:0.75rem;" />
-        <label class="luxury-label">Email</label>
+        <label class="luxury-label">Email <span style="color:var(--champagne);font-size:0.72rem;letter-spacing:0.1em;">— everything comes here</span></label>
         <input class="luxury-input" id="client-email" type="email" inputmode="email" placeholder="your@email.com" autocomplete="email" autocapitalize="off" style="margin-bottom:0.75rem;" />
+        <label class="luxury-label">Phone Number <span style="color:var(--latte);font-size:0.72rem;">— optional, only if we need to reach you</span></label>
+        <input class="luxury-input" id="client-phone" type="tel" inputmode="tel" placeholder="+1 (555) 000-0000" autocomplete="tel" style="margin-bottom:0.75rem;" />
         <label class="luxury-label" style="margin-bottom:0.5rem;">Notes for Your Artist (optional)</label>
         <textarea class="luxury-input" id="client-notes" rows="2" placeholder="Nail shape, current nails on, inspiration photo link…" style="resize:vertical;"></textarea>
       </div>
@@ -707,20 +705,21 @@
         </span>
       </label>
       <div id="submit-error" style="display:none;background:rgba(192,82,74,0.08);border:1px solid rgba(192,82,74,0.3);padding:0.85rem 1.1rem;margin-bottom:1rem;font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:#a04038;"></div>
-      <!-- SMS CONSENT
-           Appointment texts are transactional and disclosed here; marketing is
-           a separate, unticked, optional box. Carriers and the TCPA treat those
-           as different permissions, and bundling them is the kind of consent
-           that gets a sending number shut off. -->
+      <!-- CONSENT
+           Appointment email is transactional and disclosed here; marketing is
+           a separate, unticked, optional box. Bundling the two is the kind of
+           consent that gets a sender blocked, and that stays true on email.
+           The checkbox id is unchanged so the value still reaches the server
+           and the same list carries over the day texting is switched on. -->
       <div class="sms-consent">
         <label class="sms-optin">
           <input type="checkbox" id="sms-marketing" />
-          <span>Text me about new press-on drops, last-minute openings and offers. <em>Optional — your appointment texts come either way.</em></span>
+          <span>Email me about new press-on drops, last-minute openings and offers. <em>Optional — your appointment emails come either way.</em></span>
         </label>
         <p class="sms-legal">
-          By booking, you agree to receive text messages from ZOLA Nail Studio about this appointment — confirmations, reminders and updates.
-          Message frequency varies. Message and data rates may apply. Reply <strong>STOP</strong> to opt out at any time, or <strong>HELP</strong> for help.
-          See our <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy &amp; SMS Terms</a>. We never sell or share your number.
+          By booking, you agree to receive email from ZOLA Nail Studio about this appointment — confirmations, reminders and updates.
+          Anything optional has an unsubscribe link in every message.
+          See our <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>. We never sell or share your details.
         </p>
       </div>
 
@@ -731,13 +730,13 @@
       <div id="booking-success" style="display:none;text-align:center;padding:2rem 0;">
         <div style="font-family:'Cinzel',serif;font-size:2rem;color:var(--espresso);margin-bottom:0.5rem;">You're Confirmed ✦</div>
         <div id="booking-conf-num" style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--champagne);margin-bottom:0.75rem;"></div>
-        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.88rem;color:var(--latte);line-height:1.8;">A confirmation text and email is on its way. We can't wait to see you.<br>Questions? DM us <strong>@zola_officials_</strong> or text us directly.</p>
+        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.88rem;color:var(--latte);line-height:1.8;">A confirmation email is on its way. We can't wait to see you.<br>Questions? DM us <strong>@zola_officials_</strong>.</p>
 
-        <!-- One-tap reminders opt-in — uses the phone they already entered -->
+        <!-- One-tap reminders opt-in — uses the email they already entered -->
         <div id="notif-optin" style="background:rgba(182,165,136,0.08);border:1px solid rgba(182,165,136,0.25);padding:1.1rem 1.25rem;margin-top:1.25rem;">
           <div style="font-family:'Cinzel',serif;font-size:1.05rem;color:var(--espresso);margin-bottom:0.3rem;">Want appointment reminders? 🔔</div>
-          <p style="font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:var(--latte);line-height:1.6;margin-bottom:0.75rem;">We'll text the number you just used — a heads-up the night before and an hour before, so you never miss your spot.</p>
-          <button class="btn-gold" style="animation:none;font-size:0.7rem;" onclick="optInReminders()">Yes — text me ✓</button>
+          <p style="font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:var(--latte);line-height:1.6;margin-bottom:0.75rem;">We'll email the address you just used — a heads-up the night before and an hour before, so you never miss your spot.</p>
+          <button class="btn-gold" style="animation:none;font-size:0.7rem;" onclick="optInReminders()">Yes — email me ✓</button>
           <div id="notif-optin-done" style="display:none;font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:#4e8e5e;margin-top:0.5rem;">You're set ✦ Reminders are on.</div>
         </div>
 
@@ -2175,8 +2174,8 @@ async function submitBooking() {
   const name  = document.getElementById('client-name').value.trim();
   const phone = document.getElementById('client-phone').value.trim();
   const email = document.getElementById('client-email').value.trim();
-  if (!name || !phone || !email) {
-    showSubmitError('Please fill in your name, phone, and email so we can confirm your appointment.');
+  if (!name || !email) {
+    showSubmitError('Please fill in your name and email so we can send your confirmation.');
     return;
   }
 

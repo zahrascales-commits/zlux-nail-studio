@@ -19,7 +19,40 @@ async function ensure() {
     method TEXT,             -- card | cash
     ts INTEGER
   )`);
+  // The appointment itself has to carry this, not just the log. A report
+  // reading appointments must be able to tell who actually turned up.
+  const main = require('./_db');
+  for (const sql of [
+    'ALTER TABLE appointments ADD COLUMN checked_in_ts INTEGER DEFAULT 0',
+    'ALTER TABLE appointments ADD COLUMN checked_out_ts INTEGER DEFAULT 0',
+    'ALTER TABLE appointments ADD COLUMN paid_cents INTEGER DEFAULT 0',
+    'ALTER TABLE appointments ADD COLUMN pay_method TEXT DEFAULT \'\'',
+  ]) { try { await main.execute(sql); } catch (_) {} }
+  for (const sql of [
+    'ALTER TABLE team_appointments ADD COLUMN checked_in_ts INTEGER DEFAULT 0',
+    'ALTER TABLE team_appointments ADD COLUMN checked_out_ts INTEGER DEFAULT 0',
+    'ALTER TABLE team_appointments ADD COLUMN tip_cents INTEGER DEFAULT 0',
+    'ALTER TABLE team_appointments ADD COLUMN paid_cents INTEGER DEFAULT 0',
+    'ALTER TABLE team_appointments ADD COLUMN pay_method TEXT DEFAULT \'\'',
+  ]) { try { await execute(sql); } catch (_) {} }
+
   _ready = true;
+}
+
+// Stamps the appointment the kiosk just matched. Silent on failure by
+// design: a column that has not landed yet must never cost somebody their
+// check-in at the door.
+async function stampAppointment(appt, fields) {
+  if (!appt || !appt.id) return;
+  const sets = Object.keys(fields);
+  if (!sets.length) return;
+  const sql = 'UPDATE ' + (appt.src === 't' ? 'team_appointments' : 'appointments')
+    + ' SET ' + sets.map(k => k + '=?').join(', ') + ' WHERE id=?';
+  const vals = sets.map(k => fields[k]).concat([Number(appt.id)]);
+  try {
+    if (appt.src === 't') await execute(sql, vals);
+    else await require('./_db').execute(sql, vals);
+  } catch (_) {}
 }
 
 // Find today's appointment for a typed name (case-insensitive, first-name ok)
@@ -61,6 +94,9 @@ module.exports = async function (req, res) {
       const { name } = req.body || {};
       if (!name || !String(name).trim()) return res.status(400).json({ error: 'Name required' });
       const appt = await findToday(name);
+      // Arrival is the thing that separates a no-show from a client. It has
+      // to land on the appointment, not only in the log.
+      await stampAppointment(appt, { checked_in_ts: Date.now() });
       await execute('INSERT INTO kiosk_log (type, name, detail, ts) VALUES (?,?,?,?)',
         ['checkin', String(name).trim().slice(0, 80), appt ? (appt.service + ' at ' + appt.time) : 'no appointment matched', Date.now()]);
       try { await notify.notifyInApp('owner', null, '✦ ' + String(name).trim() + ' just checked in', appt ? (appt.service + ' at ' + appt.time) : 'Walk-in / no matched appointment'); } catch (_) {}
@@ -112,6 +148,20 @@ module.exports = async function (req, res) {
         if (!v.paid) return res.status(402).json({ error: 'Card payment did not go through — please try again.' });
         amount = v.amount || amount;
       }
+      // Everything the reports need lands on the appointment now: that they
+      // finished, what they paid, how, and what they tipped. A tip that
+      // lives only in the kiosk log is a tip nobody can ever total up.
+      const appt = await findToday(name);
+      if (appt) {
+        await stampAppointment(appt, {
+          checked_out_ts: Date.now(),
+          paid_cents: amount,
+          tip_cents: tip,
+          pay_method: payMethod === 'card' ? 'card' : 'cash',
+          status: 'COMPLETED',
+          deposit_paid: 1,
+        });
+      }
       await execute('INSERT INTO kiosk_log (type, name, method, amount_cents, detail, ts) VALUES (?,?,?,?,?,?)',
         ['checkout', String(name).trim().slice(0, 80), payMethod === 'card' ? 'card' : 'cash', amount,
          tip ? ('tip $' + (tip / 100).toFixed(2)) : '', Date.now()]);
@@ -122,6 +172,78 @@ module.exports = async function (req, res) {
           payMethod === 'card' ? ('💳 ' + name + ' paid ' + amt + ' by card') : ('💵 Collect ' + amt + ' cash from ' + name),
           'Checked out at the kiosk.' + tipNote);
       } catch (_) {}
+      return res.json({ ok: true });
+    }
+
+    // Today, as it actually stands: who is expected, who has walked in, who
+    // is finished. Read by Studio Manager so the floor and the office are
+    // never looking at two different days.
+    if (req.method === 'GET' && action === 'today') {
+      const today = new Date().toISOString().slice(0, 10);
+      const rows = [];
+      try {
+        const t = await query(
+          `SELECT id, client_name AS name, service, time, artist, checked_in_ts, checked_out_ts,
+                  tip_cents, paid_cents, pay_method
+             FROM team_appointments WHERE date=?`, [today]);
+        for (const r of t) rows.push({ ...r, src: 't', total_cents: 0, deposit_paid: 1 });
+      } catch (_) {}
+      try {
+        const main = require('./_db');
+        const m = await main.query(
+          `SELECT a.id, COALESCE(mm.full_name, a.guest_name) AS name, a.service,
+                  a.appointment_time AS time, COALESCE(st.name, '') AS artist, a.status,
+                  a.total_cents, a.deposit_cents, a.deposit_paid,
+                  a.checked_in_ts, a.checked_out_ts, a.tip_cents, a.paid_cents, a.pay_method
+             FROM appointments a LEFT JOIN members mm ON a.member_id = mm.member_id
+                  LEFT JOIN staff st ON a.staff_id = st.id
+            WHERE a.appointment_date=? AND a.status <> 'CANCELLED'`, [today]);
+        for (const r of m) rows.push({ ...r, src: 'm' });
+      } catch (_) {}
+
+      const num = v => Number(v) || 0;
+      rows.sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
+      const board = rows.map(r => ({
+        ref: r.src + r.id, name: r.name || 'Guest', service: r.service || 'Appointment',
+        time: r.time || '', artist: r.artist || '',
+        state: num(r.checked_out_ts) ? 'done' : (num(r.checked_in_ts) ? 'in' : 'due'),
+        checked_in_ts: num(r.checked_in_ts), checked_out_ts: num(r.checked_out_ts),
+        total_cents: num(r.total_cents), paid_cents: num(r.paid_cents), tip_cents: num(r.tip_cents),
+        pay_method: r.pay_method || '',
+        balance_cents: Math.max(0, num(r.total_cents) - (num(r.deposit_paid) ? num(r.deposit_cents) : 0)),
+      }));
+
+      return res.json({
+        date: today, board,
+        counts: {
+          expected: board.length,
+          arrived: board.filter(b => b.state !== 'due').length,
+          in_chair: board.filter(b => b.state === 'in').length,
+          done: board.filter(b => b.state === 'done').length,
+          not_arrived: board.filter(b => b.state === 'due').length,
+        },
+        money: {
+          taken_cents: board.reduce((s, b) => s + b.paid_cents, 0),
+          tips_cents: board.reduce((s, b) => s + b.tip_cents, 0),
+          outstanding_cents: board.filter(b => b.state !== 'done').reduce((s, b) => s + b.balance_cents, 0),
+        },
+      });
+    }
+
+    // Marking somebody in or out from the manager screen, for when the
+    // client never touched the iPad. Same effect, so the two never disagree.
+    if (req.method === 'POST' && action === 'mark') {
+      const CEO_PASSWORD = process.env.CEO_PASSWORD || 'ZOLA2026';
+      if (req.headers['x-ceo-password'] !== CEO_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
+      const { ref, state } = req.body || {};
+      const src = String(ref || '').charAt(0);
+      const id = Number(String(ref || '').slice(1));
+      if (!id || (src !== 't' && src !== 'm')) return res.status(400).json({ error: 'Bad reference' });
+      const appt = { src, id };
+      if (state === 'in')       await stampAppointment(appt, { checked_in_ts: Date.now(), checked_out_ts: 0 });
+      else if (state === 'done') await stampAppointment(appt, { checked_out_ts: Date.now(), status: 'COMPLETED' });
+      else if (state === 'due')  await stampAppointment(appt, { checked_in_ts: 0, checked_out_ts: 0 });
+      else return res.status(400).json({ error: 'Unknown state' });
       return res.json({ ok: true });
     }
 

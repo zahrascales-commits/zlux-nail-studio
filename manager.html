@@ -554,6 +554,42 @@
   .pp-flag{display:inline-block;font-size:0.66rem;border:1px solid var(--border-hi);border-radius:100px;
     padding:0.2rem 0.55rem;margin:0.2rem 0.25rem 0 0;color:var(--cream)}
   .pp-flag.hi{border-color:#d66;color:#ffb3b3}
+  /* ── TODAY'S FLOOR ──
+     Three states, told apart by colour before anybody reads a word: due in,
+     in the chair, finished. */
+  .fl-row{display:flex;align-items:center;gap:0.85rem;background:var(--card);border:1px solid var(--border);
+    border-left:3px solid var(--st);border-radius:9px;padding:0.7rem 0.85rem;margin-bottom:0.5rem;flex-wrap:wrap}
+  .fl-row.due{--st:#6b6355}
+  .fl-row.in{--st:#C4A882;background:linear-gradient(100deg,rgba(196,168,130,0.1),var(--card))}
+  .fl-row.done{--st:#7ec98a;opacity:0.72}
+  .fl-time{font-family:'Cinzel',serif;font-size:1rem;color:var(--cream);min-width:70px}
+  .fl-who{flex:1;min-width:130px}
+  .fl-who b{display:block;font-size:0.9rem;color:var(--cream);font-weight:400}
+  .fl-who i{display:block;font-style:normal;font-size:0.7rem;color:var(--muted);margin-top:0.12rem}
+  .fl-state{font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--st);
+    border:1px solid var(--st);border-radius:100px;padding:0.25rem 0.6rem;white-space:nowrap}
+  .fl-money{font-size:0.8rem;color:var(--cream);text-align:right;min-width:88px}
+  .fl-money i{display:block;font-style:normal;font-size:0.62rem;color:#7ec98a}
+  .fl-acts{display:flex;gap:0.35rem}
+  .fl-acts button{background:none;border:1px solid var(--border-hi);color:var(--cream);border-radius:6px;
+    padding:0.35rem 0.6rem;font:inherit;font-size:0.66rem;cursor:pointer;white-space:nowrap}
+  .fl-acts button:hover{border-color:var(--gold);color:var(--gold)}
+  /* ── DOWNLOADS ── */
+  .dl-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.15rem 1.1rem;margin-bottom:1.5rem}
+  .dl-dates{display:flex;gap:0.6rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem}
+  .dl-dates label{font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:0.3rem}
+  .dl-dates input{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:0.5rem 0.6rem;font:inherit;font-size:0.84rem;outline:none}
+  .dl-quick{display:flex;gap:0.35rem;flex-wrap:wrap}
+  .dl-quick button{background:none;border:1px solid var(--border);color:var(--muted);border-radius:100px;
+    padding:0.35rem 0.75rem;font:inherit;font-size:0.68rem;cursor:pointer}
+  .dl-quick button:hover{border-color:var(--gold);color:var(--gold)}
+  .dl-grid{display:grid;gap:0.6rem;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+  .dl-card{display:flex;gap:0.8rem;align-items:center;background:var(--bg);border:1px solid var(--border);
+    border-radius:9px;padding:0.85rem 0.9rem;cursor:pointer;text-align:left;font:inherit;transition:border-color 0.15s}
+  .dl-card:hover{border-color:var(--gold)}
+  .dl-card .ic{font-size:1.3rem;flex-shrink:0}
+  .dl-card b{display:block;font-size:0.88rem;color:var(--cream);font-weight:400}
+  .dl-card i{display:block;font-style:normal;font-size:0.68rem;color:var(--muted);margin-top:0.15rem;line-height:1.5}
 </style>
 </head>
 <body>
@@ -779,6 +815,7 @@
         </div>
       </div>
       <div class="cards" id="ov-stats"></div>
+      <div id="floor-board"></div>
       <div id="ov-dispatch"></div>
       <div class="page-head" style="margin-top:2rem;"><div><div class="page-title" style="font-size:1.15rem;">Coming up</div></div></div>
       <div id="ov-upcoming"></div>
@@ -804,12 +841,16 @@
           <div class="page-desc">How the last week and month actually went.</div>
         </div>
       </div>
+      <div id="rp-downloads"></div>
       <div id="rp-content"></div>
       <div class="cards" id="rp-stats" style="display:none"></div>
       <div class="page-head" style="margin-top:2rem;"><div><div class="page-title" style="font-size:1.15rem;">Where people drop off</div>
       <div class="page-desc">Each step of the booking flow, and how many left there.</div></div></div>
       <div id="rp-funnel"></div>
     </section>
+
+    <!-- TODAY'S FLOOR — lives on Overview, loaded with it -->
+    <!-- (markup is injected into #floor-board by loadFloor) -->
 
     <!-- MEMBERS & DROP-INS -->
     <section class="panel" id="panel-people">
@@ -1899,13 +1940,13 @@ function logout(){sessionStorage.removeItem('zm_pwd');location.reload();}
 // Initialised after login instead — at parse time PWD is still empty,
 
 const TAB_LOADERS = {
-  overview:   () => { loadOverview(); loadDispatch(); },
+  overview:   () => { loadOverview(); loadDispatch(); loadFloor(); },
   records:    () => loadRecords(),
   insights:   () => loadInsights(),
   people:     () => loadPeople(),
   payouts2:   () => loadPayoutsStripe(),
   bookings:   () => loadAllBookings(),
-  reports:    () => loadReports(),
+  reports:    () => { renderDownloads(); loadReports(); },
   services:   () => loadServicesTab(),
   goals:      () => loadGoals(),
   payouts:    () => loadPayouts(),
@@ -4169,6 +4210,147 @@ function mountOwnerPush(){
 
 
 
+
+
+/* ══════════════ DOWNLOADABLE REPORTS ══════════════
+   CSV rather than PDF: a CSV opens in Numbers, in Excel and in whatever her
+   accountant uses, and it can be re-sorted. A PDF can only be looked at. */
+const DL_REPORTS = [
+  { key:'sales',        ic:'💰', name:'Sales',                 desc:'Every appointment that took money, with tips and how it was paid.' },
+  { key:'appointments', ic:'📅', name:'Appointments',          desc:'Everything booked, including cancellations and no-shows.' },
+  { key:'clients',      ic:'👑', name:'Most valuable clients', desc:'Who spends the most, ranked, with average ticket.' },
+  { key:'commission',   ic:'✂️', name:'Commission earnings',   desc:'What each artist produced and what they are owed.' },
+  { key:'expenses',     ic:'📦', name:'Expenses',              desc:'What has gone out, including stock.' },
+];
+
+function dlIso(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+function renderDownloads(){
+  const el = document.getElementById('rp-downloads');
+  if(!el) return;
+  const now = new Date();
+  const first = new Date(now.getFullYear(), now.getMonth(), 1);
+  el.innerHTML =
+    '<div class="dl-wrap">'
+      + '<div class="page-title" style="font-size:1.05rem;margin-bottom:0.15rem">Download a report</div>'
+      + '<div class="page-desc" style="margin-bottom:0.9rem">Opens in Numbers, Excel or Google Sheets.</div>'
+      + '<div class="dl-dates">'
+        + '<div><label>From</label><input type="date" id="dl-from" value="' + dlIso(first) + '"></div>'
+        + '<div><label>To</label><input type="date" id="dl-to" value="' + dlIso(now) + '"></div>'
+        + '<div class="dl-quick">'
+          + '<button onclick="dlRange(\'month\')">This month</button>'
+          + '<button onclick="dlRange(\'last\')">Last month</button>'
+          + '<button onclick="dlRange(\'90\')">Last 90 days</button>'
+          + '<button onclick="dlRange(\'year\')">This year</button>'
+        + '</div>'
+      + '</div>'
+      + '<div class="dl-grid">'
+        + DL_REPORTS.map(function(r){
+            return '<button class="dl-card" onclick="downloadReport(\'' + r.key + '\')">'
+              + '<span class="ic">' + r.ic + '</span>'
+              + '<span><b>' + r.name + '</b><i>' + r.desc + '</i></span></button>';
+          }).join('')
+      + '</div>'
+    + '</div>';
+}
+
+function dlRange(which){
+  const now = new Date();
+  let from, to = now;
+  if(which === 'month')      from = new Date(now.getFullYear(), now.getMonth(), 1);
+  else if(which === 'last'){ from = new Date(now.getFullYear(), now.getMonth()-1, 1);
+                             to   = new Date(now.getFullYear(), now.getMonth(), 0); }
+  else if(which === '90')    { from = new Date(now); from.setDate(from.getDate()-90); }
+  else                       from = new Date(now.getFullYear(), 0, 1);
+  document.getElementById('dl-from').value = dlIso(from);
+  document.getElementById('dl-to').value   = dlIso(to);
+}
+
+// The password lives in a header, so the file has to be fetched rather than
+// linked — a plain href would be answered with 401.
+async function downloadReport(key){
+  const from = (document.getElementById('dl-from')||{}).value || '';
+  const to   = (document.getElementById('dl-to')||{}).value || '';
+  if(from && to && from > to){ alert('The From date is after the To date.'); return; }
+  try{
+    const r = await api('/api/reports?report=' + key + '&from=' + from + '&to=' + to);
+    if(!r.ok){
+      let msg = 'Could not build that report.';
+      try{ const j = await r.json(); if(j.error) msg = j.error; }catch(_){}
+      alert(msg); return;
+    }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'zola_' + key + '_' + from + '_to_' + to + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+  }catch(err){ alert('Could not download: ' + err.message); }
+}
+
+/* ══════════════ TODAY'S FLOOR ══════════════
+   Check-in and checkout, as the day is actually running. The kiosk writes
+   the same fields, so the iPad at the door and this screen can never tell
+   two different stories about who turned up. */
+async function loadFloor(){
+  const el = document.getElementById('floor-board');
+  if(!el) return;
+  let d;
+  try{
+    d = await (await api('/api/kiosk?action=today')).json();
+    if(d.error) throw new Error(d.error);
+  }catch(err){ el.innerHTML = ''; return; }
+
+  if(!d.board || !d.board.length){
+    el.innerHTML = '<div class="page-head" style="margin-top:1.6rem"><div>'
+      + '<div class="page-title" style="font-size:1.1rem">Today\'s Floor</div>'
+      + '<div class="page-desc">Nothing booked for today.</div></div></div>';
+    return;
+  }
+
+  const c = d.counts, mo = d.money;
+  const LABEL = { due: 'Due in', in: 'In the chair', done: 'Finished' };
+
+  el.innerHTML =
+    '<div class="page-head" style="margin-top:1.6rem"><div>'
+      + '<div class="page-title" style="font-size:1.1rem">Today\'s Floor</div>'
+      + '<div class="page-desc">' + c.arrived + ' of ' + c.expected + ' arrived'
+        + (c.in_chair ? ' · ' + c.in_chair + ' in the chair' : '')
+        + (c.done ? ' · ' + c.done + ' finished' : '')
+        + (mo.taken_cents ? ' · ' + cmoney(mo.taken_cents) + ' taken' : '')
+        + (mo.tips_cents ? ' · ' + cmoney(mo.tips_cents) + ' in tips' : '')
+      + '</div></div>'
+      + '<button class="btn btn-ghost btn-sm" onclick="loadFloor()">↻</button></div>'
+    + d.board.map(function(b){
+        return '<div class="fl-row ' + b.state + '">'
+          + '<div class="fl-time">' + esc(time12(b.time)) + '</div>'
+          + '<div class="fl-who"><b>' + esc(b.name) + '</b>'
+            + '<i>' + esc(b.service) + (b.artist ? ' · with ' + esc(b.artist) : '') + '</i></div>'
+          + '<div class="fl-state">' + LABEL[b.state] + '</div>'
+          + '<div class="fl-money">'
+            + (b.state === 'done'
+                ? cmoney(b.paid_cents) + (b.tip_cents ? '<i>+' + cmoney(b.tip_cents) + ' tip</i>' : '')
+                : (b.balance_cents ? cmoney(b.balance_cents) + '<i style="color:var(--muted)">to collect</i>' : 'Covered'))
+          + '</div>'
+          + '<div class="fl-acts">'
+            + (b.state === 'due'  ? '<button onclick="markFloor(\'' + b.ref + '\',\'in\')">Check in</button>' : '')
+            + (b.state === 'in'   ? '<button onclick="markFloor(\'' + b.ref + '\',\'done\')">Finished</button>' : '')
+            + (b.state !== 'due'  ? '<button onclick="markFloor(\'' + b.ref + '\',\'due\')">Undo</button>' : '')
+          + '</div>'
+          + '</div>';
+      }).join('');
+}
+
+async function markFloor(ref, state){
+  try{
+    const r = await api('/api/kiosk?action=mark', { method:'POST', body: JSON.stringify({ ref: ref, state: state }) });
+    const j = await r.json();
+    if(j.error) throw new Error(j.error);
+  }catch(err){ alert('Could not update: ' + err.message); return; }
+  loadFloor();
+}
+
 /* ══════════════ MEMBERS & DROP-INS ══════════════ */
 let PEOPLE = null;
 
@@ -4689,6 +4871,16 @@ function exportRecords(){
    Same /api/ceo-data endpoints, rebuilt in this page's own markup so the
    merged manager reads as one product rather than two bolted together. */
 const cmoney = c => '$' + Math.round(Number(c||0)/100).toLocaleString('en-US');
+// 24-hour times are what the database holds; nobody reads a schedule that way.
+function time12(t){
+  const s = String(t||'');
+  const p = s.match(/^(d{1,2}):(d{2})/);
+  if(!p) return s;
+  let h = Number(p[1]);
+  const ampm = h >= 12 ? 'pm' : 'am';
+  h = h % 12; if(!h) h = 12;
+  return h + ':' + p[2] + ampm;
+}
 const cdollars = n => '$' + Math.round(Number(n||0)).toLocaleString('en-US');
 async function ceo(section){
   const r = await api('/api/ceo-data?section=' + section);
