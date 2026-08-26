@@ -44,15 +44,28 @@ async function ensure() {
 // check-in at the door.
 async function stampAppointment(appt, fields) {
   if (!appt || !appt.id) return;
-  const sets = Object.keys(fields);
-  if (!sets.length) return;
-  const sql = 'UPDATE ' + (appt.src === 't' ? 'team_appointments' : 'appointments')
-    + ' SET ' + sets.map(k => k + '=?').join(', ') + ' WHERE id=?';
-  const vals = sets.map(k => fields[k]).concat([Number(appt.id)]);
+  const keys = Object.keys(fields || {});
+  if (!keys.length) return;
+
+  const table = appt.src === 't' ? 'team_appointments' : 'appointments';
+  const run = appt.src === 't' ? execute : require('./_db').execute;
+  const id = Number(appt.id);
+
+  // One statement if every column exists. The two tables do not carry the
+  // same ones — deposit_paid lives only on public bookings — and a single
+  // unknown column takes the whole UPDATE down with it. So if the combined
+  // write fails, each field is written on its own and the ones that fit
+  // still land. Losing a tip because a neighbouring column is missing is
+  // not a trade worth making.
+  const sql = 'UPDATE ' + table + ' SET ' + keys.map(k => k + '=?').join(', ') + ' WHERE id=?';
   try {
-    if (appt.src === 't') await execute(sql, vals);
-    else await require('./_db').execute(sql, vals);
+    await run(sql, keys.map(k => fields[k]).concat([id]));
+    return;
   } catch (_) {}
+
+  for (const k of keys) {
+    try { await run('UPDATE ' + table + ' SET ' + k + '=? WHERE id=?', [fields[k], id]); } catch (_) {}
+  }
 }
 
 // Find today's appointment for a typed name (case-insensitive, first-name ok)
