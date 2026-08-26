@@ -51,6 +51,22 @@
     '.cp-empty{font-size:0.82rem;color:#8C7A5E;padding:0.6rem 0}',
     '.cp-tag{display:inline-block;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;',
     '  border:1px solid #B6A588;color:#DDD0B8;padding:0.2rem 0.5rem;border-radius:100px;margin-top:0.35rem}',
+    // An allergy is not a note. It sits above everything else on this sheet,
+    // in red, because the cost of missing it is somebody's skin.
+    '.cp-alert{background:rgba(200,80,80,0.14);border:1px solid rgba(220,110,110,0.55);border-radius:9px;',
+    '  padding:0.85rem 0.95rem;margin-bottom:0.9rem}',
+    '.cp-alert b{display:block;font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;',
+    '  color:#ffb3b3;margin-bottom:0.35rem}',
+    '.cp-alert p{font-size:0.88rem;line-height:1.6;color:#ffd9d9;margin:0}',
+    '.cp-pref{display:flex;gap:0.7rem;padding:0.5rem 0;border-top:1px solid rgba(182,165,136,0.14);font-size:0.84rem}',
+    '.cp-pref .k{min-width:112px;color:#8C7A5E;flex-shrink:0}',
+    '.cp-pref .v{flex:1;color:#F5EEE8;min-width:0}',
+    '.cp-chip{display:inline-block;font-size:0.7rem;border:1px solid rgba(182,165,136,0.35);border-radius:100px;',
+    '  padding:0.22rem 0.6rem;margin:0.2rem 0.25rem 0 0;color:#DDD0B8}',
+    '.cp-chip.hi{border-color:#d66;color:#ffb3b3}',
+    '.cp-score{display:flex;align-items:center;gap:0.7rem;margin-bottom:0.7rem}',
+    '.cp-score b{font-family:"Cinzel",serif;font-size:1.9rem;color:#DDD0B8;line-height:1}',
+    '.cp-score span{font-size:0.78rem;color:#8C7A5E;line-height:1.5}',
   ].join('\n');
 
   var mounted = false, auth = {}, current = null;
@@ -162,6 +178,53 @@
       c.notes ? '<div class="cp-note"><p>' + esc(c.notes) + '</p></div>' : '',
     ].join('');
 
+    // ── what they told us about their own nails ──
+    var n = d.nails, intake = d.intake;
+
+    // Anything that could hurt somebody goes to the very top of the sheet,
+    // before the visit count, before the notes. Buried safety information is
+    // the same as none.
+    var alerts = '';
+    if (n && n.allergy) {
+      alerts += '<div class="cp-alert"><b>&#9888; Allergy / sensitivity</b><p>' + esc(n.allergy) + '</p></div>';
+    }
+    if (n && (n.flagged || []).some(function (f) { return f.severity >= 3; })) {
+      alerts += '<div class="cp-alert"><b>&#9888; Handle with care</b><p>'
+        + n.flagged.filter(function (f) { return f.severity >= 3; })
+            .map(function (f) { return esc(f.label); }).join(' &middot; ')
+        + '</p></div>';
+    }
+
+    var pref = function (k, v) {
+      return v ? '<div class="cp-pref"><div class="k">' + k + '</div><div class="v">' + esc(v) + '</div></div>' : '';
+    };
+
+    var nailHtml = '';
+    if (n) {
+      nailHtml += '<div class="cp-score"><b>' + (n.score || '&mdash;') + '</b>'
+        + '<span>' + esc(n.band || '') + (n.goal ? '<br>Working towards: ' + esc(n.goal) : '') + '</span></div>';
+      if ((n.flagged || []).length) {
+        nailHtml += '<div class="cp-pref"><div class="k">Nail issues</div><div class="v">'
+          + n.flagged.map(function (f) {
+              return '<span class="cp-chip' + (f.severity >= 2 ? ' hi' : '') + '">' + esc(f.label)
+                + ' &middot; ' + (['', 'a little', 'quite a bit', 'a lot'][f.severity] || '') + '</span>';
+            }).join('')
+          + '</div></div>';
+      }
+      nailHtml += pref('Shape they like', n.shape)
+        + pref('Length they like', n.length)
+        + pref('Hands at work', n.job)
+        + pref('Never again', n.dislikes)
+        + pref('What they want', n.wants);
+    }
+    if (intake && intake.answers) {
+      Object.keys(intake.answers).forEach(function (k) {
+        var v = intake.answers[k];
+        if (v && typeof v === 'string') nailHtml += pref(k.replace(/_/g, ' '), v);
+      });
+      if (intake.note) nailHtml += pref('Their note', intake.note);
+    }
+
     var notes = (d.notes || []).map(function (n) {
       return '<div class="cp-note' + (Number(n.pinned) ? ' pin' : '') + '">'
         + '<p>' + esc(n.note) + '</p>'
@@ -189,7 +252,9 @@
     }).join('') || '<div class="cp-empty">No visits on record yet.</div>';
 
     box.innerHTML = head + '<div class="cp-body">'
+      + alerts
       + stats
+      + (nailHtml ? '<div class="cp-h">Their nails, in their words</div>' + nailHtml : '')
       + (likes ? '<div class="cp-h">What we know</div>' + likes : '')
       + '<div class="cp-h">Notes from the team</div>'
       + notes

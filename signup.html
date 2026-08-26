@@ -301,6 +301,36 @@
   .plan-strike{text-decoration:line-through;opacity:0.55;}
   .details-wrap{display:none;}
   .details-wrap.show{display:block;animation:fadeUp 0.3s ease;}
+  /* ── THE RATE THEY JUST LOCKED ──
+     Shown the moment the payment goes through, because that is the moment
+     somebody quietly wonders whether they should have waited. Answering it
+     there — with the number they would have paid sitting crossed out beside
+     the number they did pay — is worth more than any reassurance sent later. */
+  .lockin{
+    background:linear-gradient(150deg,rgba(196,168,130,0.16),rgba(196,168,130,0.04));
+    border:1px solid rgba(196,168,130,0.45);border-radius:14px;
+    padding:1.5rem 1.4rem;margin:1.5rem 0;text-align:center;
+    animation:lockPop 800ms cubic-bezier(0.22,1,0.36,1) 300ms both;
+  }
+  @keyframes lockPop{from{opacity:0;transform:translateY(16px) scale(0.96)}to{opacity:1;transform:none}}
+  .lockin-eyebrow{
+    font-family:'Josefin Sans',sans-serif;font-size:0.6rem;letter-spacing:0.24em;
+    text-transform:uppercase;color:var(--champagne);margin-bottom:0.85rem;
+  }
+  .lockin-prices{display:flex;align-items:baseline;justify-content:center;gap:0.8rem;flex-wrap:wrap;margin-bottom:0.85rem}
+  .lockin-was{font-family:'Cinzel',serif;font-size:1.35rem;color:rgba(140,122,94,0.6);text-decoration:line-through}
+  .lockin-now{font-family:'Cinzel',serif;font-size:2.4rem;color:var(--espresso);line-height:1}
+  .lockin-now small{font-size:0.95rem;color:var(--latte)}
+  .lockin-body{
+    font-family:'Josefin Sans',sans-serif;font-size:0.9rem;line-height:1.85;
+    color:var(--espresso);max-width:400px;margin:0 auto;
+  }
+  .lockin-body b{color:var(--espresso);font-weight:600}
+  .lockin-until{
+    display:inline-block;margin-top:1rem;font-family:'Josefin Sans',sans-serif;
+    font-size:0.66rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--champagne);
+    border:1px solid rgba(196,168,130,0.45);border-radius:100px;padding:0.5rem 1rem;
+  }
 </style>
 </head>
 <body>
@@ -520,6 +550,8 @@
         A copy has been sent to <strong id="display-email"></strong>. Please save your Member ID somewhere safe — you will need it every time you access your portal or check in at the studio.
       </p>
 
+      <div id="lockin-3"></div>
+
       <button class="btn-signup" style="margin-top:1.5rem;" onclick="goToStep(4)">Continue to Confirmation →</button>
     </div>
   </div>
@@ -557,6 +589,8 @@
           <span class="value" id="conf-email">—</span>
         </div>
       </div>
+
+      <div id="lockin-4"></div>
 
       <a href="#" id="see-perks" class="btn-signup" style="text-decoration:none;text-align:center;display:block;margin-top:1.5rem;">See everything you just unlocked ✦</a>
       <p style="font-family:'Josefin Sans',sans-serif;font-size:0.74rem;color:var(--latte);text-align:center;margin-top:0.7rem;" id="perks-countdown"></p>
@@ -820,6 +854,66 @@ setTimeout(function(){
   /* Everything after a payment method exists, whichever way it was made.
      Shared so Apple Pay and a typed card cannot end up creating subtly
      different memberships. */
+
+  /* ── THE RATE THEY JUST LOCKED ─────────────────────────────────────────
+     The list price beside what they actually pay, and the promise that the
+     second number does not move for twelve months. */
+  const LIST_PRICE = { SIGNATURE: 19900, LUXE: 39900, BLACK_CARD: 59900 };
+
+  function heldUntil() {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() + 1);
+    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  }
+  function thisMonth() {
+    return new Date().toLocaleDateString('en-US', { month: 'long' });
+  }
+
+  function renderLockIn() {
+    const tier = signupData.tier;
+    // Somebody who paid for the year should be told what they paid for the
+    // year. Showing them a monthly figure they never agreed to is how a
+    // reassuring screen turns into a support message.
+    const yearly = (typeof billing !== 'undefined' && billing === 'yearly');
+    const per = yearly ? '/year' : '/month';
+    const listMonthly = LIST_PRICE[tier] || 0;
+
+    const paidMonthly = (signupData.appliedPromo && signupData.appliedPromo.monthly_cents != null)
+      ? signupData.appliedPromo.monthly_cents
+      : (PLANS[tier] ? PLANS[tier].monthly : 0);
+
+    const paid = yearly ? (PLANS[tier] ? PLANS[tier].yearly : 0) : paidMonthly;
+    const was  = yearly ? listMonthly * 12 : listMonthly;
+    const saveYear = yearly
+      ? Math.max(0, was - paid)
+      : Math.max(0, (was - paid) * 12);
+    const money = c => '$' + Math.round(c / 100).toLocaleString();
+
+    const html =
+      '<div class="lockin">'
+        + '<div class="lockin-eyebrow">✦ Thank you for signing up today ✦</div>'
+        + '<div class="lockin-prices">'
+          + (was > paid ? '<span class="lockin-was">' + money(was) + '</span>' : '')
+          + '<span class="lockin-now">' + money(paid) + '<small>' + per + '</small></span>'
+        + '</div>'
+        + '<div class="lockin-body">'
+          + 'You joined in <b>' + thisMonth() + '</b>, so <b>' + money(paid) + ' '
+          + (yearly ? 'a year' : 'a month') + ' is your rate for a full year</b> — it will not '
+          + 'move, whatever happens to our pricing after this month.'
+          + (saveYear > 0
+              ? ' Over the next twelve months that is <b>' + money(saveYear)
+                + '</b> you keep by having joined now rather than later.'
+              : '')
+        + '</div>'
+        + '<div class="lockin-until">Your rate is held through ' + heldUntil() + '</div>'
+      + '</div>';
+
+    ['lockin-3', 'lockin-4'].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = html;
+    });
+  }
+
   async function finishSignup(paymentMethodId, btn) {
     const reset = () => {
       if (btn) { btn.disabled = false; btn.textContent = 'Pay & Join Zola →'; }
@@ -869,6 +963,7 @@ setTimeout(function(){
 
       signupData.memberId = data.memberId;
       signupData.nextBilling = data.nextBillingDate;
+      signupData.appliedPromo = data.promo || null;
       signupData.referralCodeGenerated = data.referralCode;
 
       // Auto-login so portal opens without re-entering credentials
@@ -887,6 +982,7 @@ setTimeout(function(){
       document.getElementById('display-member-id').textContent = data.memberId;
       document.getElementById('display-tier').textContent = TIER_LABEL[signupData.tier];
       document.getElementById('display-email').textContent = signupData.email;
+      renderLockIn();
       goToStep(3);
       return true;
 

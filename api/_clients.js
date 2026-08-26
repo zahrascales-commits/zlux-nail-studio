@@ -270,7 +270,35 @@ async function handler(req, res) {
         }
       } catch (_) {}
 
-      return res.json({ client, notes, visits, totals, membership, can_edit: who.owner, viewer: who.name });
+      // What this person said about their own nails, so whoever is doing
+      // them knows about the allergy and the peeling before they open a
+      // bottle — not after. Everyone who works on a client sees this; it is
+      // the whole reason a client is asked to fill it in.
+      let nails = null;
+      try {
+        const main = require('./_db');
+        const { nailProfile } = require('./_roster-people');
+        let row = null;
+        if (membership && membership.member_id) {
+          row = await main.queryOne(
+            'SELECT member_id, answers, score, band, goal, created_ts FROM nail_assessments WHERE member_id=? ORDER BY created_ts DESC LIMIT 1',
+            [membership.member_id]);
+        }
+        if (row) nails = nailProfile(row);
+      } catch (_) {}
+
+      // The older Black Card questionnaire, filed against an email address.
+      let intake = null;
+      try {
+        if (client.email) {
+          const p = await queryOne('SELECT answers, note, updated_ts FROM client_profiles WHERE lower(email)=?',
+            [String(client.email).toLowerCase()]);
+          if (p) intake = { answers: JSON.parse(p.answers || '{}'), note: p.note || '', updated_ts: p.updated_ts };
+        }
+      } catch (_) {}
+
+      return res.json({ client, notes, visits, totals, membership, nails, intake,
+                        can_edit: who.owner, viewer: who.name });
     }
 
     // Notes are append-only and signed. A note that decides how somebody's

@@ -27,6 +27,11 @@ async function ensure() {
     "ALTER TABLE promo_codes ADD COLUMN fixed_total_cents INTEGER DEFAULT 0",
     // 'service', 'membership', or 'both'.
     "ALTER TABLE promo_codes ADD COLUMN applies_to TEXT DEFAULT 'service'",
+    // On a membership, a discount either repeats every month or applies to
+    // the first month only. Everything seeded before this column existed
+    // repeated forever, so that stays the default — changing it would
+    // silently reprice memberships already sold.
+    "ALTER TABLE promo_codes ADD COLUMN duration TEXT DEFAULT 'forever'",
     // JSON list of tiers a membership code is valid for. Empty means any.
     "ALTER TABLE promo_codes ADD COLUMN tiers TEXT DEFAULT ''",
     // Codes are private by default — she hands them out, they are never listed.
@@ -85,6 +90,29 @@ async function ensure() {
        'fixed_total', 10000, 'membership', JSON.stringify(['BLACK_CARD']),
        'Private. Given out by hand — never listed on the site.']);
   }
+
+  // ZOLA26 — the code she can actually post. Fifty dollars off the first
+  // month of any tier, capped at fifty people.
+  //
+  // First month only, deliberately. Every other code here repeats every
+  // month for as long as somebody stays, which is right for a founding rate
+  // handed to one person and wrong for a code that goes on Instagram: fifty
+  // dollars a month forever, fifty times over, is six hundred dollars of
+  // recurring income gone every year for a code that did its job in week one.
+  const launch = await queryOne("SELECT code FROM promo_codes WHERE code='ZOLA26'").catch(() => null);
+  if (!launch) {
+    await execute(
+      `INSERT OR IGNORE INTO promo_codes
+         (code, label, amount_off_cents, active, max_uses, used_count, created_ts,
+          kind, fixed_total_cents, applies_to, tiers, note, duration)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      ['ZOLA26', '$50 off your first month', 5000, 1, 50, 0, Date.now(),
+       'amount_off', 0, 'membership', JSON.stringify([]),
+       'Shareable. First month only — safe to post publicly.', 'once']);
+  } else {
+    // If it predates the duration column, make sure it is not repeating.
+    await execute("UPDATE promo_codes SET duration='once' WHERE code='ZOLA26'").catch(() => {});
+  }
 }
 
 const norm = c => String(c || '').trim().toUpperCase().slice(0, 32);
@@ -105,6 +133,7 @@ async function lookup(code) {
     label: row.label || '',
     trainee_only: !!Number(row.trainee_only),
     kind: row.kind || 'amount_off',
+    duration: row.duration === 'once' ? 'once' : 'forever',
     fixed_total_cents: Number(row.fixed_total_cents) || 0,
     applies_to: row.applies_to || 'service',
     tiers: (() => { try { return JSON.parse(row.tiers || '[]'); } catch (_) { return []; } })(),

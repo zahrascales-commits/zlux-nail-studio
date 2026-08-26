@@ -50,7 +50,11 @@ async function couponFor(stripe, promo, tier, monthlyCents) {
   const off = valueAgainst(promo, monthlyCents);
   if (off <= 0) return null;
 
-  const id = ('zola_' + promo.code + '_' + tier + '_' + off).toLowerCase().replace(/[^a-z0-9_]/g, '');
+  // Duration is part of the id: the same code at the same price repeating
+  // monthly and applying once are two different coupons, and reusing one id
+  // for both would hand the wrong one to whoever signed up second.
+  const dur = promo.duration === 'once' ? 'once' : 'forever';
+  const id = ('zola_' + promo.code + '_' + tier + '_' + off + '_' + dur).toLowerCase().replace(/[^a-z0-9_]/g, '');
   try {
     const found = await stripe.coupons.retrieve(id);
     if (found && !found.deleted) return found.id;
@@ -62,7 +66,7 @@ async function couponFor(stripe, promo, tier, monthlyCents) {
     currency: 'usd',
     // Forever, not once. A founding rate that lapses after one month is not
     // a founding rate, and nobody would notice until the second invoice.
-    duration: 'forever',
+    duration: dur,
     name: promo.code + ' — ' + tier.replace('_', ' '),
     metadata: { code: promo.code, tier, kind: promo.kind || 'amount_off' },
   });
