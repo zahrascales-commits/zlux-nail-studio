@@ -181,12 +181,32 @@ module.exports = async function (req, res) {
     if (req.method === 'GET' && action === 'today') {
       const today = new Date().toISOString().slice(0, 10);
       const rows = [];
+      // The artist's name comes from team_members — this table stores the id.
+      // The checkout columns are added by ensure() above, but a cold start
+      // that failed halfway would leave them missing, so the query falls back
+      // rather than dropping the whole day's floor.
       try {
-        const t = await query(
-          `SELECT id, client_name AS name, service, time, artist, checked_in_ts, checked_out_ts,
-                  tip_cents, paid_cents, pay_method
-             FROM team_appointments WHERE date=?`, [today]);
-        for (const r of t) rows.push({ ...r, src: 't', total_cents: 0, deposit_paid: 1 });
+        let t = [];
+        try {
+          t = await query(
+            `SELECT a.id, a.client_name AS name, a.service, a.time, a.status,
+                    COALESCE(m.name, '') AS artist,
+                    a.checked_in_ts, a.checked_out_ts, a.tip_cents, a.paid_cents, a.pay_method
+               FROM team_appointments a
+               LEFT JOIN team_members m ON m.id = a.team_member_id
+              WHERE a.date=?`, [today]);
+        } catch (_) {
+          t = await query(
+            `SELECT a.id, a.client_name AS name, a.service, a.time, a.status,
+                    COALESCE(m.name, '') AS artist
+               FROM team_appointments a
+               LEFT JOIN team_members m ON m.id = a.team_member_id
+              WHERE a.date=?`, [today]);
+        }
+        for (const r of t) {
+          if (/cancel/i.test(String(r.status || ''))) continue;
+          rows.push({ ...r, src: 't', total_cents: 0, deposit_paid: 1 });
+        }
       } catch (_) {}
       try {
         const main = require('./_db');

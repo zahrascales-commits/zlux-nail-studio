@@ -63,14 +63,31 @@ async function loadRange(from, to) {
         ORDER BY a.appointment_date, a.appointment_time`, [from, to]).catch(() => []);
   }
 
+  // Studio-booked appointments. The artist's name is on team_members; this
+  // table only holds the id. The checkout columns arrived later than the
+  // table did, so a narrower query stands behind the full one — otherwise a
+  // studio that has never used the kiosk gets an empty sales report.
   let team = [];
   try {
     const tdb = require('./_team-db');
-    team = await tdb.query(
-      `SELECT id, date, time, client_name AS client, service, artist, status,
-              tip_cents, paid_cents, pay_method, checked_in_ts, checked_out_ts
-         FROM team_appointments WHERE date >= ? AND date <= ? ORDER BY date, time`,
-      [from, to]);
+    try {
+      team = await tdb.query(
+        `SELECT a.id, a.date, a.time, a.client_name AS client, a.service, a.status,
+                COALESCE(m.name, '') AS artist,
+                a.tip_cents, a.paid_cents, a.pay_method, a.checked_in_ts, a.checked_out_ts
+           FROM team_appointments a
+           LEFT JOIN team_members m ON m.id = a.team_member_id
+          WHERE a.date >= ? AND a.date <= ? ORDER BY a.date, a.time`,
+        [from, to]);
+    } catch (_) {
+      team = await tdb.query(
+        `SELECT a.id, a.date, a.time, a.client_name AS client, a.service, a.status,
+                COALESCE(m.name, '') AS artist
+           FROM team_appointments a
+           LEFT JOIN team_members m ON m.id = a.team_member_id
+          WHERE a.date >= ? AND a.date <= ? ORDER BY a.date, a.time`,
+        [from, to]);
+    }
   } catch (_) {}
 
   // The history imported from the old booking system. It carries visits and
