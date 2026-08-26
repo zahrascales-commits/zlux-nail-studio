@@ -885,12 +885,20 @@ async function loadMonthAvailability(cursorDs) {
   const y = d.getFullYear(), mo = d.getMonth();
   const from = y + '-' + String(mo + 1).padStart(2, '0') + '-01';
   const to = y + '-' + String(mo + 1).padStart(2, '0') + '-' + String(new Date(y, mo + 1, 0).getDate()).padStart(2, '0');
-  const cacheKey = key + '@' + from + (promoTraineeOnly ? '@trainee' : '');
+  // The tier belongs in the cache key. Without it, choosing a longer design
+  // would redraw the same month that was computed for a shorter one.
+  const cacheKey = key + '@' + from + (promoTraineeOnly ? '@trainee' : '')
+    + '@' + (booking.tier || 'none') + '@' + blockMinutes();
   if (bkDayAvail.key === cacheKey) return;
   const my = ++_availToken;
   try {
+    // The tier and add-ons go with the question: a day with only a 90-minute
+    // gap left is open for a plain set and closed for a full design.
+    const addonNames = (booking.selectedAddons || []).map(function(a){ return a.name || ''; }).filter(Boolean);
     const r = await fetch('/api/coverage?action=service_days&services=' + encodeURIComponent(key)
-      + '&from=' + from + '&to=' + to + (promoTraineeOnly ? '&trainee_only=1' : ''));
+      + '&from=' + from + '&to=' + to + (promoTraineeOnly ? '&trainee_only=1' : '')
+      + '&design_tier=' + encodeURIComponent(booking.tier || '')
+      + '&addons=' + encodeURIComponent(addonNames.join('|')));
     const j = await r.json();
     if (my !== _availToken) return; // a newer month/service won the race
     bkDayAvail = { key: cacheKey, configured: !!j.configured, days: j.days || {} };
@@ -1318,8 +1326,16 @@ function addonMinutes(){
 }
 function apptMinutes(){ return BASE_MINUTES + (TIER_MINUTES[booking.tier] || 0) + addonMinutes(); }
 function blockMinutes(){ return apptMinutes() + GRACE_MINUTES; }
-function apptHours(){ return Math.ceil(blockMinutes() / 60); }
-let _slotData = { allSlots: [], booked: [], blocks: [], minAdvance: 0 };
+// The day is cut into quarter hours, so everything that walks the grid walks
+// it in fifteens. Whole hours rounded every appointment up to the next hour
+// and threw the remainder away — a 2:00 that finishes at 4:10 held the chair
+// until 5:00, on every artist, every day.
+const STEP_MINUTES = 15;
+function apptSteps(){ return Math.ceil(blockMinutes() / STEP_MINUTES); }
+// What a booking already on the books occupies. Older ones were taken when
+// every appointment was assumed to be two hours, so that is what they hold.
+const LEGACY_BLOCK_MINUTES = 120;
+let _slotData = { allSlots: [], booked: [], bookedMinutes: {}, blocks: [], minAdvance: 0, step: STEP_MINUTES };
 booking.spacingMode = 'back_to_back'; // for multi-service
 booking.unitTimes = [];               // one start time per service-unit
 
@@ -1330,24 +1346,31 @@ function rangeLabel(t){ const s=hToMin(t); return fmtClock(t)+' – '+fmtClock(m
 function unitCount(){ return booking.items.reduce((s,it)=>s+it.qty,0); }
 function unitList(){ const u=[]; booking.items.forEach(it=>{ for(let i=0;i<it.qty;i++) u.push(it.service); }); return u; }
 
-// The set of hour-slots already occupied (each booking = 2 consecutive hours,
-// plus any blocked slots and whole-day blocks).
+// Every quarter-hour already spoken for — each existing booking for the
+// length it actually runs, plus blocked slots and whole-day blocks.
 function occupiedSet(){
   const occ = new Set();
   const isAllBlocked = _slotData.blocks.some(b=>b.slot==='ALL');
   if (isAllBlocked) return 'ALL';
   _slotData.blocks.forEach(b=>{ if(b.slot!=='ALL') occ.add(b.slot); });
-  _slotData.booked.forEach(bt=>{ const s=hToMin(bt); for(let k=0;k<apptHours();k++) occ.add(minToH(s+k*60)); });
+  _slotData.booked.forEach(function(bt){
+    const s = hToMin(bt);
+    const mins = Number((_slotData.bookedMinutes||{})[bt]) || LEGACY_BLOCK_MINUTES;
+    const steps = Math.ceil(mins / STEP_MINUTES);
+    for (let k=0;k<steps;k++) occ.add(minToH(s+k*STEP_MINUTES));
+  });
   return occ;
 }
-// Is a 2-hour block starting at `slot` fully open (within hours, not occupied,
-// not overlapping any already-picked unit times, and past the advance cutoff)?
+// Is an appointment of THIS length, starting at `slot`, fully open — inside
+// opening hours, clear of everything booked, clear of the units this client
+// has already placed, and past the advance-notice cutoff?
 function blockFree(slot, occ, ignoreTimes){
   if (occ === 'ALL') return false;
   const s = hToMin(slot);
-  for (let k=0;k<apptHours();k++){
-    const h = minToH(s+k*60);
-    if (!_slotData.allSlots.includes(h)) return false; // outside open hours
+  const open = new Set(_slotData.allSlots);
+  for (let k=0;k<apptSteps();k++){
+    const h = minToH(s+k*STEP_MINUTES);
+    if (!open.has(h)) return false;    // outside open hours
     if (occ.has(h)) return false;
   }
   // advance-notice cutoff
@@ -1375,8 +1398,10 @@ async function renderTimeslots(date) {
     _slotData.blocks = d.blocks || [];
     _slotData.booked = d.booked || [];
     _slotData.allSlots = d.all_slots || [];
+    _slotData.bookedMinutes = d.booked_minutes || {};
+    _slotData.step = Number(d.slot_step_minutes) || STEP_MINUTES;
     _slotData.minAdvance = d.min_advance_hours || 0;
-  } catch (_) { _slotData = { allSlots:[], booked:[], blocks:[], minAdvance:0 }; }
+  } catch (_) { _slotData = { allSlots:[], booked:[], bookedMinutes:{}, blocks:[], minAdvance:0, step:STEP_MINUTES }; }
 
   // reset any prior time picks for this date
   booking.unitTimes = [];

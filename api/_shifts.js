@@ -8,7 +8,22 @@
 // times on it, which is exactly the dead end this is meant to prevent.
 const { query } = require('./_team-db');
 
-const APPT_MINUTES = 120; // every appointment is a 2-hour block
+// What an appointment costs the schedule when nothing else is known about
+// it. Bookings taken before durations were recorded were made on the
+// assumption of a flat two hours, so that is what they still hold — reading
+// them as shorter now would double-book somebody's afternoon.
+const APPT_MINUTES = 120;
+
+// The day is cut into quarter hours. Every function here walks the grid in
+// this step, so changing it here changes it everywhere.
+const STEP_MINUTES = 15;
+
+// Round a length up to whole steps. A booking that runs 2h25 occupies ten
+// quarter-hours, not nine and a bit — releasing the remainder would let
+// somebody book into the last five minutes of an appointment still running.
+function stepsFor(minutes) {
+  return Math.ceil((Number(minutes) || APPT_MINUTES) / STEP_MINUTES);
+}
 
 function hToMin(h) {
   const [a, b] = String(h).split(':').map(Number);
@@ -111,13 +126,21 @@ function hourCapacity(shifts, slots) {
   return cap;
 }
 
-// Existing bookings consume every hour they span, not just their start hour.
-function usageByHour(bookedStarts) {
+// Existing bookings consume every quarter-hour they span, not just the one
+// they start on — and each for its own real length.
+//
+// Accepts either plain start times or { time, minutes } objects, because
+// three callers hold this data in three shapes and rewriting all of them to
+// carry durations they do not have would break more than it fixed.
+function usageByHour(booked) {
   const use = {};
-  for (const t of bookedStarts || []) {
+  for (const item of booked || []) {
+    const t = (item && typeof item === 'object') ? item.time : item;
+    if (!t) continue;
+    const mins = (item && typeof item === 'object') ? item.minutes : null;
     const s = hToMin(t);
-    for (let k = 0; k * 60 < APPT_MINUTES; k++) {
-      const h = minToH(s + k * 60);
+    for (let k = 0; k < stepsFor(mins); k++) {
+      const h = minToH(s + k * STEP_MINUTES);
       use[h] = (use[h] || 0) + 1;
     }
   }
@@ -129,18 +152,20 @@ function openHours(slots, cap, use) {
   return slots.filter(s => (cap[s] || 0) > (use[s] || 0));
 }
 
-// Of those, the ones where a whole 2-hour appointment actually fits.
-function validStarts(hours) {
+// Of those, the ones where the whole appointment actually fits — for the
+// length this particular appointment runs, not a flat two hours.
+function validStarts(hours, needMinutes) {
   const set = new Set(hours);
+  const steps = stepsFor(needMinutes);
   return hours.filter(s => {
-    for (let k = 0; k * 60 < APPT_MINUTES; k++) {
-      if (!set.has(minToH(hToMin(s) + k * 60))) return false;
+    for (let k = 0; k < steps; k++) {
+      if (!set.has(minToH(hToMin(s) + k * STEP_MINUTES))) return false;
     }
     return true;
   });
 }
 
 module.exports = {
-  APPT_MINUTES, hToMin, minToH, covers, loadTeam, shiftCoverage,
+  APPT_MINUTES, STEP_MINUTES, stepsFor, hToMin, minToH, covers, loadTeam, shiftCoverage,
   hourCapacity, usageByHour, openHours, validStarts,
 };

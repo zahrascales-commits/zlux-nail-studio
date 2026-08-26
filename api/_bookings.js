@@ -293,9 +293,20 @@ module.exports = async (req, res) => {
       // Tips and full payments arrived later than this table did.
       try { await execute('ALTER TABLE appointments ADD COLUMN tip_cents INTEGER DEFAULT 0'); } catch (_) {}
       try { await execute('ALTER TABLE appointments ADD COLUMN paid_in_full INTEGER DEFAULT 0'); } catch (_) {}
+      // How long this appointment actually holds the chair, worked out once
+      // at booking and stored — so the calendar never has to re-derive it
+      // from a service name that may since have been renamed.
+      try { await execute('ALTER TABLE appointments ADD COLUMN design_tier TEXT DEFAULT \'\''); } catch (_) {}
+      try { await execute('ALTER TABLE appointments ADD COLUMN block_minutes INTEGER DEFAULT 0'); } catch (_) {}
+      let blockMins = 0, chosenTier = '';
+      try {
+        const tiers = require('./_tiers');
+        chosenTier = String(req.body.design_tier || '');
+        blockMins = tiers.blockMinutes(chosenTier, addon_names);
+      } catch (_) {}
       await execute(
-        `INSERT INTO appointments (member_id, guest_name, guest_email, staff_id, service, addons, appointment_date, appointment_time, status, total_cents, deposit_cents, deposit_paid)
-         VALUES (?,?,?,?,?,?,?,?,'SCHEDULED',?,?,?)`,
+        `INSERT INTO appointments (member_id, guest_name, guest_email, staff_id, service, addons, appointment_date, appointment_time, status, total_cents, deposit_cents, deposit_paid, design_tier, block_minutes)
+         VALUES (?,?,?,?,?,?,?,?,'SCHEDULED',?,?,?,?,?)`,
         [
           isMember ? member_id : null,
           isMember ? null : customer_name,
@@ -308,6 +319,8 @@ module.exports = async (req, res) => {
           total_cents,
           deposit_cents,
           depositPaid ? 1 : 0,
+          chosenTier,
+          blockMins,
         ]
       );
     } catch (_) {}

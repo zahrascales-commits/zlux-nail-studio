@@ -22,6 +22,10 @@ module.exports = async (req, res) => {
       ? store.bookings.filter(b => b.date === date).map(b => b.time_slot)
       : [];
 
+    // How long each booked start runs, where we know. Anything missing falls
+    // back to the flat two hours those bookings were taken under.
+    const bookedLengths = {};
+
     // Effective slots for the day start as the full studio range; booking-hours
     // settings + a per-day override can narrow it. Personal blocks and Studio
     // Manager appointments then mark specific slots unavailable. All Turso work
@@ -32,14 +36,26 @@ module.exports = async (req, res) => {
         const { query, queryOne, ensureTables } = require('./_team-db');
         await ensureTables();
 
-        // 1) Owner-booked appointments count as taken
+        // 1) Owner-booked appointments count as taken. Each is carried with
+        //    the length it actually runs, because a 1h30 set and a 2h15 set
+        //    block very different amounts of the day.
         const appts = await query('SELECT time FROM team_appointments WHERE date=?', [date]);
         for (const r of appts) if (r.time && !booked.includes(r.time)) booked.push(r.time);
-        // Also the durable public-booking table (survives serverless cold starts)
         try {
           const { query: mainQuery } = require('./_db');
-          const pub = await mainQuery("SELECT appointment_time AS t FROM appointments WHERE appointment_date=? AND status != 'CANCELLED'", [date]);
-          for (const r of pub) if (r.t && !booked.includes(r.t)) booked.push(r.t);
+          let pub = [];
+          try {
+            pub = await mainQuery(
+              "SELECT appointment_time AS t, block_minutes AS mins FROM appointments WHERE appointment_date=? AND status != 'CANCELLED'", [date]);
+          } catch (_) {
+            pub = await mainQuery(
+              "SELECT appointment_time AS t FROM appointments WHERE appointment_date=? AND status != 'CANCELLED'", [date]);
+          }
+          for (const r of pub) {
+            if (!r.t) continue;
+            if (!booked.includes(r.t)) booked.push(r.t);
+            if (Number(r.mins) > 0) bookedLengths[r.t] = Number(r.mins);
+          }
         } catch (_) {}
 
         // 2) Booking-availability hours: default from settings, overridden per-day
@@ -103,13 +119,21 @@ module.exports = async (req, res) => {
             // Hand back open *hours* — the page walks each hour of the 2-hour
             // block itself, so trimming to start times here would kill the last
             // valid start of every shift.
-            allSlots = openHours(allSlots, hourCapacity(onShift, allSlots), usageByHour(booked));
+            allSlots = openHours(allSlots, hourCapacity(onShift, allSlots),
+              usageByHour(booked.map(t => ({ time: t, minutes: bookedLengths[t] || null }))));
           }
         }
       } catch (_) { /* availability is additive — never break the booking page */ }
     }
 
-    return res.json({ blocks, booked, all_slots: allSlots, min_advance_hours: minAdvance, appt_hours: 2 });
+    return res.json({
+      blocks, booked, all_slots: allSlots, min_advance_hours: minAdvance,
+      // The page needs both to lay the day out honestly: how fine the grid
+      // is, and how long each existing booking actually runs.
+      slot_step_minutes: store.SLOT_STEP_MINUTES || 15,
+      booked_minutes: bookedLengths,
+      appt_hours: 2,
+    });
   }
 
   if (!auth(req)) return res.status(401).json({ error: 'Unauthorized' });

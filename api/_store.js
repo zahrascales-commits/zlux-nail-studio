@@ -25,11 +25,22 @@ const bookings = [];
 let nextId = 1;
 
 // All possible slots: 8 AM to 10 PM (shown as "Fully Booked" if blocked, not hidden)
-const ALL_SLOTS = [
-  '08:00','09:00','10:00','11:00','12:00',
-  '13:00','14:00','15:00','16:00','17:00',
-  '18:00','19:00','20:00','21:00','22:00'
-];
+// The studio day, in quarter hours.
+//
+// Quarter hours rather than whole ones because appointments are not whole
+// hours: a plain set runs 1h30 and a full-design set 2h15, so a grid of
+// whole hours rounds every single one up and quietly bins the remainder.
+const SLOT_STEP_MINUTES = 15;
+const DAY_OPEN_MINUTES = 8 * 60;    // 08:00
+const DAY_CLOSE_MINUTES = 22 * 60;  // 22:00
+
+const ALL_SLOTS = (() => {
+  const out = [];
+  for (let m = DAY_OPEN_MINUTES; m <= DAY_CLOSE_MINUTES; m += SLOT_STEP_MINUTES) {
+    out.push(String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'));
+  }
+  return out;
+})();
 
 // Calendar blocks set by CEO — { date: 'YYYY-MM-DD', slot: 'HH:MM' | 'ALL', note: '' }
 const calendarBlocks = [];
@@ -83,7 +94,7 @@ const workerMessages = []; // { id, worker_id, booking_id, client_name, message,
 let nextMsgId = 1;
 
 module.exports = {
-  services, addons, bookings, ALL_SLOTS,
+  services, addons, bookings, ALL_SLOTS, SLOT_STEP_MINUTES,
   calendarBlocks, funnelEvents, chatQuestions,
   inventory, giftCards, goals,
   workers, inspoPhotos, workerMessages,

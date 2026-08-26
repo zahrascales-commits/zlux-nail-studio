@@ -85,25 +85,34 @@ module.exports = async function (req, res) {
       // Every start a whole appointment actually fits into, minus what is
       // already on her day. Offering a time she cannot finish is worse than
       // showing her as busy.
+      // How long the appointment being booked will run, so the times offered
+      // are ones it actually finishes inside.
+      let need = shifts.APPT_MINUTES;
+      try {
+        const tiers = require('./_tiers');
+        const addons = String(req.query.addons || '').split('|').map(s => s.trim()).filter(Boolean);
+        need = tiers.blockMinutes(String(req.query.design_tier || ''), addons);
+      } catch (_) {}
+
       const out = onToday.map(sh => {
         const busy = new Set();
         for (const b of booked) {
           if (Number(b.team_member_id) !== Number(sh.id) || !b.time) continue;
-          for (let k = 0; k * 60 < shifts.APPT_MINUTES; k++) {
-            busy.add(shifts.minToH(shifts.hToMin(String(b.time)) + k * 60));
+          for (let k = 0; k < shifts.stepsFor(shifts.APPT_MINUTES); k++) {
+            busy.add(shifts.minToH(shifts.hToMin(String(b.time)) + k * shifts.STEP_MINUTES));
           }
         }
         const starts = [];
         const endMin = shifts.hToMin(sh.end);
-        for (let mins = shifts.hToMin(sh.start); mins < endMin; mins += 60) {
+        for (let mins = shifts.hToMin(sh.start); mins < endMin; mins += shifts.STEP_MINUTES) {
           // The whole appointment has to finish inside the shift, not merely
           // start inside it. Checking only that each hour begins before the
           // end lets the last slot run over — a 7:30 start on a shift ending
           // at 9:00 would have her working until 9:30.
-          if (mins + shifts.APPT_MINUTES > endMin) break;
+          if (mins + need > endMin) break;
           let fits = true;
-          for (let k = 0; k * 60 < shifts.APPT_MINUTES; k++) {
-            const step = shifts.minToH(mins + k * 60);
+          for (let k = 0; k < shifts.stepsFor(need); k++) {
+            const step = shifts.minToH(mins + k * shifts.STEP_MINUTES);
             if (busy.has(step)) { fits = false; break; }
             if (sh.lunchStart && sh.lunchEnd && step >= sh.lunchStart && step < sh.lunchEnd) { fits = false; break; }
           }
@@ -165,19 +174,35 @@ module.exports = async function (req, res) {
       // Everything already on the books for the range, so a day whose
       // qualified artists are all full reads as unavailable too.
       const takenByDate = {};
-      const bump = (d, t) => { if (d && t) (takenByDate[d] = takenByDate[d] || []).push(t); };
+      const bump = (d, t, mins) => { if (d && t) (takenByDate[d] = takenByDate[d] || []).push({ time: t, minutes: mins || null }); };
       const teamAppts = await query(
         'SELECT date, time FROM team_appointments WHERE date>=? AND date<=?', [from, to]
       ).catch(() => []);
-      for (const a of teamAppts) bump(a.date, a.time);
+      for (const a of teamAppts) bump(a.date, a.time, null);
       try {
         const { query: mainQuery } = require('./_db');
-        const pub = await mainQuery(
-          "SELECT appointment_date AS d, appointment_time AS t FROM appointments WHERE appointment_date>=? AND appointment_date<=? AND status != 'CANCELLED'",
-          [from, to]
-        );
-        for (const a of pub) bump(a.d, a.t);
+        let pub = [];
+        try {
+          pub = await mainQuery(
+            "SELECT appointment_date AS d, appointment_time AS t, block_minutes AS mins FROM appointments WHERE appointment_date>=? AND appointment_date<=? AND status != 'CANCELLED'",
+            [from, to]);
+        } catch (_) {
+          pub = await mainQuery(
+            "SELECT appointment_date AS d, appointment_time AS t FROM appointments WHERE appointment_date>=? AND appointment_date<=? AND status != 'CANCELLED'",
+            [from, to]);
+        }
+        for (const a of pub) bump(a.d, a.t, Number(a.mins) || null);
       } catch (_) { /* durable table optional */ }
+
+      // How long the appointment the client is actually trying to book will
+      // run. A day with only a 90-minute gap left is open for a plain set and
+      // closed for a full design, and the calendar should say so.
+      let needMinutes = null;
+      try {
+        const tiers = require('./_tiers');
+        const addons = String(req.query.addons || '').split('|').map(s => s.trim()).filter(Boolean);
+        needMinutes = tiers.blockMinutes(String(req.query.design_tier || ''), addons);
+      } catch (_) {}
 
       const days = {};
       for (const date of Object.keys(byDate)) {
@@ -191,7 +216,7 @@ module.exports = async function (req, res) {
         // A day is bookable only if a whole 2-hour appointment still fits
         // somewhere in it — not merely if one hour happens to be free.
         const free = openHours(slots, hourCapacity(byDate[date], slots), usageByHour(takenByDate[date]));
-        const starts = validStarts(free);
+        const starts = validStarts(free, needMinutes);
         days[date] = { open: starts.length > 0, slots: starts };
       }
       return res.json({ configured: true, days });
