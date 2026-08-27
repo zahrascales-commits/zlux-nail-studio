@@ -655,6 +655,19 @@
     display:flex;gap:0.7rem;align-items:center;flex-wrap:wrap;font-size:0.84rem;color:var(--cream)}
   .mk-row i{font-style:normal;font-size:0.7rem;color:var(--muted)}
   .mk-row .sp{margin-left:auto;display:flex;gap:0.35rem}
+  .gap-row{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--st);
+    border-radius:9px;padding:0.7rem 0.85rem;margin-bottom:0.45rem;display:flex;gap:0.7rem;
+    align-items:center;flex-wrap:wrap}
+  .gap-row.both{--st:#d66}
+  .gap-row.email{--st:#C4A882}
+  .gap-row.phone{--st:#6b6355}
+  .gap-name{font-size:0.88rem;color:var(--cream);min-width:130px}
+  .gap-name i{display:block;font-style:normal;font-size:0.68rem;color:var(--muted);margin-top:0.12rem}
+  .gap-need{font-size:0.6rem;letter-spacing:0.13em;text-transform:uppercase;color:var(--st);
+    border:1px solid var(--st);border-radius:100px;padding:0.22rem 0.55rem;white-space:nowrap}
+  .gap-in{margin-left:auto;display:flex;gap:0.35rem;flex-wrap:wrap}
+  .gap-in input{background:var(--bg);border:1px solid var(--border);color:var(--text);
+    padding:0.4rem 0.55rem;font:inherit;font-size:0.78rem;outline:none;border-radius:6px;width:170px}
 
   /* The compose box gets the width of the card it sits in. An email written
      through a twenty-character slot is an email nobody proofreads. */
@@ -876,6 +889,13 @@
           <div id="mk-progress-text" style="font-size:0.78rem;color:var(--muted);margin-top:0.5rem"></div>
         </div>
       </div>
+
+      <div class="page-head" style="margin-top:2.5rem;">
+        <div><div class="page-title" style="font-size:1.15rem;">No way to reach them</div>
+        <div class="page-desc" id="gap-sub">Clients with no email — every one of these is somebody your emails cannot get to.</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="loadGaps()">↻</button>
+      </div>
+      <div id="mk-gaps"><div class="empty">Loading…</div></div>
 
       <div class="page-head" style="margin-top:2rem;">
         <div><div class="page-title" style="font-size:1.15rem;">Drafts</div></div>
@@ -3930,6 +3950,7 @@ async function loadMarketing(){
   renderMkHistory();
   renderMkOptout();
   mkRefreshCount();
+  loadGaps();
 }
 
 function renderAudiences(){
@@ -4092,6 +4113,65 @@ async function mkSend(){
   text.innerHTML='<strong style="color:var(--cream)">Done — '+sent+' sent'
     +(failed?', '+failed+' failed'+(why?' ('+esc(why)+')':''):'')+'</strong>';
   mkSending=false; btn.disabled=false;
+  loadMarketing();
+}
+
+/* ── WHO WE CANNOT REACH ──
+   A list she has to work through by hand is a list that stays undone, so
+   this is sorted by who is worth chasing: most visits first. */
+let GAPS = null;
+
+async function loadGaps(){
+  const el = document.getElementById('mk-gaps');
+  if(!el) return;
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try{
+    GAPS = await (await api('/api/contacts?action=gaps')).json();
+    if(GAPS.error) throw new Error(GAPS.error);
+  }catch(err){ el.innerHTML = emptyBox('⚠️','Could not load: ' + esc(err.message)); return; }
+
+  const c = GAPS.counts;
+  const sub = document.getElementById('gap-sub');
+  if(sub) sub.innerHTML = c.missing_email + ' of your ' + GAPS.total_clients
+    + ' clients have no email — your emails cannot reach them. '
+    + c.missing_phone + ' have no phone'
+    + (c.missing_both ? ', and ' + c.missing_both + ' have neither.' : '.')
+    + ' The site now asks for these on its own when they log in or check in.';
+
+  const list = GAPS.clients || [];
+  if(!list.length){ el.innerHTML = emptyBox('✦','Everyone in your book has an email and a phone number.'); return; }
+
+  el.innerHTML = list.map(function(g){
+    const need = g.missing === 'both' ? 'no email · no phone'
+      : (g.missing === 'email' ? 'no email' : 'no phone');
+    return '<div class="gap-row ' + g.missing + '">'
+      + '<div class="gap-name">' + esc(g.name)
+        + '<i>' + g.visits + ' visit' + (g.visits === 1 ? '' : 's')
+          + (g.last_visit ? ' · last ' + esc(g.last_visit) : ' · never been in')
+          + (g.is_member ? ' · ' + esc(String(g.tier).replace('_',' ')) : '')
+        + '</i></div>'
+      + '<span class="gap-need">' + need + '</span>'
+      + '<div class="gap-in">'
+        + (!g.email ? '<input placeholder="their email" id="gap-e-' + g.id + '">' : '')
+        + (!g.phone ? '<input placeholder="their phone" id="gap-p-' + g.id + '">' : '')
+        + '<button class="btn btn-ghost btn-sm" onclick="saveGap(' + g.id + ')">Save</button>'
+      + '</div></div>';
+  }).join('');
+}
+
+async function saveGap(id){
+  const e = document.getElementById('gap-e-' + id);
+  const p = document.getElementById('gap-p-' + id);
+  const body = { id: id };
+  if(e && e.value.trim()) body.email = e.value.trim();
+  if(p && p.value.trim()) body.phone = p.value.trim();
+  if(!body.email && !body.phone){ alert('Type an email or a phone number first.'); return; }
+  try{
+    const r = await api('/api/contacts?action=set', { method:'POST', body: JSON.stringify(body) });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+  }catch(err){ alert('Could not save: ' + err.message); return; }
+  loadGaps();
   loadMarketing();
 }
 

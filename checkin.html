@@ -84,6 +84,30 @@
     <div class="checkmark">✦</div>
     <h2 id="in-msg">You're checked in</h2>
     <p class="sub" id="in-sub">Relax — we'll be right with you.</p>
+
+    <!-- Only shown when we genuinely have no way of reaching this person.
+         The best moment to ask is the one where they are already here and
+         already know who they are. -->
+    <div id="in-ask" style="display:none;margin-top:1.75rem;border:1px solid rgba(182,165,136,0.35);
+      background:rgba(182,165,136,0.07);padding:1.25rem 1.15rem;max-width:420px;margin-left:auto;margin-right:auto;">
+      <p class="sub" id="in-ask-why" style="margin-bottom:0.9rem;"></p>
+      <input id="in-ask-email" type="email" inputmode="email" autocapitalize="off" placeholder="your@email.com"
+        style="display:none;width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(182,165,136,0.35);
+        color:#F5EEE8;padding:0.8rem 0.9rem;font:inherit;font-size:1rem;outline:none;margin-bottom:0.6rem;" />
+      <input id="in-ask-phone" type="tel" inputmode="tel" placeholder="(555) 000-0000"
+        style="display:none;width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(182,165,136,0.35);
+        color:#F5EEE8;padding:0.8rem 0.9rem;font:inherit;font-size:1rem;outline:none;margin-bottom:0.6rem;" />
+      <label style="display:flex;gap:0.6rem;align-items:flex-start;font-size:0.8rem;color:#C9B896;
+        text-align:left;margin-bottom:0.9rem;cursor:pointer;">
+        <input type="checkbox" id="in-ask-optin" style="margin-top:3px;" />
+        <span>Also send me openings and new drops. Optional.</span>
+      </label>
+      <div style="display:flex;gap:0.6rem;">
+        <button class="big-btn" onclick="saveAsk()" style="flex:1;font-size:0.9rem;padding:0.8rem 1rem;">Save</button>
+        <button class="big-btn ghost" onclick="document.getElementById('in-ask').style.display='none'" style="font-size:0.9rem;padding:0.8rem 1rem;">Not now</button>
+      </div>
+      <p id="in-ask-msg" style="font-size:0.8rem;color:#C9B896;margin-top:0.7rem;"></p>
+    </div>
   </div>
 
   <!-- CHECKOUT: TIP (everyone, including members with $0 balance) -->
@@ -158,6 +182,50 @@ function reset(){ clearTimeout(resetTimer); MODE='in';KNAME='';KSTARS=0;_pi=null
   document.querySelectorAll('#kstars span').forEach(s=>s.textContent='☆');
   ['name-err','bal-err','card-err'].forEach(i=>document.getElementById(i).textContent='');
   show('s-home'); }
+/* ── ask for what is missing ── */
+let ASK = null;
+async function maybeAsk(name){
+  try{
+    const r = await fetch('/api/contacts?action=check&name=' + encodeURIComponent(name));
+    const d = await r.json();
+    if(!d.known || (!d.need_email && !d.need_phone)) return false;
+    ASK = { name: name, client_id: d.client_id || 0 };
+    const why = d.need_email && d.need_phone
+      ? 'We have no way to reach you — could we get your email and number? It is only ever used for your appointments.'
+      : (d.need_email
+          ? 'We do not have your email. Add it and your confirmations and reminders will come straight to you.'
+          : 'We do not have a number for you. Add it so we can reach you if anything changes.');
+    document.getElementById('in-ask-why').textContent = why;
+    document.getElementById('in-ask-email').style.display = d.need_email ? '' : 'none';
+    document.getElementById('in-ask-phone').style.display = d.need_phone ? '' : 'none';
+    document.getElementById('in-ask').style.display = '';
+    return true;
+  }catch(_){ return false; }
+}
+
+async function saveAsk(){
+  if(!ASK) return;
+  const msg = document.getElementById('in-ask-msg');
+  const email = (document.getElementById('in-ask-email').value || '').trim();
+  const phone = (document.getElementById('in-ask-phone').value || '').trim();
+  if(!email && !phone){ msg.textContent = 'Pop something in first ✦'; return; }
+  msg.textContent = 'Saving…';
+  try{
+    const r = await fetch('/api/contacts?action=save', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        name: ASK.name, client_id: ASK.client_id, email: email, phone: phone,
+        marketing_opt_in: document.getElementById('in-ask-optin').checked ? 1 : 0,
+      })
+    });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+    document.getElementById('in-ask').innerHTML =
+      '<p class="sub" style="margin:0;">Got it — thank you ✦</p>';
+    autoReset(4000);
+  }catch(err){ msg.textContent = err.message || 'That did not save — tell the front desk ✦'; }
+}
+
 function autoReset(ms){ clearTimeout(resetTimer); resetTimer=setTimeout(reset, ms); }
 
 function go(mode){ MODE=mode;
@@ -175,7 +243,11 @@ async function nameNext(){
       const d=await r.json();
       document.getElementById('in-msg').textContent='You\'re checked in, '+ (d.first||name.split(' ')[0]) +' ✦';
       document.getElementById('in-sub').textContent = d.matched ? ('We have you down for '+d.service+' — relax, we\'ll be right with you.') : 'Relax — we\'ll be right with you.';
-      show('s-in-done'); autoReset(6000);
+      show('s-in-done');
+      // Ask only if we actually cannot reach them, and give them longer on
+      // the screen if we did — six seconds is not enough to type an email.
+      const asked = await maybeAsk(name);
+      autoReset(asked ? 45000 : 6000);
     }catch{ err.textContent='Hmm, try that once more ✦'; }
   } else {
     try{

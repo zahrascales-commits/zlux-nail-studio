@@ -191,6 +191,7 @@
   <div class="portal-content">
 
     <div class="portal-tab active" id="tab-home">
+      <div id="contact-gap"></div>
       <div id="perk-wallet"></div>
       <!-- Social-profile-style header -->
       <div id="profile-hero" style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;margin-bottom:1.75rem;padding:1.5rem;background:linear-gradient(135deg,rgba(182,165,136,0.10),rgba(182,165,136,0.02));border:1px solid rgba(182,165,136,0.2);">
@@ -407,6 +408,7 @@ async function loadDashboard(member) {
   // portal never writes that key, so reading it left the wallet blank for
   // anyone who had not also been through signup on the same device.
   loadWallet(member && member.memberId);
+  askForContact(member && member.memberId);
   document.getElementById('portal-login').style.display = 'none';
   document.getElementById('portal-dashboard').style.display = 'block';
   profileData = member;
@@ -985,6 +987,84 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 window.addEventListener('scroll',()=>{ const n=document.getElementById('nav'); if(n)n.classList.toggle('scrolled',window.scrollY>60); });
 // Hamburger toggle handled by js/main.js (avoids double-toggle bug)
+
+/* ── the one thing we might be missing ──
+   Shown at the top of their own account, once, and only when we genuinely
+   cannot reach them. Dismissing it is remembered on this device, because
+   asking the same person the same question every visit is how a studio
+   teaches its clients to ignore it. */
+async function askForContact(memberId){
+  const el = document.getElementById('contact-gap');
+  if(!el || !memberId) return;
+  if(localStorage.getItem('zlux_contact_asked_' + memberId)) return;
+
+  let d;
+  try{
+    const r = await fetch('/api/contacts?action=check&member_id=' + encodeURIComponent(memberId));
+    d = await r.json();
+  }catch(_){ return; }
+  if(!d || !d.known || (!d.need_email && !d.need_phone)) return;
+
+  const both = d.need_email && d.need_phone;
+  const why = both
+    ? "We don't have an email or a phone number for you — so we can't send your confirmations or reach you if anything changes."
+    : (d.need_email
+        ? "We don't have your email, so your confirmations and reminders have nowhere to go."
+        : "We don't have a phone number for you, so we can't reach you if anything changes on the day.");
+
+  const field = (id, ph, type, mode) =>
+    '<input id="' + id + '" type="' + type + '" inputmode="' + mode + '" autocapitalize="off" placeholder="' + ph + '" '
+    + 'style="width:100%;background:var(--soft-white);border:1px solid rgba(182,165,136,0.4);color:var(--espresso);'
+    + 'font-family:\'Josefin Sans\',sans-serif;font-size:0.95rem;padding:0.75rem 0.85rem;outline:none;margin-bottom:0.6rem;">';
+
+  el.innerHTML =
+    '<div style="background:linear-gradient(150deg,rgba(182,165,136,0.16),rgba(182,165,136,0.04));'
+      + 'border:1px solid rgba(182,165,136,0.4);padding:1.35rem 1.3rem;margin-bottom:1.5rem;">'
+      + '<div style="font-family:\'Cinzel\',serif;font-size:1.1rem;color:var(--espresso);margin-bottom:0.4rem;">'
+        + 'Can we get your ' + (both ? 'details' : (d.need_email ? 'email' : 'number')) + '?</div>'
+      + '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.85rem;line-height:1.7;color:var(--latte);margin-bottom:0.9rem;">'
+        + why + '</p>'
+      + (d.need_email ? field('cg-email', 'your@email.com', 'email', 'email') : '')
+      + (d.need_phone ? field('cg-phone', '(555) 000-0000', 'tel', 'tel') : '')
+      + '<div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center;">'
+        + '<button class="btn-gold" style="animation:none;" onclick="saveContactGap(\'' + memberId + '\')">Save it</button>'
+        + '<button onclick="dismissContactGap(\'' + memberId + '\')" '
+          + 'style="background:none;border:none;font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;'
+          + 'color:var(--latte);cursor:pointer;text-decoration:underline;">Not right now</button>'
+        + '<span id="cg-msg" style="font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;color:var(--latte);"></span>'
+      + '</div>'
+    + '</div>';
+}
+
+async function saveContactGap(memberId){
+  const msg = document.getElementById('cg-msg');
+  const e = document.getElementById('cg-email');
+  const p = document.getElementById('cg-phone');
+  const email = e ? e.value.trim() : '';
+  const phone = p ? p.value.trim() : '';
+  if(!email && !phone){ msg.textContent = 'Fill one in first.'; return; }
+  msg.textContent = 'Saving…';
+  try{
+    const r = await fetch('/api/contacts?action=save', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ member_id: memberId, email: email, phone: phone })
+    });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+    localStorage.setItem('zlux_contact_asked_' + memberId, '1');
+    document.getElementById('contact-gap').innerHTML =
+      '<div style="background:rgba(120,180,130,0.12);border:1px solid rgba(120,180,130,0.4);'
+      + 'padding:1rem 1.2rem;margin-bottom:1.5rem;font-family:\'Josefin Sans\',sans-serif;'
+      + 'font-size:0.88rem;color:#3f6b47;">Saved — thank you ✦</div>';
+  }catch(err){ msg.textContent = err.message || 'That did not save.'; }
+}
+
+function dismissContactGap(memberId){
+  localStorage.setItem('zlux_contact_asked_' + memberId, '1');
+  const el = document.getElementById('contact-gap');
+  if(el) el.innerHTML = '';
+}
+
 </script>
 </body>
 </html>
