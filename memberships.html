@@ -104,6 +104,45 @@
   <p style="font-family:'Josefin Sans',sans-serif;font-size:0.95rem;color:var(--latte);max-width:420px;margin:0 auto;">Three tiers. Strictly limited. Once a spot is gone, it's gone.</p>
 </div>
 
+
+<style>
+  /* The savings line above the tiers. Loud enough to be the reason somebody
+     keeps reading, quiet enough not to look like an advert on her own site. */
+  .save-band{
+    background:linear-gradient(120deg, rgba(182,165,136,0.18), rgba(182,165,136,0.05));
+    border-top:1px solid rgba(182,165,136,0.35);
+    border-bottom:1px solid rgba(182,165,136,0.35);
+    padding:1.6rem 1.5rem; text-align:center;
+  }
+  .save-band-in{max-width:620px;margin:0 auto}
+  .save-band h3{
+    font-family:'Cinzel',serif; font-weight:400;
+    font-size:clamp(1.15rem,3.4vw,1.6rem); color:var(--espresso);
+    line-height:1.35; margin:0 0 0.5rem;
+  }
+  .save-band h3 b{color:var(--champagne); font-weight:400}
+  .save-band p{
+    font-family:'Josefin Sans',sans-serif; font-size:0.88rem;
+    color:var(--latte); line-height:1.7; margin:0 0 1rem;
+  }
+  .save-band a{
+    display:inline-block; background:var(--espresso); color:var(--champagne);
+    font-family:'Josefin Sans',sans-serif; font-size:0.72rem; font-weight:600;
+    letter-spacing:0.18em; text-transform:uppercase; text-decoration:none;
+    padding:0.8rem 1.7rem;
+  }
+  /* On the memberships page the tiers are directly below, so the button
+     scrolls rather than navigates. */
+  .save-band.on-page{border-top:none}
+</style>
+<div class="save-band on-page">
+  <div class="save-band-in">
+    <h3>You could be saving <b>$300+</b> — and there's an extra gift when you join.</h3>
+    <p>Every tier costs less than paying visit by visit, and the more you come the further ahead you are. Pick the one that fits how often you get your nails done.</p>
+    <a href="#compare">Pick your membership</a>
+  </div>
+</div>
+
 <!-- TIER LADDER — each tier shows only what's newly unlocked at that level -->
 <!-- ALREADY A MEMBER — sign in with a Member ID -->
 <div style="background:var(--espresso);border-bottom:1px solid rgba(182,165,136,0.15);padding:1.35rem 1.5rem;">
