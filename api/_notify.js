@@ -27,7 +27,7 @@ async function getKeys() {
   let db = {};
   try {
     await ensureTables();
-    const rows = await query("SELECT key, value FROM site_settings WHERE key IN ('twilio_sid','twilio_token','twilio_from','resend_key','notify_from_email')");
+    const rows = await query("SELECT key, value FROM site_settings WHERE key IN ('twilio_sid','twilio_token','twilio_from','resend_key','notify_from_email','notify_reply_to')");
     for (const r of rows) db[r.key] = String(r.value || '').trim();
   } catch (_) {}
   _keyCache = {
@@ -37,6 +37,9 @@ async function getKeys() {
     twilioToken: process.env.TWILIO_AUTH_TOKEN || db.twilio_token || '',
     twilioFrom: process.env.TWILIO_PHONE_NUMBER || db.twilio_from || '',
     fromEmail: process.env.NOTIFY_FROM_EMAIL || db.notify_from_email || FROM_EMAIL,
+    // Where replies land. Her own inbox by default, because a client who
+    // hits Reply expects to reach Zahra, not a no-reply address.
+    replyTo: process.env.NOTIFY_REPLY_TO || db.notify_reply_to || 'zolastudioempire@gmail.com',
   };
   _keyCacheAt = now;
   return _keyCache;
@@ -57,15 +60,19 @@ async function providerStatus() {
   };
 }
 
-async function sendEmail(to, subject, html) {
+async function sendEmail(to, subject, html, opts) {
   if (!to || !/@/.test(to)) return { sent: false, why: 'no email' };
   try {
     const k = await getKeys();
+    const replyTo = (opts && opts.replyTo) || k.replyTo || '';
     if (k.resendKey) {
       const r = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { Authorization: `Bearer ${k.resendKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: `ZOLA Nail Studio <${k.fromEmail}>`, to: [to], subject, html }),
+        body: JSON.stringify({
+          from: `ZOLA Nail Studio <${k.fromEmail}>`, to: [to], subject, html,
+          ...(replyTo ? { reply_to: replyTo } : {}),
+        }),
       });
       const detail = r.ok ? 'resend' : 'resend ' + r.status + ' ' + (await r.text()).slice(0, 200);
       return { sent: r.ok, why: detail };
@@ -77,6 +84,7 @@ async function sendEmail(to, subject, html) {
         body: JSON.stringify({
           personalizations: [{ to: [{ email: to }] }],
           from: { email: k.fromEmail, name: 'ZOLA Nail Studio' },
+          ...(replyTo ? { reply_to: { email: replyTo } } : {}),
           subject,
           content: [{ type: 'text/html', value: html }],
         }),
