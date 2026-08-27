@@ -22,7 +22,24 @@ module.exports = async function (req, res) {
   try {
     await ensureTables();
 
-    // ── PUBLIC: all site photo slots (pages render these) ──
+    // ── PUBLIC: which slots have a photo, and what version ──
+    //
+    // This is what public pages ask for. It is a few hundred bytes, so it
+    // arrives immediately, and each slot resolves to /api/photo?slot=…&v=…
+    // which the browser caches like any other image.
+    if (req.method === 'GET' && action === 'manifest') {
+      const rows = await query('SELECT slot, updated_ts FROM site_photos');
+      const out = {};
+      for (const r of rows) out[r.slot] = Number(r.updated_ts) || 1;
+      res.setHeader('Cache-Control', 'public, max-age=30');
+      return res.json({ versions: out });
+    }
+
+    // ── PUBLIC: every slot, inlined ──
+    //
+    // Kept for Studio Manager, which genuinely wants the thumbnails in one
+    // request. Public pages must not use this: it hands over every photo on
+    // the site as base64 whether the page shows them or not.
     if (req.method === 'GET' && (!action || action === 'slots')) {
       const rows = await query('SELECT slot, data_url FROM site_photos');
       const out = {};

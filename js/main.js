@@ -179,11 +179,20 @@ document.addEventListener('DOMContentLoaded', () => {
      else becomes a covered background with a dark overlay for text. */
   const slotEls = document.querySelectorAll('[data-photo-slot]');
   if (slotEls.length) {
-    fetch('/api/photos').then(r => r.json()).then(d => {
-      const photos = (d && d.photos) || {};
+    // Each slot is a real image URL with its version in it, so the browser
+    // caches it like any other picture and a changed photo is a changed
+    // address. What used to happen — page paints empty, a JSON blob
+    // containing every photo on the site arrives, photos pop in — is what
+    // the flash was.
+    const urlFor = (slot, v) => '/api/photo?slot=' + encodeURIComponent(slot) + '&v=' + (v || 1);
+
+    const apply = (versions) => {
       slotEls.forEach(el => {
-        const url = photos[el.dataset.photoSlot];
-        if (!url) return;
+        const slot = el.dataset.photoSlot;
+        if (!(slot in versions)) return;
+        const url = urlFor(slot, versions[slot]);
+        if (el.dataset.photoApplied === url) return;   // already showing this one
+        el.dataset.photoApplied = url;
         if (el.tagName === 'IMG') { el.src = url; el.style.display = 'block'; }
         else {
           const overlay = el.dataset.photoOverlay !== 'none'
@@ -194,6 +203,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         el.classList.add('has-photo');
       });
+    };
+
+    // Remembered from last time, applied before anything is fetched. The
+    // image itself is already in the browser cache under the same URL, so on
+    // every visit after the first the photo is simply there.
+    let cached = null;
+    try { cached = JSON.parse(localStorage.getItem('zlux_photo_versions') || 'null'); } catch (_) {}
+    if (cached) apply(cached);
+
+    // Then confirm. A few hundred bytes, and it only redraws a slot whose
+    // version actually moved.
+    fetch('/api/photos?action=manifest').then(r => r.json()).then(d => {
+      const versions = (d && d.versions) || {};
+      apply(versions);
+      try { localStorage.setItem('zlux_photo_versions', JSON.stringify(versions)); } catch (_) {}
     }).catch(() => {});
   }
 

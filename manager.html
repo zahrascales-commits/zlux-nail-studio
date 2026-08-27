@@ -3859,11 +3859,17 @@ async function deleteInq(){
 // ever reads.
 let sitePhotos={};
 const PHOTO_GROUPS=[
-  {title:'Homepage & Pages', hint:'The big photos across your site. Tap any tile to swap it.', slots:[
+  {title:'Homepage', hint:'The first thing anybody sees. Tap a tile to swap it.', slots:[
     {slot:'home-hero',label:'Homepage Hero'},
     {slot:'princess-party',label:'Princess Party'},
+  ]},
+  {title:'Page headers', hint:'The banner across the top of each page. Every page on the site has one now — an empty tile just means that page keeps its plain background.', slots:[
     {slot:'about-portrait',label:'About — Zahra'},
-    {slot:'services-header',label:'Services Header'},
+    {slot:'services-header',label:'Services'},
+    {slot:'memberships-header',label:'Memberships'},
+    {slot:'pressons-header',label:'Press-Ons'},
+    {slot:'classes-header',label:'Classes'},
+    {slot:'contact-header',label:'Contact'},
   ]},
 ];
 
