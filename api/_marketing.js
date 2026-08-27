@@ -14,7 +14,7 @@
 // Mail goes one message per recipient, so nobody ever sees another client's
 // address in a To: line, and every message carries a way out.
 const { query, queryOne, execute, ensureTables } = require('./_team-db');
-const { sendEmail } = require('./_notify');
+const { sendEmail, sendSMS } = require('./_notify');
 
 const CEO_PASSWORD = process.env.CEO_PASSWORD || 'ZOLA2026';
 
@@ -40,6 +40,11 @@ async function ensure() {
     "ALTER TABLE campaigns ADD COLUMN audience TEXT DEFAULT ''",
     "ALTER TABLE campaigns ADD COLUMN total_count INTEGER DEFAULT 0",
     "ALTER TABLE campaigns ADD COLUMN status TEXT DEFAULT 'sent'",
+    "ALTER TABLE campaigns ADD COLUMN channel TEXT DEFAULT 'email'",
+    "ALTER TABLE campaigns ADD COLUMN recipients TEXT DEFAULT ''",
+  ]) { try { await execute(sql); } catch (_) {} }
+  for (const sql of [
+    "ALTER TABLE email_drafts ADD COLUMN channel TEXT DEFAULT 'email'",
   ]) { try { await execute(sql); } catch (_) {} }
 
   // Drafts, so a message she is half way through is still there tomorrow.
@@ -58,11 +63,25 @@ async function ensure() {
     email TEXT PRIMARY KEY,
     ts INTEGER
   )`);
+
+  // The same, for texts. Kept separate on purpose: replying STOP to a text
+  // is not a request to stop being emailed, and treating it as one loses a
+  // channel the client never asked to close.
+  await execute(`CREATE TABLE IF NOT EXISTS sms_optout (
+    phone TEXT PRIMARY KEY,
+    ts INTEGER
+  )`);
 }
 
 const auth = req => req.headers['x-ceo-password'] === CEO_PASSWORD;
 const norm = e => String(e || '').trim().toLowerCase();
 const valid = e => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(norm(e));
+const digits = p => String(p || '').replace(/\D/g, '');
+// Ten digits, or eleven starting with a 1. Stored however she typed it;
+// compared on the digits alone, because "(559) 555-0000" and "5595550000"
+// are the same person and an opt-out must catch both.
+const validPhone = p => { const d = digits(p); return d.length === 10 || (d.length === 11 && d[0] === '1'); };
+const phoneKey = p => { const d = digits(p); return d.length === 11 && d[0] === '1' ? d.slice(1) : d; };
 
 function firstName(name) {
   const n = String(name || '').trim();
@@ -96,7 +115,7 @@ async function loadPeople() {
   let clients = [];
   try {
     clients = await query(
-      "SELECT id, name, email, marketing_opt_in, last_appointment, last_visit FROM clients WHERE email IS NOT NULL AND email != ''");
+      "SELECT id, name, email, phone, marketing_opt_in, last_appointment, last_visit FROM clients");
   } catch (_) {}
 
   let members = [];
@@ -104,10 +123,9 @@ async function loadPeople() {
     const main = require('./_db');
     try {
       members = await main.query(
-        "SELECT full_name AS name, email, tier, demo FROM members WHERE email IS NOT NULL AND email != ''");
+        'SELECT full_name AS name, email, phone, tier, demo FROM members');
     } catch (_) {
-      members = await main.query(
-        "SELECT full_name AS name, email, tier FROM members WHERE email IS NOT NULL AND email != ''");
+      members = await main.query('SELECT full_name AS name, email, phone, tier FROM members');
     }
   } catch (_) {}
   members = members.filter(m => !Number(m.demo));
@@ -190,6 +208,77 @@ async function resolveAudience(key, picked, preloaded) {
   return [...out.values()];
 }
 
+// Everybody, split into the three buckets the choose-who step shows.
+//
+//   subscribed    — reachable on this channel and has not opted out
+//   unreachable   — in the book, but we have no address / no number
+//   unsubscribed  — asked us to stop
+//
+// Existing clients count as subscribed. They are people this studio has done
+// business with, not a bought list, and the way they leave is the
+// unsubscribe link in every message rather than never being written to.
+async function recipientsFor(channel) {
+  const { clients, members, optedOut } = await loadPeople();
+
+  let smsOut = new Set();
+  try {
+    const rows = await query('SELECT phone FROM sms_optout');
+    smsOut = new Set(rows.map(r => phoneKey(r.phone)));
+  } catch (_) {}
+
+  const memberBy = {};
+  for (const mm of members) {
+    if (mm.email) memberBy[norm(mm.email)] = mm;
+    if (mm.name) memberBy['n:' + String(mm.name).trim().toLowerCase()] = mm;
+  }
+
+  const seen = new Set();
+  const subscribed = [], unreachable = [], unsubscribed = [];
+
+  const consider = (name, email, phone, tier) => {
+    const key = channel === 'text' ? phoneKey(phone) : norm(email);
+    const person = {
+      name: String(name || '').trim() || '(no name)',
+      email: norm(email), phone: String(phone || '').trim(),
+      tier: tier || '',
+    };
+
+    if (channel === 'text') {
+      if (!validPhone(phone)) { unreachable.push(person); return; }
+      if (seen.has('p:' + key)) return;
+      seen.add('p:' + key);
+      if (smsOut.has(key)) unsubscribed.push(person); else subscribed.push(person);
+    } else {
+      if (!valid(email)) { unreachable.push(person); return; }
+      if (seen.has('e:' + key)) return;
+      seen.add('e:' + key);
+      if (optedOut.has(key)) unsubscribed.push(person); else subscribed.push(person);
+    }
+  };
+
+  for (const mm of members) {
+    if (Number(mm.demo)) continue;
+    consider(mm.name, mm.email, mm.phone, mm.tier);
+  }
+  for (const c of clients) {
+    const mm = memberBy[norm(c.email)] || memberBy['n:' + String(c.name || '').trim().toLowerCase()];
+    consider(c.name, c.email || (mm && mm.email), c.phone || (mm && mm.phone), mm ? mm.tier : '');
+  }
+
+  const byName = (a, b) => String(a.name).localeCompare(String(b.name));
+  return {
+    subscribed: subscribed.sort(byName),
+    unreachable: unreachable.sort(byName),
+    unsubscribed: unsubscribed.sort(byName),
+  };
+}
+
+// What a text actually looks like on a phone, opt-out line and all. Shown in
+// the review step so she is reading the real thing, not an approximation.
+function smsWithFooter(text) {
+  return String(text || '').trim() + '\n\nSent by ZOLA Nail Studio. Reply STOP to unsubscribe.';
+}
+
 // ── THE EMAIL ITSELF ─────────────────────────────────────────────────────
 function toHtml(text, email) {
   const body = esc(text)
@@ -244,6 +333,26 @@ module.exports = async function (req, res) {
       Changed your mind? Just tell Zahra next time you're in.
     </p>
   </div></div>`);
+    }
+
+    // ── PUBLIC: Twilio posts here when somebody replies ──
+    //
+    // Carriers handle STOP themselves, but they do not tell the studio — so
+    // without this the site would keep queueing texts to a number that will
+    // never receive them, and keep counting them as sent.
+    if (req.method === 'POST' && action === 'sms_reply') {
+      const body = String((req.body || {}).Body || (req.body || {}).body || '').trim().toUpperCase();
+      const from = String((req.body || {}).From || (req.body || {}).from || '');
+      const key = phoneKey(from);
+      if (key) {
+        if (/^(STOP|STOPALL|UNSUBSCRIBE|CANCEL|END|QUIT)\b/.test(body)) {
+          try { await execute('INSERT OR REPLACE INTO sms_optout (phone, ts) VALUES (?,?)', [key, Date.now()]); } catch (_) {}
+        } else if (/^(START|UNSTOP|YES)\b/.test(body)) {
+          try { await execute('DELETE FROM sms_optout WHERE phone=?', [key]); } catch (_) {}
+        }
+      }
+      res.setHeader('Content-Type', 'text/xml');
+      return res.status(200).send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
     }
 
     // ── PUBLIC: join the 10%-off list ──
@@ -303,7 +412,17 @@ module.exports = async function (req, res) {
         replyTo = (r && r.value) || 'zolastudioempire@gmail.com';
       } catch (_) { replyTo = 'zolastudioempire@gmail.com'; }
 
+      let smsReady = false, smsFrom = '';
+      try {
+        const { providerStatus } = require('./_notify');
+        const p = await providerStatus();
+        smsReady = !!p.sms;
+        smsFrom = p.from_phone || '';
+      } catch (_) {}
+
       return res.json({
+        sms_ready: smsReady,
+        sms_from: smsFrom,
         audiences: AUDIENCES.map(a => ({ ...a, count: counts[a.key] || 0 })),
         everyone,                        // for the hand-pick list
         count: everyone.length,
@@ -316,6 +435,23 @@ module.exports = async function (req, res) {
       });
     }
 
+    // ── OWNER: everyone, in the three buckets the choose-who step shows ──
+    if (req.method === 'GET' && action === 'recipients') {
+      const channel = String(req.query.channel || 'email') === 'text' ? 'text' : 'email';
+      const r = await recipientsFor(channel);
+      return res.json({
+        channel,
+        subscribed: r.subscribed,
+        unreachable: r.unreachable,
+        unsubscribed: r.unsubscribed,
+        counts: {
+          subscribed: r.subscribed.length,
+          unreachable: r.unreachable.length,
+          unsubscribed: r.unsubscribed.length,
+        },
+      });
+    }
+
     // ── OWNER: who exactly would receive this ──
     if (req.method === 'POST' && action === 'audience') {
       const { audience, picked } = req.body || {};
@@ -325,8 +461,20 @@ module.exports = async function (req, res) {
 
     // ── OWNER: exactly what one person will see ──
     if (req.method === 'POST' && action === 'preview') {
-      const { subject, body, name, email } = req.body || {};
+      const { subject, body, name, email, channel } = req.body || {};
       const who = name || 'Maria';
+      if (channel === 'text') {
+        const full = smsWithFooter(personalise(body, who));
+        // Segments are what Twilio bills, so they are worth showing — but
+        // never as a limit. An emoji or a curly quote pushes the whole
+        // message into 70-character segments, which is the sort of thing
+        // that quietly triples a bill.
+        const unicode = /[^\u0000-\u007F]/.test(full);
+        const per = unicode ? 67 : 153;
+        const single = unicode ? 70 : 160;
+        const segments = full.length <= single ? 1 : Math.ceil(full.length / per);
+        return res.json({ text: full, characters: full.length, segments, unicode });
+      }
       return res.json({
         subject: personalise(subject, who),
         text: personalise(body, who),
@@ -358,12 +506,18 @@ module.exports = async function (req, res) {
 
     // ── OWNER: a test to one address, recorded nowhere ──
     if (req.method === 'POST' && action === 'test') {
-      const { subject, body, to } = req.body || {};
-      const dest = norm(to);
-      if (!valid(dest)) return res.status(400).json({ error: 'Where should the test go?' });
-      if (!String(subject || '').trim() || !String(body || '').trim()) {
-        return res.status(400).json({ error: 'Subject and message are both needed.' });
+      const { subject, body, to, channel } = req.body || {};
+      if (!String(body || '').trim()) return res.status(400).json({ error: 'Write the message first.' });
+
+      if (channel === 'text') {
+        if (!validPhone(to)) return res.status(400).json({ error: 'Which number should the test go to?' });
+        const r = await sendSMS(to, smsWithFooter(personalise(body, 'Maria')));
+        return res.json({ ok: !!(r && r.sent), why: (r && r.why) || 'unknown' });
       }
+
+      const dest = norm(to);
+      if (!valid(dest)) return res.status(400).json({ error: 'Which address should the test go to?' });
+      if (!String(subject || '').trim()) return res.status(400).json({ error: 'A subject is needed for email.' });
       const r = await sendEmail(dest, personalise(subject, 'Maria'), toHtml(personalise(body, 'Maria'), dest));
       return res.json({ ok: !!(r && r.sent), why: (r && r.why) || 'unknown' });
     }
@@ -375,6 +529,7 @@ module.exports = async function (req, res) {
     // request would be killed long before seventy messages were away, and
     // she would have no way of knowing who had been reached.
     if (req.method === 'POST' && action === 'send') {
+      const channel = String((req.body || {}).channel || 'email') === 'text' ? 'text' : 'email';
       const audience = String((req.body || {}).audience || 'everyone');
       const picked = (req.body || {}).picked || [];
       const subject = String((req.body || {}).subject || '').trim();
@@ -382,16 +537,26 @@ module.exports = async function (req, res) {
       const offset = Math.max(0, Number((req.body || {}).offset) || 0);
       let campaignId = Number((req.body || {}).campaign_id) || 0;
 
-      if (!subject || !body) return res.status(400).json({ error: 'Subject and message are both needed.' });
+      if (!body) return res.status(400).json({ error: 'Write the message first.' });
+      if (channel === 'email' && !subject) return res.status(400).json({ error: 'Email needs a subject.' });
 
-      const people = await resolveAudience(audience, picked);
+      // The choose-who step hands back an explicit list. Nothing is ever
+      // guessed at send time: what she ticked is what goes out.
+      let people;
+      if (Array.isArray(picked) && picked.length && audience === 'chosen') {
+        people = picked
+          .map(p => (typeof p === 'string' ? { name: '', email: p, phone: p } : p))
+          .filter(p => channel === 'text' ? validPhone(p.phone) : valid(p.email));
+      } else {
+        people = await resolveAudience(audience, picked);
+      }
       if (!people.length) return res.status(400).json({ error: 'Nobody is in that group.' });
 
       if (!campaignId) {
         const r = await execute(
-          `INSERT INTO campaigns (stage, subject, body, audience, total_count, sent_ts, sent_count, failed_count, status, created_ts)
-           VALUES (?,?,?,?,?,?,0,0,'sending',?)`,
-          ['broadcast', subject, body, audience, people.length, Date.now(), Date.now()]);
+          `INSERT INTO campaigns (stage, subject, body, audience, channel, total_count, sent_ts, sent_count, failed_count, status, created_ts)
+           VALUES (?,?,?,?,?,?,?,0,0,'sending',?)`,
+          ['broadcast', subject, body, audience, channel, people.length, Date.now(), Date.now()]);
         campaignId = Number(r.lastInsertRowid) || 0;
       }
 
@@ -399,11 +564,14 @@ module.exports = async function (req, res) {
       let sent = 0, failed = 0, lastWhy = '';
       const failures = [];
       for (const p of slice) {
+        const who = channel === 'text' ? p.phone : p.email;
         try {
-          const r = await sendEmail(p.email, personalise(subject, p.name), toHtml(personalise(body, p.name), p.email));
+          const r = channel === 'text'
+            ? await sendSMS(p.phone, smsWithFooter(personalise(body, p.name)))
+            : await sendEmail(p.email, personalise(subject, p.name), toHtml(personalise(body, p.name), p.email));
           if (r && r.sent) sent++;
-          else { failed++; failures.push(p.email); lastWhy = (r && r.why) || 'unknown'; }
-        } catch (e) { failed++; failures.push(p.email); lastWhy = String(e.message || e); }
+          else { failed++; failures.push(who); lastWhy = (r && r.why) || 'unknown'; }
+        } catch (e) { failed++; failures.push(who); lastWhy = String(e.message || e); }
       }
 
       const done = offset + slice.length >= people.length;

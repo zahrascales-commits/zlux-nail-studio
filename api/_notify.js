@@ -57,6 +57,9 @@ async function providerStatus() {
     sms: !!(k.twilioSid && k.twilioToken && k.twilioFrom),
     from_email: k.fromEmail || '',
     from_is_sandbox: sandbox,
+    // The number texts go out from, so a screen can show it rather than
+    // just asserting that texting works.
+    from_phone: k.twilioFrom || '',
   };
 }
 
