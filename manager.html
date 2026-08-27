@@ -655,6 +655,20 @@
     display:flex;gap:0.7rem;align-items:center;flex-wrap:wrap;font-size:0.84rem;color:var(--cream)}
   .mk-row i{font-style:normal;font-size:0.7rem;color:var(--muted)}
   .mk-row .sp{margin-left:auto;display:flex;gap:0.35rem}
+
+  /* The compose box gets the width of the card it sits in. An email written
+     through a twenty-character slot is an email nobody proofreads. */
+  #panel-marketing #mk-subject,
+  #panel-marketing #mk-body{
+    display:block;width:100%;
+    background:var(--bg);border:1px solid var(--border);color:var(--text);
+    padding:0.75rem 0.9rem;outline:none;border-radius:8px;
+    font-family:inherit;
+  }
+  #panel-marketing #mk-subject{font-size:0.95rem}
+  #panel-marketing #mk-body{font-size:0.92rem;line-height:1.75;resize:vertical;min-height:280px}
+  #panel-marketing #mk-subject:focus,
+  #panel-marketing #mk-body:focus{border-color:var(--gold)}
 </style>
 </head>
 <body>
