@@ -221,6 +221,55 @@ document.addEventListener('DOMContentLoaded', () => {
     }).catch(() => {});
   }
 
+  /* ── MOVE UP A TIER ──
+     A signed-in member sees, on any page, that there is a tier above theirs.
+     Only ever shown to somebody who is actually signed in and actually has
+     room to move — a bar telling a Black Card member to upgrade is an
+     advert for nothing, and one shown to a stranger is noise.
+
+     Dismissing it is remembered for a fortnight rather than forever: she
+     wants this in front of members, but not on every page of every visit
+     for the rest of their lives. */
+  (async function upgradeBar(){
+    var token = null;
+    try { token = localStorage.getItem('zlux_token'); } catch (_) {}
+    if (!token) return;
+    try { if (localStorage.getItem('zlux_upgrade_hidden') > Date.now()) return; } catch (_) {}
+    if (/client-portal|signup|booking/.test(location.pathname)) return;
+
+    var d;
+    try {
+      var r = await fetch('/api/upgrade', { headers: { Authorization: 'Bearer ' + token } });
+      d = await r.json();
+    } catch (_) { return; }
+    if (!d || d.error || d.at_top || !(d.options || []).length) return;
+
+    var next = d.options[0];
+    var per = d.billing === 'yearly' ? 'a year' : 'a month';
+    var bar = document.createElement('div');
+    bar.setAttribute('role','region');
+    bar.setAttribute('aria-label','Membership upgrade');
+    bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:900;background:#0D0D0D;'
+      + 'border-top:1px solid rgba(196,168,130,0.45);padding:0.85rem 1.1rem;display:flex;'
+      + 'gap:0.9rem;align-items:center;flex-wrap:wrap;font-family:"Josefin Sans",sans-serif;'
+      + 'box-shadow:0 -8px 30px rgba(0,0,0,0.4)';
+    bar.innerHTML =
+      '<span style="font-size:0.84rem;color:#F5EEE8;flex:1;min-width:190px;line-height:1.6">'
+        + 'You are on <strong style="color:#DDD0B8">' + (d.current_label || '') + '</strong>. '
+        + '<strong style="color:#C4A882">' + next.label + '</strong> is only $'
+        + Math.round(next.difference_cents / 100) + ' more ' + per + '.</span>'
+      + '<a href="client-portal.html" style="background:#C4A882;color:#0D0D0D;padding:0.55rem 1.1rem;'
+        + 'border-radius:100px;font-size:0.7rem;font-weight:700;letter-spacing:0.14em;'
+        + 'text-transform:uppercase;text-decoration:none;white-space:nowrap">See what you get</a>'
+      + '<button aria-label="Dismiss" style="background:none;border:none;color:#8C7A5E;'
+        + 'font-size:1.3rem;cursor:pointer;line-height:1;padding:0 0.3rem">&times;</button>';
+    bar.querySelector('button').onclick = function () {
+      try { localStorage.setItem('zlux_upgrade_hidden', Date.now() + 14 * 24 * 3600 * 1000); } catch (_) {}
+      bar.remove();
+    };
+    document.body.appendChild(bar);
+  })();
+
   /* ── OWNER-EDITABLE COPY ──
      [data-site-text="key"] takes the plain text she typed in Studio Manager
      → Site; [data-site-html="key"] allows the line break and gold span the

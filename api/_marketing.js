@@ -259,11 +259,14 @@ async function recipientsFor(channel) {
 
   for (const mm of members) {
     if (Number(mm.demo)) continue;
-    consider(mm.name, mm.email, mm.phone, mm.tier, { groups: ['members'] });
+    // The tier is a group of its own, so she can write to Signature and
+    // Luxe about moving up without also writing to Black Card, who have
+    // nowhere to move to.
+    consider(mm.name, mm.email, mm.phone, mm.tier, { groups: ['members', String(mm.tier || '')].filter(Boolean) });
   }
   for (const c of clients) {
     const mm = memberBy[norm(c.email)] || memberBy['n:' + String(c.name || '').trim().toLowerCase()];
-    const g = [mm ? 'members' : 'dropins'];
+    const g = mm ? ['members', String(mm.tier || '')].filter(Boolean) : ['dropins'];
     if (String(c.source || '').indexOf('presson') === 0) g.push('pressons');
     const last = String(c.last_appointment || c.last_visit || '').slice(0, 10);
     if (last) {

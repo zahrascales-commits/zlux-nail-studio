@@ -192,6 +192,7 @@
 
     <div class="portal-tab active" id="tab-home">
       <div id="contact-gap"></div>
+      <div id="upgrade-offer"></div>
       <div id="perk-wallet"></div>
       <!-- Social-profile-style header -->
       <div id="profile-hero" style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;margin-bottom:1.75rem;padding:1.5rem;background:linear-gradient(135deg,rgba(182,165,136,0.10),rgba(182,165,136,0.02));border:1px solid rgba(182,165,136,0.2);">
@@ -409,6 +410,7 @@ async function loadDashboard(member) {
   // anyone who had not also been through signup on the same device.
   loadWallet(member && member.memberId);
   askForContact(member && member.memberId);
+  loadUpgrade();
   document.getElementById('portal-login').style.display = 'none';
   document.getElementById('portal-dashboard').style.display = 'block';
   profileData = member;
@@ -1063,6 +1065,105 @@ function dismissContactGap(memberId){
   localStorage.setItem('zlux_contact_asked_' + memberId, '1');
   const el = document.getElementById('contact-gap');
   if(el) el.innerHTML = '';
+}
+
+
+/* ── MOVING UP A TIER ───────────────────────────────────────────────────
+   Shown in their own account, to anyone not already at the top. It changes
+   the subscription they have rather than selling them a second one — the
+   old "Upgrade your tier" link went to the join page, which would have left
+   somebody paying for two memberships at once. */
+async function loadUpgrade(){
+  const el = document.getElementById('upgrade-offer');
+  if(!el) return;
+  let d;
+  try{
+    const r = await fetch('/api/upgrade', { headers: { Authorization: 'Bearer ' + authToken } });
+    d = await r.json();
+    if(d.error) throw new Error(d.error);
+  }catch(_){ el.innerHTML = ''; return; }
+
+  if(d.at_top || !(d.options || []).length){
+    // Nothing to sell somebody who already has everything. Say so once,
+    // quietly, rather than showing them an empty box.
+    el.innerHTML =
+      '<div style="background:rgba(182,165,136,0.09);border:1px solid rgba(182,165,136,0.3);'
+        + 'padding:0.9rem 1.1rem;margin-bottom:1.5rem;font-family:\'Josefin Sans\',sans-serif;'
+        + 'font-size:0.84rem;color:var(--latte);">'
+        + 'You are on <strong style="color:var(--espresso)">' + esc(d.current_label) + '</strong> — the top tier. '
+        + 'Nothing above this.</div>';
+    return;
+  }
+
+  const per = d.billing === 'yearly' ? 'a year' : 'a month';
+  el.innerHTML =
+    '<div style="background:linear-gradient(150deg,rgba(182,165,136,0.15),rgba(182,165,136,0.03));'
+      + 'border:1px solid rgba(182,165,136,0.4);padding:1.4rem 1.3rem;margin-bottom:1.5rem;">'
+      + '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.6rem;letter-spacing:0.22em;'
+        + 'text-transform:uppercase;color:var(--champagne);margin-bottom:0.5rem;">Move up</div>'
+      + '<div style="font-family:\'Cinzel\',serif;font-size:1.25rem;color:var(--espresso);margin-bottom:0.3rem;">'
+        + 'You are on ' + esc(d.current_label) + '</div>'
+      + '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.84rem;color:var(--latte);'
+        + 'line-height:1.7;margin-bottom:1.1rem;">Change any time. You are credited for the part of '
+        + 'this ' + (d.billing === 'yearly' ? 'year' : 'month') + ' you have not used, so you only pay the difference.</p>'
+      + d.options.map(function(o){
+          return '<div style="background:var(--soft-white);border:1px solid rgba(182,165,136,0.3);'
+            + 'padding:1.05rem 1.1rem;margin-bottom:0.7rem;">'
+            + '<div style="display:flex;align-items:baseline;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.5rem;">'
+              + '<strong style="font-family:\'Cinzel\',serif;font-size:1.1rem;color:var(--espresso);">'
+                + esc(o.label) + '</strong>'
+              + '<span style="font-family:\'Josefin Sans\',sans-serif;font-size:0.82rem;color:var(--champagne);">'
+                + '+$' + Math.round(o.difference_cents/100) + ' more ' + per + '</span>'
+              + '<span style="margin-left:auto;font-family:\'Josefin Sans\',sans-serif;font-size:0.74rem;color:var(--latte);">'
+                + '$' + Math.round(o.cents/100) + ' ' + per + ' total</span>'
+            + '</div>'
+            + '<ul style="margin:0 0 0.9rem 1rem;padding:0;">'
+              + (o.gains||[]).map(function(g){
+                  return '<li style="font-family:\'Josefin Sans\',sans-serif;font-size:0.83rem;'
+                    + 'line-height:1.7;color:var(--latte);">' + esc(g) + '</li>';
+                }).join('')
+            + '</ul>'
+            + '<button class="btn-gold" style="animation:none;font-size:0.72rem;" '
+              + 'onclick="doUpgrade(\'' + o.tier + '\',\'' + esc(o.label) + '\',' + o.difference_cents + ')">'
+              + 'Move to ' + esc(o.label) + '</button>'
+            + '</div>';
+        }).join('')
+      + '<div id="upgrade-msg" style="font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;color:var(--latte);"></div>'
+    + '</div>';
+}
+
+async function doUpgrade(tier, label, diffCents){
+  const msg = document.getElementById('upgrade-msg');
+  // Real money moves here, so it is asked plainly and once.
+  if(!confirm('Move up to ' + label + '?\n\nYour card will be charged the difference now — about $'
+    + Math.round(diffCents/100) + ', less credit for the time you have not used.')) return;
+  if(msg) msg.textContent = 'Changing your membership…';
+  try{
+    const r = await fetch('/api/upgrade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken },
+      body: JSON.stringify({ tier: tier })
+    });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+    document.getElementById('upgrade-offer').innerHTML =
+      '<div style="background:rgba(120,180,130,0.12);border:1px solid rgba(120,180,130,0.45);'
+        + 'padding:1.3rem 1.2rem;margin-bottom:1.5rem;">'
+        + '<div style="font-family:\'Cinzel\',serif;font-size:1.2rem;color:#2f5c39;margin-bottom:0.4rem;">'
+          + 'You are ' + esc(d.label) + ' now ✦</div>'
+        + '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.85rem;color:#3f6b47;line-height:1.7;">'
+          + 'Moved up from ' + esc(d.from_label) + '. Everything below is yours from this moment.</p>'
+        + '<ul style="margin:0.7rem 0 0 1rem;padding:0;">'
+          + (d.gains||[]).map(function(g){
+              return '<li style="font-family:\'Josefin Sans\',sans-serif;font-size:0.84rem;line-height:1.75;color:#3f6b47;">'
+                + esc(g) + '</li>';
+            }).join('')
+        + '</ul></div>';
+    if(window.zolaConfetti) window.zolaConfetti();
+    // Everything on this screen is tier-dependent, so it is all reloaded
+    // rather than patched in three places and left disagreeing.
+    setTimeout(function(){ location.reload(); }, 3500);
+  }catch(err){ if(msg) msg.textContent = err.message || 'That did not go through — nothing was charged.'; }
 }
 
 </script>
