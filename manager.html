@@ -27,9 +27,29 @@
   html{scroll-behavior:smooth}
   body{background:var(--bg);color:var(--text);font-family:'Josefin Sans',sans-serif;font-size:0.92rem;line-height:1.6;min-height:100vh}
   a{color:inherit;text-decoration:none}
-  input,select,textarea,button{font-family:inherit;font-size:inherit;color:inherit}
-  /* Defensive: selects/options must never be light-text-on-white in this dark theme */
-  select{background:var(--card);color:var(--cream)}
+  input,select,textarea,button{font-family:inherit;font-size:inherit}
+
+  /* Text fields carry their own colours, always.
+     Inheriting alone was the bug: the text colour came down from the page
+     (cream) but the background did not — a browser paints an unstyled input
+     white on its own. Cream on white is invisible, so anything typed into a
+     field that had not been styled by hand could not be read while writing
+     it. Every field now states both, and the caret is stated too, because a
+     cursor you cannot see is the same problem one keystroke earlier. */
+  input,select,textarea{
+    background:var(--surface);
+    color:var(--text);
+    caret-color:var(--gold);
+    border:1px solid var(--border);
+  }
+  input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}
+  input:focus,select:focus,textarea:focus{border-color:var(--gold);outline:none}
+  /* Checkboxes and radios are drawn by the browser — a background here turns
+     them into grey squares. */
+  input[type="checkbox"],input[type="radio"]{
+    background:none;border:none;caret-color:auto;accent-color:var(--gold);
+  }
+  button{color:inherit}
   option{background:#1C1815;color:#F5EEE8}
   ::-webkit-scrollbar{width:8px;height:8px}
   ::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:4px}
