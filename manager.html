@@ -4052,6 +4052,7 @@ function cwOpen(channel){
     subject: '',
     body: '',
     bucket: 'subscribed',
+    group: 'all',
     search: '',
     chosen: new Set(),
     people: null,
@@ -4160,12 +4161,37 @@ function cwStep2(){
   const list = cwBucketList();
   const q = (CW.search||'').toLowerCase().trim();
   const shown = list.filter(function(x){
+    if(!inGroup(x)) return false;
     if(!q) return true;
     return String(x.name).toLowerCase().includes(q)
       || String(x.email).toLowerCase().includes(q)
       || String(x.phone).includes(q);
   });
   const selectable = CW.bucket === 'subscribed';
+  const GROUPS = [
+    { k:'all',      label:'Everyone' },
+    { k:'members',  label:'Members' },
+    { k:'dropins',  label:'Drop-ins' },
+    { k:'pressons', label:'Press-ons' },
+    { k:'lapsed',   label:'Gone quiet' },
+  ];
+  const inGroup = function(x){
+    return !CW.group || CW.group === 'all' || (x.groups || []).indexOf(CW.group) >= 0;
+  };
+  const chips = selectable
+    ? '<div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.85rem">'
+      + GROUPS.map(function(g){
+          const n = g.k === 'all'
+            ? (CW.people.subscribed || []).length
+            : (CW.people.subscribed || []).filter(function(x){ return (x.groups||[]).indexOf(g.k) >= 0; }).length;
+          const on = CW.group === g.k;
+          return '<button style="background:none;border:1px solid ' + (on ? 'var(--gold)' : 'var(--border)')
+            + ';color:' + (on ? 'var(--gold)' : 'var(--muted)')
+            + ';border-radius:100px;padding:0.32rem 0.72rem;font:inherit;font-size:0.74rem;cursor:pointer" '
+            + 'onclick="cwSetGroup(\'' + g.k + '\')">' + g.label + ' (' + n + ')</button>';
+        }).join('')
+      + '</div>'
+    : '';
   const allOn = selectable && shown.length && shown.every(function(x){ return CW.chosen.has(cwKey(x)); });
 
   document.getElementById('cw-pane').innerHTML =
@@ -4176,6 +4202,7 @@ function cwStep2(){
       + '<button class="cw-tab' + (CW.bucket==='unreachable'?' on':'') + '" onclick="CW.bucket=\'unreachable\';cwStep2()">' + gone + ' (' + c.unreachable + ')</button>'
       + '<button class="cw-tab' + (CW.bucket==='unsubscribed'?' on':'') + '" onclick="CW.bucket=\'unsubscribed\';cwStep2()">Unsubscribed (' + c.unsubscribed + ')</button>'
     + '</div>'
+    + chips
     + (selectable
         ? '<label class="cw-all"><input type="checkbox" ' + (allOn?'checked':'') + ' onchange="cwToggleAll(this.checked)">'
           + '<span>Select everyone' + (q ? ' matching "' + esc(CW.search) + '"' : '') + '</span>'
@@ -4207,9 +4234,14 @@ function cwKey(x){
   return CW.channel === 'text' ? String(x.phone||'').replace(/\D/g,'') : String(x.email||'').toLowerCase();
 }
 function cwToggle(k, on){ if(on) CW.chosen.add(k); else CW.chosen.delete(k); cwStep2(); }
+// Changing the group must not silently drop people she already ticked, so
+// selections are kept — the chip narrows what is shown, not what is chosen.
+function cwSetGroup(k){ CW.group = k; cwStep2(); }
+
 function cwToggleAll(on){
   const q = (CW.search||'').toLowerCase().trim();
   cwBucketList().filter(function(x){
+    if(CW.group && CW.group !== 'all' && (x.groups||[]).indexOf(CW.group) < 0) return false;
     if(!q) return true;
     return String(x.name).toLowerCase().includes(q) || String(x.email).toLowerCase().includes(q) || String(x.phone).includes(q);
   }).forEach(function(x){ const k = cwKey(x); if(on) CW.chosen.add(k); else CW.chosen.delete(k); });

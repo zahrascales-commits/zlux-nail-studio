@@ -108,10 +108,18 @@ module.exports = async function (req, res) {
       const email = String(buyer_email || '').trim().toLowerCase();
       // Look up (or create) the client so sizes + kit history stick forever
       let client = email ? await queryOne('SELECT * FROM clients WHERE lower(email)=?', [email]) : null;
+      try { await execute("ALTER TABLE clients ADD COLUMN source TEXT DEFAULT ''"); } catch (_) {}
       if (!client && email) {
-        await execute('INSERT INTO clients (name,email,phone,created_ts) VALUES (?,?,?,?)',
-          [String(buyer_name || '').slice(0, 120), email, String(buyer_phone || '').slice(0, 40), Date.now()]);
+        await execute('INSERT INTO clients (name,email,phone,source,created_ts) VALUES (?,?,?,?,?)',
+          [String(buyer_name || '').slice(0, 120), email, String(buyer_phone || '').slice(0, 40),
+           'presson_buyer', Date.now()]);
         client = await queryOne('SELECT * FROM clients WHERE lower(email)=?', [email]);
+      } else if (client) {
+        // Somebody already in the book who has now bought press-ons belongs
+        // on that list too, without losing however they first arrived.
+        try {
+          await execute("UPDATE clients SET source='presson_buyer' WHERE id=? AND (source IS NULL OR source='')", [client.id]);
+        } catch (_) {}
       }
 
       // ONE sizing kit per person, ever. If they already claimed one — no

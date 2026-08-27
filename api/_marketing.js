@@ -115,7 +115,7 @@ async function loadPeople() {
   let clients = [];
   try {
     clients = await query(
-      "SELECT id, name, email, phone, marketing_opt_in, last_appointment, last_visit FROM clients");
+      "SELECT id, name, email, phone, marketing_opt_in, source, last_appointment, last_visit FROM clients");
   } catch (_) {}
 
   let members = [];
@@ -235,12 +235,13 @@ async function recipientsFor(channel) {
   const seen = new Set();
   const subscribed = [], unreachable = [], unsubscribed = [];
 
-  const consider = (name, email, phone, tier) => {
+  const consider = (name, email, phone, tier, extra) => {
     const key = channel === 'text' ? phoneKey(phone) : norm(email);
     const person = {
       name: String(name || '').trim() || '(no name)',
       email: norm(email), phone: String(phone || '').trim(),
       tier: tier || '',
+      groups: (extra && extra.groups) || [],
     };
 
     if (channel === 'text') {
@@ -258,11 +259,18 @@ async function recipientsFor(channel) {
 
   for (const mm of members) {
     if (Number(mm.demo)) continue;
-    consider(mm.name, mm.email, mm.phone, mm.tier);
+    consider(mm.name, mm.email, mm.phone, mm.tier, { groups: ['members'] });
   }
   for (const c of clients) {
     const mm = memberBy[norm(c.email)] || memberBy['n:' + String(c.name || '').trim().toLowerCase()];
-    consider(c.name, c.email || (mm && mm.email), c.phone || (mm && mm.phone), mm ? mm.tier : '');
+    const g = [mm ? 'members' : 'dropins'];
+    if (String(c.source || '').indexOf('presson') === 0) g.push('pressons');
+    const last = String(c.last_appointment || c.last_visit || '').slice(0, 10);
+    if (last) {
+      const d = new Date(last + 'T12:00:00');
+      if (!isNaN(d) && (Date.now() - d.getTime()) / 86400000 > 90) g.push('lapsed');
+    }
+    consider(c.name, c.email || (mm && mm.email), c.phone || (mm && mm.phone), mm ? mm.tier : '', { groups: g });
   }
 
   const byName = (a, b) => String(a.name).localeCompare(String(b.name));

@@ -340,8 +340,9 @@ async function joinWaitlist(){
   btn.disabled=true; btn.textContent='Adding you…';
   try{
     await fetch('/api/clients?action=signup',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'signup',name:name||'Press-on waitlist',
-        email:isEmail?contact:'', phone:isEmail?'':contact})});
+      body:JSON.stringify({action:'signup', name:name||'',
+        email:isEmail?contact:'', phone:isEmail?'':contact,
+        source:'presson_waitlist'})});
     document.getElementById('soon-form').style.display='none';
     document.getElementById('soon-done').style.display='block';
     if(window.zolaConfetti)window.zolaConfetti();

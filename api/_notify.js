@@ -63,17 +63,49 @@ async function providerStatus() {
   };
 }
 
+// A readable text version of an HTML email. Not a fallback nobody sees —
+// filters compare the two parts, and a message with only one is suspect.
+function htmlToText(html) {
+  return String(html || '')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<a\b[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href, txt) => {
+      const label = String(txt).replace(/<[^>]+>/g, '').trim();
+      return label && !/^https?:/i.test(label) ? label + ' (' + href + ')' : href;
+    })
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|tr|h[1-6])>/gi, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+}
+
 async function sendEmail(to, subject, html, opts) {
   if (!to || !/@/.test(to)) return { sent: false, why: 'no email' };
   try {
     const k = await getKeys();
     const replyTo = (opts && opts.replyTo) || k.replyTo || '';
+
+    // One-click unsubscribe. Gmail and Yahoo have required this of bulk
+    // senders since February 2024; without it a perfectly legitimate
+    // message reads as one that does not expect anybody to want out.
+    const site = process.env.PUBLIC_BASE_URL || 'https://zolanailstudio.com';
+    const unsub = (opts && opts.unsubscribeUrl)
+      || (site + '/api/marketing?action=unsubscribe&e=' + encodeURIComponent(to));
+    const headers = {
+      'List-Unsubscribe': '<' + unsub + '>, <mailto:' + (replyTo || k.fromEmail) + '?subject=unsubscribe>',
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    };
+    const text = (opts && opts.text) || htmlToText(html);
     if (k.resendKey) {
       const r = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { Authorization: `Bearer ${k.resendKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          from: `ZOLA Nail Studio <${k.fromEmail}>`, to: [to], subject, html,
+          from: `ZOLA Nail Studio <${k.fromEmail}>`, to: [to], subject, html, text, headers,
           ...(replyTo ? { reply_to: replyTo } : {}),
         }),
       });
@@ -89,7 +121,13 @@ async function sendEmail(to, subject, html, opts) {
           from: { email: k.fromEmail, name: 'ZOLA Nail Studio' },
           ...(replyTo ? { reply_to: { email: replyTo } } : {}),
           subject,
-          content: [{ type: 'text/html', value: html }],
+          // Plain text first: that is the order the MIME spec expects, and
+          // SendGrid rejects the parts the other way round.
+          content: [
+            { type: 'text/plain', value: text },
+            { type: 'text/html', value: html },
+          ],
+          headers,
         }),
       });
       return { sent: r.ok || r.status === 202, why: 'sendgrid ' + r.status };

@@ -40,9 +40,23 @@ async function handler(req, res) {
 
     // ── PUBLIC: join the list (signup area) ──
     if (req.method === 'POST' && action === 'signup') {
-      const { name, phone, email } = req.body || {};
+      const { name, phone, email, source } = req.body || {};
       if (!phone && !email) return res.status(400).json({ error: 'phone or email required' });
       await upsertClient({ name, email, phone, optIn: true });
+      // Which list they joined from. Everyone lands in the same book, but a
+      // drop list is not the same audience as everyone who has ever sat in
+      // the chair, and she needs to be able to write to one without the other.
+      try { await execute("ALTER TABLE clients ADD COLUMN source TEXT DEFAULT ''"); } catch (_) {}
+      if (source) {
+        const key = email ? 'lower(email)=?' : "replace(replace(replace(replace(phone,'-',''),' ',''),'(',''),')','')=?";
+        const val = email ? String(email).toLowerCase().trim() : String(phone || '').replace(/\D/g, '');
+        // One statement, and the match is the only condition. An earlier
+        // draft read "WHERE source IS NULL OR source='' AND lower(email)=?",
+        // which SQL reads as "(source IS NULL) OR (source='' AND email=?)" —
+        // that would have retagged every client in the book who had no
+        // source yet, every time one person joined a waitlist.
+        try { await execute('UPDATE clients SET source=? WHERE ' + key, [String(source).slice(0, 40), val]); } catch (_) {}
+      }
       // instant welcome (delivers when provider keys are configured)
       if (email) sendEmail(email, 'Welcome to ZOLA ✦',
         `<p>Hi ${(name || 'love').split(' ')[0]} — you're on the ZOLA list. You'll be first to hear about open spots, drops, and studio news.</p><p>— Zahra ✦ ZOLA Nail Studio</p>`).catch(() => {});
