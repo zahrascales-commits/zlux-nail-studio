@@ -127,8 +127,11 @@ function daysSince(ds) {
   return Math.round((Date.now() - d.getTime()) / 86400000);
 }
 
-async function resolveAudience(key, picked) {
-  const { clients, members, optedOut } = await loadPeople();
+// The overview screen asks for eight audience counts at once. Loading every
+// client and every member eight times over made opening the tab visibly
+// slow, so one load is passed through when the caller has already done it.
+async function resolveAudience(key, picked, preloaded) {
+  const { clients, members, optedOut } = preloaded || await loadPeople();
 
   const memberByEmail = {};
   for (const m of members) if (valid(m.email)) memberByEmail[norm(m.email)] = m;
@@ -277,12 +280,13 @@ module.exports = async function (req, res) {
 
     // ── OWNER: everything the screen needs ──
     if (req.method === 'GET' && (action === 'overview' || !action)) {
+      const people = await loadPeople();
       const counts = {};
       for (const a of AUDIENCES) {
         if (a.key === 'custom') { counts[a.key] = 0; continue; }
-        counts[a.key] = (await resolveAudience(a.key)).length;
+        counts[a.key] = (await resolveAudience(a.key, [], people)).length;
       }
-      const everyone = await resolveAudience('everyone');
+      const everyone = await resolveAudience('everyone', [], people);
       const campaigns = await query('SELECT * FROM campaigns ORDER BY id DESC LIMIT 20').catch(() => []);
       const drafts = await query('SELECT * FROM email_drafts ORDER BY updated_ts DESC LIMIT 20').catch(() => []);
       const optedOut = await query('SELECT email, ts FROM email_optout ORDER BY ts DESC LIMIT 100').catch(() => []);
