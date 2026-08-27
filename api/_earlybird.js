@@ -36,12 +36,33 @@ async function ensure() {
     seat_number INTEGER DEFAULT 0,
     ts INTEGER
   )`);
+  // Dates arrived after the table did.
+  for (const sql of [
+    "ALTER TABLE earlybird ADD COLUMN starts_on TEXT DEFAULT ''",
+    "ALTER TABLE earlybird ADD COLUMN ends_on TEXT DEFAULT ''",
+  ]) { try { await execute(sql); } catch (_) {} }
+  for (const sql of [
+    "ALTER TABLE earlybird_claims ADD COLUMN what TEXT DEFAULT 'membership'",
+  ]) { try { await execute(sql); } catch (_) {} }
+
   const row = await queryOne('SELECT id FROM earlybird WHERE id=1').catch(() => null);
   if (!row) {
     await execute(
       'INSERT OR IGNORE INTO earlybird (id, active, seats, amount_cents, label, updated_ts) VALUES (1,0,10,1000,?,?)',
       ['Founding Ten', Date.now()]);
   }
+}
+
+// The studio's own day, not the server's. A discount that says "today only"
+// has to end at midnight in Porterville, and a serverless box in Virginia
+// thinks it is already tomorrow for three hours before that.
+function studioToday() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Los_Angeles',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date());
+  const get = t => (parts.find(p => p.type === t) || {}).value || '';
+  return get('year') + '-' + get('month') + '-' + get('day');
 }
 
 async function state() {
@@ -52,6 +73,14 @@ async function state() {
   const seats = Number((cfg || {}).seats) || 0;
   const amount = Number((cfg || {}).amount_cents) || 0;
   const active = !!Number((cfg || {}).active);
+
+  const today = studioToday();
+  const starts = String((cfg && cfg.starts_on) || '').slice(0, 10);
+  const ends = String((cfg && cfg.ends_on) || '').slice(0, 10);
+  const started = !starts || today >= starts;
+  const ended = !!ends && today > ends;
+  const inWindow = started && !ended;
+
   return {
     active,
     seats,
@@ -59,19 +88,29 @@ async function state() {
     remaining: Math.max(0, seats - claimed),
     amount_cents: amount,
     label: (cfg && cfg.label) || 'Founding Ten',
-    // The only thing callers should branch on. Off, full, or nothing set —
-    // all three mean the same thing at checkout, and collapsing them here
-    // stops three screens each deciding it differently.
-    available: active && amount > 0 && claimed < seats,
+    starts_on: starts,
+    ends_on: ends,
+    today,
+    in_window: inWindow,
+    // Why it is not running, in words, so three screens do not each invent
+    // their own explanation.
+    why: !active ? 'switched off'
+      : (amount <= 0 ? 'no amount set'
+      : (!started ? 'starts ' + starts
+      : (ended ? 'ended ' + ends
+      : (claimed >= seats ? 'all places taken' : '')))),
+    // The only thing callers should branch on. Off, full, out of date, or
+    // nothing set — all of them mean the same thing at checkout.
+    available: active && amount > 0 && inWindow && claimed < seats,
   };
 }
 
 // Take a seat, if there is one. Returns what was actually given, which is
 // what the confirmation should say — never what was hoped for.
-async function claim({ member_id, name, email, tier, billing }) {
+async function claim({ member_id, name, email, tier, billing, what }) {
   await ensure();
   const s = await state();
-  if (!s.available) return { claimed: false, amount_cents: 0, seat_number: 0 };
+  if (!s.available) return { claimed: false, amount_cents: 0, seat_number: 0, why: s.why };
 
   // Somebody who already has one does not get a second.
   if (member_id) {
@@ -80,10 +119,11 @@ async function claim({ member_id, name, email, tier, billing }) {
   }
 
   await execute(
-    `INSERT INTO earlybird_claims (member_id, name, email, tier, billing, amount_cents, seat_number, ts)
-     VALUES (?,?,?,?,?,?,?,?)`,
+    `INSERT INTO earlybird_claims (member_id, name, email, tier, billing, amount_cents, seat_number, what, ts)
+     VALUES (?,?,?,?,?,?,?,?,?)`,
     [String(member_id || ''), String(name || '').slice(0, 120), String(email || '').slice(0, 160),
-     String(tier || ''), String(billing || ''), s.amount_cents, s.claimed + 1, Date.now()]);
+     String(tier || ''), String(billing || ''), s.amount_cents, s.claimed + 1,
+     String(what || 'membership').slice(0, 30), Date.now()]);
 
   // Re-read rather than trust the number we started with. Two signups in the
   // same second both pass the check above; the count afterwards is the truth,
@@ -111,6 +151,8 @@ module.exports = async function (req, res) {
         remaining: s.remaining,
         amount_cents: s.available ? s.amount_cents : 0,
         label: s.label,
+        ends_on: s.ends_on,
+        why: s.why,
       });
     }
 
@@ -135,9 +177,11 @@ module.exports = async function (req, res) {
       const b = req.body || {};
       const seats = Math.max(0, Math.round(Number(b.seats) || 0));
       const amount = Math.max(0, Math.round(Number(b.amount_cents) || 0));
+      const day = v => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '');
       await execute(
-        'UPDATE earlybird SET active=?, seats=?, amount_cents=?, label=?, updated_ts=? WHERE id=1',
-        [b.active ? 1 : 0, seats, amount, String(b.label || 'Founding Ten').slice(0, 60), Date.now()]);
+        'UPDATE earlybird SET active=?, seats=?, amount_cents=?, label=?, starts_on=?, ends_on=?, updated_ts=? WHERE id=1',
+        [b.active ? 1 : 0, seats, amount, String(b.label || 'Founding Ten').slice(0, 60),
+         day(b.starts_on), day(b.ends_on), Date.now()]);
       return res.json(await state());
     }
 

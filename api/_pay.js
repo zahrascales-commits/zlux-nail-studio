@@ -160,7 +160,23 @@ module.exports = async function (req, res) {
          value would be a charge nobody agreed to. */
       const wantsFull = !!pay_full;
       const tip = Math.max(0, Math.min(Math.round(Number(tip_cents) || 0), total * 2));
-      const charge = (wantsFull ? total : deposit) + tip;
+
+      /* The early bird comes off a booking too — ten dollars off the first
+         ten people means whatever they are buying, not memberships alone.
+         Taken off what is actually being collected today, and never below
+         the fifty cents Stripe will accept, so it cannot turn a real charge
+         into a failed one. A tip is somebody's own money and is left alone. */
+      let ebOff = 0, ebLabel = '';
+      try {
+        const s = await require('./_earlybird').state();
+        if (s.available) {
+          const base = wantsFull ? total : deposit;
+          ebOff = Math.min(s.amount_cents, Math.max(0, base - 50));
+          ebLabel = s.label;
+        }
+      } catch (_) {}
+
+      const charge = Math.max(0, (wantsFull ? total : deposit) - ebOff) + tip;
 
       // Nothing to collect — the membership covered it and no tip was added.
       // Asking Stripe for a zero charge is an error, not a free visit.
@@ -169,6 +185,7 @@ module.exports = async function (req, res) {
           client_secret: null, payment_intent_id: null,
           deposit_cents: 0, total_cents: total, covered_cents: covered,
           tip_cents: 0, charged_cents: 0, paid_in_full: wantsFull, fully_covered: true,
+          early_bird_cents: 0, early_bird_label: '',
         });
       }
       const params = {
@@ -181,6 +198,7 @@ module.exports = async function (req, res) {
         'metadata[client]': customer_name || '',
         'metadata[paid_in_full]': wantsFull ? 'yes' : 'no',
         'metadata[tip_cents]': String(tip),
+        'metadata[early_bird_cents]': String(ebOff),
       };
       if (customer_email && /@/.test(customer_email)) params.receipt_email = customer_email;
       const pi = await stripeApi('payment_intents', params);
@@ -188,6 +206,7 @@ module.exports = async function (req, res) {
         client_secret: pi.client_secret, payment_intent_id: pi.id,
         deposit_cents: deposit, total_cents: total, covered_cents: covered,
         tip_cents: tip, charged_cents: charge, paid_in_full: wantsFull,
+        early_bird_cents: ebOff, early_bird_label: ebLabel,
       });
     }
 
@@ -231,6 +250,12 @@ module.exports.verifyPaymentIntent = async function (payment_intent_id) {
     });
     const pi = await r.json();
     if (!r.ok) return { paid: false, why: pi.error && pi.error.message || 'stripe error' };
-    return { paid: pi.status === 'succeeded' || pi.status === 'processing', status: pi.status, amount: pi.amount };
+    // Metadata rides back too. Callers put things on the intent at creation
+    // — an early-bird amount, a tip — and need them again once the money has
+    // actually cleared, without trusting the browser to say so a second time.
+    return {
+      paid: pi.status === 'succeeded' || pi.status === 'processing',
+      status: pi.status, amount: pi.amount, metadata: pi.metadata || {},
+    };
   } catch (e) { return { paid: false, why: String(e.message || e) }; }
 };

@@ -145,6 +145,16 @@ module.exports = async (req, res) => {
     let depositPaid = false;
     if (payment_intent_id) {
       const v = await require('./_pay').verifyPaymentIntent(payment_intent_id);
+      // The place is taken only once the money has cleared. An abandoned
+      // checkout must not burn one of the ten.
+      try {
+        if (v && v.paid && Number((v.metadata || {}).early_bird_cents) > 0) {
+          await require('./_earlybird').claim({
+            member_id: '', name: customer_name, email: customer_email,
+            tier: '', billing: 'one-off', what: 'booking',
+          });
+        }
+      } catch (_) {}
       if (!v.paid) return res.status(402).json({ error: 'Your card payment did not go through (' + (v.status || v.why) + '). Please try again — you have not been charged.' });
       depositPaid = true;
     }

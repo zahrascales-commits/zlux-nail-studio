@@ -106,12 +106,15 @@ async function ensure() {
          (code, label, amount_off_cents, active, max_uses, used_count, created_ts,
           kind, fixed_total_cents, applies_to, tiers, note, duration)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      ['ZOLA26', '$50 off your first month', 5000, 1, 50, 0, Date.now(),
-       'amount_off', 0, 'membership', JSON.stringify([]),
-       'Shareable. First month only — safe to post publicly.', 'once']);
+      ['ZOLA26', '$10 off anything', 1000, 1, 50, 0, Date.now(),
+       'amount_off', 0, 'both', JSON.stringify([]),
+       'Shareable, site-wide. Ten dollars off a booking, press-ons or a first month.', 'once']);
   } else {
     // If it predates the duration column, make sure it is not repeating.
-    await execute("UPDATE promo_codes SET duration='once' WHERE code='ZOLA26'").catch(() => {});
+    // Corrected after the fact: it was seeded at $50 and membership-only,
+    // which is not what it is meant to be. Ten dollars, off anything.
+    await execute("UPDATE promo_codes SET duration='once', amount_off_cents=1000, applies_to='both',"
+      + " label='$10 off anything' WHERE code='ZOLA26'").catch(() => {});
   }
 }
 

@@ -1657,13 +1657,14 @@
         </div>
         <div class="site-card" style="grid-column:1/-1;">
           <h3>Discount Codes 🎟️</h3>
-          <p>Codes you hand out. <strong>TRAIN20</strong> is ready to go for the trainee special — it's already on your homepage.</p>
+          <p>Two kinds of discount live here. The <strong>Early Bird</strong> below comes off automatically for the first few people — nobody types anything. Under it are the <strong>codes</strong> you hand out.</p>
           <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem">
             <div style="flex:1;min-width:130px"><label class="fld-label">Code</label><input id="pc-code" placeholder="TRAIN20" style="text-transform:uppercase" /></div>
             <div style="width:110px"><label class="fld-label">$ off</label><input id="pc-off" type="number" min="1" step="1" placeholder="20" /></div>
             <div style="flex:2;min-width:170px"><label class="fld-label">Note to yourself</label><input id="pc-label" placeholder="Trainee special" /></div>
             <button class="btn btn-gold btn-sm" onclick="savePromo()">Save code</button>
           </div>
+          <div id="eb-summary" style="margin-bottom:1.1rem"></div>
           <div id="promo-list" style="display:grid;gap:0.5rem"></div>
         </div>
         <div class="site-card">
@@ -5034,6 +5035,8 @@ async function loadEarlyBird(){
         + '<div><label>What to call it</label><input id="eb-label" value="' + esc(EB.label) + '"></div>'
         + '<div><label>How many people</label><input id="eb-seats" type="number" min="0" value="' + EB.seats + '"></div>'
         + '<div><label>How much off</label><input id="eb-amount" type="number" min="0" step="1" value="' + (EB.amount_cents/100) + '"></div>'
+        + '<div><label>First day</label><input id="eb-starts" type="date" value="' + esc(EB.starts_on||'') + '"></div>'
+        + '<div><label>Last day</label><input id="eb-ends" type="date" value="' + esc(EB.ends_on||'') + '"></div>'
       + '</div>'
       + '<label style="display:flex;gap:0.6rem;align-items:center;font-size:0.86rem;color:var(--cream);margin-bottom:1rem;cursor:pointer">'
         + '<input type="checkbox" id="eb-active" ' + (EB.active ? 'checked' : '') + '>'
@@ -5073,6 +5076,8 @@ async function saveEarlyBird(){
       seats: Number(document.getElementById('eb-seats').value) || 0,
       amount_cents: Math.round(dollars * 100),
       label: document.getElementById('eb-label').value,
+      starts_on: (document.getElementById('eb-starts')||{}).value || '',
+      ends_on: (document.getElementById('eb-ends')||{}).value || '',
     })});
     const d = await r.json();
     if(d.error) throw new Error(d.error);
@@ -6095,7 +6100,44 @@ async function loadFaq(){
 }
 
 /* ── DISCOUNT CODES ── */
+// The automatic one, shown first, with everything about it on the card and
+// a way straight to its own screen. She looked for the ten dollars here and
+// found only codes.
+async function renderEbSummary(){
+  const el=document.getElementById('eb-summary'); if(!el) return;
+  let s;
+  try{ s=await (await api('/api/earlybird?action=admin')).json(); if(s.error) throw new Error(s.error); }
+  catch(err){ el.innerHTML=''; return; }
+
+  const live = s.available;
+  const window = s.starts_on || s.ends_on
+    ? (s.starts_on === s.ends_on
+        ? 'on ' + s.starts_on
+        : (s.starts_on ? 'from ' + s.starts_on : '') + (s.ends_on ? ' until ' + s.ends_on : ''))
+    : 'no end date';
+
+  el.innerHTML =
+    '<div style="background:var(--bg);border:1px solid ' + (live?'var(--gold)':'var(--border)') + ';'
+      + 'border-radius:10px;padding:0.95rem 1.05rem">'
+      + '<div style="display:flex;gap:0.7rem;align-items:baseline;flex-wrap:wrap;margin-bottom:0.35rem">'
+        + '<strong style="font-size:0.95rem;color:var(--cream)">' + esc(s.label) + '</strong>'
+        + '<span style="font-size:0.6rem;letter-spacing:0.13em;text-transform:uppercase;border-radius:100px;'
+          + 'padding:0.2rem 0.55rem;border:1px solid ' + (live?'#7ec98a;color:#7ec98a':'var(--border-hi);color:var(--muted)') + '">'
+          + (live ? 'Live now' : ('Not running' + (s.why ? ' — ' + esc(s.why) : ''))) + '</span>'
+        + '<a href="#" onclick="event.preventDefault();showTab(\'earlybird\')" '
+          + 'style="margin-left:auto;font-size:0.74rem;color:var(--gold);border-bottom:1px dotted var(--gold)">Edit</a>'
+      + '</div>'
+      + '<div style="font-size:0.82rem;color:var(--muted);line-height:1.7">'
+        + '<strong style="color:var(--cream)">' + cmoney(s.amount_cents) + ' off anything</strong>'
+        + ' — bookings, press-ons and memberships — for the first '
+        + '<strong style="color:var(--cream)">' + s.seats + '</strong> people, ' + esc(window) + '.<br>'
+        + s.claimed + ' taken · ' + s.remaining + ' left · ' + cmoney(s.given_cents || 0) + ' given away'
+      + '</div>'
+    + '</div>';
+}
+
 async function loadPromos(){
+  renderEbSummary();
   const g=document.getElementById('promo-list'); if(!g) return;
   try{
     const r=await api('/api/promo'); const d=await r.json();

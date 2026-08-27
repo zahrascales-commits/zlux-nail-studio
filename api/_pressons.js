@@ -83,18 +83,35 @@ module.exports = async function (req, res) {
       if (!Number(p.price_cents)) return res.status(400).json({ error: 'This set isn\'t priced yet.' });
       const sk = await require('./_pay').getStripeSecret();
       if (!sk) return res.status(400).json({ error: 'Payments not configured' });
+
+      // Ten dollars off the first ten people applies here too. Worked out
+      // server-side in the same request that creates the charge, so what is
+      // taken and what was promised on screen cannot disagree.
+      let ebOff = 0, ebLabel = '';
+      try {
+        const s = await require('./_earlybird').state();
+        if (s.available) { ebOff = Math.min(s.amount_cents, Math.max(0, p.price_cents - 50)); ebLabel = s.label; }
+      } catch (_) {}
+      const charge = Math.max(50, p.price_cents - ebOff);
+
       const r = await fetch('https://api.stripe.com/v1/payment_intents', {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + sk, 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
-          amount: String(p.price_cents), currency: 'usd', 'automatic_payment_methods[enabled]': 'true',
-          description: ('ZOLA Press-Ons — ' + p.name).slice(0, 300),
+          amount: String(charge), currency: 'usd', 'automatic_payment_methods[enabled]': 'true',
+          description: ('ZOLA Press-Ons — ' + p.name + (ebOff ? ' (early bird)' : '')).slice(0, 300),
           'metadata[product_id]': String(p.id),
+          'metadata[early_bird_cents]': String(ebOff),
         }).toString(),
       });
       const pi = await r.json();
       if (!r.ok) return res.status(400).json({ error: pi.error && pi.error.message || 'Stripe error' });
-      return res.json({ client_secret: pi.client_secret, payment_intent_id: pi.id, price_cents: p.price_cents });
+      return res.json({
+        client_secret: pi.client_secret, payment_intent_id: pi.id,
+        price_cents: p.price_cents,
+        early_bird_cents: ebOff, early_bird_label: ebLabel,
+        charge_cents: charge,
+      });
     }
 
     // ── PUBLIC: confirm after Stripe charges — sizing-kit rule enforced HERE ──
@@ -108,6 +125,19 @@ module.exports = async function (req, res) {
       const email = String(buyer_email || '').trim().toLowerCase();
       // Look up (or create) the client so sizes + kit history stick forever
       let client = email ? await queryOne('SELECT * FROM clients WHERE lower(email)=?', [email]) : null;
+      // The place is taken only now, once the payment has cleared — never
+      // when the intent was created. An abandoned checkout must not burn one
+      // of the ten.
+      try {
+        const pay = await require('./_pay').verifyPaymentIntent(payment_intent_id);
+        const off = Number((pay && pay.metadata && pay.metadata.early_bird_cents) || 0);
+        if (off > 0) {
+          await require('./_earlybird').claim({
+            member_id: '', name: buyer_name, email, tier: '', billing: 'one-off', what: 'press-ons',
+          });
+        }
+      } catch (_) {}
+
       try { await execute("ALTER TABLE clients ADD COLUMN source TEXT DEFAULT ''"); } catch (_) {}
       if (!client && email) {
         await execute('INSERT INTO clients (name,email,phone,source,created_ts) VALUES (?,?,?,?,?)',
