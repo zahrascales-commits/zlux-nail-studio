@@ -80,6 +80,7 @@ async function ensureTables() {
     note TEXT DEFAULT '',
     updated_ts INTEGER
   )`);
+  try { await execute("ALTER TABLE clients ADD COLUMN source TEXT DEFAULT ''"); } catch (_) {}
   await execute(`CREATE TABLE IF NOT EXISTS site_photos (
     slot TEXT PRIMARY KEY,
     data_url TEXT,

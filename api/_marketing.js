@@ -116,7 +116,13 @@ async function loadPeople() {
   try {
     clients = await query(
       "SELECT id, name, email, phone, marketing_opt_in, source, last_appointment, last_visit FROM clients");
-  } catch (_) {}
+  } catch (_) {
+    // A missing column must cost the one column, never the whole list.
+    try {
+      clients = await query(
+        "SELECT id, name, email, phone, marketing_opt_in, last_appointment, last_visit FROM clients");
+    } catch (_) {}
+  }
 
   let members = [];
   try {
