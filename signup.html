@@ -331,6 +331,33 @@
     font-size:0.66rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--champagne);
     border:1px solid rgba(196,168,130,0.45);border-radius:100px;padding:0.5rem 1rem;
   }
+  /* ── WHAT THEY SAVED ──
+     One big number. Somebody who has just paid should be told what they got
+     for it before they are told anything else. */
+  .save-hero{
+    background:linear-gradient(150deg,rgba(196,168,130,0.2),rgba(196,168,130,0.05));
+    border:1px solid rgba(196,168,130,0.5);border-radius:16px;
+    padding:1.9rem 1.5rem;margin:1.5rem 0;text-align:center;
+    animation:savePop 800ms cubic-bezier(0.22,1,0.36,1) 200ms both;
+  }
+  @keyframes savePop{from{opacity:0;transform:translateY(20px) scale(0.94)}to{opacity:1;transform:none}}
+  .save-eyebrow{font-family:'Josefin Sans',sans-serif;font-size:0.62rem;letter-spacing:0.24em;
+    text-transform:uppercase;color:var(--champagne);margin-bottom:0.6rem}
+  .save-num{font-family:'Cinzel',serif;font-size:clamp(2.6rem,10vw,3.8rem);color:var(--espresso);line-height:1}
+  .save-per{font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:var(--latte);margin-top:0.4rem}
+  .save-break{border-top:1px solid rgba(196,168,130,0.35);margin-top:1.2rem;padding-top:1.1rem;
+    display:grid;gap:0.5rem;max-width:340px;margin-left:auto;margin-right:auto}
+  .save-line{display:flex;justify-content:space-between;gap:1rem;
+    font-family:'Josefin Sans',sans-serif;font-size:0.86rem;color:var(--latte)}
+  .save-line b{color:var(--espresso);font-weight:600}
+  .save-bird{background:var(--espresso);color:var(--champagne);border-radius:12px;
+    padding:0.9rem 1.1rem;margin-top:1.1rem;font-family:'Josefin Sans',sans-serif;
+    font-size:0.86rem;line-height:1.7}
+  .save-bird b{color:#fff}
+
+  /* Confetti. Drawn in a canvas so it never touches layout and cannot be
+     left behind on the page after it finishes. */
+  #confetti{position:fixed;inset:0;pointer-events:none;z-index:9999}
 </style>
 </head>
 <body>
@@ -602,6 +629,7 @@
   </div>
 
 </div><!-- /signup-wrap -->
+<canvas id="confetti"></canvas>
 
 <script>
 /* A dead signup page is the most expensive bug this site can have, so it
@@ -858,6 +886,12 @@ setTimeout(function(){
   /* ── THE RATE THEY JUST LOCKED ─────────────────────────────────────────
      The list price beside what they actually pay, and the promise that the
      second number does not move for twelve months. */
+  // Names and labels come from a form and from the database, so they are
+  // escaped before going anywhere near innerHTML.
+  function esc(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
   const LIST_PRICE = { SIGNATURE: 19900, LUXE: 39900, BLACK_CARD: 59900 };
 
   function heldUntil() {
@@ -889,9 +923,39 @@ setTimeout(function(){
       : Math.max(0, (was - paid) * 12);
     const money = c => '$' + Math.round(c / 100).toLocaleString();
 
+    // What the studio would have charged for these services one at a time,
+    // against what they are paying — plus the early-bird seat if they got
+    // one. All of it as a single number first, because that is the one they
+    // will remember and repeat to somebody else.
+    const bird = signupData.earlyBird;
+    const birdOff = (bird && bird.amount_cents) || 0;
+    const upfrontSaving = Math.max(0, was - paid) + birdOff;
+    const periodWord = yearly ? 'this year' : 'this month';
+
     const html =
-      '<div class="lockin">'
-        + '<div class="lockin-eyebrow">✦ Thank you for signing up today ✦</div>'
+      '<div class="save-hero">'
+        + '<div class="save-eyebrow">✦ Congratulations, ' + esc(signupData.fullName.split(' ')[0]) + ' ✦</div>'
+        + '<div class="save-num">' + money(upfrontSaving) + '</div>'
+        + '<div class="save-per">saved ' + periodWord
+          + (saveYear > upfrontSaving ? ' — and ' + money(saveYear + birdOff) + ' over your first year' : '')
+          + '</div>'
+        + '<div class="save-break">'
+          + (was > paid
+              ? '<div class="save-line"><span>These services separately</span><b>' + money(was) + '</b></div>'
+                + '<div class="save-line"><span>Your ' + (yearly ? 'yearly' : 'monthly') + ' rate</span><b>' + money(paid) + '</b></div>'
+              : '')
+          + (birdOff > 0
+              ? '<div class="save-line"><span>' + esc(bird.label || 'Early bird') + ' — you were number ' + bird.seat_number + '</span><b>−' + money(birdOff) + '</b></div>'
+              : '')
+        + '</div>'
+        + (birdOff > 0
+            ? '<div class="save-bird">And you made it. You are <b>number ' + bird.seat_number + '</b> — '
+              + 'one of the first to join, which is another <b>' + money(birdOff) + '</b> off. '
+              + 'That is gone once the places are.</div>'
+            : '')
+      + '</div>'
+      + '<div class="lockin">'
+        + '<div class="lockin-eyebrow">Thank you for signing up today</div>'
         + '<div class="lockin-prices">'
           + (was > paid ? '<span class="lockin-was">' + money(was) + '</span>' : '')
           + '<span class="lockin-now">' + money(paid) + '<small>' + per + '</small></span>'
@@ -900,10 +964,6 @@ setTimeout(function(){
           + 'You joined in <b>' + thisMonth() + '</b>, so <b>' + money(paid) + ' '
           + (yearly ? 'a year' : 'a month') + ' is your rate for a full year</b> — it will not '
           + 'move, whatever happens to our pricing after this month.'
-          + (saveYear > 0
-              ? ' Over the next twelve months that is <b>' + money(saveYear)
-                + '</b> you keep by having joined now rather than later.'
-              : '')
         + '</div>'
         + '<div class="lockin-until">Your rate is held through ' + heldUntil() + '</div>'
       + '</div>';
@@ -912,6 +972,63 @@ setTimeout(function(){
       const el = document.getElementById(id);
       if (el) el.innerHTML = html;
     });
+  }
+
+  /* ── CONFETTI ────────────────────────────────────────────────────────
+     Canvas rather than a hundred divs: it never touches layout, cannot be
+     left behind on the page, and stops itself once the last piece has
+     fallen off the bottom. Skipped entirely for anyone who has asked their
+     device for less motion. */
+  function throwConfetti(){
+    const canvas = document.getElementById('confetti');
+    if(!canvas) return;
+    if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const resize = () => {
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    const COLOURS = ['#C4A882','#DDD0B8','#8C7A5E','#F5EEE8','#B6A588'];
+    const bits = [];
+    for(let i=0;i<130;i++){
+      bits.push({
+        x: Math.random() * window.innerWidth,
+        y: -20 - Math.random() * window.innerHeight * 0.5,
+        w: 6 + Math.random() * 6,
+        h: 9 + Math.random() * 8,
+        vy: 2 + Math.random() * 3.2,
+        vx: -1.2 + Math.random() * 2.4,
+        spin: -0.14 + Math.random() * 0.28,
+        angle: Math.random() * Math.PI * 2,
+        colour: COLOURS[(Math.random() * COLOURS.length) | 0],
+      });
+    }
+
+    let frames = 0;
+    (function tick(){
+      frames++;
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      let alive = 0;
+      for(const b of bits){
+        b.y += b.vy; b.x += b.vx; b.angle += b.spin;
+        b.vx += Math.sin((frames + b.y) / 40) * 0.02;   // a little drift
+        if(b.y < window.innerHeight + 30) alive++;
+        ctx.save();
+        ctx.translate(b.x, b.y);
+        ctx.rotate(b.angle);
+        ctx.fillStyle = b.colour;
+        ctx.fillRect(-b.w/2, -b.h/2, b.w, b.h);
+        ctx.restore();
+      }
+      if(alive && frames < 600) requestAnimationFrame(tick);
+      else { ctx.clearRect(0, 0, window.innerWidth, window.innerHeight); window.removeEventListener('resize', resize); }
+    })();
   }
 
   async function finishSignup(paymentMethodId, btn) {
@@ -964,6 +1081,7 @@ setTimeout(function(){
       signupData.memberId = data.memberId;
       signupData.nextBilling = data.nextBillingDate;
       signupData.appliedPromo = data.promo || null;
+      signupData.earlyBird = data.early_bird || null;
       signupData.referralCodeGenerated = data.referralCode;
 
       // Auto-login so portal opens without re-entering credentials
@@ -984,6 +1102,7 @@ setTimeout(function(){
       document.getElementById('display-email').textContent = signupData.email;
       renderLockIn();
       goToStep(3);
+      throwConfetti();
       return true;
 
     } catch (err) {

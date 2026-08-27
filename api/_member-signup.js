@@ -203,6 +203,46 @@ module.exports = async (req, res) => {
       }
     }
 
+    /* ── The early-bird seat ───────────────────────────────────────────
+       Taken here, on the server, in the same request that creates the
+       subscription — never on the browser's word. It stacks on top of any
+       promo code rather than replacing it: one is a code she handed out,
+       the other is a place in a queue.
+
+       Stripe allows a subscription only one coupon, so when both apply the
+       two are combined into a single coupon worth the pair. Doing it any
+       other way means silently dropping one of the two discounts a client
+       was just promised on screen.                                      */
+    const eb = require('./_earlybird');
+    let ebResult = null, ebCents = 0;
+    try {
+      const s = await eb.state();
+      if (s.available) ebCents = s.amount_cents;
+    } catch (_) {}
+
+    if (ebCents > 0) {
+      let listPrice = (yearly ? TIER_YEARLY_CENTS[tier] : TIER_CENTS[tier]) || 0;
+      try {
+        const price = await stripe.prices.retrieve(priceId);
+        if (price && price.unit_amount) listPrice = price.unit_amount;
+      } catch (_) {}
+
+      const promoOff = appliedPromo ? Math.max(0, listPrice - appliedPromo.monthly_cents) : 0;
+      const totalOff = Math.min(listPrice, promoOff + ebCents);
+      const id = ('zola_eb_' + tier + '_' + (yearly ? 'y' : 'm') + '_' + totalOff).toLowerCase().replace(/[^a-z0-9_]/g, '');
+      try {
+        let coupon = null;
+        try { coupon = await stripe.coupons.retrieve(id); } catch (_) {}
+        if (!coupon) {
+          coupon = await stripe.coupons.create({
+            id, amount_off: totalOff, currency: 'usd', duration: 'once',
+            name: 'ZOLA early bird' + (appliedPromo ? ' + ' + appliedPromo.code : ''),
+          });
+        }
+        couponId = coupon.id;
+      } catch (_) { /* if the coupon cannot be made, the signup still goes through at full price */ }
+    }
+
     const subscription = await stripe.subscriptions.create({
       customer: customer.id,
       items: [{ price: priceId }],
@@ -216,6 +256,14 @@ module.exports = async (req, res) => {
     });
 
     const memberId = generateMemberId(fullName);
+    if (ebCents > 0) {
+      try {
+        ebResult = await eb.claim({
+          member_id: memberId, name: fullName, email,
+          tier, billing: yearly ? 'yearly' : 'monthly',
+        });
+      } catch (_) {}
+    }
     const passwordHash = bcrypt.hashSync(password, 10);
     const referral = generateReferralCode();
     const qrSecret = generateQrSecret();
@@ -255,6 +303,11 @@ module.exports = async (req, res) => {
       tier,
       referralCode: referral,
       promo: appliedPromo,
+      // What the confirmation should say — what was actually given, never
+      // what was hoped for.
+      early_bird: (ebResult && ebResult.claimed)
+        ? { amount_cents: ebResult.amount_cents, seat_number: ebResult.seat_number, label: ebResult.label }
+        : null,
       nextBillingDate: nextBilling,
       clientSecret: subscription.latest_invoice?.payment_intent?.client_secret || null,
     });
