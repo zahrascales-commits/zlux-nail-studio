@@ -942,39 +942,6 @@
       </div>
       <div id="mk-warn" style="display:none;background:rgba(200,120,60,0.12);border:1px solid rgba(200,120,60,0.4);padding:0.9rem 1.1rem;margin-bottom:1.25rem;border-radius:10px;font-size:0.84rem;line-height:1.6;"></div>
 
-      <div class="sched-step"><div class="sched-step-n">1</div><div class="sched-step-t">Who gets it?</div></div>
-      <div class="mk-auds" id="mk-auds"></div>
-      <div id="mk-picker" style="display:none"></div>
-      <div class="mk-who" id="mk-who"></div>
-
-      <div class="sched-step"><div class="sched-step-n">2</div><div class="sched-step-t">Write it</div></div>
-      <div class="sched-card">
-        <label class="fld-label">Subject</label>
-        <input id="mk-subject" placeholder="What's this about?" style="margin-bottom:0.8rem" />
-        <label class="fld-label">Message — type <strong>{{name}}</strong> anywhere and it becomes each person's first name</label>
-        <textarea id="mk-body" rows="14" placeholder="Hi {{name}},&#10;&#10;" style="font-family:inherit;line-height:1.7"></textarea>
-        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.8rem;align-items:center">
-          <button class="btn btn-ghost btn-sm" onclick="mkInsertName()">Insert {{name}}</button>
-          <button class="btn btn-ghost btn-sm" onclick="mkPreview()">Preview</button>
-          <button class="btn btn-ghost btn-sm" onclick="mkTest()">Send me a test</button>
-          <button class="btn btn-ghost btn-sm" onclick="mkSaveDraft()">Save draft</button>
-          <span id="mk-status" style="font-size:0.75rem;color:var(--muted);margin-left:auto"></span>
-        </div>
-        <div id="mk-preview" style="display:none;margin-top:1rem;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff"></div>
-      </div>
-
-      <div class="sched-step"><div class="sched-step-n">3</div><div class="sched-step-t">Send it</div></div>
-      <div class="sched-card">
-        <div style="font-size:0.84rem;color:var(--cream);line-height:1.7;margin-bottom:0.9rem" id="mk-send-line">
-          Pick a group above first.
-        </div>
-        <button class="btn btn-gold" id="mk-send" onclick="mkSend()">Send</button>
-        <div id="mk-progress" style="display:none;margin-top:1rem">
-          <div class="mk-bar"><i id="mk-bar-fill"></i></div>
-          <div id="mk-progress-text" style="font-size:0.78rem;color:var(--muted);margin-top:0.5rem"></div>
-        </div>
-      </div>
-
       <div class="page-head" style="margin-top:2.5rem;">
         <div><div class="page-title" style="font-size:1.15rem;">No way to reach them</div>
         <div class="page-desc" id="gap-sub">Clients with no email — every one of these is somebody your emails cannot get to.</div></div>
@@ -4046,176 +4013,24 @@ async function loadMarketing(){
   const esub = document.getElementById('cw-email-sub');
   if(esub) esub.textContent = mkData.from_email ? ('Sending from ' + mkData.from_email) : 'Not connected yet';
 
-  renderAudiences();
   renderMkDrafts();
   renderMkHistory();
   renderMkOptout();
-  mkRefreshCount();
   loadGaps();
 }
 
-function renderAudiences(){
-  const el=document.getElementById('mk-auds');
-  el.innerHTML=(mkData.audiences||[]).map(function(a){
-    return '<button class="mk-aud'+(a.key===mkAudience?' on':'')+'" onclick="mkPickAudience(\''+a.key+'\')">'
-      + '<div class="mk-aud-t">'+esc(a.label)+'<span class="mk-aud-n">'+(a.key==='custom'?'✎':a.count)+'</span></div>'
-      + (a.hint?'<div class="mk-aud-s">'+esc(a.hint)+'</div>':'')
-      + '</button>';
-  }).join('');
-}
 
-function mkPickAudience(key){
-  mkAudience=key;
-  renderAudiences();
-  const picker=document.getElementById('mk-picker');
-  if(key==='custom'){
-    picker.style.display='';
-    picker.innerHTML='<div class="mk-pick">'
-      + (mkData.everyone||[]).map(function(p,i){
-          return '<label><input type="checkbox" value="'+esc(p.email)+'" onchange="mkPickedChanged()">'
-            + esc(p.name||p.email)+' <span>'+esc(p.email)+'</span></label>';
-        }).join('')
-      + '</div>';
-  }else{
-    picker.style.display='none';
-    picker.innerHTML='';
-    mkPicked=[];
-  }
-  mkRefreshCount();
-}
 
-function mkPickedChanged(){
-  mkPicked=[].slice.call(document.querySelectorAll('#mk-picker input:checked')).map(function(i){return i.value;});
-  mkRefreshCount();
-}
 
 // Never let her press Send without knowing the number. "Everyone" is not an
 // answer she should have to take on trust.
-async function mkRefreshCount(){
-  const who=document.getElementById('mk-who');
-  const line=document.getElementById('mk-send-line');
-  who.textContent='Counting…';
-  try{
-    const r=await api('/api/marketing?action=audience',{method:'POST',
-      body:JSON.stringify({audience:mkAudience,picked:mkPicked})});
-    const d=await r.json();
-    if(d.error) throw new Error(d.error);
-    mkData._count=d.count;
-    const sample=(d.people||[]).slice(0,4).map(function(p){return p.name||p.email;}).join(', ');
-    who.innerHTML='This goes to <b>'+d.count+'</b> '+(d.count===1?'person':'people')
-      + (sample?' — '+esc(sample)+(d.count>4?' and '+(d.count-4)+' more':''):'');
-    line.innerHTML=d.count
-      ? 'This goes to <strong>'+d.count+'</strong> '+(d.count===1?'person':'people')
-        + ', one personal email each — nobody sees anyone else\'s address.'
-      : 'Nobody is in that group yet.';
-    document.getElementById('mk-send').disabled=!d.count;
-  }catch(err){ who.textContent='Could not count: '+err.message; }
-}
 
-function mkInsertName(){
-  const t=document.getElementById('mk-body');
-  const s=t.selectionStart||0, e=t.selectionEnd||0;
-  t.value=t.value.slice(0,s)+'{{name}}'+t.value.slice(e);
-  t.focus(); t.selectionStart=t.selectionEnd=s+8;
-}
 
-async function mkPreview(){
-  const box=document.getElementById('mk-preview');
-  try{
-    const r=await api('/api/marketing?action=preview',{method:'POST',body:JSON.stringify({
-      subject:document.getElementById('mk-subject').value,
-      body:document.getElementById('mk-body').value,
-    })});
-    const d=await r.json();
-    box.style.display='';
-    box.innerHTML='<div style="padding:0.6rem 0.8rem;background:var(--card);color:var(--cream);font-size:0.8rem;border-bottom:1px solid var(--border)">'
-      + 'Subject: '+esc(d.subject||'(none)')+'</div>'
-      + '<iframe style="width:100%;height:420px;border:0;background:#fff"></iframe>';
-    const f=box.querySelector('iframe');
-    f.contentDocument.open(); f.contentDocument.write(d.html||''); f.contentDocument.close();
-  }catch(err){ box.style.display=''; box.innerHTML='<div style="padding:1rem;color:#d68a8a">'+esc(err.message)+'</div>'; }
-}
 
-async function mkTest(){
-  const to=prompt('Send a test copy to which address?', mkData && mkData.reply_to || '');
-  if(!to) return;
-  const s=document.getElementById('mk-status');
-  s.textContent='Sending test…';
-  try{
-    const r=await api('/api/marketing?action=test',{method:'POST',body:JSON.stringify({
-      to:to,
-      subject:document.getElementById('mk-subject').value,
-      body:document.getElementById('mk-body').value,
-    })});
-    const d=await r.json();
-    s.textContent=d.ok?('Test sent to '+to+' ✦'):('Test failed: '+(d.error||d.why||'unknown'));
-  }catch(err){ s.textContent='Test failed: '+err.message; }
-}
 
-async function mkSaveDraft(){
-  const s=document.getElementById('mk-status');
-  try{
-    const r=await api('/api/marketing?action=save_draft',{method:'POST',body:JSON.stringify({
-      id:mkDraftId,
-      name:(document.getElementById('mk-subject').value||'Untitled').slice(0,60),
-      subject:document.getElementById('mk-subject').value,
-      body:document.getElementById('mk-body').value,
-      audience:mkAudience,
-    })});
-    const d=await r.json();
-    if(d.error) throw new Error(d.error);
-    mkDraftId=d.id||mkDraftId;
-    s.textContent='Draft saved ✦';
-  }catch(err){ s.textContent='Could not save: '+err.message; }
-  loadMarketing();
-}
 
 // Sends a batch at a time. A single request would be killed long before
 // seventy messages were away, and she would be left not knowing who got it.
-async function mkSend(){
-  if(mkSending) return;
-  const subject=document.getElementById('mk-subject').value.trim();
-  const body=document.getElementById('mk-body').value.trim();
-  if(!subject||!body){ alert('Write a subject and a message first.'); return; }
-  const n=mkData._count||0;
-  if(!n){ alert('Nobody is in that group.'); return; }
-  if(!confirm('Send this to '+n+' '+(n===1?'person':'people')+'?\n\nThis cannot be unsent.')) return;
-
-  mkSending=true;
-  const btn=document.getElementById('mk-send');
-  btn.disabled=true;
-  const prog=document.getElementById('mk-progress');
-  const fill=document.getElementById('mk-bar-fill');
-  const text=document.getElementById('mk-progress-text');
-  prog.style.display='';
-
-  let offset=0, campaign=null, sent=0, failed=0, total=n, why='';
-  while(true){
-    let d;
-    try{
-      const r=await api('/api/marketing?action=send',{method:'POST',body:JSON.stringify({
-        audience:mkAudience, picked:mkPicked, subject:subject, body:body,
-        offset:offset, campaign_id:campaign,
-      })});
-      d=await r.json();
-      if(d.error) throw new Error(d.error);
-    }catch(err){
-      text.textContent='Stopped after '+sent+' of '+total+' — '+err.message;
-      break;
-    }
-    campaign=d.campaign_id; sent+=d.sent; failed+=d.failed; total=d.total; offset=d.next_offset;
-    if(d.why) why=d.why;
-    fill.style.width=Math.round(100*offset/Math.max(1,total))+'%';
-    text.textContent='Sent '+sent+' of '+total+(failed?' · '+failed+' failed':'');
-    if(d.done) break;
-  }
-
-  fill.style.width='100%';
-  text.innerHTML='<strong style="color:var(--cream)">Done — '+sent+' sent'
-    +(failed?', '+failed+' failed'+(why?' ('+esc(why)+')':''):'')+'</strong>';
-  mkSending=false; btn.disabled=false;
-  loadMarketing();
-}
 
 
 /* ══════════════ CAMPAIGN WIZARD ══════════════
@@ -4280,6 +4095,16 @@ function cwRender(){
     el.textContent = (CW.step > n ? '✓ ' : '') + base
       + (n === 2 && CW.chosen.size ? ' (' + CW.chosen.size + ')' : '');
   });
+  const foot = document.getElementById('cw-foot');
+  if(foot){
+    foot.innerHTML =
+      '<button class="btn btn-ghost btn-sm" onclick="cwSaveDraft()">Save as draft</button>'
+      + '<span id="cw-foot-msg" style="font-size:0.76rem;color:var(--muted)"></span>'
+      + '<div class="sp">'
+        + (CW.step > 1 ? '<button class="btn btn-ghost btn-sm" onclick="cwGoto(' + (CW.step-1) + ')">Back</button>' : '')
+      + '</div>';
+  }
+
   document.getElementById('cw-head-actions').innerHTML =
     CW.step === 3
       ? '<button class="btn btn-ghost btn-sm" onclick="cwTest()">Send me a test</button>'
@@ -4441,6 +4266,23 @@ async function cwSide(){
   }
 }
 
+async function cwSaveDraft(){
+  const msg = document.getElementById('cw-foot-msg');
+  if(!CW.body.trim()){ if(msg) msg.textContent = 'Nothing to save yet.'; return; }
+  try{
+    const r = await api('/api/marketing?action=save_draft', { method:'POST', body: JSON.stringify({
+      id: CW.draftId || null,
+      name: (CW.subject || CW.body).slice(0,60),
+      subject: CW.subject, body: CW.body,
+      audience: 'chosen', channel: CW.channel,
+    })});
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+    CW.draftId = d.id || CW.draftId;
+    if(msg) msg.textContent = 'Draft saved ✦';
+  }catch(err){ if(msg) msg.textContent = 'Could not save: ' + err.message; }
+}
+
 /* ── test ── */
 async function cwTest(){
   const isText = CW.channel === 'text';
@@ -4559,7 +4401,7 @@ function renderMkDrafts(){
   const list=mkData.drafts||[];
   el.innerHTML=list.length?list.map(function(d){
     return '<div class="mk-row"><div>'+esc(d.subject||d.name||'Untitled')
-      + '<i>'+esc(String(d.audience||'').replace('_',' '))+'</i></div>'
+      + '<i>'+(String(d.channel||'email')==='text'?'💬 Text':'✉️ Email')+'</i></div>'
       + '<div class="sp">'
         + '<button class="btn btn-ghost btn-sm" onclick="mkOpenDraft('+d.id+')">Open</button>'
         + '<button class="btn btn-ghost btn-sm" onclick="mkDeleteDraft('+d.id+')">Delete</button>'
@@ -4570,12 +4412,11 @@ function renderMkDrafts(){
 function mkOpenDraft(id){
   const d=(mkData.drafts||[]).find(function(x){return Number(x.id)===Number(id);});
   if(!d) return;
-  mkDraftId=Number(d.id);
-  document.getElementById('mk-subject').value=d.subject||'';
-  document.getElementById('mk-body').value=d.body||'';
-  mkPickAudience(d.audience||'everyone');
-  document.getElementById('mk-status').textContent='Draft opened.';
-  document.getElementById('mk-subject').scrollIntoView({behavior:'smooth',block:'center'});
+  cwOpen(String(d.channel||'email')==='text'?'text':'email');
+  CW.draftId=Number(d.id);
+  CW.subject=d.subject||'';
+  CW.body=d.body||'';
+  cwRender();
 }
 
 async function mkDeleteDraft(id){

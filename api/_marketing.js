@@ -484,18 +484,18 @@ module.exports = async function (req, res) {
 
     // ── OWNER: drafts ──
     if (req.method === 'POST' && action === 'save_draft') {
-      const { id, name, subject, body, audience } = req.body || {};
+      const { id, name, subject, body, audience, channel } = req.body || {};
       const now = Date.now();
       if (id) {
-        await execute('UPDATE email_drafts SET name=?, subject=?, body=?, audience=?, updated_ts=? WHERE id=?',
+        await execute('UPDATE email_drafts SET name=?, subject=?, body=?, audience=?, channel=?, updated_ts=? WHERE id=?',
           [String(name || '').slice(0, 120), String(subject || '').slice(0, 200),
-           String(body || '').slice(0, 20000), String(audience || 'everyone'), now, Number(id)]);
+           String(body || '').slice(0, 20000), String(audience || 'everyone'), String(channel || 'email'), now, Number(id)]);
         return res.json({ ok: true, id: Number(id) });
       }
       const r = await execute(
-        'INSERT INTO email_drafts (name, subject, body, audience, updated_ts) VALUES (?,?,?,?,?)',
+        'INSERT INTO email_drafts (name, subject, body, audience, channel, updated_ts) VALUES (?,?,?,?,?,?)',
         [String(name || '').slice(0, 120), String(subject || '').slice(0, 200),
-         String(body || '').slice(0, 20000), String(audience || 'everyone'), now]);
+         String(body || '').slice(0, 20000), String(audience || 'everyone'), String(channel || 'email'), now]);
       return res.json({ ok: true, id: Number(r.lastInsertRowid) || null });
     }
 
