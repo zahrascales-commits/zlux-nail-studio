@@ -240,6 +240,10 @@ async function build() {
       monthly_cents: monthly,
       // The figure on a member's card should say when it is a guess.
       price_estimated: v.estimated,
+      // A membership with no Stripe subscription behind it is not billing
+      // anybody. It counts toward nothing, and saying so is the difference
+      // between a revenue figure and a wish.
+      billing_live: !!mm.stripe_subscription_id,
       billing_period: v.yearly ? 'yearly' : 'monthly',
       promo_code: mm.promo_code || '',
       list_cents: TIER_PRICE[mm.tier] || 0,

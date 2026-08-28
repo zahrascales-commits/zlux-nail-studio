@@ -5490,6 +5490,7 @@ async function loadPeople(){
                       ? ' <span style="color:var(--gold)">(was ' + pplMoney(r.list_cents) + (r.promo_code ? ' · ' + esc(r.promo_code) : '') + ')</span>'
                       : '')
                   + (r.price_estimated ? ' <span title="Signed up before we recorded what was charged — this is the list price" style="color:var(--muted)">≈</span>' : '')
+                  + (r.billing_live === false ? ' <span style="color:#d9a441">· not billing</span>' : '')
                   + ' · '
                   + r.months_paid + ' month' + (r.months_paid === 1 ? '' : 's') + ' paid'
                 + '</div></button>';
