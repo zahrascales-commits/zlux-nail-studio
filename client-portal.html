@@ -182,7 +182,7 @@
         <button onclick="showTab('tab-history')" id="nav-history">History</button>
         <button onclick="showTab('tab-health')" id="nav-health" style="display:none;">Nail Health</button>
         <button onclick="showTab('tab-messages')" id="nav-messages">Messages</button>
-        <button onclick="showTab('tab-profile')" id="nav-profile">Profile</button>
+        <button onclick="showTab('tab-profile')" id="nav-profile">Settings</button>
         <button onclick="doLogout()" style="color:rgba(140,122,94,0.5);">Sign Out</button>
       </div>
     </div>
@@ -193,7 +193,6 @@
     <div class="portal-tab active" id="tab-home">
       <div id="contact-gap"></div>
       <div id="upgrade-offer"></div>
-      <div id="cancel-block"></div>
       <div id="perk-wallet"></div>
       <!-- Social-profile-style header -->
       <div id="profile-hero" style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;margin-bottom:1.75rem;padding:1.5rem;background:linear-gradient(135deg,rgba(182,165,136,0.10),rgba(182,165,136,0.02));border:1px solid rgba(182,165,136,0.2);">
@@ -317,9 +316,27 @@
     </div>
 
     <div class="portal-tab" id="tab-profile">
-      <h2 style="font-family:'Cinzel',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:1.5rem;">My Profile</h2>
+      <h2 style="font-family:'Cinzel',serif;font-size:1.75rem;color:var(--espresso);margin-bottom:1.5rem;">Settings</h2>
+
+      <!-- The four things that are actually theirs to change. Everything
+           else on this page is a record, not a setting. -->
       <div class="p-card">
-        <div class="p-card-title">Account Details</div>
+        <div class="p-card-title">Your Details</div>
+        <div style="display:grid;gap:0.75rem;grid-template-columns:1fr 1fr;">
+          <div class="pf" style="grid-column:1/-1;"><label>Name</label><input id="set-name" placeholder="Your name" /></div>
+          <div class="pf"><label>Email</label><input id="set-email" type="email" inputmode="email" autocapitalize="off" placeholder="you@email.com" /></div>
+          <div class="pf"><label>Phone</label><input id="set-phone" type="tel" inputmode="tel" placeholder="(555) 000-0000" /></div>
+          <div class="pf" style="grid-column:1/-1;">
+            <label>Birthday <span id="set-bday-note" style="color:var(--latte);font-weight:400;text-transform:none;letter-spacing:0;"></span></label>
+            <input id="set-bday" type="date" />
+          </div>
+        </div>
+        <button class="btn-login" style="margin-top:0.9rem;" onclick="saveSettings()">Save</button>
+        <div id="set-msg" style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;margin-top:0.6rem;"></div>
+      </div>
+
+      <div class="p-card">
+        <div class="p-card-title">Your Membership</div>
         <div id="profile-details"></div>
         <!-- Tucked at the bottom of a collapsed block on purpose. It is
              their information and they can have it, but a renewal date is
@@ -348,6 +365,12 @@
         <button class="btn-login" style="margin-top:0.75rem;width:auto;padding:0.6rem 1.5rem;" onclick="copyReferralLink()">Copy Link</button>
         <div style="margin-top:1rem;font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:var(--latte);">Successful referrals: <strong id="referral-count">0</strong></div>
       </div>
+
+      <!-- Last thing on the page, and a plain link rather than a button.
+           Understated, not obstructed: it has to be as easy to leave as it
+           was to join, and somebody who cannot find the exit calls their
+           bank instead. -->
+      <div id="cancel-block" style="margin-top:2rem;"></div>
     </div>
 
   </div>
@@ -412,6 +435,10 @@ async function loadDashboard(member) {
   loadWallet(member && member.memberId);
   askForContact(member && member.memberId);
   loadUpgrade();
+  fillSettings(member);
+  // Ending a membership belongs in settings, at the bottom — findable in two
+  // clicks, never the loudest thing on a page somebody opened for another
+  // reason.
   loadCancel();
   document.getElementById('portal-login').style.display = 'none';
   document.getElementById('portal-dashboard').style.display = 'block';
@@ -1263,6 +1290,67 @@ async function resumeMembership(){
     if(d.error) throw new Error(d.error);
     loadCancel();
   }catch(err){ if(msg) msg.textContent = err.message || 'Could not undo that.'; }
+}
+
+
+/* ── SETTINGS ───────────────────────────────────────────────────────────
+   Four fields. The birthday is the odd one: it can be set once and then it
+   is fixed, because the birthday-month gift is claimed against it and a
+   field somebody can rewrite is a gift somebody can claim four times a
+   year. The server enforces that too — this only stops the page offering
+   something it would refuse. */
+function fillSettings(member){
+  if(!member) return;
+  const set = (id, v) => { const el = document.getElementById(id); if(el) el.value = v || ''; };
+  set('set-name', member.fullName || member.full_name);
+  set('set-email', member.email);
+  set('set-phone', member.phone);
+
+  const dob = String(member.dateOfBirth || member.date_of_birth || '').slice(0,10);
+  const bday = document.getElementById('set-bday');
+  const note = document.getElementById('set-bday-note');
+  if(bday){
+    bday.value = /^\d{4}-\d{2}-\d{2}$/.test(dob) ? dob : '';
+    const locked = !!bday.value;
+    bday.disabled = locked;
+    bday.style.opacity = locked ? '0.6' : '1';
+    if(note) note.textContent = locked
+      ? '— saved. Message the studio if it needs changing.'
+      : '— set this once, it cannot be changed after.';
+  }
+}
+
+async function saveSettings(){
+  const msg = document.getElementById('set-msg');
+  const body = {
+    full_name: (document.getElementById('set-name')||{}).value || '',
+    email: (document.getElementById('set-email')||{}).value || '',
+    phone: (document.getElementById('set-phone')||{}).value || '',
+  };
+  const bday = document.getElementById('set-bday');
+  if(bday && !bday.disabled && bday.value) body.date_of_birth = bday.value;
+
+  msg.style.color = 'var(--latte)';
+  msg.textContent = 'Saving…';
+  try{
+    const r = await fetch('/api/member-profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken },
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+    msg.style.color = '#3c8c50';
+    msg.textContent = 'Saved.';
+    if(body.date_of_birth && bday){
+      bday.disabled = true; bday.style.opacity = '0.6';
+      const note = document.getElementById('set-bday-note');
+      if(note) note.textContent = '— saved. Message the studio if it needs changing.';
+    }
+  }catch(err){
+    msg.style.color = '#a04038';
+    msg.textContent = err.message || 'That did not save.';
+  }
 }
 
 </script>

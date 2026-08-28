@@ -51,7 +51,36 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'PUT') {
-      const { phone, preferences } = req.body;
+      const { phone, preferences, full_name, email, date_of_birth } = req.body;
+
+      if (full_name && String(full_name).trim()) {
+        await execute('UPDATE members SET full_name = ? WHERE member_id = ?',
+          [String(full_name).trim().slice(0, 120), memberId]);
+      }
+
+      if (email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(email).trim())) {
+        const clean = String(email).trim().toLowerCase();
+        // Somebody else's address would let them take over that account, so
+        // the change is refused rather than applied to the wrong person.
+        const taken = await queryOne(
+          'SELECT member_id FROM members WHERE lower(email)=? AND member_id<>?', [clean, memberId]);
+        if (taken) return res.status(400).json({ error: 'That email is already on another membership.' });
+        await execute('UPDATE members SET email = ? WHERE member_id = ?', [clean, memberId]);
+      }
+
+      // Set once, then fixed. The birthday-month gift is claimed against
+      // this date; a field that can be rewritten is a gift that can be
+      // claimed as often as somebody edits it.
+      if (date_of_birth && /^\d{4}-\d{2}-\d{2}$/.test(String(date_of_birth))) {
+        const cur = await queryOne('SELECT date_of_birth FROM members WHERE member_id = ?', [memberId]);
+        const already = cur && String(cur.date_of_birth || '').slice(0, 10);
+        if (already && /^\d{4}-\d{2}-\d{2}$/.test(already)) {
+          return res.status(400).json({ error: 'Your birthday is already saved and cannot be changed. Message the studio if it is wrong.' });
+        }
+        await execute('UPDATE members SET date_of_birth = ? WHERE member_id = ?',
+          [String(date_of_birth), memberId]);
+      }
+
       if (phone) {
         await execute('UPDATE members SET phone = ? WHERE member_id = ?', [phone, memberId]);
       }
