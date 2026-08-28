@@ -1561,6 +1561,26 @@ function loadSummary() {
     lineItemsEl.innerHTML += buildLine(a.name, a.basePrice, a.charged, note);
   });
 
+  // ── The design tier ──
+  //
+  // It is a real charge and was missing from this list entirely, so
+  // clicking a tier moved the amount taken from the card but never moved
+  // the number on screen. She had no way to see it was being applied, and
+  // no way to see when it was not.
+  //
+  // Shown as its own line rather than folded into the service, because it
+  // is a choice she wants people to see themselves making.
+  if (booking.tier) {
+    const t = tierOf(booking.tier);
+    if (t && t.price > 0) {
+      // TIER_OPTIONS holds cents; every other number in this summary is
+      // dollars. Adding it raw would have turned a $5 tier into $500.
+      const dollars = t.price / 100;
+      total += dollars;
+      lineItemsEl.innerHTML += buildLine(t.name + ' — ' + t.title, dollars, dollars, '');
+    }
+  }
+
   // ── Birthday gift ──
   const bdayLine = document.getElementById('checkout-birthday-line');
   const bdayName = document.getElementById('checkout-birthday-name');
@@ -1822,6 +1842,10 @@ function tierLengthNote(){
 function pickTier(k){
   booking.tier = (booking.tier === k) ? null : k;
   renderTierChoice();
+  // The price just changed too. Without this the tier was charged on the
+  // card but the running total never moved, so there was no way to see it
+  // had been applied — or to notice when it had not.
+  if(typeof loadSummary === 'function') loadSummary();
   // The length of the appointment just changed, so the times on offer have too.
   if(booking.date) renderTimeslots(booking.date);
 }
