@@ -96,9 +96,23 @@ module.exports = async function (req, res) {
     if (req.method === 'GET') {
       // The date it would actually stop: the end of a period they have paid
       // for, and never before the minimum term is served.
+      //
+      // If Stripe could not be reached the renewal date is unknown, and an
+      // empty date on this screen reads as "ends on nothing". The minimum
+      // term is the honest floor to quote instead, and the page is told the
+      // date is an estimate rather than shown a blank.
       let effective = periodEnd;
+      let estimated = false;
+      if (!effective) {
+        estimated = true;
+        effective = minEnd && minEnd > today ? new Date(minEnd) : null;
+        if (!effective && member.next_billing_at) {
+          const nb = new Date(String(member.next_billing_at).slice(0, 10) + 'T12:00:00');
+          if (!isNaN(nb)) effective = nb;
+        }
+      }
       if (minEnd && effective && effective < minEnd) {
-        effective = new Date(periodEnd);
+        effective = new Date(effective);
         while (effective < minEnd) effective.setMonth(effective.getMonth() + 1);
       }
       return res.json({
@@ -111,7 +125,8 @@ module.exports = async function (req, res) {
         minimum_ends_pretty: pretty(iso(minEnd)),
         already_ending: alreadyEnding,
         effective_on: iso(effective),
-        effective_pretty: pretty(iso(effective)),
+        effective_pretty: pretty(iso(effective)) || 'the end of your current period',
+        estimated,
         // Said plainly before they decide, not after.
         keeps_access_until: iso(effective),
         no_refund_note: 'Months already paid for are not refunded — you keep everything until the date above.',
