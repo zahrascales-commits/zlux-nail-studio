@@ -136,6 +136,10 @@ module.exports = async (req, res) => {
       service_name, service_price,
       addon_names = [], addon_charged = [],
       member_id, member_tier,
+      // The design tier the client picked. It was never pulled out of the
+      // body here, so the variable read as undefined and the tier price was
+      // silently dropped from the saved appointment.
+      design_tier,
       date, time_slot, worker,
       payment_intent_id,
       for_name, // multi-person bookings: who this specific service is for
@@ -216,7 +220,15 @@ module.exports = async (req, res) => {
     // never trusted. This also fixes a long-standing units bug where the
     // booking page sent dollars and the server recorded them as cents.
     let total_cents, deposit_cents;
-    const calc = require('./_pay').computeDeposit({ service_name, addon_names, member_tier, free_service: freeService });
+    // design_tier belongs here. Without it the card was charged the right
+    // amount by the payment endpoint — which does pass it — but the
+    // appointment was SAVED without the tier, so the balance owed at
+    // checkout and every figure in the reports came out $5, $10 or $20
+    // short on every booking with art on it.
+    const calc = require('./_pay').computeDeposit({
+      service_name, addon_names, member_tier, free_service: freeService,
+      design_tier: design_tier || null,
+    });
     if (calc) {
       total_cents = calc.total_cents;
       deposit_cents = calc.deposit_cents;
