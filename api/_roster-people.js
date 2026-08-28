@@ -38,6 +38,12 @@ function monthsBetween(fromIso, toIso) {
 }
 
 async function loadEverything() {
+  // The price columns are created here rather than assumed. Selecting a
+  // column that does not exist throws, and both queries below now name
+  // them — so without this the whole member list came back empty and the
+  // dashboard showed no members and no revenue at all.
+  try { await price.ensureColumns(); } catch (_) {}
+
   // Memberships
   let members = [];
   try {
@@ -53,7 +59,14 @@ async function loadEverything() {
         `SELECT member_id, full_name, email, phone, tier, date_of_birth,
                 membership_started_at, next_billing_at, referral_code, flagged, demo, paid_cents, billing_period, promo_code, stripe_subscription_id
            FROM members ORDER BY membership_started_at DESC`);
-    } catch (_) {}
+    } catch (_) {
+      // Last resort: only columns this table has always had. Fewer details
+      // is survivable; an empty member list is not.
+      try {
+        members = await query(
+          'SELECT member_id, full_name, email, phone, tier, membership_started_at, next_billing_at FROM members');
+      } catch (_) {}
+    }
   }
 
   // Everyone in the book, member or not
