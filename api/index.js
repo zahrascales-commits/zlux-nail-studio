@@ -82,6 +82,7 @@ app.all('/api/photo',            require('./_photo'));
 app.all('/api/earlybird',        require('./_earlybird'));
 app.all('/api/upgrade',          require('./_upgrade'));
 app.all('/api/cancel-membership', require('./_cancel-membership'));
+app.all('/api/attention',        require('./_attention'));
 app.all('/api/careers',          require('./_careers'));
 app.all('/api/marketing',        require('./_marketing'));
 app.all('/api/classes',          require('./_classes'));

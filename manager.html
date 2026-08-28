@@ -771,6 +771,35 @@
   .eb-claim{display:flex;gap:0.7rem;align-items:center;padding:0.55rem 0.6rem;border-top:1px solid var(--border);font-size:0.83rem;color:var(--cream);flex-wrap:wrap}
   .eb-claim .seat{font-family:'Cinzel',serif;color:var(--gold);min-width:32px}
   .eb-claim i{font-style:normal;color:var(--muted);font-size:0.72rem}
+  /* ── NEEDS YOU ──
+     Above everything, in red when it is not empty, because an appointment
+     with nobody on it is a client who turns up to an empty chair. */
+  .ny{border:1px solid rgba(214,102,102,0.55);background:linear-gradient(150deg,rgba(214,102,102,0.11),rgba(214,102,102,0.02));
+    border-radius:12px;padding:1.15rem 1.2rem;margin-bottom:1.5rem}
+  .ny.calm{border-color:rgba(126,201,138,0.4);background:rgba(126,201,138,0.06)}
+  .ny-h{display:flex;align-items:baseline;gap:0.7rem;flex-wrap:wrap;margin-bottom:0.2rem}
+  .ny-t{font-family:'Cinzel',serif;font-size:1.2rem;color:var(--cream)}
+  .ny-n{font-family:'Cinzel',serif;font-size:1.5rem;color:#ff9d9d}
+  .ny-sub{font-size:0.78rem;color:var(--muted);line-height:1.6;margin-bottom:1rem}
+  .ny-row{display:flex;gap:0.8rem;align-items:center;flex-wrap:wrap;background:var(--bg);
+    border:1px solid var(--border);border-left:3px solid #d66;border-radius:9px;
+    padding:0.75rem 0.9rem;margin-bottom:0.5rem}
+  .ny-row.soon{border-left-color:#ff6b6b;background:rgba(214,102,102,0.08)}
+  .ny-when{font-family:'Cinzel',serif;font-size:0.95rem;color:var(--cream);min-width:104px}
+  .ny-when i{display:block;font-style:normal;font-size:0.66rem;color:var(--muted);margin-top:0.1rem}
+  .ny-who{flex:1;min-width:150px}
+  .ny-who b{display:block;font-size:0.9rem;color:var(--cream);font-weight:400}
+  .ny-who i{display:block;font-style:normal;font-size:0.7rem;color:var(--muted);margin-top:0.12rem}
+  .ny-row select{background:var(--surface);border:1px solid var(--border-hi);color:var(--text);
+    padding:0.5rem 0.6rem;font:inherit;font-size:0.82rem;border-radius:7px;min-width:150px}
+  .ny-done{font-size:0.84rem;color:#7ec98a}
+  .ny-feed{display:grid;gap:0.4rem;margin-top:1.1rem}
+  .ny-item{display:flex;gap:0.7rem;align-items:center;flex-wrap:wrap;background:var(--card);
+    border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.8rem;font-size:0.83rem;color:var(--cream)}
+  .ny-item .ic{font-size:1rem}
+  .ny-item i{font-style:normal;font-size:0.7rem;color:var(--muted)}
+  .ny-item .sp{margin-left:auto;font-size:0.72rem;color:var(--muted)}
+  .ny-sec{font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin:1.2rem 0 0.5rem}
 </style>
 </head>
 <body>
@@ -991,6 +1020,7 @@
           <div class="page-desc">Where the studio stands right now.</div>
         </div>
       </div>
+      <div id="needs-you"></div>
       <div class="cards" id="ov-stats"></div>
       <div id="floor-board"></div>
       <div id="ov-dispatch"></div>
@@ -2165,7 +2195,7 @@ function logout(){sessionStorage.removeItem('zm_pwd');location.reload();}
 // Initialised after login instead — at parse time PWD is still empty,
 
 const TAB_LOADERS = {
-  overview:   () => { loadOverview(); loadDispatch(); loadFloor(); },
+  overview:   () => { loadNeedsYou(); loadOverview(); loadDispatch(); loadFloor(); },
   records:    () => loadRecords(),
   insights:   () => loadInsights(),
   people:     () => loadPeople(),
@@ -4992,6 +5022,115 @@ async function downloadReport(key){
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
   }catch(err){ alert('Could not download: ' + err.message); }
+}
+
+
+/* ══════════════ NEEDS YOU ══════════════
+   Built because Rosalinda Ruiz sat unassigned for days with nowhere to find
+   her. The dispatch panel only showed appointments that went through the
+   first-to-confirm flow — anything booked another way had no artist and no
+   screen that said so.
+
+   What earns a place here: only she can resolve it, and leaving it costs
+   money or costs a client their appointment. */
+let NEEDS = null;
+
+async function loadNeedsYou(){
+  const el = document.getElementById('needs-you');
+  if(!el) return;
+  try{
+    NEEDS = await (await api('/api/attention')).json();
+    if(NEEDS.error) throw new Error(NEEDS.error);
+  }catch(err){ el.innerHTML = ''; return; }
+
+  const n = NEEDS.counts || {};
+  const un = NEEDS.unassigned || [];
+  const team = NEEDS.team || [];
+
+  // The tab itself carries the number, so it is visible from any screen.
+  const tabBtn = document.querySelector('.tab[data-tab="overview"]');
+  if(tabBtn){
+    const badge = n.needs_you ? ' <span class="dot">' + n.needs_you + '</span>' : '';
+    tabBtn.innerHTML = 'Overview' + badge;
+  }
+
+  let html = '';
+
+  if(un.length){
+    html += '<div class="ny">'
+      + '<div class="ny-h"><div class="ny-t">Nobody is doing these</div>'
+        + '<div class="ny-n">' + un.length + '</div></div>'
+      + '<div class="ny-sub">Every one of these is a client with an appointment and no artist. '
+        + 'Pick who is taking it — they are told straight away.</div>'
+      + un.map(function(a){
+          const soon = a.days_away <= 3;
+          return '<div class="ny-row' + (soon ? ' soon' : '') + '" id="ny-' + a.id + '">'
+            + '<div class="ny-when">' + esc(niceDay(a.date)) + '<i>' + esc(time12(a.time))
+              + ' · ' + (a.days_away === 0 ? 'today' : a.days_away === 1 ? 'tomorrow' : 'in ' + a.days_away + ' days') + '</i></div>'
+            + '<div class="ny-who"><b>' + esc(a.client) + '</b>'
+              + '<i>' + esc(a.service || 'Appointment') + (a.phone ? ' · ' + esc(a.phone) : '') + '</i></div>'
+            + '<select id="ny-sel-' + a.id + '">'
+              + '<option value="">Give it to…</option>'
+              + team.map(function(t){ return '<option value="' + t.id + '">' + esc(t.name)
+                  + (Number(t.trainee) ? ' (trainee)' : '') + '</option>'; }).join('')
+            + '</select>'
+            + '<button class="btn btn-sm" onclick="assignNeed(' + a.id + ')">Assign</button>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+  } else {
+    html += '<div class="ny calm">'
+      + '<div class="ny-h"><div class="ny-t">Everything is assigned ✦</div></div>'
+      + '<div class="ny-sub" style="margin-bottom:0">Every upcoming appointment has an artist on it.</div>'
+      + '</div>';
+  }
+
+  // Everything else that happened, in one feed rather than three screens.
+  const feed = [];
+  for(const mm of (NEEDS.new_members || [])){
+    feed.push({ ic:'★', text:'<b>' + esc(mm.name) + '</b> joined ' + esc(String(mm.tier||'').replace('_',' ').toLowerCase()),
+      sub: esc(mm.email || ''), when: mm.started });
+  }
+  for(const b of (NEEDS.new_bookings || [])){
+    feed.push({ ic:'📅', text:'<b>' + esc(b.client) + '</b> booked ' + esc(b.service),
+      sub: niceDay(b.date) + ' at ' + time12(b.time) + (b.deposit_paid ? ' · deposit paid' : ' · no deposit'),
+      when: b.date });
+  }
+  if(feed.length){
+    html += '<div class="ny-sec">Just happened</div><div class="ny-feed">'
+      + feed.slice(0,10).map(function(f){
+          return '<div class="ny-item"><span class="ic">' + f.ic + '</span>'
+            + '<span>' + f.text + (f.sub ? '<i>' + f.sub + '</i>' : '') + '</span>'
+            + '<span class="sp">' + esc(niceDay(f.when)) + '</span></div>';
+        }).join('')
+      + '</div>';
+  }
+
+  el.innerHTML = html;
+}
+
+function niceDay(ds){
+  const d = new Date(String(ds||'').slice(0,10) + 'T12:00:00');
+  return isNaN(d) ? String(ds||'') : d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+}
+
+async function assignNeed(id){
+  const sel = document.getElementById('ny-sel-' + id);
+  const memberId = sel ? sel.value : '';
+  if(!memberId){ alert('Pick who is taking it first.'); return; }
+  const row = document.getElementById('ny-' + id);
+  try{
+    const r = await api('/api/manager', { method:'PUT',
+      body: JSON.stringify({ action:'reassign', id: id, team_member_id: memberId }) });
+    const d = await r.json();
+    if(d && d.error) throw new Error(d.error);
+  }catch(err){ alert('Could not assign that: ' + err.message); return; }
+  // Confirm on the row itself before it disappears, so she sees it landed.
+  if(row){
+    const who = sel.options[sel.selectedIndex].text;
+    row.innerHTML = '<div class="ny-done">✓ Given to ' + esc(who) + '</div>';
+    setTimeout(function(){ loadNeedsYou(); reloadAppts && reloadAppts(); }, 900);
+  } else { loadNeedsYou(); }
 }
 
 /* ══════════════ TODAY'S FLOOR ══════════════
