@@ -2009,7 +2009,11 @@
     <div class="field"><label class="fld-label">Service or task</label><select id="a-service"></select><input id="a-service-other" placeholder="Type what they are doing" style="display:none;margin-top:0.5rem" /></div>
     <div class="field two">
       <div><label class="fld-label">Date</label><input type="date" id="a-date" /></div>
-      <div><label class="fld-label">Time</label><select id="a-time"></select></div>
+      <div><label class="fld-label">Time</label>
+        <input id="a-time" list="a-time-options" placeholder="11:30 or 12:08" autocomplete="off" />
+        <datalist id="a-time-options"></datalist>
+        <div id="a-time-echo" style="font-size:0.7rem;color:var(--muted);margin-top:0.25rem"></div>
+      </div>
     </div>
     <div class="field"><label class="fld-label">Notes (optional)</label><textarea id="a-notes" rows="2" placeholder="Inspo, allergies, prep…"></textarea></div>
     <div class="modal-actions">
@@ -2090,7 +2094,16 @@ async function loadServiceCatalog(){
   const sel = document.getElementById('a-service');
   if (sel) fillServiceSelect(sel, sel.value);
 }
-const SLOTS = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'];
+// Quarter hours from eight in the morning to ten at night. The old list was
+// whole hours only, which meant an eleven-thirty appointment could not be
+// written down at all.
+const SLOTS = (function(){
+  const out = [];
+  for (let mins = 8 * 60; mins <= 22 * 60; mins += 15) {
+    out.push(String(Math.floor(mins / 60)).padStart(2, '0') + ':' + String(mins % 60).padStart(2, '0'));
+  }
+  return out;
+})();
 let PWD='';
 let members=[];
 let appts=[];
@@ -3319,7 +3332,7 @@ function toggleSkillsList(){
   document.getElementById('sk-list-wrap').style.opacity=document.getElementById('sk-restricted').checked?'1':'0.4';
 }
 function openSkillsModal(id){
-  const m=members.find(x=>x.id===id);if(!m)return;
+  const m=members.find(x=>Number(x.id)===Number(id));if(!m)return;
   document.getElementById('skills-name').textContent=m.name;
   document.getElementById('sk-id').value=m.id;
   document.getElementById('sk-restricted').checked=!!Number(m.restricted);
@@ -3355,7 +3368,7 @@ function renderOverrides(){
   if(!overrides.length){g.innerHTML='';return;}
   const today=new Date().toISOString().slice(0,10);
   g.innerHTML=overrides.map(o=>{
-    const names=o.team_member_ids.map(id=>{const m=members.find(x=>x.id===id);return m?m.name:'—';}).join(', ');
+    const names=o.team_member_ids.map(id=>{const m=members.find(x=>Number(x.id)===Number(id));return m?m.name:'—';}).join(', ');
     const active=today>=o.start_date&&today<=o.end_date;
     return `<div class="member-card" style="--mc:#B6A588;">
       <div class="mc-top">
@@ -3716,8 +3729,50 @@ function fillServiceSelect(sel,selected){
     if(other)box.focus();
   };
 }
-function fillTimeSelect(sel,selected){
-  sel.innerHTML=SLOTS.map(t=>`<option value="${t}" ${t===selected?'selected':''}>${fmtTime(t)}</option>`).join('');
+// The list is a suggestion, not a limit. Anything a person would recognise
+// as a time is accepted — 9, 9:05, 9.05, 930, 9:05 pm — and turned into the
+// 24-hour form the rest of the system stores.
+function fillTimeSelect(input, selected){
+  const dl = document.getElementById('a-time-options');
+  if(dl) dl.innerHTML = SLOTS.map(t=>'<option value="'+t+'">'+fmtTime(t)+'</option>').join('');
+  input.value = selected || '';
+  input.oninput = echoTime;
+  input.onblur = function(){
+    const t = parseTimeInput(input.value);
+    if(t) input.value = t;
+    echoTime();
+  };
+  echoTime();
+
+  function echoTime(){
+    const el = document.getElementById('a-time-echo');
+    if(!el) return;
+    const t = parseTimeInput(input.value);
+    el.textContent = t ? fmtTime(t) : (input.value.trim() ? 'Not a time I recognise' : '');
+    el.style.color = t || !input.value.trim() ? 'var(--muted)' : '#d68a8a';
+  }
+}
+
+function parseTimeInput(raw){
+  let s = String(raw||'').trim().toLowerCase();
+  if(!s) return '';
+  const pm = /p/.test(s), am = /a/.test(s);
+  s = s.replace(/[^0-9:.]/g,'').replace('.',':');
+  let h, mi;
+  if(s.includes(':')){
+    const p = s.split(':');
+    h = parseInt(p[0],10); mi = parseInt(p[1]||'0',10);
+  } else if(s.length <= 2){
+    h = parseInt(s,10); mi = 0;
+  } else {
+    // 930 and 1145 are how people type when they are in a hurry
+    h = parseInt(s.slice(0,s.length-2),10); mi = parseInt(s.slice(-2),10);
+  }
+  if(isNaN(h)||isNaN(mi)||mi<0||mi>59) return '';
+  if(pm && h < 12) h += 12;
+  if(am && h === 12) h = 0;
+  if(h < 0 || h > 23) return '';
+  return String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0');
 }
 function openApptModal(){
   document.getElementById('appt-modal-title').textContent='New Appointment';
@@ -3735,11 +3790,15 @@ function openApptModal(){
   openModal('modal-appt');
 }
 function editAppt(id){
-  const a=appts.find(x=>x.id===id);if(!a)return;
+  const a=appts.find(x=>Number(x.id)===Number(id));if(!a)return;
   document.getElementById('appt-modal-title').textContent='Edit Appointment';
   document.getElementById('a-id').value=a.id;
   document.getElementById('a-client').value=a.client_name||'';
   document.getElementById('a-phone').value=a.client_phone||'';
+  // Was never filled in, so opening an appointment and saving it wiped
+  // whatever email was on it.
+  const _ae=document.getElementById('a-email');
+  if(_ae) _ae.value=a.client_email||'';
   document.getElementById('a-notes').value=a.notes||'';
   document.getElementById('a-date').value=a.date;
   fillMemberSelect(document.getElementById('a-member'),a.team_member_id);
@@ -3769,10 +3828,11 @@ async function saveAppt(){
       return (v==='Other (type it)' && o && o.value.trim()) ? o.value.trim() : v;
     })(),
     date:document.getElementById('a-date').value,
-    time:document.getElementById('a-time').value,
+    time:parseTimeInput(document.getElementById('a-time').value),
     notes:document.getElementById('a-notes').value.trim(),
   };
-  if(!payload.date||!payload.time){toast('Pick a date & time');return;}
+  if(!payload.date){toast('Pick a date');return;}
+  if(!payload.time){toast('That time did not make sense — try 11:30, or 1:15 pm');return;}
   if(id){
     payload.status=appts.find(x=>x.id===Number(id))?.status||'scheduled';
     await api('/api/manager',{method:'PUT',body:JSON.stringify({action:'update_appt',id,...payload})});
@@ -6763,7 +6823,7 @@ async function openThread(id,el){
   activeThreadId=id;
   document.querySelectorAll('.thread').forEach(t=>t.classList.remove('active'));
   if(el){el.classList.add('active');activeThreadToken=el.dataset.token;}
-  const a=appts.find(x=>x.id===id);
+  const a=appts.find(x=>Number(x.id)===Number(id));
   document.getElementById('chat-head').style.display='flex';
   document.getElementById('chat-input-row').style.display='flex';
   document.getElementById('chat-name').textContent=(a?a.client_name:el?.querySelector('.thread-name')?.childNodes[0].textContent)||'Client';
