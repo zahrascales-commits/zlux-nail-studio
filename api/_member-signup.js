@@ -287,6 +287,24 @@ module.exports = async (req, res) => {
       now, nextBilling, new Date().toISOString().slice(0, 7)
     ]);
 
+    /* What they are actually being charged, written down at the moment it is
+       decided. Every revenue figure on this site used to be derived from a
+       hardcoded list price, so a founding-rate member paying $100 counted as
+       $299 and every discount the studio gave was invisible in its own
+       accounts. */
+    try {
+      const listNow = (yearly ? TIER_YEARLY_CENTS[tier] : TIER_CENTS[tier]) || 0;
+      let actually = listNow;
+      if (appliedPromo && appliedPromo.monthly_cents != null) actually = appliedPromo.monthly_cents;
+      // The early bird comes off the first payment only, so it is not what
+      // they pay every period and must not be recorded as if it were.
+      await require('./_member-price').record(memberId, {
+        paid_cents: actually,
+        billing_period: yearly ? 'yearly' : 'monthly',
+        promo_code: appliedPromo ? appliedPromo.code : '',
+      });
+    } catch (_) {}
+
     if (referredByCode) {
       const referrer = await queryOne('SELECT member_id FROM members WHERE referral_code = ?', [referredByCode]);
       if (referrer) {

@@ -12,7 +12,10 @@ const { query, queryOne, execute } = require('./_db');
 
 const CEO_PASSWORD = process.env.CEO_PASSWORD || 'ZOLA2026';
 
+// Kept only as the fallback for members who signed up before what they pay
+// was ever written down. _member-price is the answer everywhere else.
 const TIER_PRICE = { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900 };
+const price = require('./_member-price');
 const TIER_LABEL = { SIGNATURE: 'Signature', LUXE: 'Luxe', BLACK_CARD: 'Black Card' };
 
 const pad = n => String(n).padStart(2, '0');
@@ -41,14 +44,14 @@ async function loadEverything() {
     members = await query(
       `SELECT member_id, full_name, email, phone, tier, date_of_birth,
               membership_started_at, next_billing_at, cancelled_at, status,
-              referral_code, flagged, demo
+              referral_code, flagged, demo, paid_cents, billing_period, promo_code, stripe_subscription_id
          FROM members ORDER BY membership_started_at DESC`);
   } catch (_) {
     // cancelled_at / status arrived later than this table did
     try {
       members = await query(
         `SELECT member_id, full_name, email, phone, tier, date_of_birth,
-                membership_started_at, next_billing_at, referral_code, flagged, demo
+                membership_started_at, next_billing_at, referral_code, flagged, demo, paid_cents, billing_period, promo_code, stripe_subscription_id
            FROM members ORDER BY membership_started_at DESC`);
     } catch (_) {}
   }
@@ -171,8 +174,20 @@ function nailProfile(assessment) {
   };
 }
 
+// Members who signed up before what they pay was recorded are asked about
+// once, directly to Stripe, and then never again. Without this every
+// existing member would sit on an estimate forever.
+let _backfilled = false;
+
 async function build() {
-  const { members, clients, paid, legacy, assessments } = await loadEverything();
+  let { members, clients, paid, legacy, assessments } = await loadEverything();
+  if (!_backfilled && members.some(mm => !Number(mm.paid_cents))) {
+    _backfilled = true;
+    try {
+      await require('./_member-price').backfillFromStripe(members);
+      ({ members, clients, paid, legacy, assessments } = await loadEverything());
+    } catch (_) {}
+  }
 
   const byMemberId = {};
   for (const a of assessments) if (!byMemberId[a.member_id]) byMemberId[a.member_id] = a;
@@ -190,12 +205,14 @@ async function build() {
   for (const mm of members) {
     if (Number(mm.demo)) continue;         // the preview account is not income
     memberNames.add(key(mm.full_name));
-    const price = TIER_PRICE[mm.tier] || 0;
+    // What they really pay, not what the tier lists at.
+    const v = price.monthlyValue(mm);
+    const monthly = v.cents;
     const isCancelled = !!mm.cancelled_at || /cancel/i.test(String(mm.status || ''));
     const months = monthsBetween(mm.membership_started_at, mm.cancelled_at || null);
-    const paidToDate = price * months;
+    const paidToDate = monthly * months;
     lifetimeMembership += paidToDate;
-    if (!isCancelled) mrr += price;
+    if (!isCancelled) mrr += monthly;
 
     const c = clientByKey[key(mm.full_name)] || clientByKey[String(mm.email || '').toLowerCase()] || {};
     const stats = summarise(mm.full_name, mm.email, paid, legacy);
@@ -207,7 +224,12 @@ async function build() {
       phone: mm.phone || c.phone || '',
       tier: mm.tier,
       tier_label: TIER_LABEL[mm.tier] || mm.tier,
-      monthly_cents: price,
+      monthly_cents: monthly,
+      // The figure on a member's card should say when it is a guess.
+      price_estimated: v.estimated,
+      billing_period: v.yearly ? 'yearly' : 'monthly',
+      promo_code: mm.promo_code || '',
+      list_cents: TIER_PRICE[mm.tier] || 0,
       started: String(mm.membership_started_at || '').slice(0, 10),
       renews: String(mm.next_billing_at || '').slice(0, 10),
       cancelled_at: mm.cancelled_at ? String(mm.cancelled_at).slice(0, 10) : '',

@@ -172,6 +172,16 @@ module.exports = async function (req, res) {
       // Only now is it true. Writing the tier before Stripe agreed would
       // give somebody Black Card benefits on a Signature payment.
       await execute('UPDATE members SET tier = ? WHERE member_id = ?', [to, member.member_id]);
+      // And what they pay changed with it, so the figure every report reads
+      // has to change too.
+      try {
+        const prices = yearly ? TIER_YEARLY_CENTS : TIER_CENTS;
+        await require('./_member-price').record(member.member_id, {
+          paid_cents: prices[to] || 0,
+          billing_period: yearly ? 'yearly' : 'monthly',
+          promo_code: '',
+        });
+      } catch (_) {}
       try {
         await execute("ALTER TABLE members ADD COLUMN upgraded_at TEXT DEFAULT ''");
       } catch (_) {}

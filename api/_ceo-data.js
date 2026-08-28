@@ -160,9 +160,16 @@ module.exports = async (req, res) => {
 
     if (section === 'overview') {
       let members = [];
-      try { members = await query('SELECT tier FROM members WHERE COALESCE(demo,0)=0'); } catch (_) {}
-      const PRICE = { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900 };
-      const mrr = members.reduce((s2, mm) => s2 + (PRICE[mm.tier] || 0), 0);
+      // What each member actually pays, not what their tier lists at. A
+      // member on the founding rate paying $100 was counting as $299 here.
+      try {
+        members = await query(
+          'SELECT tier, paid_cents, billing_period FROM members WHERE COALESCE(demo,0)=0');
+      } catch (_) {
+        try { members = await query('SELECT tier FROM members WHERE COALESCE(demo,0)=0'); } catch (_) {}
+      }
+      const mp = require('./_member-price');
+      const mrr = members.reduce((s2, mm) => s2 + mp.monthlyValue(mm).cents, 0);
       const byTier = { SIGNATURE: 0, LUXE: 0, BLACK_CARD: 0 };
       members.forEach(mm => { if (byTier[mm.tier] !== undefined) byTier[mm.tier]++; });
 
@@ -361,11 +368,16 @@ module.exports = async (req, res) => {
     if (section === 'giftcards') return res.json({ giftCards: store.giftCards });
     if (section === 'goals') {
       let members = [];
-      try { members = await query('SELECT tier FROM members WHERE COALESCE(demo,0)=0'); } catch (_) {}
+      try {
+        members = await query(
+          'SELECT tier, paid_cents, billing_period FROM members WHERE COALESCE(demo,0)=0');
+      } catch (_) {
+        try { members = await query('SELECT tier FROM members WHERE COALESCE(demo,0)=0'); } catch (_) {}
+      }
       const byTier = { SIGNATURE: 0, LUXE: 0, BLACK_CARD: 0 };
       members.forEach(m => { if (byTier[m.tier] !== undefined) byTier[m.tier]++; });
-      const PRICE = { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900 };
-      const mrr = members.reduce((s, m) => s + (PRICE[m.tier] || 0), 0);
+      const mp2 = require('./_member-price');
+      const mrr = members.reduce((s, m) => s + mp2.monthlyValue(m).cents, 0);
       const live = store.goals.map(g => {
         if (g.title.includes('Signature')) return { ...g, current: byTier.SIGNATURE };
         if (g.title.includes('Luxe'))      return { ...g, current: byTier.LUXE };

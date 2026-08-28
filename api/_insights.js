@@ -158,10 +158,16 @@ async function build(period) {
   // reason the studio is building a membership base.
   let membership_cents = 0;
   try {
-    const PRICE = { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900 };
-    const rows = await query(
-      "SELECT tier FROM members WHERE COALESCE(demo,0)=0 AND date(membership_started_at)<=?", [r.to]);
-    membership_cents = rows.reduce((t, m) => t + (PRICE[m.tier] || 0), 0);
+    let rows = [];
+    try {
+      rows = await query(
+        "SELECT tier, paid_cents, billing_period FROM members WHERE COALESCE(demo,0)=0 AND date(membership_started_at)<=?", [r.to]);
+    } catch (_) {
+      rows = await query(
+        "SELECT tier FROM members WHERE COALESCE(demo,0)=0 AND date(membership_started_at)<=?", [r.to]);
+    }
+    const mp = require('./_member-price');
+    membership_cents = rows.reduce((t, m) => t + mp.monthlyValue(m).cents, 0);
   } catch (_) {}
 
   const other_cents = retail_cents + membership_cents;
