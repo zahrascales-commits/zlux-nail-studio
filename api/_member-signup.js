@@ -12,16 +12,48 @@ const TIER_PRICES = {
 // What each tier costs per month, in cents. The Stripe price is the real
 // source of truth; this is the fallback used to work out a discount when the
 // price object cannot be read.
-const TIER_CENTS = { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900, TEST: 158 };
+const TIER_CENTS = {
+  // The two tiers now sold. These bill every four weeks, not monthly.
+  ESSENTIAL: 8000, ELITE: 11000,
+  // Retired. Kept so existing members keep working; nobody new can buy one.
+  SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900, TEST: 158,
+};
 
 // Paying for the year. Roughly two months free on every tier — the saving is
 // the difference between these and twelve monthly payments, not a made-up
 // percentage.
-const TIER_YEARLY_CENTS = { SIGNATURE: 99900, LUXE: 199900, BLACK_CARD: 299900, TEST: 1580 };
+const TIER_YEARLY_CENTS = {
+  // Ten cycles' money for thirteen cycles of membership — the saving is
+  // exactly three visits, which is the only way it is ever described.
+  ESSENTIAL: 80000, ELITE: 110000,
+  SIGNATURE: 99900, LUXE: 199900, BLACK_CARD: 299900, TEST: 1580,
+};
 
 // The yearly Stripe price, created the first time somebody buys one so she
 // never has to set anything up by hand. Looked up by lookup_key so a second
 // signup reuses it instead of creating a duplicate price every time.
+// The four-week price. Stripe has no "every 4 weeks" interval, so it is a
+// weekly interval counted in fours — thirteen charges a year. Created on
+// first use and found by lookup key afterwards, so a second signup reuses
+// it rather than minting a duplicate price every time.
+async function cyclePriceFor(stripe, tier) {
+  const amount = TIER_CENTS[tier];
+  if (!amount) return null;
+  const lookupKey = ('zola_' + tier + '_4week_' + amount).toLowerCase();
+  try {
+    const found = await stripe.prices.list({ lookup_keys: [lookupKey], limit: 1 });
+    if (found && found.data && found.data[0]) return found.data[0].id;
+  } catch (_) {}
+  const created = await stripe.prices.create({
+    unit_amount: amount,
+    currency: 'usd',
+    recurring: { interval: 'week', interval_count: 4 },
+    lookup_key: lookupKey,
+    product_data: { name: 'ZOLA ' + tier.charAt(0) + tier.slice(1).toLowerCase() + ' — every 4 weeks' },
+  });
+  return created.id;
+}
+
 async function yearlyPriceFor(stripe, tier) {
   const amount = TIER_YEARLY_CENTS[tier];
   if (!amount) return null;
@@ -125,9 +157,16 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'Missing required fields.' });
   }
 
-  const validTiers = ['SIGNATURE', 'LUXE', 'BLACK_CARD', 'TEST'];
+  // Only the two live tiers can be bought. The retired three are refused
+  // here rather than on the page, so a stale tab or a saved link cannot sell
+  // somebody a membership that no longer exists.
+  const validTiers = ['ESSENTIAL', 'ELITE', 'TEST'];
   if (!validTiers.includes(tier)) {
-    return res.status(400).json({ error: 'Invalid tier.' });
+    return res.status(400).json({
+      error: ['SIGNATURE', 'LUXE', 'BLACK_CARD'].includes(tier)
+        ? 'That membership is no longer available — please choose Essential or Elite.'
+        : 'Invalid tier.',
+    });
   }
 
   try {
@@ -163,6 +202,11 @@ module.exports = async (req, res) => {
     } catch (_) {}
     if (!priceId) priceId = process.env[`STRIPE_PRICE_${tier}`] || null;
     if (!priceId) priceId = TIER_PRICES[tier];
+    // Essential and Elite have no legacy price to fall back on and bill on a
+    // four-week cycle, so their price is made here the first time one sells.
+    if (['ESSENTIAL', 'ELITE'].includes(tier)) {
+      try { priceId = await cyclePriceFor(stripe, tier); } catch (_) {}
+    }
 
     // Paying for the year swaps the price entirely. Done after the monthly
     // lookup so a studio that has set its own monthly prices keeps them.
@@ -300,7 +344,11 @@ module.exports = async (req, res) => {
       // they pay every period and must not be recorded as if it were.
       await require('./_member-price').record(memberId, {
         paid_cents: actually,
-        billing_period: yearly ? 'yearly' : 'monthly',
+        // Essential and Elite bill every four weeks, which is thirteen
+        // payments a year rather than twelve. Recording that as monthly
+        // would undercount every one of them by a payment a year.
+        billing_period: yearly ? 'yearly'
+          : (['ESSENTIAL', 'ELITE'].includes(tier) ? 'cycle' : 'monthly'),
         promo_code: appliedPromo ? appliedPromo.code : '',
       });
     } catch (_) {}

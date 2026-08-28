@@ -12,8 +12,8 @@
 // than quietly passed off as fact.
 const { execute, queryOne } = require('./_db');
 
-const LIST_MONTHLY = { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900, TEST: 158 };
-const LIST_YEARLY = { SIGNATURE: 99900, LUXE: 199900, BLACK_CARD: 299900, TEST: 1580 };
+const LIST_MONTHLY = { ESSENTIAL: 8000, ELITE: 11000, SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900, TEST: 158 };
+const LIST_YEARLY = { ESSENTIAL: 80000, ELITE: 110000, SIGNATURE: 99900, LUXE: 199900, BLACK_CARD: 299900, TEST: 1580 };
 
 async function ensureColumns() {
   for (const sql of [
@@ -34,7 +34,7 @@ async function record(memberId, { paid_cents, billing_period, promo_code }) {
     await execute(
       'UPDATE members SET paid_cents=?, billing_period=?, promo_code=? WHERE member_id=?',
       [Math.max(0, Math.round(Number(paid_cents) || 0)),
-       billing_period === 'yearly' ? 'yearly' : 'monthly',
+       ['yearly', 'cycle', 'monthly'].includes(billing_period) ? billing_period : 'monthly',
        String(promo_code || '').slice(0, 32),
        memberId]);
   } catch (_) {}
@@ -50,11 +50,27 @@ async function record(memberId, { paid_cents, billing_period, promo_code }) {
 // counted.
 function monthlyValue(member) {
   const tier = String((member || {}).tier || '').toUpperCase();
-  const yearly = String((member || {}).billing_period || '') === 'yearly';
+  const period = String((member || {}).billing_period || '');
+  const yearly = period === 'yearly';
+  // 'cycle' is every four weeks — what Essential and Elite bill on. The
+  // retired tiers billed monthly and must keep doing so here.
+  const cycle = period === 'cycle';
   const paid = Number((member || {}).paid_cents) || 0;
 
   if (paid > 0) {
-    return { cents: yearly ? Math.round(paid / 12) : paid, estimated: false, yearly };
+    // Three ways to pay, three different monthly values.
+    //
+    //   yearly  — a twelfth of the payment
+    //   cycle   — every four weeks, so thirteen payments a year, so a
+    //             month is thirteen twelfths of one payment
+    //   monthly — the retired tiers, one payment per month
+    //
+    // Treating a four-week cycle as a month understates those members by a
+    // whole payment a year. Treating a monthly member as a cycle overstates
+    // them by the same amount, which is why these are not the same case.
+    const perMonth = yearly ? Math.round(paid / 12)
+      : (cycle ? Math.round(paid * 13 / 12) : paid);
+    return { cents: perMonth, estimated: false, yearly, cycle };
   }
   // Nothing recorded: this member predates the column. The list price is the
   // best guess available and is marked as one.
@@ -103,7 +119,8 @@ async function backfillFromStripe(members) {
 
       await record(m.member_id, {
         paid_cents: cents,
-        billing_period: interval === 'year' ? 'yearly' : 'monthly',
+        billing_period: interval === 'year' ? 'yearly'
+          : (interval === 'week' ? 'cycle' : 'monthly'),
         promo_code: (sub.metadata && sub.metadata.promo_code) || '',
       });
       filled++;
