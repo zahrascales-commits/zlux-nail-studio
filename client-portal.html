@@ -193,6 +193,7 @@
     <div class="portal-tab active" id="tab-home">
       <div id="contact-gap"></div>
       <div id="upgrade-offer"></div>
+      <div id="cancel-block"></div>
       <div id="perk-wallet"></div>
       <!-- Social-profile-style header -->
       <div id="profile-hero" style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;margin-bottom:1.75rem;padding:1.5rem;background:linear-gradient(135deg,rgba(182,165,136,0.10),rgba(182,165,136,0.02));border:1px solid rgba(182,165,136,0.2);">
@@ -327,7 +328,7 @@
           <summary style="font-family:'Josefin Sans',sans-serif;font-size:0.76rem;color:var(--latte);cursor:pointer;">Billing &amp; renewal</summary>
           <div style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--espresso);line-height:1.8;margin-top:0.7rem;">
             Your membership renews on <strong id="profile-renews">—</strong>.
-            <br><span style="color:var(--latte);font-size:0.8rem;">Manage or cancel any time after your first three months — just message the studio.</span>
+            <br><span style="color:var(--latte);font-size:0.8rem;">Manage or cancel from your account below, any time after your first three months.</span>
           </div>
         </details>
         <div style="display:grid;gap:0.75rem;grid-template-columns:1fr 1fr;margin-top:1.25rem;">
@@ -411,6 +412,7 @@ async function loadDashboard(member) {
   loadWallet(member && member.memberId);
   askForContact(member && member.memberId);
   loadUpgrade();
+  loadCancel();
   document.getElementById('portal-login').style.display = 'none';
   document.getElementById('portal-dashboard').style.display = 'block';
   profileData = member;
@@ -1164,6 +1166,103 @@ async function doUpgrade(tier, label, diffCents){
     // rather than patched in three places and left disagreeing.
     setTimeout(function(){ location.reload(); }, 3500);
   }catch(err){ if(msg) msg.textContent = err.message || 'That did not go through — nothing was charged.'; }
+}
+
+
+/* ── ENDING A MEMBERSHIP ────────────────────────────────────────────────
+   Deliberately quiet and deliberately present. The Terms have promised
+   since the day they went up that this can be done here, and until now it
+   could not — the portal said to message the studio. A term you do not
+   honour is worse than one you never wrote.
+
+   It is also the honest thing commercially: somebody who cannot find the
+   exit calls their bank instead, and a chargeback costs more than the
+   month they wanted to stop paying for. */
+async function loadCancel(){
+  const el = document.getElementById('cancel-block');
+  if(!el) return;
+  let d;
+  try{
+    const r = await fetch('/api/cancel-membership', { headers: { Authorization: 'Bearer ' + authToken } });
+    d = await r.json();
+    if(d.error) throw new Error(d.error);
+  }catch(_){ el.innerHTML = ''; return; }
+
+  if(d.already_ending){
+    el.innerHTML =
+      '<div style="background:rgba(200,120,120,0.08);border:1px solid rgba(200,120,120,0.35);'
+        + 'padding:1.2rem 1.2rem;margin-bottom:1.5rem;">'
+        + '<div style="font-family:\'Cinzel\',serif;font-size:1.05rem;color:var(--espresso);margin-bottom:0.4rem;">'
+          + 'Your membership ends ' + esc(d.effective_pretty || 'soon') + '</div>'
+        + '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.85rem;color:var(--latte);line-height:1.7;margin-bottom:0.9rem;">'
+          + 'You keep everything until then — nothing changes before that date. Changed your mind?</p>'
+        + '<button class="btn-gold" style="animation:none;font-size:0.72rem;" onclick="resumeMembership()">Keep my membership</button>'
+        + '<div id="cancel-msg" style="font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;color:var(--latte);margin-top:0.6rem;"></div>'
+      + '</div>';
+    return;
+  }
+
+  // A detail element rather than a button: findable by anyone looking for
+  // it, not the loudest thing on a page they came to for other reasons.
+  el.innerHTML =
+    '<details style="border-top:1px solid rgba(182,165,136,0.25);margin-bottom:1.5rem;padding-top:0.9rem;">'
+      + '<summary style="font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;color:var(--latte);cursor:pointer;">'
+        + 'Cancel my membership</summary>'
+      + '<div style="padding:1rem 0 0.2rem;">'
+        + (d.served_minimum
+            ? '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.85rem;color:var(--latte);line-height:1.75;margin-bottom:0.9rem;">'
+              + 'You have been with us since <strong style="color:var(--espresso)">' + esc(d.started_pretty) + '</strong>. '
+              + 'If you cancel now it ends on <strong style="color:var(--espresso)">' + esc(d.effective_pretty) + '</strong> — '
+              + 'you keep every benefit until then, and you will not be charged again.</p>'
+            : '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.85rem;color:var(--latte);line-height:1.75;margin-bottom:0.9rem;">'
+              + 'Memberships run for a minimum of ' + d.minimum_months + ' months, and yours is served on '
+              + '<strong style="color:var(--espresso)">' + esc(d.minimum_ends_pretty) + '</strong>. '
+              + 'You can ask to cancel now — it takes effect on '
+              + '<strong style="color:var(--espresso)">' + esc(d.effective_pretty) + '</strong>, and nothing changes before then.</p>')
+        + '<label style="display:block;font-family:\'Josefin Sans\',sans-serif;font-size:0.78rem;color:var(--latte);margin-bottom:0.35rem;">'
+          + 'Anything we could have done better? (optional)</label>'
+        + '<textarea id="cancel-reason" rows="2" placeholder="It helps us more than you know."'
+          + ' style="width:100%;background:var(--soft-white);border:1px solid rgba(182,165,136,0.35);'
+          + 'color:var(--espresso);font-family:\'Josefin Sans\',sans-serif;font-size:0.88rem;'
+          + 'padding:0.7rem 0.8rem;outline:none;margin-bottom:0.8rem;"></textarea>'
+        + '<button onclick="cancelMembership()" style="background:none;border:1px solid rgba(200,120,120,0.5);'
+          + 'color:#a04038;font-family:\'Josefin Sans\',sans-serif;font-size:0.72rem;letter-spacing:0.14em;'
+          + 'text-transform:uppercase;padding:0.7rem 1.3rem;cursor:pointer;">Cancel my membership</button>'
+        + '<div id="cancel-msg" style="font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;color:var(--latte);margin-top:0.7rem;"></div>'
+      + '</div>'
+    + '</details>';
+}
+
+async function cancelMembership(){
+  const msg = document.getElementById('cancel-msg');
+  const reason = (document.getElementById('cancel-reason') || {}).value || '';
+  if(!confirm('Cancel your membership?\n\nYou keep everything you have paid for until it ends, and you can undo this any time before that date.')) return;
+  if(msg) msg.textContent = 'Cancelling…';
+  try{
+    const r = await fetch('/api/cancel-membership', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken },
+      body: JSON.stringify({ reason: reason })
+    });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+    loadCancel();
+  }catch(err){ if(msg) msg.textContent = err.message || 'That did not go through — nothing has changed.'; }
+}
+
+async function resumeMembership(){
+  const msg = document.getElementById('cancel-msg');
+  if(msg) msg.textContent = 'Putting it back…';
+  try{
+    const r = await fetch('/api/cancel-membership?action=resume', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken },
+      body: JSON.stringify({})
+    });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+    loadCancel();
+  }catch(err){ if(msg) msg.textContent = err.message || 'Could not undo that.'; }
 }
 
 </script>
