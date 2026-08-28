@@ -33,6 +33,21 @@ const toCsv = (headers, rows) =>
   [headers.map(cell).join(','), ...rows.map(r => r.map(cell).join(','))].join('\r\n') + '\r\n';
 
 const isCancelled = b => /cancel/i.test(String(b.status || ''));
+
+// Who and when, normalised, so the same appointment written into two tables
+// produces the same key from either side.
+const sameApptKey = (name, date, time) =>
+  String(name || '').trim().toLowerCase().replace(/\s+/g, ' ')
+  + '|' + String(date || '').slice(0, 10)
+  + '|' + String(time || '').slice(0, 5);
+
+// Drop the calendar mirror of anything already counted from the money table.
+// Whatever is left in `team` is genuinely studio-booked and counts once.
+function withoutMirrors(appts, team) {
+  const seen = new Set();
+  for (const a of appts || []) seen.add(sameApptKey(a.client, a.date, a.time));
+  return (team || []).filter(t => !seen.has(sameApptKey(t.client, t.date, t.time)));
+}
 const isNoShow = b => /no.?show/i.test(String(b.status || ''));
 
 async function loadRange(from, to) {
@@ -110,6 +125,7 @@ async function loadRange(from, to) {
 // Every appointment that took money, day by day, with what was actually
 // collected separated from what was billed.
 function salesReport({ appts, team }, from, to) {
+  team = withoutMirrors(appts, team);
   const rows = [];
   let gross = 0, tips = 0, deposits = 0;
 
@@ -157,6 +173,7 @@ function salesReport({ appts, team }, from, to) {
 // Everything booked, including what was cancelled — because the pattern of
 // cancellations is a report in itself.
 function appointmentsReport({ appts, team, legacy }, from, to) {
+  team = withoutMirrors(appts, team);
   const rows = [];
   for (const a of appts) {
     let addons = '';
@@ -200,6 +217,7 @@ function appointmentsReport({ appts, team, legacy }, from, to) {
 
 // ── MOST VALUABLE CLIENTS ─────────────────────────────────────────────
 function valuableReport({ appts, team, legacy }, from, to) {
+  team = withoutMirrors(appts, team);
   const by = {};
   const bump = (name, patch) => {
     const k = String(name || 'Guest').trim().toLowerCase();
@@ -268,6 +286,7 @@ function valuableReport({ appts, team, legacy }, from, to) {
 // from the team record rather than being assumed, because guessing here
 // produces a number somebody might get paid on.
 async function commissionReport({ appts, team }, from, to) {
+  team = withoutMirrors(appts, team);
   let rates = {};
   try {
     const tdb = require('./_team-db');

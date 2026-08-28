@@ -234,9 +234,17 @@ module.exports = async function (req, res) {
         for (const r of m) rows.push({ ...r, src: 'm' });
       } catch (_) {}
 
+      // An online booking is written into both tables on purpose. Showing
+      // both would put the same client on the floor twice — once payable,
+      // once not — and she would check somebody in against the wrong one.
+      const key = r => String(r.name || '').trim().toLowerCase().replace(/\s+/g, ' ')
+        + '|' + String(r.time || '').slice(0, 5);
+      const fromMoney = new Set(rows.filter(r => r.src === 'm').map(key));
+      const deduped = rows.filter(r => r.src === 'm' || !fromMoney.has(key(r)));
+
       const num = v => Number(v) || 0;
-      rows.sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
-      const board = rows.map(r => ({
+      deduped.sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
+      const board = deduped.map(r => ({
         ref: r.src + r.id, name: r.name || 'Guest', service: r.service || 'Appointment',
         time: r.time || '', artist: r.artist || '',
         state: num(r.checked_out_ts) ? 'done' : (num(r.checked_in_ts) ? 'in' : 'due'),
