@@ -91,6 +91,27 @@ async function ensure() {
        'Private. Given out by hand — never listed on the site.']);
   }
 
+  // MASYNX2 and THEOG both repeat forever, which is right for one and
+  // dangerous for the other.
+  //
+  // MASYNX2 makes a membership free. Repeating, that is not a free month —
+  // it is a free Black Card every month for as long as somebody stays, and
+  // if it ever leaks the cap is all that stands between her and handing out
+  // memberships indefinitely. It exists so she can test a real checkout, and
+  // a first-month-only version tests exactly the same thing.
+  //
+  // THEOG genuinely is meant to repeat — it is the founding rate she hands
+  // to particular people. What it should not be is unlimited: a permanent
+  // $199-a-month discount with no cap is one forwarded screenshot away from
+  // being a permanent $199-a-month discount for everybody.
+  try {
+    await execute(
+      "UPDATE promo_codes SET duration='once', max_uses=5 WHERE code='MASYNX2' AND duration<>'once'");
+  } catch (_) {}
+  try {
+    await execute("UPDATE promo_codes SET max_uses=10 WHERE code='THEOG' AND (max_uses IS NULL OR max_uses=0)");
+  } catch (_) {}
+
   // ZOLA26 — the code she can actually post. Fifty dollars off the first
   // month of any tier, capped at fifty people.
   //
@@ -238,8 +259,38 @@ module.exports.handler = async function (req, res) {
       return res.json({ codes: await query('SELECT * FROM promo_codes ORDER BY created_ts DESC') });
     }
 
+    // Change named fields on a code that already exists. Anything not sent
+    // is left exactly as it was.
+    if (req.method === 'POST' && action === 'update') {
+      const b = req.body || {};
+      const c = norm(b.code);
+      if (!c) return res.status(400).json({ error: 'Which code?' });
+      const existing = await queryOne('SELECT code FROM promo_codes WHERE code=?', [c]);
+      if (!existing) return res.status(404).json({ error: 'No such code.' });
+
+      if (b.duration !== undefined) {
+        await execute('UPDATE promo_codes SET duration=? WHERE code=?',
+          [b.duration === 'once' ? 'once' : 'forever', c]);
+      }
+      if (b.max_uses !== undefined) {
+        await execute('UPDATE promo_codes SET max_uses=? WHERE code=?',
+          [Math.max(0, Math.round(Number(b.max_uses) || 0)), c]);
+      }
+      if (b.active !== undefined) {
+        await execute('UPDATE promo_codes SET active=? WHERE code=?', [b.active ? 1 : 0, c]);
+      }
+      if (b.applies_to !== undefined) {
+        const scope = ['service', 'membership', 'both'].includes(String(b.applies_to)) ? String(b.applies_to) : 'service';
+        await execute('UPDATE promo_codes SET applies_to=? WHERE code=?', [scope, c]);
+      }
+      if (b.label !== undefined) {
+        await execute('UPDATE promo_codes SET label=? WHERE code=?', [String(b.label).slice(0, 160), c]);
+      }
+      return res.json({ ok: true, code: c });
+    }
+
     if (req.method === 'POST' && action === 'save') {
-      const { code, label, amount_off, active, max_uses, trainee_only } = req.body || {};
+      const { code, label, amount_off, active, max_uses, trainee_only, duration, applies_to } = req.body || {};
       const c = norm(code);
       if (!c) return res.status(400).json({ error: 'A code is required' });
       const cents = Math.round(Number(amount_off || 0) * 100);
@@ -253,6 +304,16 @@ module.exports.handler = async function (req, res) {
       );
       if (trainee_only !== undefined) {
         await execute('UPDATE promo_codes SET trainee_only=? WHERE code=?', [trainee_only ? 1 : 0, c]);
+      }
+      // Anything not sent is left alone, so editing the label of a repeating
+      // code cannot quietly turn it into a one-off — or the reverse.
+      if (duration !== undefined) {
+        await execute('UPDATE promo_codes SET duration=? WHERE code=?',
+          [duration === 'once' ? 'once' : 'forever', c]);
+      }
+      if (applies_to !== undefined) {
+        const scope = ['service', 'membership', 'both'].includes(String(applies_to)) ? String(applies_to) : 'service';
+        await execute('UPDATE promo_codes SET applies_to=? WHERE code=?', [scope, c]);
       }
       return res.json({ ok: true, code: c });
     }

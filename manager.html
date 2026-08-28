@@ -6150,20 +6150,73 @@ async function loadPromos(){
       const off=(Number(x.amount_off_cents)/100).toFixed(0);
       const on=Number(x.active);
       const code=String(x.code).replace(/'/g,'');
+      // How long it lasts is the most expensive thing about a code and was
+      // nowhere on screen: one that takes $199 off every month forever
+      // looked exactly like one that takes $10 off once.
+      const repeats = String(x.duration||'forever') !== 'once';
+      const worth = String(x.kind)==='fixed_total'
+        ? 'sets the price to $'+(Number(x.fixed_total_cents||0)/100)
+        : '$'+off+' off';
+      const scope = { service:'bookings', membership:'memberships', both:'anything' }[String(x.applies_to||'service')] || 'bookings';
+      const cap = Number(x.max_uses||0);
+      const used = Number(x.used_count||0);
+      const left = cap ? Math.max(0, cap-used) : null;
+
       return [
-        '<div style="display:flex;align-items:center;gap:0.7rem;padding:0.65rem 0.85rem;border:1px solid var(--border);border-radius:8px;background:var(--card)">',
-          '<div style="flex:1;min-width:0">',
+        '<div style="display:flex;align-items:center;gap:0.7rem;padding:0.65rem 0.85rem;border:1px solid '
+          + (repeats && String(x.applies_to||'')!=='service' ? 'rgba(217,164,65,0.5)' : 'var(--border)')
+          + ';border-radius:8px;background:var(--card);flex-wrap:wrap">',
+          '<div style="flex:1;min-width:170px">',
             '<div style="font-family:Cinzel,serif;font-size:1rem;color:var(--gold);letter-spacing:0.08em">'+esc(x.code)+'</div>',
-            '<div style="font-size:0.68rem;color:var(--muted)">$'+off+' off'
-              +(x.label?' · '+esc(x.label):'')+' · used '+Number(x.used_count||0)+'×</div>',
+            '<div style="font-size:0.68rem;color:var(--muted);line-height:1.6">'+worth+' on '+scope
+              +(x.label?' · '+esc(x.label):'')+'<br>used '+used+'×'
+              +(cap ? ' · '+left+' of '+cap+' left' : ' · <span style="color:#d9a441">no limit on uses</span>')+'</div>',
           '</div>',
+          // The answer to the question she actually asked, on every row.
+          '<span title="'+(repeats?'This discount comes off every single month, for as long as they stay':'They get this once, then pay full price')
+            +'" style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;border-radius:100px;'
+            +'padding:0.25rem 0.6rem;white-space:nowrap;border:1px solid '
+            +(repeats?'#d9a441;color:#d9a441':'#7ec98a;color:#7ec98a')+'">'
+            +(repeats?'Every month':'First time only')+'</span>',
+          '<button class="btn btn-ghost btn-sm" onclick="setPromoDuration(&quot;'+code+'&quot;,'+(repeats?1:0)+')">'
+            +(repeats?'Make it once':'Make it repeat')+'</button>',
           '<span class="status-pill '+(on?'status-on':'status-off')+'">'+(on?'On':'Off')+'</span>',
           '<button class="btn btn-ghost btn-sm" onclick="togglePromo(&quot;'+code+'&quot;,'+(on?0:1)+','+Number(x.amount_off_cents)+')">'+(on?'Turn off':'Turn on')+'</button>',
+          '<button class="btn btn-ghost btn-sm" onclick="setPromoCap(&quot;'+code+'&quot;,'+cap+')">Limit</button>',
           '<button class="btn btn-danger btn-sm" onclick="delPromo(&quot;'+code+'&quot;)">Delete</button>',
         '</div>'
       ].join('');
     }).join('');
   }catch(_){ g.innerHTML='<div style="color:var(--muted);font-size:0.8rem">Could not load codes.</div>'; }
+}
+
+// Changing whether a code repeats only affects people who use it from now
+// on. Stripe holds a coupon against each subscription at signup, so nobody
+// already on a code has their price moved by this.
+async function setPromoDuration(code, isRepeating){
+  const to = isRepeating ? 'once' : 'forever';
+  const msg = to === 'forever'
+    ? 'Make ' + code + ' repeat EVERY MONTH?\n\nAnyone who uses it keeps the discount for as long as they stay a member.'
+    : 'Make ' + code + ' a one-off?\n\nPeople who use it get the discount once, then pay full price.';
+  if(!confirm(msg + '\n\nAnyone already using it keeps what they signed up for.')) return;
+  try{
+    const r = await api('/api/promo?action=update', { method:'POST', body: JSON.stringify({ code: code, duration: to }) });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+  }catch(err){ alert('Could not change it: ' + err.message); return; }
+  loadPromos();
+}
+
+async function setPromoCap(code, current){
+  const v = prompt('How many people may use ' + code + ' in total?\n\n0 means no limit.', String(current||0));
+  if(v === null) return;
+  const n = Math.max(0, Math.round(Number(v) || 0));
+  try{
+    const r = await api('/api/promo?action=update', { method:'POST', body: JSON.stringify({ code: code, max_uses: n }) });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+  }catch(err){ alert('Could not set that: ' + err.message); return; }
+  loadPromos();
 }
 
 async function savePromo(){
