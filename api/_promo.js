@@ -106,7 +106,10 @@ async function ensure() {
   // being a permanent $199-a-month discount for everybody.
   try {
     await execute(
-      "UPDATE promo_codes SET duration='once', max_uses=5 WHERE code='MASYNX2' AND duration<>'once'");
+      // COALESCE because duration can be NULL on a row that predates the
+      // column: 'NULL <> once' is NULL, not true, so the plain comparison
+      // matched nothing and the correction silently did not happen.
+      "UPDATE promo_codes SET duration='once', max_uses=5 WHERE code='MASYNX2' AND COALESCE(duration,'forever')<>'once'");
   } catch (_) {}
   try {
     await execute("UPDATE promo_codes SET max_uses=10 WHERE code='THEOG' AND (max_uses IS NULL OR max_uses=0)");
