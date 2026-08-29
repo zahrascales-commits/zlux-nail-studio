@@ -112,12 +112,6 @@
 
   /* Billing switch. Annual is the one being recommended, so it carries the
      badge and the weight — but the four-week option is never hidden. */
-  .pl-switch{display:flex;justify-content:center;gap:0;margin:0 auto 2.2rem;max-width:420px;
-    border:1px solid rgba(182,165,136,0.4);border-radius:100px;overflow:hidden;background:#fff}
-  .pl-switch button{flex:1;background:none;border:none;cursor:pointer;padding:0.85rem 0.9rem;
-    font-family:'Josefin Sans',sans-serif;font-size:0.78rem;letter-spacing:0.1em;
-    text-transform:uppercase;color:var(--latte);position:relative}
-  .pl-switch button.on{background:var(--espresso);color:var(--champagne)}
   .pl-badge{display:inline-block;margin-left:0.4rem;font-size:0.58rem;letter-spacing:0.12em;
     background:var(--champagne);color:var(--espresso);padding:0.15rem 0.4rem;border-radius:100px;
     vertical-align:middle}
@@ -166,9 +160,26 @@
     text-decoration:line-through;margin-bottom:0.2rem}
   .pl-old-price{font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:var(--latte);
     text-decoration:line-through;margin-bottom:0.8rem}
-  .pl-old-status{display:inline-block;font-family:'Josefin Sans',sans-serif;font-size:0.62rem;
-    letter-spacing:0.14em;text-transform:uppercase;color:var(--latte);
-    border:1px solid rgba(182,165,136,0.35);padding:0.35rem 0.75rem;cursor:not-allowed}
+  /* The original three, described the same short way as the new two. The
+     long comparison pages they used to have are not coming back. */
+  .pl-old-card{border:1px solid rgba(182,165,136,0.25);padding:1.4rem 1.2rem;opacity:1;
+    display:flex;flex-direction:column;text-align:left}
+  .pl-old-name{font-family:'Cinzel',serif;font-size:1.15rem;color:var(--cream);
+    text-decoration:none;margin-bottom:0.15rem}
+  .pl-old-line{font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);margin-bottom:0.8rem}
+  .pl-old-price{font-family:'Cinzel',serif;font-size:1.6rem;color:var(--champagne);
+    text-decoration:none;margin-bottom:0.15rem}
+  .pl-old-per{font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:var(--latte);margin-bottom:1rem}
+  .pl-old-list{list-style:none;padding:0;margin:0 0 1.2rem}
+  .pl-old-list li{font-family:'Josefin Sans',sans-serif;font-size:0.8rem;line-height:1.6;
+    color:var(--cream);padding-left:1.1rem;position:relative;margin-bottom:0.45rem;opacity:0.85}
+  .pl-old-list li::before{content:'✦';position:absolute;left:0;color:var(--champagne);font-size:0.62rem;top:0.3rem}
+  .pl-old-cta{display:block;text-align:center;border:1px solid var(--champagne);color:var(--champagne);
+    font-family:'Josefin Sans',sans-serif;font-size:0.68rem;letter-spacing:0.16em;text-transform:uppercase;
+    text-decoration:none;padding:0.75rem 1rem;margin-top:auto}
+  .pl-old-spots{font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:var(--latte);
+    text-align:center;margin-top:0.7rem}
+  .pl-old-spots b{color:var(--cream)}
 </style>
 
 <!-- ALREADY A MEMBER — sign in with a Member ID -->
@@ -189,11 +200,6 @@
 <section class="pl-wrap" id="tiers">
   <div class="pl-in">
 
-    <div class="pl-switch" role="group" aria-label="Billing">
-      <button id="pl-cycle" onclick="plBilling('cycle')">Every 4 weeks</button>
-      <button id="pl-annual" class="on" onclick="plBilling('annual')">Annually<span class="pl-badge">Best value</span></button>
-    </div>
-
     <div class="pl-grid" id="pl-grid">
       <div class="pl-card"><div class="pl-name">Essential</div></div>
       <div class="pl-card elite"><div class="pl-name">Elite</div></div>
@@ -205,24 +211,8 @@
 <div class="pl-old">
   <div class="pl-old-in">
     <h3>Signature, Luxe and Black Card</h3>
-    <p>Our first three memberships. Every spot went. They are closed now — Essential and Elite took their place.</p>
-    <div class="pl-old-row">
-      <div class="pl-old-card">
-        <div class="pl-old-name">Signature</div>
-        <div class="pl-old-price">$99 / month</div>
-        <span class="pl-old-status" aria-disabled="true">Fully Booked</span>
-      </div>
-      <div class="pl-old-card">
-        <div class="pl-old-name">Luxe</div>
-        <div class="pl-old-price">$199 / month</div>
-        <span class="pl-old-status" aria-disabled="true">Booked Out</span>
-      </div>
-      <div class="pl-old-card">
-        <div class="pl-old-name">Black Card</div>
-        <div class="pl-old-price">$299 / month</div>
-        <span class="pl-old-status" aria-disabled="true">Booked Out</span>
-      </div>
-    </div>
+    <p>Our first three memberships. Every spot went — and we have opened a few more of each. They cost more, and they include more.</p>
+    <div class="pl-old-row" id="pl-legacy"></div>
   </div>
 </div>
 
@@ -330,28 +320,23 @@ window.mpMemberLogin = mpMemberLogin;
    The old counter on this page worked out its own figures from the week of
    the year and ticked down on a timer. */
 let PL = null;
-let plMode = 'annual';   // annual is the recommendation, so it opens on it
 
 const plMoney = c => '$' + Math.round((c || 0) / 100).toLocaleString();
 const plEsc = s => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-function plBilling(mode){
-  plMode = mode;
-  document.getElementById('pl-cycle').classList.toggle('on', mode === 'cycle');
-  document.getElementById('pl-annual').classList.toggle('on', mode === 'annual');
-  plRender();
-}
 
 function plRender(){
   const grid = document.getElementById('pl-grid');
   if(!grid || !PL) return;
-  const annual = plMode === 'annual';
 
   grid.innerHTML = PL.plans.map(function(p){
     const elite = p.key === 'ELITE';
-    const amount = annual ? p.annual_cents : p.cycle_cents;
-    const per = annual ? 'a year' : 'every 4 weeks';
+    // One number on this page: what it costs every four weeks. The year is
+    // offered at checkout, where it is the recommendation rather than a
+    // second decision to make before the first one.
+    const amount = p.cycle_cents;
+    const per = 'every 4 weeks';
     const pct = p.capacity ? Math.round(100 * p.joined / p.capacity) : 0;
 
     return '<div class="pl-card' + (elite ? ' elite' : '') + '">'
@@ -361,10 +346,8 @@ function plRender(){
       + '<div class="pl-price"><span class="pl-amt">' + plMoney(amount) + '</span>'
         + '<span class="pl-per">' + per + '</span></div>'
       // Never a percentage. Three visits is a thing you can picture.
-      + '<div class="pl-free">' + (annual
-          ? p.annual_free_visits + ' visits free'
-          : plMoney(p.annual_cents) + ' a year gets you ' + p.annual_free_visits + ' visits free')
-        + '</div>'
+      + '<div class="pl-free">Or ' + plMoney(p.annual_cents) + ' for the year — '
+        + p.annual_free_visits + ' visits free</div>'
 
       + '<ul class="pl-list">'
         + p.includes.map(function(i){ return '<li>' + plEsc(i) + '</li>'; }).join('')
@@ -376,11 +359,34 @@ function plRender(){
       + (p.full
           ? '<span class="pl-cta" style="opacity:0.5;cursor:not-allowed">Fully booked</span>'
           : '<a class="pl-cta' + (elite ? ' gold' : '') + '" href="signup.html?tier=' + p.key
-            + '&billing=' + (annual ? 'annual' : 'cycle') + '">Join ' + plEsc(p.name) + '</a>')
+            + '">Join ' + plEsc(p.name) + '</a>')
 
       // The size of the open door matters as much as the people walking in.
       + '<div class="pl-bar"><i style="width:' + pct + '%"></i></div>'
       + '<div class="pl-spots"><b>' + p.joined + '</b> joined · <b>' + p.spots_open + '</b> spots open</div>'
+      + '</div>';
+  }).join('');
+}
+
+// The original three, in the same short shape as the new two. They are
+// below Essential and Elite on purpose — those are the easier sell, so they
+// go first, and these are for somebody who reads that far and wants more.
+function plRenderLegacy(){
+  const grid = document.getElementById('pl-legacy');
+  if(!grid || !PL || !PL.legacy) return;
+  grid.innerHTML = PL.legacy.map(function(p){
+    return '<div class="pl-old-card">'
+      + '<div class="pl-old-name">' + plEsc(p.name) + '</div>'
+      + '<div class="pl-old-line">' + plEsc(p.line) + '</div>'
+      + '<div class="pl-old-price">' + plMoney(p.cycle_cents) + '</div>'
+      + '<div class="pl-old-per">a month</div>'
+      + '<ul class="pl-old-list">'
+        + p.includes.map(function(i){ return '<li>' + plEsc(i) + '</li>'; }).join('')
+      + '</ul>'
+      + (p.full
+          ? '<span class="pl-old-cta" style="opacity:0.45;cursor:not-allowed">Fully booked</span>'
+          : '<a class="pl-old-cta" href="signup.html?tier=' + p.key + '">Join ' + plEsc(p.name) + '</a>')
+      + '<div class="pl-old-spots"><b>' + p.joined + '</b> joined · <b>' + p.spots_open + '</b> open</div>'
       + '</div>';
   }).join('');
 }
@@ -390,8 +396,8 @@ function plRender(){
     PL = await (await fetch('/api/plans')).json();
   }catch(_){ return; }
   plRender();
+  plRenderLegacy();
 })();
-window.plBilling = plBilling;
 </script>
 </body>
 </html>

@@ -14,7 +14,7 @@ const TIER_PRICES = {
 // price object cannot be read.
 const TIER_CENTS = {
   // The two tiers now sold. These bill every four weeks, not monthly.
-  ESSENTIAL: 8000, ELITE: 11000,
+  ESSENTIAL: 8500, ELITE: 11000,
   // Retired. Kept so existing members keep working; nobody new can buy one.
   SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900, TEST: 158,
 };
@@ -25,7 +25,8 @@ const TIER_CENTS = {
 const TIER_YEARLY_CENTS = {
   // Ten cycles' money for thirteen cycles of membership — the saving is
   // exactly three visits, which is the only way it is ever described.
-  ESSENTIAL: 80000, ELITE: 110000,
+  // Eleven cycles for thirteen — exactly two visits free.
+  ESSENTIAL: 8500 * 11, ELITE: 11000 * 11,
   SIGNATURE: 99900, LUXE: 199900, BLACK_CARD: 299900, TEST: 1580,
 };
 
@@ -160,13 +161,11 @@ module.exports = async (req, res) => {
   // Only the two live tiers can be bought. The retired three are refused
   // here rather than on the page, so a stale tab or a saved link cannot sell
   // somebody a membership that no longer exists.
-  const validTiers = ['ESSENTIAL', 'ELITE', 'TEST'];
+  // All five are buyable again. Essential and Elite lead the page; the
+  // original three sit below it and cost more, which is the point.
+  const validTiers = ['ESSENTIAL', 'ELITE', 'SIGNATURE', 'LUXE', 'BLACK_CARD', 'TEST'];
   if (!validTiers.includes(tier)) {
-    return res.status(400).json({
-      error: ['SIGNATURE', 'LUXE', 'BLACK_CARD'].includes(tier)
-        ? 'That membership is no longer available — please choose Essential or Elite.'
-        : 'Invalid tier.',
-    });
+    return res.status(400).json({ error: 'Invalid tier.' });
   }
 
   try {

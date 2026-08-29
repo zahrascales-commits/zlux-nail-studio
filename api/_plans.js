@@ -17,12 +17,16 @@ const { query, queryOne, execute } = require('./_db');
 // 10, and the difference is exactly three cycles.
 const CYCLES_PER_YEAR = 13;
 
+// Annual is priced at eleven cycles for thirteen, so the saving is exactly
+// two visits. Three was too much to give away on a membership this size.
+const FREE_VISITS_ANNUAL = 2;
+
 const PLANS = [
   {
     key: 'ESSENTIAL',
     name: 'Essential',
-    cycle_cents: 8000,
-    annual_cents: 80000,
+    cycle_cents: 8500,
+    annual_cents: 8500 * (CYCLES_PER_YEAR - FREE_VISITS_ANNUAL),
     capacity: 100,
     // Short, and in the order somebody skimming would want them.
     includes: [
@@ -37,7 +41,7 @@ const PLANS = [
     key: 'ELITE',
     name: 'Elite',
     cycle_cents: 11000,
-    annual_cents: 110000,
+    annual_cents: 11000 * (CYCLES_PER_YEAR - FREE_VISITS_ANNUAL),
     capacity: 50,
     includes: [
       'Everything in Essential',
@@ -51,16 +55,43 @@ const PLANS = [
 ];
 
 // Sold at any visit, on either tier.
-const ADDON = { name: 'Russian pedicure', cents: 7500 };
+const ADDON = { name: 'Russian pedicure', cents: 9500 };
 
-const byKey = k => PLANS.find(p => p.key === String(k || '').toUpperCase()) || null;
+// The original three, still buyable. They sit below Essential and Elite and
+// are described the same short way — the long comparison pages they used to
+// have are gone for good. A handful of spots each, because that is what
+// reopening a closed tier honestly is.
+const LEGACY = [
+  {
+    key: 'SIGNATURE', name: 'Signature', cycle_cents: 9900, annual_cents: 99900, capacity: 28,
+    includes: ['One manicure and one pedicure a month', 'Half off every add-on', 'Books 3 days before the public'],
+    line: 'Hands and feet, every month.',
+  },
+  {
+    key: 'LUXE', name: 'Luxe', cycle_cents: 19900, annual_cents: 199900, capacity: 18,
+    includes: ['Two manicures and a pedicure a month', 'Every add-on free', 'Books 13 days before the public'],
+    line: 'More of everything, nothing extra to pay.',
+  },
+  {
+    key: 'BLACK_CARD', name: 'Black Card', cycle_cents: 29900, annual_cents: 299900, capacity: 13,
+    includes: ['Two services a month', 'Every add-on free', 'Choose your own artist, every visit', 'Books 20 days before the public'],
+    line: 'The one where you pick who does your nails.',
+  },
+];
+
+const ALL = () => PLANS.concat(LEGACY);
+const byKey = k => ALL().find(p => p.key === String(k || '').toUpperCase()) || null;
 
 // Three cycles' worth — the only way this saving is ever described. A
 // percentage would make somebody do arithmetic to find out whether it is a
 // good idea.
 function annualSaving(plan) {
   const full = plan.cycle_cents * CYCLES_PER_YEAR;
-  return { saved_cents: full - plan.annual_cents, free_visits: Math.round((full - plan.annual_cents) / plan.cycle_cents) };
+  const saved = full - plan.annual_cents;
+  // Floored, never rounded. Rounding 3.6 up to 4 would promise a visit that
+  // was not paid for, and the whole point of this framing is that it is
+  // literally true.
+  return { saved_cents: saved, free_visits: Math.max(0, Math.floor(saved / plan.cycle_cents)) };
 }
 
 async function ensureColumns() {
@@ -77,7 +108,7 @@ async function ensureColumns() {
 async function counts() {
   await ensureColumns();
   const out = {};
-  for (const p of PLANS) out[p.key] = 0;
+  for (const p of ALL()) out[p.key] = 0;
 
   try {
     const rows = await query(
@@ -100,11 +131,25 @@ async function counts() {
   return out;
 }
 
+function shapeOne(p, taken) {
+  const joined = Math.min(taken[p.key] || 0, p.capacity);
+  const s = annualSaving(p);
+  return {
+    key: p.key, name: p.name, line: p.line, includes: p.includes,
+    cycle_cents: p.cycle_cents, annual_cents: p.annual_cents,
+    annual_saved_cents: s.saved_cents, annual_free_visits: s.free_visits,
+    capacity: p.capacity, joined,
+    spots_open: Math.max(0, p.capacity - joined),
+    full: joined >= p.capacity,
+  };
+}
+
 async function publicShape() {
   const taken = await counts();
   return {
     cycles_per_year: CYCLES_PER_YEAR,
     addon: ADDON,
+    legacy: LEGACY.map(p => shapeOne(p, taken)),
     plans: PLANS.map(p => {
       const joined = Math.min(taken[p.key] || 0, p.capacity);
       const s = annualSaving(p);
@@ -156,6 +201,8 @@ module.exports = async function (req, res) {
 };
 
 module.exports.PLANS = PLANS;
+module.exports.LEGACY = LEGACY;
+module.exports.ALL = ALL;
 module.exports.ADDON = ADDON;
 module.exports.CYCLES_PER_YEAR = CYCLES_PER_YEAR;
 module.exports.byKey = byKey;
