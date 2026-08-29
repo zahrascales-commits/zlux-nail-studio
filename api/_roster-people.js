@@ -14,9 +14,17 @@ const CEO_PASSWORD = process.env.CEO_PASSWORD || 'ZOLA2026';
 
 // Kept only as the fallback for members who signed up before what they pay
 // was ever written down. _member-price is the answer everywhere else.
-const TIER_PRICE = { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900 };
+/* Every tier ZOLA has ever sold, current and retired, straight from the one
+   file that defines them. Hard-coding them here is what hid a paying Elite
+   member from her own Members screen. */
+const plans = require('./_plans');
+const TIER_PRICE = {};
+const TIER_LABEL = {};
+for (const p of plans.ALL()) {
+  TIER_PRICE[p.key] = p.cycle_cents;
+  TIER_LABEL[p.key] = p.name;
+}
 const price = require('./_member-price');
-const TIER_LABEL = { SIGNATURE: 'Signature', LUXE: 'Luxe', BLACK_CARD: 'Black Card' };
 
 const pad = n => String(n).padStart(2, '0');
 const today = () => {
@@ -212,7 +220,10 @@ async function build() {
   }
 
   const memberNames = new Set();
-  const columns = { SIGNATURE: [], LUXE: [], BLACK_CARD: [] };
+  // Current tiers first, then the retired ones — the order the Members
+  // screen reads in.
+  const columns = {};
+  for (const p of plans.ALL()) columns[p.key] = [];
   let mrr = 0, lifetimeMembership = 0;
 
   for (const mm of members) {
@@ -264,7 +275,10 @@ async function build() {
       nails: nailProfile(byMemberId[mm.member_id]),
       ...stats,
     };
-    if (columns[mm.tier]) columns[mm.tier].push(row);
+    // A tier nobody recognises still belongs to a real person who is paying,
+    // so give it a column rather than dropping the row.
+    if (!columns[mm.tier]) columns[mm.tier] = [];
+    columns[mm.tier].push(row);
   }
 
   // Drop-ins: everybody in the book who is not a member.

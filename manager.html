@@ -904,27 +904,8 @@
         </div>
       </div>
 
-      <!-- Tier breakdown -->
-      <div class="tier-grid">
-        <div class="tier-card" data-tier="SIGNATURE">
-          <div class="tier-top"><span class="tier-name">Signature</span><span class="tier-price">$99/mo</span></div>
-          <div class="tier-count" id="t-sig">0</div>
-          <div class="tier-bar"><span id="t-sig-bar" style="width:0%"></span></div>
-          <div class="tier-rev">Contributes <strong id="t-sig-rev">$0</strong>/mo</div>
-        </div>
-        <div class="tier-card lux" data-tier="LUXE">
-          <div class="tier-top"><span class="tier-name">Luxe</span><span class="tier-price">$199/mo</span></div>
-          <div class="tier-count" id="t-lux">0</div>
-          <div class="tier-bar"><span id="t-lux-bar" style="width:0%"></span></div>
-          <div class="tier-rev">Contributes <strong id="t-lux-rev">$0</strong>/mo</div>
-        </div>
-        <div class="tier-card blk" data-tier="BLACK_CARD">
-          <div class="tier-top"><span class="tier-name">Black Card</span><span class="tier-price">$299/mo</span></div>
-          <div class="tier-count" id="t-blk">0</div>
-          <div class="tier-bar"><span id="t-blk-bar" style="width:0%"></span></div>
-          <div class="tier-rev">Contributes <strong id="t-blk-rev">$0</strong>/mo</div>
-        </div>
-      </div>
+      <!-- Tier breakdown — built from whatever memberships exist -->
+      <div class="tier-grid" id="tier-grid"></div>
 
       <!-- Distribution -->
       <div class="site-card" style="margin-top:1.25rem;">
@@ -3016,43 +2997,84 @@ async function loadSales(){
   const my = ++salesToken; // last call wins — a late live fetch can't clobber a newer showcase render
   document.getElementById('sales-mode-toggle').checked = salesMode==='showcase';
   document.getElementById('sales-mode-label').textContent = salesMode==='showcase' ? 'Preview' : 'Live';
-  let counts, newM;
+  let counts, newM, stats = null;
   if(salesMode==='showcase'){
     const s = showcaseCounts(); counts = s; newM = s.new_this_month;
   } else {
     try{
       const r = await api('/api/manager?action=membership_stats'); const d = await r.json();
-      counts = d.counts || {SIGNATURE:0,LUXE:0,BLACK_CARD:0}; newM = d.new_this_month||0;
-    }catch{ counts={SIGNATURE:0,LUXE:0,BLACK_CARD:0}; newM=0; }
+      counts = d.counts || {}; newM = d.new_this_month||0; stats = d;
+    }catch{ counts={}; newM=0; }
   }
   if(my !== salesToken) return; // superseded by a newer loadSales — don't render stale data
-  renderSales(counts, newM);
+  renderSales(counts, newM, stats);
 }
 
-function renderSales(c, newM){
+/* The dashboard is told what the memberships are rather than knowing them.
+   `stats` carries the names, the running order, what each tier really brings
+   in and the monthly total. In preview mode there is no server payload, so
+   the figures fall back to list prices worked out here. */
+const TIER_SHADE = ['', 'lux', 'blk'];
+
+function renderSales(c, newM, stats){
   salesShown = { ...c, newThisMonth:newM };
-  const total = c.SIGNATURE + c.LUXE + c.BLACK_CARD;
-  const mrr = c.SIGNATURE*SALES_PRICE.SIGNATURE + c.LUXE*SALES_PRICE.LUXE + c.BLACK_CARD*SALES_PRICE.BLACK_CARD;
+  stats = stats || {};
+  const labels = stats.labels || { SIGNATURE:'Signature', LUXE:'Luxe', BLACK_CARD:'Black Card' };
+  const prices = stats.prices || SALES_PRICE;
+  const order = (stats.order && stats.order.length ? stats.order : Object.keys(c))
+    .filter(k => c[k] !== undefined && k !== 'newThisMonth' && k !== 'new_this_month');
+
+  const total = order.reduce((a,k)=> a + (Number(c[k])||0), 0);
+
+  // What she is actually paid, when the server knows it. Multiplying
+  // head-count by list price is what made every discount vanish.
+  const revByTier = stats.revenue_by_tier || null;
+  const revFor = k => (revByTier && revByTier[k] !== undefined)
+    ? (Number(revByTier[k])||0)
+    : (Number(c[k])||0) * (Number(prices[k])||0);
+  const mrr = stats.mrr_cents !== undefined
+    ? (Number(stats.mrr_cents)||0)
+    : order.reduce((a,k)=> a + revFor(k), 0);
+
   animateNum(document.getElementById('m-mrr'), mrr, money);
   animateNum(document.getElementById('m-total'), total);
   animateNum(document.getElementById('m-arr'), mrr*12, money);
   animateNum(document.getElementById('m-new'), newM);
-  const tiers = [['sig','SIGNATURE'],['lux','LUXE'],['blk','BLACK_CARD']];
-  tiers.forEach(([k,T])=>{
-    animateNum(document.getElementById('t-'+k), c[T]);
-    document.getElementById('t-'+k+'-rev').textContent = money(c[T]*SALES_PRICE[T]);
-    document.getElementById('t-'+k+'-bar').style.width = (total?Math.round(c[T]/total*100):0)+'%';
-  });
-  // mix bar
-  const pct = T => total?Math.round(c[T]/total*100):0;
-  document.getElementById('mix-bar').innerHTML =
-    `<span class="mix-sig" style="width:${pct('SIGNATURE')}%"></span>`+
-    `<span class="mix-lux" style="width:${pct('LUXE')}%"></span>`+
-    `<span class="mix-blk" style="width:${pct('BLACK_CARD')}%"></span>`;
-  document.getElementById('mix-legend').innerHTML =
-    `<span><span class="sw mix-sig"></span>Signature ${pct('SIGNATURE')}%</span>`+
-    `<span><span class="sw mix-lux"></span>Luxe ${pct('LUXE')}%</span>`+
-    `<span><span class="sw mix-blk"></span>Black Card ${pct('BLACK_CARD')}%</span>`;
+
+  // A tier nobody has ever joined and that is not on sale is noise; a
+  // retired tier with members still in it has to stay, because it is still
+  // money coming in.
+  const shown = order.filter(k => (Number(c[k])||0) > 0 || prices[k] !== undefined);
+
+  const grid = document.getElementById('tier-grid');
+  if(grid){
+    grid.innerHTML = shown.map(function(k, i){
+      const n = Number(c[k])||0;
+      const per = Number(prices[k])||0;
+      return '<div class="tier-card ' + (TIER_SHADE[i % TIER_SHADE.length] || '') + '" data-tier="' + esc(k) + '">'
+        + '<div class="tier-top"><span class="tier-name">' + esc(labels[k] || k) + '</span>'
+          + '<span class="tier-price">' + (per ? money(per) : '—') + '</span></div>'
+        + '<div class="tier-count">' + n + '</div>'
+        + '<div class="tier-bar"><span style="width:' + (total?Math.round(n/total*100):0) + '%"></span></div>'
+        + '<div class="tier-rev">Contributes <strong>' + money(revFor(k)) + '</strong>/mo</div>'
+      + '</div>';
+    }).join('');
+  }
+
+  const pct = k => total?Math.round((Number(c[k])||0)/total*100):0;
+  const MIX = ['mix-sig','mix-lux','mix-blk'];
+  const mixBar = document.getElementById('mix-bar');
+  if(mixBar){
+    mixBar.innerHTML = shown.map(function(k,i){
+      return '<span class="' + MIX[i % MIX.length] + '" style="width:' + pct(k) + '%"></span>';
+    }).join('');
+  }
+  const legend = document.getElementById('mix-legend');
+  if(legend){
+    legend.innerHTML = shown.map(function(k,i){
+      return '<span><span class="sw ' + MIX[i % MIX.length] + '"></span>' + esc(labels[k] || k) + ' ' + pct(k) + '%</span>';
+    }).join('');
+  }
 }
 
 function setSalesMode(showcase){
