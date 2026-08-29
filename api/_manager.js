@@ -1388,12 +1388,45 @@ module.exports = async function (req, res) {
     }
 
     if (method === 'PUT' && action === 'update_appt') {
-      const { id, team_member_id, client_name, client_phone, service, date, time, notes, status } = req.body || {};
-      await execute(
-        `UPDATE team_appointments SET team_member_id=?, client_name=?, client_phone=?, service=?, date=?, time=?, notes=?, status=? WHERE id=?`,
-        [team_member_id ? Number(team_member_id) : null, client_name || '', client_phone || '', service || '', date, time, notes || '', status || 'scheduled', Number(id)]
-      );
-      return res.json({ ok: true });
+      const body = req.body || {};
+      const id = Number(body.id);
+      if (!id) return res.status(400).json({ error: 'Which appointment?' });
+
+      /* Only what was actually sent. This used to write every column on
+         every call, so a request carrying one field blanked all the others —
+         name, service, date and time gone, on a real client's booking. */
+      const sets = [], vals = [];
+      const take = (key, transform) => {
+        if (body[key] === undefined) return;
+        sets.push(key + '=?');
+        vals.push(transform ? transform(body[key]) : body[key]);
+      };
+
+      take('team_member_id', v => (v ? Number(v) : null));
+      take('client_name');
+      take('client_phone');
+      take('client_email', v => String(v || '').trim().toLowerCase());
+      take('service');
+      take('date');
+      take('time');
+      take('notes');
+      take('status', v => v || 'scheduled');
+
+      if (!sets.length) return res.json({ ok: true, changed: 0 });
+
+      vals.push(id);
+      try {
+        await execute('UPDATE team_appointments SET ' + sets.join(', ') + ' WHERE id=?', vals);
+      } catch (_) {
+        // An older database may not have every column named here. Write the
+        // ones that fit rather than losing the whole edit.
+        let done = 0;
+        for (let i = 0; i < sets.length; i++) {
+          try { await execute('UPDATE team_appointments SET ' + sets[i] + ' WHERE id=?', [vals[i], id]); done++; } catch (_) {}
+        }
+        return res.json({ ok: true, changed: done });
+      }
+      return res.json({ ok: true, changed: sets.length });
     }
 
     if (method === 'PUT' && action === 'reassign') {
