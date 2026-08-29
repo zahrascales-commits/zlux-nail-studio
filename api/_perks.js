@@ -24,6 +24,8 @@ const TIERS = {
      that is what her booking data said people actually come for. */
   ESSENTIAL: {
     label: 'Essential',
+    // Not sold on this membership at any price — it is what Elite is for.
+    lockedAddons: ['Russian Manicure'],
     price: 85,
     daysAhead: 3,
     perks: [
@@ -398,4 +400,11 @@ module.exports.daysAheadFor = function (tier) {
 module.exports.tierPerks = function (tier) {
   const t = TIERS[String(tier || '').toUpperCase()];
   return t ? t.perks : [];
+};
+
+// Add-ons a membership does not offer at all, so the checkout can refuse
+// them rather than trusting a greyed-out box in a browser.
+module.exports.lockedAddonsFor = function (tier) {
+  const t = TIERS[String(tier || '').toUpperCase()];
+  return (t && t.lockedAddons) ? t.lockedAddons : [];
 };

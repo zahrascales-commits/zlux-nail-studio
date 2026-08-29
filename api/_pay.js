@@ -129,6 +129,12 @@ function computeDeposit({ service_name, addon_names = [], member_tier, free_serv
 
   // What this membership includes by name rather than by percentage.
   const freeAddons = member_tier ? addonsIncludedFor(member_tier) : [];
+  /* Things this membership does not offer at all. A disabled checkbox is a
+     courtesy, not a control — the request can be sent anyway, so the price
+     is refused here where it counts. */
+  const lockedAddons = member_tier
+    ? (function(){ try { return require('./_perks').lockedAddonsFor(member_tier).map(norm); } catch (_) { return []; } })()
+    : [];
   const perks = member_tier ? perksFor(member_tier) : [];
   const designFree = perks.some(p => p.kind === 'discount' && p.on === 'design' && Number(p.value) >= 100);
 
@@ -148,6 +154,7 @@ function computeDeposit({ service_name, addon_names = [], member_tier, free_serv
   for (const name of addon_names) {
     const a = findAddon(name);
     if (!a) continue;
+    if (lockedAddons.includes(norm(a.name))) continue;   // not on offer here
     // Included outright beats any percentage.
     if (freeAddons.includes(norm(a.name))) {
       covered += a.price_cents;
