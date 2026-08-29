@@ -83,14 +83,53 @@ function html({ client, service, artist, datePretty, timePretty, link, depositCe
 </div>`;
 }
 
+const looksLikeEmail = e => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(e || '').trim());
+
+/* Where to reach this client, in order of how much the source knows.
+   The appointment first, then the public booking it mirrors, then the
+   client's own record. Anything found is written back so the next lookup is
+   free and so the roster shows it. */
+async function resolveEmail(appt) {
+  if (looksLikeEmail(appt.client_email)) return String(appt.client_email).trim().toLowerCase();
+
+  const name = String(appt.client_name || '').trim();
+  let found = '';
+
+  // The online booking that created this row.
+  try {
+    const main = require('./_db');
+    const r = await main.queryOne(
+      `SELECT COALESCE(a.guest_email, mm.email) AS email
+         FROM appointments a
+         LEFT JOIN members mm ON a.member_id = mm.member_id
+        WHERE a.appointment_date = ? AND a.appointment_time = ?
+          AND lower(COALESCE(mm.full_name, a.guest_name)) = lower(?)
+        LIMIT 1`, [appt.date, appt.time, name]);
+    if (r && looksLikeEmail(r.email)) found = String(r.email).trim().toLowerCase();
+  } catch (_) {}
+
+  // Failing that, the client book.
+  if (!found && name) {
+    try {
+      const r = await queryOne('SELECT email FROM clients WHERE lower(name)=lower(?) AND email <> \'\' LIMIT 1', [name]);
+      if (r && looksLikeEmail(r.email)) found = String(r.email).trim().toLowerCase();
+    } catch (_) {}
+  }
+
+  if (found) {
+    try { await execute('UPDATE team_appointments SET client_email=? WHERE id=?', [found, appt.id]); } catch (_) {}
+  }
+  return found;
+}
+
 // Send it for one appointment. Returns what happened rather than throwing,
 // because a confirmation that fails must never take a booking down with it.
 async function sendFor(appt, { force } = {}) {
   const visit = require('./_visit');
   await visit.ensureColumns();
 
-  const to = String(appt.client_email || '').trim();
-  if (!to || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return { sent: false, why: 'no email on the appointment' };
+  const to = await resolveEmail(appt);
+  if (!to) return { sent: false, why: 'no email anywhere for this client' };
   if (!appt.chat_token) return { sent: false, why: 'no link token' };
   if (!force && Number(appt.confirm_sent_ts) > 0) return { sent: false, why: 'already sent' };
 
@@ -137,17 +176,28 @@ async function pending() {
   const visit = require('./_visit');
   await visit.ensureColumns();
   const today = new Date().toISOString().slice(0, 10);
+  let rows = [];
   try {
-    return await query(
+    // No email filter here on purpose: most rows predate the column, and
+    // resolveEmail finds the address elsewhere. Filtering on the empty
+    // column is what made this report nobody to send to.
+    rows = await query(
       `SELECT a.*, m.name AS artist_name
          FROM team_appointments a
          LEFT JOIN team_members m ON m.id = a.team_member_id
         WHERE a.date >= ?
           AND COALESCE(a.confirm_sent_ts,0) = 0
-          AND COALESCE(a.client_email,'') <> ''
           AND LOWER(COALESCE(a.status,'scheduled')) <> 'cancelled'
         ORDER BY a.date, a.time`, [today]);
   } catch (_) { return []; }
+
+  // Work out who is actually reachable before offering to write to them.
+  const out = [];
+  for (const r of rows) {
+    const email = await resolveEmail(r);
+    if (email) out.push({ ...r, client_email: email });
+  }
+  return out;
 }
 
-module.exports = { sendFor, pending, html };
+module.exports = { sendFor, pending, html, resolveEmail };
