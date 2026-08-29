@@ -42,7 +42,26 @@ async function stripeApi(path, params) {
   return data;
 }
 
-const ADDON_DISCOUNT = { SIGNATURE: 0.50, LUXE: 1.00, BLACK_CARD: 1.00 };
+/* What comes off an add-on for a member. The retired tiers discounted
+   everything by a flat rate; Essential and Elite do not — Elite includes two
+   named add-ons outright and charges normally for the rest, which is what
+   the memberships page says. A tier missing from here charged every member
+   the guest price. */
+const ADDON_DISCOUNT = { ESSENTIAL: 0, ELITE: 0, SIGNATURE: 0.50, LUXE: 1.00, BLACK_CARD: 1.00 };
+
+function perksFor(tier) {
+  try { return require('./_perks').tierPerks(tier) || []; } catch (_) { return []; }
+}
+
+// Add-ons a tier includes by name rather than by percentage.
+function addonsIncludedFor(tier) {
+  try {
+    const t = require('./_perks').tierPerks(tier);
+    // Matched through the same normaliser the menu uses, so 'Soak Off
+    // Removal' on the membership finds the add-on actually called 'Removal'.
+    return (t || []).filter(p => p.kind === 'addon_free' && p.of).map(p => norm(p.of));
+  } catch (_) { return []; }
+}
 
 // The booking page says "Short Acrylic Set", the menu says "Short Acrylic",
 // add-ons vary too — normalize so every spelling finds its price.
@@ -75,14 +94,30 @@ function computeDeposit({ service_name, addon_names = [], member_tier, free_serv
   if (!svc) return null;
   const pct = member_tier ? (ADDON_DISCOUNT[member_tier] || 0) : 0;
   const tiers = require('./_tiers');
-  // Charged even when the service itself is covered by a membership: the
-  // included service is the service, not the extra design work on top.
-  const tierCents = design_tier ? tiers.priceFor(design_tier) : 0;
+
+  // What this membership includes by name rather than by percentage.
+  const freeAddons = member_tier ? addonsIncludedFor(member_tier) : [];
+  const perks = member_tier ? perksFor(member_tier) : [];
+  const designFree = perks.some(p => p.kind === 'discount' && p.on === 'design' && Number(p.value) >= 100);
+
+  /* Charged even when the service itself is covered by a membership: the
+     included service is the service, not the extra design work on top. The
+     exception is a membership that says designs cost nothing, which is the
+     whole promise on Essential and Elite. */
+  const tierListCents = design_tier ? tiers.priceFor(design_tier) : 0;
+  const tierCents = designFree ? 0 : tierListCents;
+
   let total = (free_service ? 0 : svc.price_cents) + tierCents;
-  let covered = free_service ? svc.price_cents : 0;
+  let covered = (free_service ? svc.price_cents : 0) + (designFree ? tierListCents : 0);
+
   for (const name of addon_names) {
     const a = findAddon(name);
     if (!a) continue;
+    // Included outright beats any percentage.
+    if (freeAddons.includes(norm(a.name))) {
+      covered += a.price_cents;
+      continue;
+    }
     total += Math.round(a.price_cents * (1 - pct));
     covered += Math.round(a.price_cents * pct);
   }
@@ -97,6 +132,7 @@ function computeDeposit({ service_name, addon_names = [], member_tier, free_serv
     // rather than silently disappearing into a smaller number.
     service_list_cents: svc.price_cents,
     tier_cents: tierCents,
+    tier_list_cents: tierListCents,
     covered_cents: covered,
   };
 }

@@ -20,6 +20,36 @@ const CEO_PASSWORD = process.env.CEO_PASSWORD || 'ZOLA2026';
    so it builds from the thing they came for to the thing they did not
    know they were getting.                                            */
 const TIERS = {
+  /* The two memberships now sold. Four-week cycles, hands-first, because
+     that is what her booking data said people actually come for. */
+  ESSENTIAL: {
+    label: 'Essential',
+    price: 85,
+    daysAhead: 3,
+    perks: [
+      { key: 'free_service', kind: 'free_service', label: 'Your service, on us',        detail: 'Every visit. A structured manicure, GelX or acrylic — any length, your choice.', value: 1, of: 'manicure' },
+      { key: 'design_free',  kind: 'discount',     label: 'Any design, no extra charge', detail: 'Whatever you want on them. There is no art tier and no upsell.', value: 100, on: 'design' },
+      { key: 'no_deposit',   kind: 'deposit',      label: 'No deposit, ever',            detail: 'You book, you come in. Nothing is taken up front.' },
+      { key: 'calendar',     kind: 'calendar',     label: 'You book before walk-ins',    detail: 'The calendar opens to you first, so the times you want are still there.', value: 3 },
+      { key: 'account',      kind: 'account',      label: 'Your own account',            detail: 'Your visits, your perks, your nail record — all in one place.' },
+    ],
+  },
+  ELITE: {
+    label: 'Elite',
+    price: 110,
+    daysAhead: 7,
+    perks: [
+      { key: 'free_service', kind: 'free_service', label: 'Your service, on us',          detail: 'Every visit. A structured manicure, GelX or acrylic — any length, your choice.', value: 1, of: 'manicure' },
+      { key: 'russian',      kind: 'addon_free',   label: 'Russian manicure every visit', detail: 'The technique that actually grows your nails out. Included, not added on.', of: 'Russian Manicure' },
+      { key: 'free_removal', kind: 'addon_free',   label: 'Free removal',                 detail: 'Coming in with something on? Taken off properly, at no charge.', of: 'Soak Off Removal' },
+      { key: 'organic',      kind: 'product',      label: 'Organic product every visit',  detail: 'The gentler system, on every set — not an upgrade you have to ask for.' },
+      { key: 'design_free',  kind: 'discount',     label: 'Any design, no extra charge',  detail: 'Whatever you want on them. There is no art tier and no upsell.', value: 100, on: 'design' },
+      { key: 'no_deposit',   kind: 'deposit',      label: 'No deposit, ever',             detail: 'You book, you come in. Nothing is taken up front.' },
+      { key: 'nail_program', kind: 'program',      label: 'Your personal nail record',    detail: 'Every visit logged — what was done, how they are growing, what changed.' },
+      { key: 'calendar',     kind: 'calendar',     label: 'A week of calendar, unlocked', detail: 'You book a week further out than anyone walking in.', value: 7 },
+      { key: 'account',      kind: 'account',      label: 'Your own account',             detail: 'Your visits, your perks, your nail record — all in one place.' },
+    ],
+  },
   SIGNATURE: {
     label: 'Signature Club',
     price: 99,
@@ -358,3 +388,14 @@ module.exports.windowFor = windowFor;
 module.exports.tierConfig = tierConfig;
 module.exports.publicDays = publicDays;
 module.exports.tierPriorityOn = tierPriorityOn;
+
+// The booking window and the checkout both need these, and both used to
+// keep their own copy of the answer.
+module.exports.daysAheadFor = function (tier) {
+  const t = TIERS[String(tier || '').toUpperCase()];
+  return t ? (t.daysAhead || 0) : null;
+};
+module.exports.tierPerks = function (tier) {
+  const t = TIERS[String(tier || '').toUpperCase()];
+  return t ? t.perks : [];
+};

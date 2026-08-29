@@ -32,7 +32,24 @@ module.exports = async (req, res) => {
         const member = await queryOne('SELECT tier FROM members WHERE member_id = ?', [session.user_id]);
         if (member) {
           tier = member.tier;
-          daysAhead = { SIGNATURE: config.signature_days_ahead, LUXE: config.luxe_days_ahead, BLACK_CARD: config.black_card_days_ahead }[tier] ?? config.public_days_ahead;
+          /* The three retired tiers have their own settings on the schedule
+             screen. Everything else takes the window from its perks, which
+             is the same list the member is shown — so a tier added later
+             cannot quietly get the walk-in window. */
+          const configured = {
+            SIGNATURE: config.signature_days_ahead,
+            LUXE: config.luxe_days_ahead,
+            BLACK_CARD: config.black_card_days_ahead,
+          }[tier];
+          if (configured !== undefined && configured !== null) {
+            daysAhead = configured;
+          } else {
+            let fromPerks = null;
+            try { fromPerks = require('./_perks').daysAheadFor(tier); } catch (_) {}
+            daysAhead = (fromPerks === null || fromPerks === undefined)
+              ? config.public_days_ahead
+              : fromPerks;
+          }
         }
       } else if (session.role === 'ADMIN') {
         tier = 'ADMIN';
