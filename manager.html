@@ -1400,6 +1400,7 @@
         </div>
         <input class="login-input" id="client-search" placeholder="Search name, phone, email…" oninput="renderClients()" style="max-width:260px;padding:0.6rem 0.9rem" />
       </div>
+      <div id="client-dupes"></div>
       <div id="clients-list"></div>
     </section>
 
@@ -4757,7 +4758,7 @@ function editGoal(memberId, goalId){
       + '<div class="field two">'
         + '<div><label class="fld-label">How it gets counted</label><select id="g-metric">' + opts + '</select></div>'
         + '<div><label class="fld-label">Only this tier (memberships)</label>'
-          + '<input id="g-filter" placeholder="SIGNATURE, LUXE, BLACK_CARD — or blank for any" value="' + esc((cur&&cur.metric_filter)||'') + '" /></div>'
+          + '<input id="g-filter" placeholder="ESSENTIAL, ELITE, SIGNATURE, LUXE, BLACK_CARD — or blank for any" value="' + esc((cur&&cur.metric_filter)||'') + '" /></div>'
       + '</div>'
       + '<div class="field two">'
         + '<div><label class="fld-label">Fills the jar at</label><input id="g-target" type="number" step="1" min="1" value="' + ((cur&&cur.target)||7) + '" /></div>'
@@ -6757,12 +6758,71 @@ async function saveSite(){
 /* ── CLIENTS ── */
 let clients=[];let openClientId=null;let bcProfiles={};
 const BC_QS=['Silent appointment or chatty?','Favorite nail color(s)','Favorite nail shape','Favorite nail length','Favorite design/style','Favorite scent','Prefers organic products?','Services booked/wanted most','Wants natural nails longer?','Nails thin or strong?','Chip or break easily?','Grow fast or slow?','Curve up, down, or straight?','Bites nails / picks skin?','Allergies or sensitivities','Past nail damage to track','Firmer or lighter cuticle touch?','Pressure points / ticklish spots'];
+
+/* ── THE SAME PERSON, TWICE ──────────────────────────────────────────────
+   Only a shared email or phone ever suggests a join. Two clients really can
+   share a first name, and a wrong merge cannot be undone. */
+const MERGE_BREAK = String.fromCharCode(10);
+
+async function loadClientDupes(){
+  const el = document.getElementById('client-dupes');
+  if(!el) return;
+  let d;
+  try{
+    d = await (await api('/api/clients?action=duplicates')).json();
+    if(d.error) throw new Error(d.error);
+  }catch(_){ el.innerHTML=''; return; }
+
+  const pairs = d.duplicates || [];
+  if(!pairs.length){ el.innerHTML=''; return; }
+
+  el.innerHTML =
+    '<div class="ny" style="border-color:rgba(196,168,130,0.5);margin-bottom:1.2rem;'
+      + 'background:linear-gradient(150deg,rgba(196,168,130,0.1),rgba(196,168,130,0.02))">'
+    + '<div class="ny-h"><div class="ny-t">In the book twice</div>'
+      + '<div class="ny-n" style="color:var(--gold)">' + pairs.length + '</div></div>'
+    + '<div class="ny-sub">These share a phone number or an email, so they are one client under two names. '
+      + 'Joining keeps the fuller name and adds their visits together. Anything that would be lost — '
+      + 'a second number, a second email — is written into her notes instead.</div>'
+    + pairs.map(function(p, i){
+        const keep = p.clients[0], drop = p.clients[1];
+        return '<div class="ny-row" id="dupe-' + i + '" style="border-left-color:var(--gold)">'
+          + '<div class="ny-who" style="flex:1"><b>' + esc(keep.name || 'Unnamed') + '</b>'
+            + '<i>keeping this one · ' + esc(keep.email || keep.phone || '') + '</i></div>'
+          + '<div class="ny-who" style="flex:1"><b style="color:var(--muted)">' + esc(drop.name || 'Unnamed') + '</b>'
+            + '<i>folding in · same ' + esc(p.matched_on) + '</i></div>'
+          + '<button class="btn btn-ghost btn-sm" onclick="mergeClients(' + keep.id + ',' + drop.id + ',' + i + ')">Join</button>'
+          + '</div>';
+      }).join('')
+    + '<div id="dupe-msg" style="font-size:0.78rem;color:var(--muted);margin-top:0.7rem"></div>'
+    + '</div>';
+}
+
+async function mergeClients(keepId, dropId, i){
+  const warn = 'Join these two into one client?' + MERGE_BREAK + MERGE_BREAK
+    + 'Visits are added together and the fuller name is kept. A second email or phone '
+    + 'number is saved into her notes rather than lost.' + MERGE_BREAK + MERGE_BREAK
+    + 'This cannot be undone.';
+  if(!confirm(warn)) return;
+  const msg = document.getElementById('dupe-msg');
+  if(msg) msg.textContent = 'Joining…';
+  try{
+    const r = await api('/api/clients?action=merge', { method:'POST', body: JSON.stringify({ keep_id: keepId, drop_id: dropId }) });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+    const row = document.getElementById('dupe-' + i);
+    if(row) row.innerHTML = '<div class="ny-done">✓ Joined' + (d.carried && d.carried.length ? ' — ' + esc(d.carried.join('; ')) : '') + '</div>';
+    if(msg) msg.textContent = '';
+  }catch(err){ if(msg) msg.textContent = 'Could not join those: ' + err.message; return; }
+  setTimeout(function(){ loadClients(); }, 1200);
+}
 async function loadClients(){
   const el=document.getElementById('clients-list');
   el.innerHTML='<div class="empty">Loading clients…</div>';
   try{
     const r=await api('/api/clients');const d=await r.json();
     clients=d.clients||[];bcProfiles=d.bc_profiles||{};renderClients();
+    loadClientDupes();
   }catch{el.innerHTML='<div class="empty">Could not load clients.</div>';}
 }
 function bcProfileHtml(email){
