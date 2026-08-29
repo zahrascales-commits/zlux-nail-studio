@@ -387,7 +387,7 @@
         <div style="text-align:right;"><span class="option-price">$1</span></div>
       </button>
 
-      <div class="section-label" style="margin-bottom:0.75rem;">Manicure</div>
+      <div class="section-label" id="lbl-manicure" style="margin-bottom:0.75rem;">Manicure</div>
       <button class="option-btn" id="svc-btn-gel" onclick="toggleService('Regular Gel Manicure',55,'manicure',this)">
         <div><span class="option-name">Regular Gel Manicure</span><span class="option-sub">Classic gel colour — clean, simple, quick</span></div>
         <div style="text-align:right;"><span class="option-price">$55</span></div>
@@ -421,7 +421,7 @@
         <div style="text-align:right;"><span class="option-price" id="price-6">$110</span><div id="tag-6"></div></div>
       </button>
 
-      <div class="section-label" style="margin:1rem 0 0.75rem;">Pedicure</div>
+      <div class="section-label" id="lbl-pedicure" style="margin:1rem 0 0.75rem;">Pedicure</div>
       <button class="option-btn" id="svc-btn-7" onclick="toggleService('Russian Dry Pedicure',95,'pedicure',this)">
         <div><span class="option-name">Russian Dry Pedicure</span><span class="option-sub">Water-free Russian technique — the healthiest way to grow out your natural nails</span></div>
         <div style="text-align:right;"><span class="option-price" id="price-7">$95</span><div id="tag-7"></div></div>
@@ -429,6 +429,14 @@
       <button class="option-btn" id="svc-btn-8" onclick="toggleService('Russian Dry Pedicure — Full Correction',125,'pedicure',this)">
         <div><span class="option-name">Russian Dry Pedicure — Full Correction</span><span class="option-sub">Complete foot renewal — exfoliation, buffing, and callus correction each visit</span></div>
         <div style="text-align:right;"><span class="option-price" id="price-8">$125</span><div id="tag-8"></div></div>
+      </button>
+
+      <button type="button" id="add-second-svc" onclick="showAllServices()"
+        style="display:none;width:100%;background:none;border:1px dashed rgba(182,165,136,0.7);
+               padding:0.9rem 1rem;margin-top:0.9rem;cursor:pointer;
+               font-family:'Josefin Sans',sans-serif;font-size:0.82rem;letter-spacing:0.08em;
+               text-transform:uppercase;color:var(--latte);">
+        + Add a second service
       </button>
 
       <div class="section-label" style="margin:1.25rem 0 0.75rem;">Add-Ons <span style="font-size:0.65rem;color:var(--latte);text-transform:none;letter-spacing:0;">(optional)</span></div>
@@ -1214,6 +1222,58 @@ function updateAddonPriceTags() {
 // ── Multi-select services (GlossGenius pattern: tap to Select/Unselect,
 //    sticky bar counts up, + / − stepper books the same service twice for
 //    a second person) ──
+
+/* ── ONE SERVICE ON SCREEN ──────────────────────────────────────────────
+   The list is only long until something is chosen. After that the chosen
+   service stays, everything else folds away, and one button brings the list
+   back for anyone who genuinely wants two. */
+let SHOW_ALL_SERVICES = false;
+
+function serviceButtons(){
+  return [...document.querySelectorAll('#step-2 .option-btn')].filter(function(b){
+    return /^svc-btn/.test(b.id || '') || b.id === 'test-service-btn';
+  });
+}
+
+function collapseServices(){
+  const btns = serviceButtons();
+  if(!btns.length) return;
+  const chosen = booking.items.length > 0;
+  const fold = chosen && !SHOW_ALL_SERVICES;
+
+  btns.forEach(function(b){
+    // The owner's test button follows its own rule and is hidden anyway.
+    if(b.id === 'test-service-btn') return;
+    const picked = b.classList.contains('svc-selected');
+    b.style.display = (!fold || picked) ? '' : 'none';
+  });
+
+  // A heading with nothing under it is just a word on the page.
+  ['lbl-manicure','lbl-pedicure'].forEach(function(id){
+    const lbl = document.getElementById(id);
+    if(!lbl) return;
+    const group = id === 'lbl-manicure' ? 'manicure' : 'pedicure';
+    const anyVisible = btns.some(function(b){
+      return b.style.display !== 'none' && (b.getAttribute('onclick') || '').indexOf("'" + group + "'") > -1;
+    });
+    lbl.style.display = anyVisible ? '' : 'none';
+  });
+
+  const add = document.getElementById('add-second-svc');
+  if(add) add.style.display = fold ? 'block' : 'none';
+}
+
+function showAllServices(){
+  SHOW_ALL_SERVICES = true;
+  collapseServices();
+  // Put the newly revealed options in front of them rather than leaving them
+  // to work out that something changed further up the page.
+  const first = serviceButtons().find(function(b){
+    return b.style.display !== 'none' && !b.classList.contains('svc-selected');
+  });
+  if(first && first.scrollIntoView) first.scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
 function toggleService(name, price, category, btn) {
   const idx = booking.items.findIndex(it => it.service === name);
   if (idx >= 0) {
@@ -1233,7 +1293,11 @@ function toggleService(name, price, category, btn) {
       + '<span style="font-family:\'Josefin Sans\',sans-serif;font-size:0.62rem;color:var(--champagne);letter-spacing:0.06em;">people</span></span>';
     (btn.querySelector('div') || btn).appendChild(holder);
   }
+  // Choosing collapses the list again — including when they are picking a
+  // second one, so it never sits open longer than it is needed.
+  SHOW_ALL_SERVICES = false;
   syncLegacyMirror();
+  collapseServices();
   updateStickyBar();
 }
 function changeQty(name, delta, el) {
@@ -1641,10 +1705,13 @@ function removeServiceUnit(name) {
   }
   if (!booking.items.length) {
     alert('All services removed — tap Back to choose a service.');
+    SHOW_ALL_SERVICES = false;
+    collapseServices();
     updateStickyBar();
     goStep(2);
     return;
   }
+  collapseServices();
   updateStickyBar();
   loadSummary();
   renderWhoSection();
@@ -1679,6 +1746,7 @@ function goStep(n) {
     el.className = 'gg-step' + (i === icon ? ' on' : i < icon ? ' done' : '');
     if (i < 3) document.getElementById('gg-l' + i).className = 'gg-line' + (i < icon ? ' done' : '');
   }
+  if (n === 2) { SHOW_ALL_SERVICES = false; collapseServices(); }
   if (n === 2 && booking.memberTier) updateServiceTags();
   if (n === 3) { loadCoverageWindows().then(renderBkCal); renderBkCal(); loadTimeslots(); }
   if (n === 4) { loadSummary(); renderWhoSection(); initPayment(); }
