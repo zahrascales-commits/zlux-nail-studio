@@ -5667,9 +5667,14 @@ async function loadPeople(){
     + '</div>'
 
     + '<div class="ppl-cols">'
-      + col('SIGNATURE', 'Signature', '$99 a month')
-      + col('LUXE', 'Luxe', '$199 a month')
-      + col('BLACK_CARD', 'Black Card', '$299 a month')
+      // One column per membership the server reports, in its order. Naming
+      // three of them here is what hid an Elite member who was being billed.
+      + Object.keys(PEOPLE.columns || {}).map(function(tier){
+          const label = (PEOPLE.column_labels || {})[tier] || tier;
+          const cents = (PEOPLE.column_prices || {})[tier] || 0;
+          const every = (PEOPLE.column_cadence || {})[tier] || 'a month';
+          return col(tier, esc(label), cents ? pplMoney(cents) + ' ' + every : '');
+        }).join('')
     + '</div>'
 
     + '<div class="page-head" style="margin-top:2rem;"><div>'

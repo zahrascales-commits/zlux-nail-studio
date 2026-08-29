@@ -327,27 +327,39 @@ async function build() {
 
   const lapsed = dropins.filter(d => d.days_since != null && d.days_since > 90);
 
+  // Every column that exists, counted the same way. Naming the three
+  // original tiers here is what kept an Elite member off her own Members
+  // screen after the columns above had already been built correctly.
+  const tierKeys = Object.keys(columns);
+  const everyRow = tierKeys.reduce((all, k) => all.concat(columns[k]), []);
+  const byTier = {};
+  const labels = {};
+  const prices = {};
+  const cadence = {};
+  for (const k of tierKeys) {
+    byTier[k] = columns[k].length;
+    labels[k] = TIER_LABEL[k] || k;
+    prices[k] = TIER_PRICE[k] || 0;
+    // The two current memberships bill every four weeks; the retired three
+    // were monthly. Saying "a month" about a four-week plan is a small lie
+    // that adds up to a whole extra payment a year.
+    const p = plans.byKey(k);
+    cadence[k] = (p && plans.PLANS.some(x => x.key === k)) ? 'every 4 weeks' : 'a month';
+  }
+
   return {
     today: today(),
-    columns: {
-      SIGNATURE: columns.SIGNATURE,
-      LUXE: columns.LUXE,
-      BLACK_CARD: columns.BLACK_CARD,
-    },
+    columns,
+    // What each column is called and costs, so the screen never has to know.
+    column_labels: labels,
+    column_prices: prices,
+    column_cadence: cadence,
     totals: {
       mrr_cents: mrr,
-      active_members: columns.SIGNATURE.filter(r => r.active).length
-        + columns.LUXE.filter(r => r.active).length
-        + columns.BLACK_CARD.filter(r => r.active).length,
-      cancelled_members: columns.SIGNATURE.filter(r => !r.active).length
-        + columns.LUXE.filter(r => !r.active).length
-        + columns.BLACK_CARD.filter(r => !r.active).length,
+      active_members: everyRow.filter(r => r.active).length,
+      cancelled_members: everyRow.filter(r => !r.active).length,
       membership_paid_to_date_cents: lifetimeMembership,
-      by_tier: {
-        SIGNATURE: columns.SIGNATURE.length,
-        LUXE: columns.LUXE.length,
-        BLACK_CARD: columns.BLACK_CARD.length,
-      },
+      by_tier: byTier,
     },
     dropins: dropins.sort((a, b) => String(b.last_visit).localeCompare(String(a.last_visit))),
     dropin_totals: {
