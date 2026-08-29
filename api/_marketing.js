@@ -283,10 +283,17 @@ async function recipientsFor(channel) {
   }
 
   const byName = (a, b) => String(a.name).localeCompare(String(b.name));
+  // Which memberships there are to pick from. Sent with the people so the
+  // screen never has to know the tiers by name — that is what left the
+  // Elite member in the data but off the buttons.
+  const plans = require('./_plans');
+  const tiers = plans.ALL().map(p => ({ key: p.key, name: p.name }));
+
   return {
     subscribed: subscribed.sort(byName),
     unreachable: unreachable.sort(byName),
     unsubscribed: unsubscribed.sort(byName),
+    tiers,
   };
 }
 

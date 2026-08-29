@@ -1596,9 +1596,7 @@
             <select id="mass-audience" onchange="onMassAudience()" style="background:var(--bg);border:1px solid var(--border);color:var(--cream);padding:0.55rem 0.7rem">
               <option value="optin">Signed-up list only</option>
               <option value="all">All clients</option>
-              <option value="BLACK_CARD">Everyone in Black Card</option>
-              <option value="LUXE">Everyone in Luxe</option>
-              <option value="SIGNATURE">Everyone in Signature</option>
+              <!-- one option per membership, filled in on load -->
               <option value="selected">Pick specific people…</option>
             </select>
             <button class="btn btn-gold btn-sm" onclick="sendMass()">Send Message</button>
@@ -2204,7 +2202,7 @@ const TAB_LOADERS = {
   inventory:  () => loadInventory(),
   messages:   () => loadThreads(),
   scheduling: () => loadScheduling(),
-  marketing:  () => loadMarketing(),
+  marketing:  () => { fillMassAudience(); loadMarketing(); },
   team:       () => { renderMembers(); loadClientInspo(); loadOverrides(); },
   inbox:      () => loadInquiries(),
   site:       () => loadSite(),
@@ -4321,16 +4319,19 @@ function cwStep2(){
       || String(x.phone).includes(q);
   });
   const selectable = CW.bucket === 'subscribed';
+  // One button per membership the server reports, current ones first.
+  // These used to be typed out, which is why a paying Elite member could be
+  // in the list but never selected.
   const GROUPS = [
     { k:'all',      label:'Everyone' },
     { k:'members',  label:'Members' },
-    { k:'SIGNATURE',label:'Signature' },
-    { k:'LUXE',     label:'Luxe' },
-    { k:'BLACK_CARD',label:'Black Card' },
+  ].concat(((CW.people && CW.people.tiers) || []).map(function(t){
+    return { k: t.key, label: t.name };
+  })).concat([
     { k:'dropins',  label:'Drop-ins' },
     { k:'pressons', label:'Press-ons' },
     { k:'lapsed',   label:'Gone quiet' },
-  ];
+  ]);
   const inGroup = function(x){
     return !CW.group || CW.group === 'all' || (x.groups || []).indexOf(CW.group) >= 0;
   };
@@ -7094,13 +7095,45 @@ function massPickAll(on){
   massClients.filter(c=>!q||((c.name||'')+' '+(c.email||'')+' '+(c.phone||'')).toLowerCase().includes(q)).forEach(c=>{on?massSelected.add(Number(c.id)):massSelected.delete(Number(c.id));});
   renderMassPicker();
 }
+/* The memberships, so the quick-message box can offer each one and name it
+   in the confirmation. Filled from the server rather than typed here — that
+   is what left the Elite member with no way to be written to. */
+let MASS_TIERS = [];
+
+async function fillMassAudience(){
+  const sel = document.getElementById('mass-audience');
+  if(!sel) return;
+  let tiers = [];
+  try{
+    const d = await (await api('/api/plans')).json();
+    tiers = (d.plans || []).concat(d.legacy || []).map(function(p){ return { key:p.key, name:p.name }; });
+  }catch(_){ return; }
+  if(!tiers.length) return;
+  MASS_TIERS = tiers;
+
+  // Rebuild between "All clients" and "Pick specific people".
+  [...sel.querySelectorAll('option[data-tier]')].forEach(function(o){ o.remove(); });
+  const pick = sel.querySelector('option[value="selected"]');
+  tiers.forEach(function(t){
+    const o = document.createElement('option');
+    o.value = t.key;
+    o.dataset.tier = '1';
+    o.textContent = 'Everyone in ' + t.name;
+    sel.insertBefore(o, pick);
+  });
+}
+
 async function sendMass(){
   const message=document.getElementById('mass-msg').value.trim();
   if(!message){toast('Write your message first');return;}
   const audience=document.getElementById('mass-audience').value;
   const ids=audience==='selected'?[...massSelected]:undefined;
   if(audience==='selected'&&(!ids||!ids.length)){toast('Pick at least one person');return;}
-  const audLabel={optin:'your signed-up list',all:'all clients','BLACK_CARD':'all Black Card members','LUXE':'all Luxe members','SIGNATURE':'all Signature members',selected:ids?ids.length+' selected people':'selected people'}[audience];
+  const tierName = (MASS_TIERS.find(function(t){ return t.key === audience; }) || {}).name;
+  const audLabel = tierName
+    ? 'all ' + tierName + ' members'
+    : ({ optin:'your signed-up list', all:'all clients',
+         selected: ids ? ids.length + ' selected people' : 'selected people' }[audience] || audience);
   if(!confirm('Send this message to '+audLabel+' right now?'))return;
   const out=document.getElementById('mass-result');
   out.textContent='Sending…';

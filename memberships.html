@@ -386,7 +386,7 @@ function plRenderLegacy(){
       + (p.full
           ? '<span class="pl-old-cta" style="opacity:0.45;cursor:not-allowed">Fully booked</span>'
           : '<a class="pl-old-cta" href="signup.html?tier=' + p.key + '">Join ' + plEsc(p.name) + '</a>')
-      + '<div class="pl-old-spots"><b>' + p.joined + '</b> joined · <b>' + p.spots_open + '</b> open</div>'
+      + '<div class="pl-old-spots"><b>' + p.joined + '</b> taken · <b>' + p.spots_open + '</b> spot' + (p.spots_open === 1 ? '' : 's') + ' left</div>'
       + '</div>';
   }).join('');
 }

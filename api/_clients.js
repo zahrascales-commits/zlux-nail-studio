@@ -485,7 +485,10 @@ async function handler(req, res) {
       // audiences pull from the membership roster; everything else pulls from
       // the general client list (opt-in, all, or a hand-picked selection).
       let targets = [];
-      if (audience === 'BLACK_CARD' || audience === 'LUXE' || audience === 'SIGNATURE') {
+      // Any membership that exists, not three named ones. Naming them is
+      // what left a paying Elite member unreachable.
+      const isTier = !!require('./_plans').byKey(String(audience || ''));
+      if (isTier) {
         targets = await query('SELECT full_name AS name, email, phone FROM members WHERE tier = ?', [audience]).catch(() => []);
       } else if (audience === 'selected') {
         const idList = (Array.isArray(ids) ? ids : []).map(Number).filter(Boolean);
