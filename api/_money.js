@@ -35,7 +35,7 @@ const money = c => Math.round(Number(c) || 0);
 /* Every card payment Stripe took in a window, net of anything given back.
    Paged, because a busy month is more than one page and a silently
    truncated list reads as a quiet month. */
-async function stripeCollected(sk, sinceSec) {
+async function stripeCollected(sk, sinceSec, LIST) {
   let starting_after = null;
   let gross = 0, refunded = 0, count = 0;
   const byMonth = {};
@@ -67,6 +67,7 @@ async function stripeCollected(sk, sinceSec) {
       // does not. That is the cleanest signal Stripe gives for which is
       // which, and it does not depend on how a description was worded.
       const isMembership = !!ch.invoice;
+      if (LIST) LIST.push({ id: ch.id, amount: ch.amount, refunded: ch.amount_refunded, invoice: ch.invoice || null, desc: ch.description || "", created: ch.created });
       const desc = String(ch.description || '').toLowerCase();
       if (isMembership) bySource.memberships += net;
       else if (/deposit|checkout|balance|tip|appointment/.test(desc)) bySource.appointments += net;
@@ -138,10 +139,11 @@ module.exports = async function (req, res) {
     const srows = await query("SELECT key, value FROM site_settings WHERE key = 'stripe_secret'");
     const sk = (srows[0] && srows[0].value) || process.env.STRIPE_SECRET_KEY || '';
 
+    const listing = String(req.query.detail || "") === "1" ? [] : null;
     let card = { gross: 0, refunded: 0, net: 0, count: 0, byMonth: {}, bySource: {} };
     let cardError = '';
     if (sk) {
-      try { card = await stripeCollected(sk, Math.floor(yStart.getTime() / 1000)); }
+      try { card = await stripeCollected(sk, Math.floor(yStart.getTime() / 1000), listing); }
       catch (e) { cardError = String(e.message || e); }
     } else {
       cardError = 'no Stripe key saved';
@@ -193,6 +195,7 @@ module.exports = async function (req, res) {
       // Never added in. Shown so the gap between booked and banked is visible.
       outstanding: owed,
       card_error: cardError,
+      charges: listing || undefined,
     });
   } catch (err) {
     return res.status(500).json({ error: String(err.message || err) });
