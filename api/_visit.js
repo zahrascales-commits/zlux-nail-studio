@@ -44,11 +44,44 @@ async function findByToken(token) {
 // Half the service, the same rule the public booking uses. Worked out from
 // the menu rather than stored on the row, so a service renamed or repriced
 // does not leave an old number sitting on somebody's appointment.
+/* Who is this, and does their membership already cover it?
+   Without this the deposit was priced for a stranger every time. */
+async function memberInfoFor(appt) {
+  try {
+    const bill = require('./_kiosk-bill');
+    const member = await bill.memberFor({
+      member_id: appt.member_id || null,
+      email: appt.client_email || appt.email || '',
+      name: appt.client_name || appt.name || '',
+    });
+    const tier = bill.memberTierOf(member);
+    if (!tier) return { member: null, tier: null };
+    return { member, tier };
+  } catch (_) { return { member: null, tier: null }; }
+}
+
 async function depositFor(appt) {
+  // A deposit already taken is a fact, not a calculation.
   if (Number(appt.deposit_cents) > 0) return Number(appt.deposit_cents);
+
+  const { member, tier } = await memberInfoFor(appt);
+
+  /* Essential and Elite promise no deposit in as many words. The retired
+     tiers include the service outright, so there is nothing to hold. */
+  if (tier) {
+    try {
+      const perks = require('./_perks');
+      const neverDeposits = (perks.tierPerks(tier) || []).some(p => p.kind === 'deposit');
+      if (neverDeposits) return 0;
+      const free = await require('./_pay').freeServicesLeft(member.member_id, tier);
+      if (free > 0) return 0;
+    } catch (_) { return 0; }   // unsure about a member means do not ask them for money
+  }
+
   try {
     const calc = require('./_pay').computeDeposit({
-      service_name: appt.service, addon_names: [],
+      service_name: appt.service, addon_names: [], member_tier: tier || null,
+      free_service: false,
     });
     if (calc && calc.deposit_cents) return calc.deposit_cents;
   } catch (_) {}
@@ -182,3 +215,4 @@ module.exports.findByToken = findByToken;
 module.exports.depositFor = depositFor;
 module.exports.pretty = pretty;
 module.exports.time12 = time12;
+module.exports.memberInfoFor = memberInfoFor;
