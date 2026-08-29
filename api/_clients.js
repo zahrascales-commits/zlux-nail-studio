@@ -382,6 +382,94 @@ async function handler(req, res) {
       return res.json({ ok: true });
     }
 
+    /* ── OWNER: two rows, one client ──
+       Everything the losing row knows is carried across. A detail that
+       cannot be carried — a second email, a second phone — goes into the
+       notes rather than the bin, because an old number is still a way to
+       reach somebody and this cannot be undone. */
+    if (req.method === 'POST' && action === 'merge') {
+      const keepId = Number((req.body || {}).keep_id);
+      const dropId = Number((req.body || {}).drop_id);
+      if (!keepId || !dropId || keepId === dropId) {
+        return res.status(400).json({ error: 'Pick two different clients to join.' });
+      }
+
+      const keep = await queryOne('SELECT * FROM clients WHERE id=?', [keepId]);
+      const drop = await queryOne('SELECT * FROM clients WHERE id=?', [dropId]);
+      if (!keep || !drop) return res.status(404).json({ error: 'One of those clients no longer exists.' });
+
+      const NEWLINE = String.fromCharCode(10);
+      const clean = v => String(v == null ? '' : v).trim();
+      const same = (a, b) => clean(a).toLowerCase() === clean(b).toLowerCase();
+
+      // Keep what the surviving row has; fill its blanks from the other.
+      const email = clean(keep.email) || clean(drop.email);
+      const phone = clean(keep.phone) || clean(drop.phone);
+
+      // Whatever could not be kept, said plainly and dated.
+      const carried = [];
+      if (clean(drop.email) && !same(drop.email, email)) carried.push('also uses ' + clean(drop.email));
+      if (clean(drop.phone) && !same(drop.phone, phone)) carried.push('also has ' + clean(drop.phone));
+      if (clean(drop.name) && !same(drop.name, keep.name)) carried.push('was also in the book as "' + clean(drop.name) + '"');
+
+      const joinText = (a, b) => {
+        const parts = [clean(a), clean(b)].filter(Boolean).filter((v, i, arr) => arr.indexOf(v) === i);
+        return parts.join(' · ');
+      };
+
+      const notes = [
+        joinText(keep.notes, drop.notes),
+        carried.length ? '[joined ' + new Date().toISOString().slice(0, 10) + '] ' + carried.join('; ') : '',
+      ].filter(Boolean).join(NEWLINE);
+
+      // Visits add up; the most recent visit and service win.
+      const visits = (Number(keep.visits) || 0) + (Number(drop.visits) || 0);
+      const keepLater = clean(keep.last_visit) >= clean(drop.last_visit);
+      const lastVisit = keepLater ? clean(keep.last_visit) : clean(drop.last_visit);
+      const lastService = (keepLater ? clean(keep.last_service) : clean(drop.last_service))
+        || clean(keep.last_service) || clean(drop.last_service);
+
+      await execute(
+        `UPDATE clients SET name=?, email=?, phone=?, likes=?, dislikes=?, notes=?,
+           marketing_opt_in=?, visits=?, last_service=?, last_visit=? WHERE id=?`,
+        [clean(keep.name) || clean(drop.name), email, phone,
+         joinText(keep.likes, drop.likes), joinText(keep.dislikes, drop.dislikes), notes,
+         (Number(keep.marketing_opt_in) || Number(drop.marketing_opt_in)) ? 1 : 0,
+         visits, lastService, lastVisit, keepId]);
+
+      await execute('DELETE FROM clients WHERE id=?', [dropId]);
+
+      return res.json({ ok: true, kept: keepId, removed: dropId, carried, email, phone, visits });
+    }
+
+    /* ── OWNER: who is in the book twice ──
+       Matched on a shared email or phone only. Two people really can have
+       the same first name, so a name on its own is never enough to suggest
+       joining two records. */
+    if (req.method === 'GET' && action === 'duplicates') {
+      const rows = await query('SELECT id, name, email, phone, visits, last_visit FROM clients ORDER BY id');
+      const groups = {};
+      const add = (k, r) => { if (k) (groups[k] = groups[k] || []).push(r); };
+      for (const r of rows) {
+        add('e:' + String(r.email || '').trim().toLowerCase(), r);
+        add('p:' + String(r.phone || '').replace(/[^0-9]/g, ''), r);
+      }
+      const pairs = [];
+      const seen = new Set();
+      for (const k of Object.keys(groups)) {
+        if (k === 'e:' || k === 'p:') continue;
+        const g = groups[k];
+        if (g.length < 2) continue;
+        // The fuller name is the one worth keeping.
+        g.sort((a, b) => String(b.name || '').length - String(a.name || '').length);
+        const sig = g.map(x => x.id).sort().join('-');
+        if (seen.has(sig)) continue;
+        seen.add(sig);
+        pairs.push({ matched_on: k.startsWith('e:') ? 'email' : 'phone', value: k.slice(2), clients: g });
+      }
+      return res.json({ duplicates: pairs });
+    }
+
     // ── OWNER: list every client for the mass-message picker ──
     if (req.method === 'GET' && action === 'list') {
       const rows = await query('SELECT id, name, email, phone, last_service, marketing_opt_in FROM clients ORDER BY name');
