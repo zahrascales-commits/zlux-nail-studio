@@ -81,6 +81,61 @@ let CTX = { client_name: '', service: '', appt_date: '', member_name: '' };
 let PICKED = '';
 
 const $ = id => document.getElementById(id);
+
+/* Shrink a photo until it fits, whatever it started as.
+   Three fixed attempts used to be the whole strategy, and a long phone
+   screenshot went past all three — then uploaded anyway and got refused.
+   This keeps going: smaller, then lower quality, then smaller again, until
+   it is under the limit. Any picture a phone can produce ends up sendable. */
+const INSPO_LIMIT = 2600000;   // leaves room under the server's ceiling
+
+async function shrinkToFit(file){
+  let bmp = null;
+  // createImageBitmap reads formats an <img> will not, which matters on
+  // iPhones where photos arrive as HEIC.
+  try {
+    if (window.createImageBitmap) bmp = await createImageBitmap(file);
+  } catch (_) {}
+
+  if (!bmp) {
+    bmp = await new Promise(function (resolve, reject) {
+      const img = new Image(), reader = new FileReader();
+      reader.onload = function (ev) { img.src = ev.target.result; };
+      img.onload = function () { resolve(img); };
+      img.onerror = function () {
+        reject(new Error('That file is not a picture this browser can open. A screenshot or a photo from your camera roll will work.'));
+      };
+      reader.onerror = function () { reject(new Error('Could not read that file — try another.')); };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  const w0 = bmp.width || bmp.naturalWidth;
+  const h0 = bmp.height || bmp.naturalHeight;
+  if (!w0 || !h0) throw new Error('That file is not a picture — try another.');
+
+  // Start generous. Detail in a reference photo is the entire point of
+  // sending one, so quality only comes down when it has to.
+  let maxDim = 2200, quality = 0.9, out = '';
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const scale = Math.min(1, maxDim / Math.max(w0, h0));
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.round(w0 * scale));
+    cv.height = Math.max(1, Math.round(h0 * scale));
+    const ctx = cv.getContext('2d');
+    // A white ground, so a screenshot with transparency does not turn black
+    // when it becomes a JPEG.
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(bmp, 0, 0, cv.width, cv.height);
+    out = cv.toDataURL('image/jpeg', quality);
+    if (out.length <= INSPO_LIMIT) return out;
+    // Drop quality first — it costs less than losing the detail she needs.
+    if (quality > 0.5) quality -= 0.12;
+    else maxDim = Math.round(maxDim * 0.8);
+  }
+  return out;
+}
 const esc = s => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const msg = (t, isErr) => { const m = $('ins-msg'); m.textContent = t; m.className = 'ins-msg' + (isErr ? ' err' : ''); };
@@ -118,27 +173,17 @@ $('ins-file').addEventListener('change', e => {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
   msg('');
-  const img = new Image(), reader = new FileReader();
-  reader.onload = ev => { img.src = ev.target.result; };
-  img.onload = () => {
-    // Compress in the browser — phone photos are far too big to store raw,
-    // and a failed upload here means she walks in with nothing to work from.
-    const scale = Math.min(1, 1400 / Math.max(img.width, img.height));
-    const cv = document.createElement('canvas');
-    cv.width = Math.round(img.width * scale);
-    cv.height = Math.round(img.height * scale);
-    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
-    PICKED = cv.toDataURL('image/jpeg', 0.82);
-    if (PICKED.length > 850000) PICKED = cv.toDataURL('image/jpeg', 0.6);
-    if (PICKED.length > 850000) PICKED = cv.toDataURL('image/jpeg', 0.42);
+  msg('Getting your photo ready…');
+  shrinkToFit(file).then(function (dataUrl) {
+    PICKED = dataUrl;
     $('ins-img').src = PICKED;
     $('ins-preview').style.display = 'block';
     $('ins-actions').classList.add('on');
     $('ins-drop-t').textContent = 'Tap to choose a different photo';
-  };
-  img.onerror = () => msg('That file did not look like a photo — try another.', true);
-  reader.onerror = () => msg('Could not read that file — try another.', true);
-  reader.readAsDataURL(file);
+    msg('');
+  }).catch(function (err) {
+    msg(err.message || 'Could not read that file — try another.', true);
+  });
 });
 
 $('ins-again').addEventListener('click', () => $('ins-file').click());

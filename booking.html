@@ -1051,15 +1051,25 @@ function inspoPicked(input) {
   reader.onload = e => { img.src = e.target.result; };
   img.onerror = () => { status.textContent = 'That file didn\'t look like a photo — try another.'; };
   img.onload = () => {
-    // resize + compress so it uploads fast and stays under the size limit
-    const scale = Math.min(1, 1000 / Math.max(img.width, img.height));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(img.width * scale);
-    canvas.height = Math.round(img.height * scale);
-    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-    let q = 0.78, dataUrl = canvas.toDataURL('image/jpeg', q);
-    // step the quality down until comfortably under the server's ~900KB cap
-    while (dataUrl.length > 820000 && q > 0.3) { q -= 0.12; dataUrl = canvas.toDataURL('image/jpeg', q); }
+    // Shrink until it fits rather than giving up at a fixed floor. A
+    // reference photo exists to be looked at closely, so the size comes
+    // down before the quality does, and it keeps going until it is under
+    // the limit instead of sending something that will be refused.
+    const LIMIT = 2600000;
+    let maxDim = 2200, q = 0.9, dataUrl = '';
+    for (let i = 0; i < 12; i++) {
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      dataUrl = canvas.toDataURL('image/jpeg', q);
+      if (dataUrl.length <= LIMIT) break;
+      if (q > 0.5) q -= 0.12; else maxDim = Math.round(maxDim * 0.8);
+    }
     _inspoDataUrl = dataUrl;
     const prev = document.getElementById('inspo-preview');
     prev.src = dataUrl; prev.style.display = 'block';

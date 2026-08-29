@@ -12,7 +12,11 @@ const { query, queryOne, execute, ensureTables } = require('./_team-db');
 const { notifyInApp } = require('./_notify');
 
 const CEO_PASSWORD = process.env.CEO_PASSWORD || 'ZOLA2026';
-const MAX_DATA_URL = 900000; // ~900KB — client resizes to well under this
+// Roughly 3MB of base64, which is about a 2.2MB image. Comfortably under
+// the request size a serverless function will accept, and far above
+// anything the browser will actually send after resizing — the point is
+// that a photo is never refused for being large.
+const MAX_DATA_URL = 3000000;
 
 module.exports = async function (req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
