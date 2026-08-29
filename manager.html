@@ -850,6 +850,7 @@
     <button class="tab" data-tab="scheduling" onclick="showTab('scheduling')">Scheduling <span class="dot" id="sched-dot" style="display:none">!</span></button>
     <button class="tab" data-tab="marketing" onclick="showTab('marketing')">Emails</button>
     <button class="tab" data-tab="team" onclick="showTab('team')">Team</button>
+    <button class="tab" data-tab="paymath" onclick="showTab('paymath')">Pay Math</button>
     <button class="tab" data-tab="clients" onclick="showTab('clients')">Clients</button>
     <button class="tab" data-tab="site" onclick="showTab('site')">Site</button>
     <button class="tab" data-tab="traffic" onclick="showTab('traffic')">Traffic</button>
@@ -1393,6 +1394,20 @@
     </section>
 
     <!-- CLIENTS -->
+        <section class="panel" id="panel-paymath">
+      <div class="page-head"><div>
+        <div class="page-title">Pay Math</div>
+        <div class="page-desc">Every appointment each artist has done and what it actually brought in. 
+        Work out their share however you pay them — this does not assume a percentage.</div>
+      </div>
+      <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+        <input id="pm-from" type="date" style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:0.5rem 0.6rem;outline:none" />
+        <span style="color:var(--muted);font-size:0.8rem">to</span>
+        <input id="pm-to" type="date" style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:0.5rem 0.6rem;outline:none" />
+        <button class="btn btn-sm" onclick="loadPayMath()">Show</button>
+      </div></div>
+      <div id="paymath-body"></div>
+    </section>
     <section class="panel" id="panel-clients">
       <div class="page-head">
         <div>
@@ -2209,6 +2224,7 @@ const TAB_LOADERS = {
   inbox:      () => loadInquiries(),
   site:       () => loadSite(),
   traffic:    () => loadTraffic(),
+  paymath:    () => loadPayMath(),
   clients:    () => loadClients(),
   settings:   () => { loadSettings(); mountOwnerPush(); },
 };
@@ -6878,6 +6894,73 @@ async function mergeClients(keepId, dropId, i){
     if(msg) msg.textContent = '';
   }catch(err){ if(msg) msg.textContent = 'Could not join those: ' + err.message; return; }
   setTimeout(function(){ loadClients(); }, 1200);
+}
+
+/* ── PAY MATH ────────────────────────────────────────────────────────────
+   What each artist did and what it brought in. No percentage is applied
+   anywhere: she pays different people differently and changes it, and a
+   figure computed here would eventually disagree with what she really
+   pays. Facts and totals only. */
+async function loadPayMath(){
+  const el = document.getElementById('paymath-body');
+  if(!el) return;
+  el.innerHTML = '<div class="empty">Working it out…</div>';
+
+  const from = (document.getElementById('pm-from')||{}).value || '';
+  const to = (document.getElementById('pm-to')||{}).value || '';
+  const qs = (from && to) ? ('&from=' + from + '&to=' + to) : '';
+
+  let d;
+  try{
+    d = await (await api('/api/team-math?x=1' + qs)).json();
+    if(d.error) throw new Error(d.error);
+  }catch(err){ el.innerHTML = emptyBox('⚠️','Could not load: ' + esc(err.message)); return; }
+
+  if(document.getElementById('pm-from') && !from) document.getElementById('pm-from').value = d.from;
+  if(document.getElementById('pm-to') && !to) document.getElementById('pm-to').value = d.to;
+
+  const mny = c => '$' + ((Number(c)||0)/100).toFixed(2);
+
+  el.innerHTML =
+    '<div class="cards">'
+      + statCard(d.totals.appointments, 'Appointments in this range')
+      + statCard(mny(d.totals.collected_cents), 'Collected across everyone')
+      + statCard(mny(d.totals.tips_cents), 'Tips (theirs, not yours)')
+    + '</div>'
+    + (d.artists || []).map(function(a){
+        return '<div class="site-card" style="margin-top:1.25rem">'
+          + '<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:0.5rem">'
+            + '<h3 style="margin:0">' + esc(a.name) + '</h3>'
+            + '<div style="font-size:0.82rem;color:var(--muted)">'
+              + a.appointments + ' appointment' + (a.appointments === 1 ? '' : 's')
+              + ' · <strong style="color:var(--cream)">' + mny(a.collected_cents) + '</strong> collected'
+              + (a.tips_cents ? ' · ' + mny(a.tips_cents) + ' tips' : '')
+              + (a.unpaid_cents ? ' · <span style="color:#d9a441">' + mny(a.unpaid_cents) + ' not paid yet</span>' : '')
+            + '</div>'
+          + '</div>'
+          + (a.rows.length
+              ? '<div style="overflow-x:auto;margin-top:0.8rem"><table style="width:100%;border-collapse:collapse;font-size:0.84rem">'
+                + '<tr style="text-align:left;color:var(--muted);font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase">'
+                  + '<th style="padding:0.4rem 0.6rem 0.4rem 0">Date</th><th style="padding:0.4rem 0.6rem">Client</th>'
+                  + '<th style="padding:0.4rem 0.6rem">Service</th><th style="padding:0.4rem 0.6rem;text-align:right">Worth</th>'
+                  + '<th style="padding:0.4rem 0.6rem;text-align:right">Collected</th><th style="padding:0.4rem 0 0.4rem 0.6rem;text-align:right">Tip</th></tr>'
+                + a.rows.map(function(r){
+                    return '<tr style="border-top:1px solid var(--border)">'
+                      + '<td style="padding:0.45rem 0.6rem 0.45rem 0;color:var(--muted);white-space:nowrap">' + esc(niceDay(r.date)) + '</td>'
+                      + '<td style="padding:0.45rem 0.6rem">' + esc(r.client) + '</td>'
+                      + '<td style="padding:0.45rem 0.6rem;color:var(--muted)">' + esc(r.service) + '</td>'
+                      + '<td style="padding:0.45rem 0.6rem;text-align:right;color:var(--muted)">' + mny(r.worth_cents) + '</td>'
+                      + '<td style="padding:0.45rem 0.6rem;text-align:right;'
+                        + (r.collected_cents ? 'color:var(--cream)' : 'color:#d9a441') + '">'
+                        + (r.collected_cents ? mny(r.collected_cents) : 'not paid') + '</td>'
+                      + '<td style="padding:0.45rem 0 0.45rem 0.6rem;text-align:right;color:var(--muted)">'
+                        + (r.tip_cents ? mny(r.tip_cents) : '—') + '</td>'
+                    + '</tr>';
+                  }).join('')
+                + '</table></div>'
+              : '<div class="empty" style="margin-top:0.6rem">Nothing in this range.</div>')
+        + '</div>';
+      }).join('');
 }
 async function loadClients(){
   const el=document.getElementById('clients-list');
