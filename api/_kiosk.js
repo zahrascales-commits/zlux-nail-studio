@@ -103,6 +103,37 @@ module.exports = async function (req, res) {
   try {
     await ensure();
 
+    /* ── WHO IS THIS ──
+       Email or phone settles it outright. A name settles it only when one
+       person matches; otherwise the screen shows the shortlist and they
+       pick. Nothing is guessed, because a guess here charges somebody
+       else's card. */
+    if (req.method === 'GET' && action === 'find') {
+      const find = require('./_kiosk-find');
+      const { matches, how } = await find.findFor(req.query.q);
+      const bill = require('./_kiosk-bill');
+
+      const pay = require('./_pay');
+      const sk = await pay.getStripeSecret();
+
+      const out = [];
+      for (const a of matches.slice(0, 8)) {
+        const b = await bill.billFor(a);
+        const card = await bill.cardOnFile(sk, b.stripe_customer_id);
+        out.push({
+          ref: a.src + a.id,
+          name: b.name, service: b.service, time: b.time, artist: b.artist,
+          is_member: b.is_member, tier_label: b.tier_label,
+          list_cents: b.list_cents,
+          covered_by_membership: b.covered_by_membership,
+          deposit_taken_cents: b.deposit_taken_cents,
+          remainder_cents: b.remainder_cents,
+          card_on_file: card ? { brand: card.brand, last4: card.last4 } : null,
+        });
+      }
+      return res.json({ how, count: matches.length, matches: out });
+    }
+
     if (req.method === 'POST' && action === 'checkin') {
       const { name } = req.body || {};
       if (!name || !String(name).trim()) return res.status(400).json({ error: 'Name required' });

@@ -335,3 +335,7 @@ module.exports.verifyPaymentIntent = async function (payment_intent_id) {
 
 // The till prices a service the same way the booking page does.
 module.exports.serviceCategory = serviceCategory;
+
+// The till has to reach the same answer as the booking page about how much
+// of a membership is still unspent.
+module.exports.freeServicesLeft = freeServicesLeft;
