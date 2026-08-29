@@ -75,6 +75,7 @@ app.all('/api/perks',            require('./_perks'));
 app.all('/api/client-link',      require('./_client-link-api'));
 app.all('/api/insights',         require('./_insights'));
 app.all('/api/people',           require('./_roster-people'));
+app.all('/api/money',            require('./_money'));
 app.all('/api/reports',          require('./_reports'));
 app.all('/api/journeys',         require('./_journeys'));
 app.all('/api/contacts',         require('./_contacts'));

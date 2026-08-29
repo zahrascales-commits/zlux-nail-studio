@@ -233,10 +233,14 @@ async function build() {
     const v = price.monthlyValue(mm);
     const monthly = v.cents;
     const isCancelled = !!mm.cancelled_at || /cancel/i.test(String(mm.status || ''));
+    /* Nothing is billing this membership. It may be a preview account, or
+       somebody whose card was never attached — either way it is not income
+       and it is not an active member. */
+    const billing = !!mm.stripe_subscription_id;
     const months = monthsBetween(mm.membership_started_at, mm.cancelled_at || null);
     const paidToDate = monthly * months;
     lifetimeMembership += paidToDate;
-    if (!isCancelled) mrr += monthly;
+    if (!isCancelled && billing) mrr += monthly;
 
     const c = clientByKey[key(mm.full_name)] || clientByKey[String(mm.email || '').toLowerCase()] || {};
     const stats = summarise(mm.full_name, mm.email, paid, legacy);
@@ -261,7 +265,9 @@ async function build() {
       started: String(mm.membership_started_at || '').slice(0, 10),
       renews: String(mm.next_billing_at || '').slice(0, 10),
       cancelled_at: mm.cancelled_at ? String(mm.cancelled_at).slice(0, 10) : '',
-      active: !isCancelled,
+      // Active means being billed, not merely present in the table.
+      active: !isCancelled && billing,
+      cancelled: isCancelled,
       months_paid: months,
       paid_to_date_cents: paidToDate,
       flagged: !!Number(mm.flagged),
@@ -347,6 +353,10 @@ async function build() {
     cadence[k] = (p && plans.PLANS.some(x => x.key === k)) ? 'every 4 weeks' : 'a month';
   }
 
+  // Said plainly alongside the totals, because "5 members, $804 a month" and
+  // "3 members, $306 a month" are very different businesses.
+  const notBilling = everyRow.filter(r => !r.billing_live && !r.cancelled).length;
+
   return {
     today: today(),
     columns,
@@ -357,7 +367,9 @@ async function build() {
     totals: {
       mrr_cents: mrr,
       active_members: everyRow.filter(r => r.active).length,
-      cancelled_members: everyRow.filter(r => !r.active).length,
+      cancelled_members: everyRow.filter(r => r.cancelled).length,
+      // Present, not cancelled, and nothing is charging them.
+      not_billing_members: notBilling,
       membership_paid_to_date_cents: lifetimeMembership,
       by_tier: byTier,
     },

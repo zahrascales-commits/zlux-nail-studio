@@ -1151,7 +1151,7 @@ module.exports = async function (req, res) {
 
       try {
         const paid = await query(
-          'SELECT tier, paid_cents, billing_period FROM members WHERE COALESCE(demo,0)=0');
+          "SELECT tier, paid_cents, billing_period FROM members WHERE COALESCE(demo,0)=0 AND COALESCE(stripe_subscription_id,'') <> '' AND COALESCE(status,'active') NOT LIKE '%cancel%'");
         for (const p of paid) {
           if (!p.tier) continue;
           seen(p.tier);
@@ -1160,7 +1160,9 @@ module.exports = async function (req, res) {
       } catch (_) {}
 
       try {
-        const rows = await query('SELECT tier, COUNT(*) AS n FROM members WHERE COALESCE(demo,0)=0 GROUP BY tier');
+        /* Only memberships something is actually billing. Counting rows
+           made two preview accounts look like paying members. */
+        const rows = await query("SELECT tier, COUNT(*) AS n FROM members WHERE COALESCE(demo,0)=0 AND COALESCE(stripe_subscription_id,'') <> '' AND COALESCE(status,'active') NOT LIKE '%cancel%' GROUP BY tier");
         for (const r of rows) { if (!r.tier) continue; seen(r.tier); counts[r.tier] = Number(r.n); }
       } catch (_) {}
 
