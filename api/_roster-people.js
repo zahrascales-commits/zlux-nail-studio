@@ -267,7 +267,7 @@ async function build() {
       cancelled_at: mm.cancelled_at ? String(mm.cancelled_at).slice(0, 10) : '',
       // Active means being billed, not merely present in the table.
       active: !isCancelled && billing,
-      cancelled: isCancelled,
+      membership_cancelled: isCancelled,
       months_paid: months,
       paid_to_date_cents: paidToDate,
       flagged: !!Number(mm.flagged),
@@ -355,7 +355,7 @@ async function build() {
 
   // Said plainly alongside the totals, because "5 members, $804 a month" and
   // "3 members, $306 a month" are very different businesses.
-  const notBilling = everyRow.filter(r => !r.billing_live && !r.cancelled).length;
+  const notBilling = everyRow.filter(r => !r.billing_live && !r.membership_cancelled).length;
 
   return {
     today: today(),
@@ -367,7 +367,7 @@ async function build() {
     totals: {
       mrr_cents: mrr,
       active_members: everyRow.filter(r => r.active).length,
-      cancelled_members: everyRow.filter(r => r.cancelled).length,
+      cancelled_members: everyRow.filter(r => r.membership_cancelled).length,
       // Present, not cancelled, and nothing is charging them.
       not_billing_members: notBilling,
       membership_paid_to_date_cents: lifetimeMembership,
