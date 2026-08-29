@@ -70,8 +70,11 @@
 
   <!-- NAME (shared) -->
   <div class="screen" id="s-name">
-    <h2 id="name-title">What's your name?</h2>
-    <input class="name-input" id="kname" placeholder="First & last name" autocomplete="off" onkeydown="if(event.key==='Enter')nameNext()" />
+    <h2 id="name-title">What's your email?</h2>
+    <p class="sub" style="margin-top:0.5rem;">Your name works too — email just finds you straight away.</p>
+    <input class="name-input" id="kname" placeholder="you@email.com" autocomplete="off"
+      inputmode="email" autocapitalize="none" spellcheck="false"
+      onkeydown="if(event.key==='Enter')nameNext()" />
     <div class="err" id="name-err"></div>
     <div class="row">
       <button class="big-btn ghost" onclick="reset()">Back</button>
@@ -260,7 +263,7 @@ function go(mode){ MODE=mode;
 async function nameNext(){
   const name=document.getElementById('kname').value.trim();
   const err=document.getElementById('name-err'); err.textContent='';
-  if(!name){ err.textContent='Please type your name ✦'; return; }
+  if(!name){ err.textContent='Please type your email or name ✦'; return; }
   KNAME=name;
   if(MODE==='in'){
     try{
