@@ -919,6 +919,87 @@ module.exports = async function (req, res) {
       return res.json({ ok: true, sent, skipped, why });
     }
 
+    /* ── IS ANYBODY ACTUALLY BEING CHARGED ──
+       Straight from Stripe, per member: whether the subscription is live,
+       what it takes, how often, and when it next runs. A membership row in
+       the database with no subscription behind it is not income, and this is
+       the only place that can say so with certainty. */
+    if (method === 'GET' && action === 'billing_check') {
+      const srows = await query("SELECT key, value FROM site_settings WHERE key = 'stripe_secret'");
+      const secret = (srows[0] && srows[0].value) || process.env.STRIPE_SECRET_KEY || '';
+      if (!secret) return res.json({ ok: false, reason: 'no_key', members: [] });
+
+      const main = require('./_db');
+      let members = [];
+      try {
+        members = await main.query(
+          'SELECT member_id, full_name, email, tier, stripe_subscription_id, paid_cents, billing_period, demo FROM members ORDER BY membership_started_at DESC');
+      } catch (_) {}
+
+      const stripe = require('stripe')(secret);
+      const out = [];
+      let liveCents = 0;
+
+      for (const mm of members) {
+        if (Number(mm.demo)) continue;
+        const row = {
+          member_id: mm.member_id, name: mm.full_name, email: mm.email, tier: mm.tier,
+          recorded_cents: Number(mm.paid_cents) || 0,
+          subscription: mm.stripe_subscription_id || '',
+          live: false, status: 'no subscription', charge_cents: 0, every: '', next_charge: '',
+        };
+
+        if (mm.stripe_subscription_id) {
+          try {
+            const sub = await stripe.subscriptions.retrieve(mm.stripe_subscription_id, { expand: ['discount'] });
+            const item = sub.items && sub.items.data && sub.items.data[0];
+            const price = item && item.price;
+            let cents = price ? (Number(price.unit_amount) || 0) : 0;
+
+            // What leaves their bank, after any coupon.
+            const d = sub.discount && sub.discount.coupon;
+            if (d) {
+              if (d.amount_off) cents = Math.max(0, cents - Number(d.amount_off));
+              else if (d.percent_off) cents = Math.round(cents * (1 - Number(d.percent_off) / 100));
+            }
+
+            const rec = price && price.recurring;
+            const every = rec
+              ? (rec.interval === 'week' && Number(rec.interval_count) === 4 ? 'every 4 weeks'
+                : rec.interval === 'year' ? 'a year'
+                : 'a ' + rec.interval)
+              : '';
+
+            row.status = sub.status;
+            row.live = sub.status === 'active' || sub.status === 'trialing';
+            row.charge_cents = cents;
+            row.every = every;
+            row.coupon = d ? (d.name || d.id) : '';
+            row.next_charge = sub.current_period_end
+              ? new Date(sub.current_period_end * 1000).toISOString().slice(0, 10) : '';
+
+            if (row.live) {
+              // Everything normalised to a month so the total means something.
+              liveCents += rec && rec.interval === 'year' ? Math.round(cents / 12)
+                : (rec && rec.interval === 'week' && Number(rec.interval_count) === 4) ? Math.round(cents * 13 / 12)
+                : cents;
+            }
+          } catch (err) {
+            row.status = 'could not read: ' + String(err.message || err).slice(0, 90);
+          }
+        }
+        out.push(row);
+      }
+
+      return res.json({
+        ok: true,
+        members: out,
+        collecting: out.filter(r => r.live).length,
+        not_collecting: out.filter(r => !r.live).length,
+        live_monthly_cents: liveCents,
+      });
+    }
+
     // ── MEMBERSHIP SALES STATS (real counts + revenue by tier) ──
     if (method === 'GET' && action === 'membership_stats') {
       // Revenue by tier has to be what those members pay, not what the tier
