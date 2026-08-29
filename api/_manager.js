@@ -660,17 +660,24 @@ module.exports = async function (req, res) {
         const until = new Date(now + 'T12:00:00Z');
         until.setUTCDate(until.getUTCDate() + weeks * 7);
 
+        // Everything she already has in the window, read once. The table is
+        // keyed on (member_id, date), so a day she has set is a day this
+        // must leave alone.
+        const existing = new Set();
+        try {
+          const have = await query('SELECT date FROM tech_shifts WHERE member_id=? AND date>=?', [mid, now]);
+          for (const h of have) existing.add(String(h.date));
+        } catch (_) {}
+
         let added = 0;
         while (cursor <= until) {
           const dow = cursor.getUTCDay();
           const p = byDow[dow];
           if (p) {
             const date = ds(cursor);
-            // Never touch a day that already exists.
-            const have = await queryOne('SELECT id FROM tech_shifts WHERE member_id=? AND date=?', [mid, date]);
-            if (!have) {
+            if (!existing.has(date)) {
               await execute(
-                'INSERT INTO tech_shifts (member_id, date, start_time, end_time, lunch_start, lunch_end, created_ts) VALUES (?,?,?,?,?,?,?)',
+                'INSERT OR IGNORE INTO tech_shifts (member_id, date, start_time, end_time, lunch_start, lunch_end, created_ts) VALUES (?,?,?,?,?,?,?)',
                 [mid, date, p.start, p.end, p.ls || null, p.le || null, Date.now()]);
               added++;
             }
