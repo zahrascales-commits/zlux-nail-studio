@@ -779,6 +779,37 @@
 // MEMBER TIER RULES
 // ═══════════════════════════════════════════
 const TIER_RULES = {
+  ESSENTIAL: {
+    label: 'Essential',
+    tagText: 'ESSENTIAL',
+    tagStyle: 'background:rgba(140,122,94,0.15);color:var(--latte);',
+    freeManicures: 1,
+    freePedicures: 0,
+    freeServiceCount: null,
+    freeAddonNames: [],
+    freeAddonCount: 0,
+    addonDiscountPct: 0,
+    // Not sold on Essential at any price — it is the reason Elite exists.
+    lockedAddonNames: ['Russian Manicure Technique'],
+    upgradeTo: 'ELITE',
+    upgradeLabel: 'Elite',
+    reminderText: 'Essential: your service is included this visit, and any design is free.',
+    priorityText: '✦  Members book before walk-ins — your slots are shown first.'
+  },
+  ELITE: {
+    label: 'Elite',
+    tagText: 'ELITE',
+    tagStyle: 'background:rgba(182,165,136,0.15);color:var(--champagne);',
+    freeManicures: 1,
+    freePedicures: 0,
+    freeServiceCount: null,
+    freeAddonNames: ['Russian Manicure Technique', 'Soak Off Removal'],
+    freeAddonCount: 99,
+    addonDiscountPct: 0,
+    lockedAddonNames: [],
+    reminderText: 'Elite: your service is included, with a Russian manicure and removal every visit.',
+    priorityText: '✦  Elite members book a week ahead of everyone else.'
+  },
   SIGNATURE: {
     label: 'Signature Club',
     tagText: 'SIGNATURE',
@@ -1185,6 +1216,61 @@ function updateServiceTags() {
   }
 }
 
+
+// This page had no escaper of its own; every name it shows is one we wrote,
+// but the screens below build HTML from them and that should not be the
+// thing standing between a menu edit and a broken page.
+function esc(v){
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/* ── WHAT THIS ADD-ON BELONGS TO ─────────────────────────────────────────
+   Tapping something their membership does not include should not do
+   nothing. It explains what it comes with and offers the way to it, with
+   their booking left exactly where it was if they would rather carry on. */
+function showUpgradeForAddon(addonName){
+  const rules = TIER_RULES[booking.memberTier] || {};
+  const goingTo = rules.upgradeLabel || 'Elite';
+
+  let box = document.getElementById('upsell-screen');
+  if(!box){
+    box = document.createElement('div');
+    box.id = 'upsell-screen';
+    box.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(20,16,12,0.72);'
+      + 'display:flex;align-items:center;justify-content:center;padding:1.25rem;';
+    document.body.appendChild(box);
+  }
+
+  box.innerHTML =
+    '<div style="background:var(--cream);max-width:420px;width:100%;padding:2rem 1.6rem;text-align:center;'
+      + 'border:1px solid rgba(182,165,136,0.5);">'
+    + '<div style="font-family:\'Cinzel\',serif;font-size:1.35rem;color:var(--espresso);margin-bottom:0.5rem;">'
+      + esc(addonName) + '</div>'
+    + '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.9rem;color:var(--latte);line-height:1.75;margin-bottom:1.4rem;">'
+      + 'This one comes with <strong style="color:var(--espresso)">' + esc(goingTo) + '</strong> — a Russian manicure '
+      + 'every single visit, included, along with free removal and organic product. '
+      + 'It is not something Essential can add on.'
+    + '</p>'
+    + '<button class="btn-gold" style="animation:none;width:100%;margin-bottom:0.7rem;" '
+      + 'onclick="goUpgrade()">Move up to ' + esc(goingTo) + '</button>'
+    + '<button class="btn-outline-dark" style="width:100%;font-size:0.72rem;" '
+      + 'onclick="closeUpsell()">Keep booking without it</button>'
+    + '</div>';
+  box.style.display = 'flex';
+}
+
+function closeUpsell(){
+  const box = document.getElementById('upsell-screen');
+  if(box) box.style.display = 'none';
+}
+
+function goUpgrade(){
+  // Their account is where the change actually happens, and where the price
+  // difference is shown before they agree to it.
+  window.location.href = '/client-portal.html?upgrade=ELITE';
+}
 function updateAddonPriceTags() {
   if (!booking.memberTier) return;
   const rules = TIER_RULES[booking.memberTier];
@@ -1199,6 +1285,28 @@ function updateAddonPriceTags() {
     const priceEl = document.getElementById('addon-price-' + a.id);
     const tagEl   = document.getElementById('addon-tag-' + a.id);
     if (!priceEl || !tagEl) return;
+
+    const row = priceEl.closest('.addon-row');
+    const box = document.getElementById('addon-' + a.id);
+
+    /* Something this membership does not include at any price. Left on
+       screen deliberately: taking it away would leave them wondering where
+       it went, and this is the one thing Elite is for. */
+    if ((rules.lockedAddonNames || []).includes(a.name)) {
+      if (box) { box.checked = false; box.disabled = true; }
+      if (row) {
+        row.style.opacity = '0.55';
+        row.style.cursor = 'pointer';
+        row.setAttribute('data-locked', a.name);
+        row.onclick = function(ev){ ev.preventDefault(); showUpgradeForAddon(a.name); };
+      }
+      priceEl.innerHTML = '<span style="opacity:0.5;text-decoration:line-through;font-size:0.78rem;">+$' + a.base + '</span>';
+      tagEl.innerHTML = '<span class="addon-free-tag" style="margin-top:0.2rem;background:rgba(140,122,94,0.18);color:var(--latte);">🔒 Elite only</span>';
+      return;
+    }
+    // Not locked on this membership — undo anything a previous tier left.
+    if (box) box.disabled = false;
+    if (row) { row.style.opacity = ''; row.onclick = null; row.removeAttribute('data-locked'); }
 
     const pct = rules.addonDiscountPct || 0;
     if (rules.freeAddonNames.includes(a.name) && rules.freeAddonCount > 0) {

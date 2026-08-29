@@ -435,7 +435,21 @@ async function loadDashboard(member) {
   // anyone who had not also been through signup on the same device.
   loadWallet(member && member.memberId);
   askForContact(member && member.memberId);
-  loadUpgrade();
+  loadUpgrade().then(function(){
+    /* Arriving from the booking page, where they tapped something their
+       membership does not include. Put the offer in front of them rather
+       than leaving them to find it. */
+    try{
+      var want = new URLSearchParams(location.search).get('upgrade');
+      if(!want) return;
+      var box = document.getElementById('upgrade-offer');
+      if(!box || !box.innerHTML.trim()) return;
+      box.scrollIntoView({ behavior:'smooth', block:'center' });
+      box.style.transition = 'box-shadow 0.5s ease';
+      box.style.boxShadow = '0 0 0 2px var(--champagne)';
+      setTimeout(function(){ box.style.boxShadow = 'none'; }, 2600);
+    }catch(_){}
+  });
   loadInspoBox(member);
   fillSettings(member);
   // Ending a membership belongs in settings, at the bottom — findable in two
