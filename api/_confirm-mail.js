@@ -191,11 +191,19 @@ async function pending() {
         ORDER BY a.date, a.time`, [today]);
   } catch (_) { return []; }
 
-  // Work out who is actually reachable before offering to write to them.
+  // Work out who is actually reachable before offering to write to them,
+  // and only once each: the same person at the same time is one appointment
+  // however many rows it left behind, and three identical emails is worse
+  // than none.
   const out = [];
+  const seen = new Set();
   for (const r of rows) {
+    const key = String(r.client_name || '').trim().toLowerCase() + '|' + r.date + '|' + String(r.time || '').slice(0, 5);
+    if (seen.has(key)) continue;
     const email = await resolveEmail(r);
-    if (email) out.push({ ...r, client_email: email });
+    if (!email) continue;
+    seen.add(key);
+    out.push({ ...r, client_email: email });
   }
   return out;
 }
