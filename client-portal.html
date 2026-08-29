@@ -1159,6 +1159,14 @@ async function loadUpgrade(){
                 + esc(o.label) + '</strong>'
               + '<span style="font-family:\'Josefin Sans\',sans-serif;font-size:0.82rem;color:var(--champagne);">'
                 + '+$' + Math.round(o.difference_cents/100) + ' more ' + per + '</span>'
+              /* The welcome, said where the price is: what they are
+                 weighing is the step up, so it belongs beside that. */
+              + (o.first_cycle_off_cents
+                  ? '<span style="font-family:\'Josefin Sans\',sans-serif;font-size:0.74rem;'
+                    + 'background:rgba(182,165,136,0.28);color:var(--espresso);padding:0.15rem 0.5rem;">'
+                    + '$' + Math.round(o.first_cycle_off_cents/100) + ' off your first ' + per.replace('a ','')
+                    + '</span>'
+                  : '')
               + '<span style="margin-left:auto;font-family:\'Josefin Sans\',sans-serif;font-size:0.74rem;color:var(--latte);">'
                 + '$' + Math.round(o.cents/100) + ' ' + per + ' total</span>'
             + '</div>'
@@ -1170,7 +1178,10 @@ async function loadUpgrade(){
             + '</ul>'
             + '<button class="btn-gold" style="animation:none;font-size:0.72rem;" '
               + 'onclick="doUpgrade(\'' + o.tier + '\',\'' + esc(o.label) + '\',' + o.difference_cents + ')">'
-              + 'Move to ' + esc(o.label) + '</button>'
+              + 'Move to ' + esc(o.label)
+              + (o.first_cycle_off_cents ? ' — first ' + per.replace('a ','') + ' $'
+                  + Math.round((o.cents - o.first_cycle_off_cents)/100) : '')
+              + '</button>'
             + '</div>';
         }).join('')
       + '<div id="upgrade-msg" style="font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;color:var(--latte);"></div>'

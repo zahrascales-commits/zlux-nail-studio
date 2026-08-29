@@ -17,7 +17,7 @@ const path = require('path');
 // ─────────────────────────────────────────────────────────────
 const PRODUCTS = [
   // Drop-in services (full price — the site charges a 50% deposit at booking)
-  { name: 'Organic Structured Manicure',            price: 90 },
+  { name: 'Organic Structured Manicure',            price: 95 },
   { name: 'Short Gel X',                            price: 95 },
   { name: 'Medium Gel X',                           price: 100 },
   { name: 'Long Gel X',                             price: 110 },

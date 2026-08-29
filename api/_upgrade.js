@@ -26,6 +26,28 @@ function ladderFor(tier) {
 }
 
 const TIER_LABEL = { ESSENTIAL: 'Essential', ELITE: 'Elite', SIGNATURE: 'Signature', LUXE: 'Luxe', BLACK_CARD: 'Black Card' };
+
+/* Taken off the first payment only, on moves between the memberships now
+   sold. Capped deliberately: anything larger stops being a nudge and starts
+   being the price. */
+const FIRST_CYCLE_OFF_CENTS = 800;
+
+function firstCycleOffFor(from, to) {
+  if (!CURRENT_ORDER.includes(from) || !CURRENT_ORDER.includes(to)) return 0;
+  return FIRST_CYCLE_OFF_CENTS;
+}
+
+// One coupon, reused. Stripe keeps them forever and minting a fresh one per
+// upgrade would litter the account.
+async function firstCycleCoupon(stripe, cents) {
+  const id = 'zola_upgrade_' + cents + 'off_first';
+  try { await stripe.coupons.retrieve(id); return id; } catch (_) {}
+  await stripe.coupons.create({
+    id, amount_off: cents, currency: 'usd', duration: 'once',
+    name: '$' + (cents / 100).toFixed(0) + ' off your first four weeks',
+  });
+  return id;
+}
 const TIER_CENTS = { ESSENTIAL: 8500, ELITE: 11000, SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900 };
 const TIER_YEARLY_CENTS = { ESSENTIAL: 93500, ELITE: 121000, SIGNATURE: 99900, LUXE: 199900, BLACK_CARD: 299900 };
 
@@ -151,6 +173,9 @@ module.exports = async function (req, res) {
           // it costs. Somebody already paying $99 is deciding about $100,
           // not about $199.
           difference_cents: Math.max(0, (prices[t] || 0) - (prices[current] || 0)),
+          // Only ever on the four-week plan: taking $8 off a year is not a
+          // welcome, it is a rounding error.
+          first_cycle_off_cents: yearly ? 0 : firstCycleOffFor(current, t),
           gains: GAINS[t] || [],
         })),
       });
@@ -188,11 +213,22 @@ module.exports = async function (req, res) {
 
       let updated;
       try {
+      // The welcome, on the first payment only.
+      let welcomeOff = 0, welcomeCoupon = null;
+      if (!yearly) {
+        welcomeOff = firstCycleOffFor(current, to);
+        if (welcomeOff > 0) {
+          try { welcomeCoupon = await firstCycleCoupon(stripe, welcomeOff); }
+          catch (_) { welcomeOff = 0; }
+        }
+      }
+
         updated = await stripe.subscriptions.update(member.stripe_subscription_id, {
           items: [{ id: item.id, price: priceId }],
           // Credit the unused part of the tier they are leaving and bill the
           // difference now, rather than charging a full extra month.
           proration_behavior: 'always_invoice',
+          ...(welcomeCoupon ? { coupon: welcomeCoupon } : {}),
           metadata: { ...(sub.metadata || {}), tier: to, upgraded_from: current, upgraded_at: new Date().toISOString() },
         });
       } catch (e) {
