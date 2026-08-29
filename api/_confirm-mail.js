@@ -63,7 +63,7 @@ function html({ client, service, artist, datePretty, timePretty, link, depositCe
       </a>
 
       <p style="font-size:12px;line-height:1.7;color:#8C7A5E;margin:14px 0 0;text-align:center">
-        One link, both things. It works on your phone — no password.
+        ${depositPaid || !depositCents ? 'It works on your phone — no password.' : 'One link, both things. It works on your phone — no password.'}
       </p>
 
       <div style="border-top:1px solid #eee5d8;margin-top:24px;padding-top:18px">
