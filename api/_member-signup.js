@@ -435,3 +435,7 @@ async function sendWelcome({ fullName, email, phone, memberId, tier }) {
     });
   }
 }
+
+// Reused when a member is moved from the yearly plan onto this one.
+module.exports.cyclePriceFor = cyclePriceFor;
+module.exports.yearlyPriceFor = yearlyPriceFor;

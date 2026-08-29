@@ -919,6 +919,134 @@ module.exports = async function (req, res) {
       return res.json({ ok: true, sent, skipped, why });
     }
 
+    /* ── PUT A MEMBER ON THE RECURRING PLAN, WITH A DISCOUNT ──
+       Refunds what they paid for the year, ends that subscription, and
+       starts them on the four-week price with a discount that repeats for
+       as long as they stay.
+
+       Previews unless committed. Real money on a live account should never
+       move because a request was sent twice or a parameter was mistyped, so
+       the caller has to say so explicitly. */
+    if (method === 'POST' && action === 'switch_to_cycle') {
+      const body = req.body || {};
+      const memberId = String(body.member_id || '').trim();
+      const discountCents = Math.max(0, Math.round(Number(body.discount_cents) || 0));
+      const commit = body.commit === true;
+      if (!memberId) return res.status(400).json({ error: 'Which member?' });
+
+      const srows = await query("SELECT key, value FROM site_settings WHERE key = 'stripe_secret'");
+      const secret = (srows[0] && srows[0].value) || process.env.STRIPE_SECRET_KEY || '';
+      if (!secret) return res.status(400).json({ error: 'No Stripe key saved.' });
+      const stripe = require('stripe')(secret);
+
+      const main = require('./_db');
+      const mm = await main.queryOne(
+        'SELECT member_id, full_name, email, tier, stripe_subscription_id FROM members WHERE member_id = ?',
+        [memberId]);
+      if (!mm) return res.status(404).json({ error: 'No member with that id.' });
+      if (!mm.stripe_subscription_id) return res.status(400).json({ error: 'That member has no subscription to change.' });
+
+      const plans = require('./_plans');
+      const plan = plans.byKey(mm.tier);
+      if (!plan) return res.status(400).json({ error: 'That member is on a tier that no longer exists: ' + mm.tier });
+
+      const listCents = plan.cycle_cents;
+      const chargeCents = Math.max(0, listCents - discountCents);
+
+      const steps = [];
+      const money = c => '$' + (c / 100).toFixed(2).replace(/\.00$/, '');
+
+      // ── what is there now ──
+      const sub = await stripe.subscriptions.retrieve(mm.stripe_subscription_id);
+      const item = sub.items && sub.items.data && sub.items.data[0];
+      const oldPrice = item && item.price;
+      const oldAmount = oldPrice ? Number(oldPrice.unit_amount) || 0 : 0;
+      const customerId = typeof sub.customer === 'string' ? sub.customer : (sub.customer || {}).id;
+
+      // ── what was actually paid, so the refund is what left their bank ──
+      let refundTarget = null, refundCents = 0;
+      try {
+        const invs = await stripe.invoices.list({ subscription: sub.id, limit: 10 });
+        for (const inv of (invs.data || [])) {
+          if (Number(inv.amount_paid) > 0) {
+            refundTarget = inv.charge || (inv.payment_intent ? { payment_intent: inv.payment_intent } : null);
+            refundCents = Number(inv.amount_paid);
+            break;
+          }
+        }
+      } catch (e) { steps.push('could not read invoices: ' + e.message); }
+
+      const preview = {
+        member: mm.full_name, email: mm.email, tier: mm.tier,
+        now: { subscription: sub.id, status: sub.status, charging: money(oldAmount),
+               every: oldPrice && oldPrice.recurring
+                 ? (oldPrice.recurring.interval === 'year' ? 'a year' : 'every ' + oldPrice.recurring.interval_count + ' ' + oldPrice.recurring.interval)
+                 : '' },
+        will: {
+          refund: refundCents ? money(refundCents) : 'nothing found to refund',
+          then_charge: money(chargeCents) + ' every 4 weeks',
+          made_of: money(listCents) + ' less ' + money(discountCents) + ' off, every payment, for as long as they stay',
+          payments_a_year: plans.CYCLES_PER_YEAR,
+          a_year_comes_to: money(chargeCents * plans.CYCLES_PER_YEAR),
+        },
+      };
+
+      if (!commit) return res.json({ ok: true, preview, committed: false });
+
+      // ── 1. give the year back ──
+      if (refundTarget) {
+        const args = typeof refundTarget === 'string'
+          ? { charge: refundTarget }
+          : refundTarget;
+        const r = await stripe.refunds.create({ ...args, reason: 'requested_by_customer' });
+        steps.push('refunded ' + money(refundCents) + ' (' + r.id + ')');
+      } else {
+        steps.push('nothing paid found to refund');
+      }
+
+      // ── 2. end the yearly subscription ──
+      await stripe.subscriptions.cancel(sub.id, { prorate: false });
+      steps.push('ended the yearly subscription');
+
+      // ── 3. the discount, repeating ──
+      let couponId = null;
+      if (discountCents > 0) {
+        couponId = 'zola_' + discountCents + 'off_forever';
+        try {
+          await stripe.coupons.retrieve(couponId);
+        } catch (_) {
+          await stripe.coupons.create({
+            id: couponId, amount_off: discountCents, currency: 'usd',
+            duration: 'forever', name: money(discountCents) + ' off every payment',
+          });
+        }
+        steps.push('discount of ' + money(discountCents) + ' every payment');
+      }
+
+      // ── 4. start them on the four-week plan ──
+      const signup = require('./_member-signup');
+      const priceId = await signup.cyclePriceFor(stripe, mm.tier);
+      if (!priceId) return res.status(500).json({ error: 'Could not build the four-week price.', steps });
+
+      const created = await stripe.subscriptions.create({
+        customer: customerId,
+        items: [{ price: priceId }],
+        ...(couponId ? { coupon: couponId } : {}),
+        metadata: { member_id: mm.member_id, tier: mm.tier, moved_from: sub.id },
+      });
+      steps.push('started ' + money(chargeCents) + ' every 4 weeks (' + created.id + ')');
+
+      // ── 5. the studio's own records agree with Stripe ──
+      try {
+        await main.execute(
+          'UPDATE members SET stripe_subscription_id = ?, paid_cents = ?, billing_period = ? WHERE member_id = ?',
+          [created.id, chargeCents, 'cycle', mm.member_id]);
+        steps.push('records updated');
+      } catch (e) { steps.push('could not update records: ' + e.message); }
+
+      return res.json({ ok: true, preview, committed: true, steps, new_subscription: created.id, status: created.status });
+    }
+
     /* ── IS ANYBODY ACTUALLY BEING CHARGED ──
        Straight from Stripe, per member: whether the subscription is live,
        what it takes, how often, and when it next runs. A membership row in
