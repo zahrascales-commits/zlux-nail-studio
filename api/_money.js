@@ -63,12 +63,13 @@ async function stripeCollected(sk, sinceSec, LIST) {
       const key = when.getFullYear() + '-' + pad(when.getMonth() + 1);
       byMonth[key] = (byMonth[key] || 0) + net;
 
-      // A subscription charge carries an invoice; a deposit or a checkout
-      // does not. That is the cleanest signal Stripe gives for which is
-      // which, and it does not depend on how a description was worded.
-      const isMembership = !!ch.invoice;
-      if (LIST) LIST.push({ id: ch.id, amount: ch.amount, refunded: ch.amount_refunded, invoice: ch.invoice || null, desc: ch.description || "", created: ch.created });
+      /* Membership money versus appointment money. An invoice id would be
+         the tidy signal, but Stripe leaves it unset on these charges — the
+         first payment of a subscription is billed directly. The description
+         is what actually distinguishes them here. */
       const desc = String(ch.description || '').toLowerCase();
+      const isMembership = !!ch.invoice || /subscription|membership/.test(desc);
+      if (LIST) LIST.push({ id: ch.id, amount: ch.amount, refunded: ch.amount_refunded, invoice: ch.invoice || null, desc: ch.description || "", created: ch.created });
       if (isMembership) bySource.memberships += net;
       else if (/deposit|checkout|balance|tip|appointment/.test(desc)) bySource.appointments += net;
       else bySource.other += net;

@@ -1001,6 +1001,7 @@
           <div class="page-desc">Where the studio stands right now.</div>
         </div>
       </div>
+      <div id="money-now"></div>
       <div id="needs-you"></div>
       <div id="missing-confirms"></div>
       <div class="cards" id="ov-stats"></div>
@@ -2183,7 +2184,7 @@ function logout(){sessionStorage.removeItem('zm_pwd');location.reload();}
 // Initialised after login instead — at parse time PWD is still empty,
 
 const TAB_LOADERS = {
-  overview:   () => { loadNeedsYou(); loadMissingConfirms(); loadOverview(); loadDispatch(); loadFloor(); },
+  overview:   () => { loadMoneyNow(); loadNeedsYou(); loadMissingConfirms(); loadOverview(); loadDispatch(); loadFloor(); },
   records:    () => loadRecords(),
   insights:   () => loadInsights(),
   people:     () => loadPeople(),
@@ -5089,6 +5090,68 @@ async function extendRota(weeks){
   setTimeout(function(){ loadNeedsYou(); }, 900);
 }
 
+
+/* ── WHAT WAS ACTUALLY COLLECTED ─────────────────────────────────────────
+   Not what was booked, not what was arranged — what reached the bank. The
+   month resets on the first, and anything booked but unpaid is shown
+   separately and never added in. */
+async function loadMoneyNow(){
+  const el = document.getElementById('money-now');
+  if(!el) return;
+  let d;
+  try{
+    d = await (await api('/api/money')).json();
+    if(d.error) throw new Error(d.error);
+  }catch(err){ el.innerHTML = ''; return; }
+
+  const mny = c => '$' + ((Number(c)||0)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const from = d.from || {};
+
+  el.innerHTML =
+    '<div class="ny" style="border-color:rgba(196,168,130,0.45);margin-bottom:1.2rem;'
+      + 'background:linear-gradient(150deg,rgba(196,168,130,0.10),rgba(196,168,130,0.02))">'
+    + '<div class="ny-h"><div class="ny-t">Collected in ' + esc(d.month.label) + '</div>'
+      + '<div class="ny-n" style="color:var(--gold);font-size:1.5rem">' + mny(d.month.cents) + '</div></div>'
+    + '<div class="ny-sub">Money that actually arrived — card and cash, after refunds. '
+      + 'It resets on the first of each month.</div>'
+
+    + '<div style="display:flex;gap:1.4rem;flex-wrap:wrap;margin:0.9rem 0 0.4rem">'
+      + '<div><div style="font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">This year</div>'
+        + '<div style="font-size:1.15rem;color:var(--cream)">' + mny(d.year.cents) + '</div></div>'
+      + '<div><div style="font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Card</div>'
+        + '<div style="font-size:1.15rem;color:var(--cream)">' + mny(d.month.card_cents) + '</div></div>'
+      + '<div><div style="font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Cash</div>'
+        + '<div style="font-size:1.15rem;color:var(--cream)">' + mny(d.month.cash_cents) + '</div></div>'
+      + '<div><div style="font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Memberships (yr)</div>'
+        + '<div style="font-size:1.15rem;color:var(--cream)">' + mny(from.memberships) + '</div></div>'
+      + '<div><div style="font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Appointments (yr)</div>'
+        + '<div style="font-size:1.15rem;color:var(--cream)">' + mny(from.appointments) + '</div></div>'
+    + '</div>'
+
+    + ((d.outstanding && d.outstanding.cents)
+        ? '<div style="border-top:1px solid var(--border);margin-top:0.9rem;padding-top:0.7rem;font-size:0.8rem;color:var(--muted)">'
+          + '<strong style="color:#d9a441">' + mny(d.outstanding.cents) + '</strong> booked and not paid for, across '
+          + d.outstanding.appointments + ' appointment' + (d.outstanding.appointments === 1 ? '' : 's')
+          + ' — deliberately not counted above.</div>'
+        : '')
+    + ((Number(d.refunded_cents) > 0)
+        ? '<div style="font-size:0.78rem;color:var(--muted);margin-top:0.35rem">'
+          + mny(d.refunded_cents) + ' refunded this year, already taken back out.</div>'
+        : '')
+    + (d.card_error
+        ? '<div style="font-size:0.78rem;color:#e08a8a;margin-top:0.35rem">Card takings unavailable: ' + esc(d.card_error) + '</div>'
+        : '')
+
+    + ((d.months || []).length > 1
+        ? '<div style="border-top:1px solid var(--border);margin-top:0.9rem;padding-top:0.7rem">'
+          + (d.months || []).map(function(x){
+              return '<div style="display:flex;justify-content:space-between;font-size:0.82rem;padding:0.2rem 0;color:var(--muted)">'
+                + '<span>' + esc(x.label) + '</span><span style="color:var(--cream)">' + mny(x.cents) + '</span></div>';
+            }).join('')
+          + '</div>'
+        : '')
+    + '</div>';
+}
 async function loadNeedsYou(){
   const el = document.getElementById('needs-you');
   if(!el) return;
