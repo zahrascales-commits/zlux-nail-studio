@@ -198,6 +198,51 @@ module.exports = async function (req, res) {
       return res.json({ inspo: visible });
     }
 
+    /* ── OWNER: give the older photos an owner ──
+       Same rule as a new one: whoever is doing that client's next
+       appointment. Only ever fills a blank, so it cannot move a photo away
+       from the artist it already reached. */
+    if (req.method === 'POST' && action === 'retag_inspo') {
+      if (req.headers['x-ceo-password'] !== CEO_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
+      for (const sql of [
+        'ALTER TABLE client_inspo ADD COLUMN team_member_id INTEGER',
+        "ALTER TABLE client_inspo ADD COLUMN artist TEXT DEFAULT ''",
+      ]) { try { await execute(sql); } catch (_) {} }
+
+      const rows = await query(
+        "SELECT id, client_name, confirmation FROM client_inspo WHERE team_member_id IS NULL OR COALESCE(artist,'') = ''");
+      const today = new Date().toISOString().slice(0, 10);
+      const fixed = [];
+      for (const r of rows) {
+        const who = String(r.client_name || '').trim();
+        const tag = String(r.confirmation || '').trim();
+        let next = null;
+        try {
+          next = tag
+            ? await queryOne(
+                `SELECT a.team_member_id, m.name AS artist FROM team_appointments a
+                   LEFT JOIN team_members m ON m.id = a.team_member_id
+                  WHERE a.chat_token = ? OR a.notes LIKE ? ORDER BY a.id DESC LIMIT 1`, [tag, '%' + tag + '%'])
+            : null;
+        } catch (_) {}
+        if ((!next || !next.team_member_id) && who) {
+          try {
+            next = await queryOne(
+              `SELECT a.team_member_id, m.name AS artist FROM team_appointments a
+                 LEFT JOIN team_members m ON m.id = a.team_member_id
+                WHERE lower(a.client_name) = lower(?) AND a.date >= ?
+                  AND LOWER(COALESCE(a.status,'scheduled')) <> 'cancelled'
+                ORDER BY a.date, a.time LIMIT 1`, [who, today]);
+          } catch (_) {}
+        }
+        if (!next || !next.team_member_id) continue;
+        await execute('UPDATE client_inspo SET team_member_id=?, artist=? WHERE id=?',
+          [next.team_member_id, next.artist || '', r.id]);
+        fixed.push({ id: r.id, client: who, artist: next.artist || '' });
+      }
+      return res.json({ ok: true, checked: rows.length, fixed });
+    }
+
     // ── OWNER: delete an inspo photo ──
     if (req.method === 'DELETE' && action === 'inspo') {
       if (req.headers['x-ceo-password'] !== CEO_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
