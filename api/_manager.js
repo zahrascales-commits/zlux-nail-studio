@@ -1396,6 +1396,8 @@ module.exports = async function (req, res) {
         notify = await notifyNewAppointment({
           clientName: client_name, clientPhone: client_phone, clientEmail: client_email,
           service, date, time,
+          // One email, not two: the appointment link email has already gone.
+          skipClientEmail: !!(confirmMail && confirmMail.sent),
           memberId: m ? m.id : null, memberName: m ? m.name : null,
           memberPhone: m ? m.phone : null, memberEmail: m ? m.email : null,
         });

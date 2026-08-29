@@ -67,8 +67,14 @@ function html({ client, service, artist, datePretty, timePretty, link, depositCe
       </p>
 
       <div style="border-top:1px solid #eee5d8;margin-top:24px;padding-top:18px">
-        <p style="font-size:13px;line-height:1.8;color:#8C7A5E;margin:0">
+        <p style="font-size:13px;line-height:1.8;color:#8C7A5E;margin:0 0 10px">
+          <strong style="color:#3a3027">Where:</strong> 2037 W Linda Vista Ave #D, Porterville, CA
+        </p>
+        <p style="font-size:13px;line-height:1.8;color:#8C7A5E;margin:0 0 10px">
           <strong style="color:#3a3027">Before you come:</strong> no lotion or oils for 24 hours, and please arrive with clean hands.
+        </p>
+        <p style="font-size:13px;line-height:1.8;color:#8C7A5E;margin:0">
+          <strong style="color:#3a3027">Afterwards:</strong> no lotion or oils for 24 hours, and keep your hands out of water as much as you can while the set cures.
         </p>
       </div>
     </div>

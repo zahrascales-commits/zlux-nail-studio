@@ -331,10 +331,23 @@ async function notifyNewAppointment(a) {
   // out for claim gets the holding message instead — _claims sends the real
   // confirmation the moment somebody takes it, so sending it here too would
   // promise the client an artist nobody has agreed to be.
-  if (!a.pendingClaim) {
+  /* skipClientEmail is set when the appointment email with the deposit and
+     photo link has already gone. Two confirmations a second apart is how a
+     studio looks like it does not know what it has sent. */
+  if (!a.pendingClaim && !a.skipClientEmail) {
     const c = await notifyClientConfirmed(a);
     results.client_email = c.email;
     results.client_sms = c.sms;
+  } else if (a.skipClientEmail) {
+    results.client_email = { sent: false, why: 'already sent with the appointment link' };
+    // The text is still worth sending: it is a different channel, not a
+    // second copy of the same thing.
+    if (!a.pendingClaim) {
+      try {
+        const { when, studioAddress, inspoLink } = await bookingContext(a);
+        if (a.clientPhone) results.client_sms = await sendSMS(a.clientPhone, clientSms(a, when, studioAddress, inspoLink));
+      } catch (_) {}
+    }
   }
 
   // whoever got booked — instant in-app + SMS/email
