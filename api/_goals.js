@@ -371,10 +371,14 @@ module.exports = async function (req, res) {
 
     if (method === 'PUT' && action === 'base') {
       const { member_id, base_pct } = req.body || {};
+      const pct = Math.max(0, Math.min(100, Number(base_pct) || 0));
       await execute(
         `INSERT INTO worker_commission (member_id, base_pct) VALUES (?,?)
          ON CONFLICT(member_id) DO UPDATE SET base_pct=excluded.base_pct`,
-        [Number(member_id), Number(base_pct) || 0]);
+        [Number(member_id), pct]);
+      // Same rate, same artist — the payout report reads it from her record.
+      try { await execute('ALTER TABLE team_members ADD COLUMN commission_pct REAL DEFAULT 0'); } catch (_) {}
+      try { await execute('UPDATE team_members SET commission_pct=? WHERE id=?', [pct, Number(member_id)]); } catch (_) {}
       return res.json({ ok: true });
     }
 

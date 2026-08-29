@@ -1894,6 +1894,13 @@
     </div>
     <div class="field"><label class="fld-label">Bio / Blurb (shown on the website)</label><textarea id="m-bio" rows="3" placeholder="Write a short intro — e.g. 'Trained in Zahra's exact methods. Known for clean structured sets and detail-forward nail art.'"></textarea></div>
     <div class="field">
+      <label class="fld-label">Commission %</label>
+      <input id="m-commission" type="number" min="0" max="100" step="1" placeholder="e.g. 40" />
+      <div style="font-size:0.74rem;color:var(--muted);margin-top:0.3rem;">
+        Her share of what she brings in. The Commission earnings report cannot work out what she is owed until this is set.
+      </div>
+    </div>
+    <div class="field">
       <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
         <input type="checkbox" id="m-trainee" style="width:auto;" />
         <span>In training — clients using a trainee code will only see her times</span>
@@ -3267,6 +3274,7 @@ function openMemberModal(){
   document.getElementById('m-bio').value='';
   setMemberPhoto('');
   document.getElementById('m-trainee').checked=false;
+  document.getElementById('m-commission').value='';
   document.getElementById('m-show-site').checked=false;
   document.getElementById('m-active-wrap').style.display='none';
   openModal('modal-member');
@@ -3283,6 +3291,7 @@ function editMember(id){
   document.getElementById('m-bio').value=m.bio||'';
   setMemberPhoto(m.photo||'');
   document.getElementById('m-trainee').checked=!!Number(m.trainee);
+  document.getElementById('m-commission').value=Number(m.commission_pct)||'';
   document.getElementById('m-show-site').checked=!!Number(m.show_on_site);
   document.getElementById('m-active-wrap').style.display='block';
   document.getElementById('m-active').value=String(Number(m.active));
@@ -3326,10 +3335,11 @@ async function saveMember(){
   const show_on_site=document.getElementById('m-show-site').checked;
   const photo=document.getElementById('m-photo').value;
   const trainee=document.getElementById('m-trainee').checked;
+  const commission_pct=document.getElementById('m-commission').value;
   if(!name){toast('Enter a name');return;}
   if(id){
     const active=document.getElementById('m-active').value;
-    await api('/api/manager',{method:'PUT',body:JSON.stringify({action:'update_member',id,name,role,color,phone,email,bio,photo,trainee,show_on_site,active:Number(active)})});
+    await api('/api/manager',{method:'PUT',body:JSON.stringify({action:'update_member',id,name,role,color,phone,email,bio,photo,trainee,show_on_site,commission_pct,active:Number(active)})});
     toast('Team member updated');
   }else{
     const r=await api('/api/manager',{method:'POST',body:JSON.stringify({action:'add_member',name,role,color,phone,email,bio,photo,trainee,show_on_site})});

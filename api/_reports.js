@@ -290,8 +290,25 @@ async function commissionReport({ appts, team }, from, to) {
   let rates = {};
   try {
     const tdb = require('./_team-db');
-    const staff = await tdb.query('SELECT name, commission_pct FROM team_members');
-    for (const s of staff) rates[String(s.name).toLowerCase()] = Number(s.commission_pct) || 0;
+    try { await tdb.execute('ALTER TABLE team_members ADD COLUMN commission_pct REAL DEFAULT 0'); } catch (_) {}
+    const staff = await tdb.query('SELECT id, name, commission_pct FROM team_members');
+    for (const s of staff) {
+      const pct = Number(s.commission_pct) || 0;
+      if (pct > 0) rates[String(s.name).toLowerCase()] = pct;
+    }
+    // The goals screen has its own rate box. If that is where she set it,
+    // the payout report should still know — an artist is owed the same
+    // either way.
+    try {
+      const base = await tdb.query('SELECT member_id, base_pct FROM worker_commission');
+      const byId = {};
+      for (const s of staff) byId[String(s.id)] = String(s.name).toLowerCase();
+      for (const b of base) {
+        const nm = byId[String(b.member_id)];
+        const pct = Number(b.base_pct) || 0;
+        if (nm && pct > 0 && !rates[nm]) rates[nm] = pct;
+      }
+    } catch (_) {}
   } catch (_) {}
 
   const by = {};

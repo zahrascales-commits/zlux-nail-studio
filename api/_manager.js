@@ -264,6 +264,7 @@ module.exports = async function (req, res) {
 
     // ── MEMBERS ──
     if (method === 'GET' && action === 'members') {
+      try { await execute('ALTER TABLE team_members ADD COLUMN commission_pct REAL DEFAULT 0'); } catch (_) {}
       return res.json({ members: await membersWithSkills() });
     }
 
@@ -1048,13 +1049,26 @@ module.exports = async function (req, res) {
     }
 
     if (method === 'PUT' && action === 'update_member') {
-      const { id, name, role, color, active, phone, email, bio, title, show_on_site, photo, trainee } = req.body || {};
+      const { id, name, role, color, active, phone, email, bio, title, show_on_site, photo, trainee, commission_pct } = req.body || {};
       await execute('UPDATE team_members SET name=?, role=?, color=?, active=?, phone=?, email=?, bio=?, title=?, show_on_site=? WHERE id=?',
         [name, role, color || '#C4A882', active ? 1 : 0, phone || '', email || '', bio || '', title || '', show_on_site ? 1 : 0, Number(id)]);
       // Photo is written separately so leaving it untouched in the form never
       // wipes an existing headshot.
       if (photo !== undefined) await execute('UPDATE team_members SET photo=? WHERE id=?', [photo || '', Number(id)]);
       if (trainee !== undefined) await execute('UPDATE team_members SET trainee=? WHERE id=?', [trainee ? 1 : 0, Number(id)]);
+      /* What she owes them per visit. Kept on the artist and mirrored to the
+         goals table, because a rate that lives in two places and disagrees
+         is worse than one that is missing. */
+      if (commission_pct !== undefined) {
+        const pct = Math.max(0, Math.min(100, Number(commission_pct) || 0));
+        try { await execute('ALTER TABLE team_members ADD COLUMN commission_pct REAL DEFAULT 0'); } catch (_) {}
+        await execute('UPDATE team_members SET commission_pct=? WHERE id=?', [pct, Number(id)]);
+        try {
+          await execute(
+            `INSERT INTO worker_commission (member_id, base_pct) VALUES (?,?)
+             ON CONFLICT(member_id) DO UPDATE SET base_pct=excluded.base_pct`, [Number(id), pct]);
+        } catch (_) {}
+      }
       return res.json({ ok: true });
     }
 
