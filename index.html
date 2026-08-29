@@ -742,11 +742,8 @@
     setTimeout(() => { el.textContent = '✦   ' + facts[ti] + '   ✦'; el.style.opacity = 1; }, 300);
   }, 4000);
 
-  setTimeout(() => {
-    document.getElementById('sig-bar').style.width   = '88%';
-    document.getElementById('luxe-bar').style.width  = '67%';
-    document.getElementById('black-bar').style.width = '60%';
-  }, 600);
+  // The bars these filled belonged to the retired tier cards, and the
+  // percentages were typed in rather than counted. Both are gone.
   // Responsive grids
   if (window.innerWidth < 700) {
     const tg = document.getElementById('home-team-grid');
