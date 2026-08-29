@@ -7,7 +7,14 @@ const { upsertClient } = require('./_clients');
 const CEO_PASSWORD = process.env.CEO_PASSWORD || 'ZOLA2026';
 
 async function membersWithSkills() {
-  const members = await query('SELECT id, name, role, pin, color, active, phone, email, restricted, bio, show_on_site, title, photo, trainee FROM team_members ORDER BY id');
+  const BASE = 'id, name, role, pin, color, active, phone, email, restricted, bio, show_on_site, title, photo, trainee';
+  let members;
+  try {
+    members = await query('SELECT ' + BASE + ', commission_pct FROM team_members ORDER BY id');
+  } catch (_) {
+    // An older database without the rate column still has a team.
+    members = await query('SELECT ' + BASE + ' FROM team_members ORDER BY id');
+  }
   const skillRows = await query('SELECT team_member_id, service_name FROM worker_skills');
   const skillsByMember = {};
   for (const row of skillRows) {
