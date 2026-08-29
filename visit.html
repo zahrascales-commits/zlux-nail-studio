@@ -131,15 +131,40 @@ async function shrinkToFit(file){
   return out;
 }
 
-async function load(){
+/* Two clients with real bookings were told their appointment did not
+   exist because the database blinked once. The page now tries again, and
+   only calls it a bad link when the studio has actually said so. */
+async function load(attempt){
+  attempt = attempt || 1;
   if(!TOKEN){ $('body').innerHTML = '<div class="card"><h2>Link incomplete</h2><p>That link is missing its code. Check the message it came in, or DM the studio.</p></div>'; return; }
+
+  let res, body;
   try{
-    V = await (await fetch('/api/visit?t=' + encodeURIComponent(TOKEN))).json();
-    if(V.error) throw new Error(V.error);
-  }catch(err){
-    $('body').innerHTML = '<div class="card"><h2>We could not find that</h2><p>' + esc(err.message) + '</p></div>';
+    res = await fetch('/api/visit?t=' + encodeURIComponent(TOKEN));
+    body = await res.json();
+  }catch(_){ body = { error: '', retry: true }; res = { ok: false, status: 0 }; }
+
+  const temporary = !res.ok && (body.retry || res.status === 0 || res.status >= 500);
+
+  if(temporary && attempt < 4){
+    // Backing off a little each time rather than hammering a system that
+    // is already struggling.
+    $('body').innerHTML = '<div class="card"><h2>One moment…</h2>'
+      + '<p>Reaching the studio. Your appointment is safe.</p></div>';
+    await new Promise(function(r){ setTimeout(r, attempt * 900); });
+    return load(attempt + 1);
+  }
+
+  if(body.error || !res.ok){
+    const stillTrying = temporary;
+    $('body').innerHTML = '<div class="card"><h2>' + (stillTrying ? 'We could not reach the studio' : 'We could not find that') + '</h2>'
+      + '<p>' + esc(body.error || 'Something went wrong at our end.') + '</p>'
+      + (stillTrying ? '<button class="btn" style="margin-top:1rem" onclick="load(1)">Try again</button>' : '')
+      + '</div>';
     return;
   }
+
+  V = body;
   render();
 }
 

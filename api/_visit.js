@@ -12,7 +12,15 @@ const { query, queryOne, execute, ensureTables } = require('./_team-db');
 
 const MAX_DATA_URL = 3000000;
 
+/* Done once per process, not once per visitor. This was eight ALTER
+   statements and a table check on every single load of a client's link —
+   eight chances for a cold database to fail on somebody who just wanted to
+   send a photo. */
+let columnsReady = null;
+
 async function ensureColumns() {
+  if (columnsReady) return columnsReady;
+  columnsReady = (async function () {
   await ensureTables();
   for (const sql of [
     // What was quoted and what has been paid, on the appointment itself.
@@ -29,16 +37,44 @@ async function ensureColumns() {
     'ALTER TABLE client_inspo ADD COLUMN artist TEXT DEFAULT \'\'',
     'ALTER TABLE client_inspo ADD COLUMN note TEXT DEFAULT \'\'',
   ]) { try { await execute(sql); } catch (_) {} }
+  })().catch(function (e) {
+    // A failed migration must not be cached as done.
+    columnsReady = null;
+    throw e;
+  });
+  return columnsReady;
+}
+
+/* Look the appointment up, and be honest about what happened.
+   Returning null for both "no such link" and "the database did not answer"
+   is what told two clients with real bookings that their appointment did
+   not exist. */
+async function lookupByToken(token) {
+  if (!token) return { appt: null, failed: false };
+  try { await ensureColumns(); } catch (_) { /* schema work is not the client's problem */ }
+
+  const sql = `SELECT a.*, m.name AS artist_name, m.id AS artist_id
+       FROM team_appointments a
+       LEFT JOIN team_members m ON m.id = a.team_member_id
+      WHERE a.chat_token = ?`;
+
+  let lastErr = null;
+  // Two attempts: a cold serverless connection drops often enough that one
+  // failure means nothing.
+  for (let i = 0; i < 2; i++) {
+    try {
+      const row = await queryOne(sql, [String(token)]);
+      return { appt: row || null, failed: false };
+    } catch (err) {
+      lastErr = err;
+      if (i === 0) await new Promise(r => setTimeout(r, 250));
+    }
+  }
+  return { appt: null, failed: true, error: String((lastErr && lastErr.message) || lastErr) };
 }
 
 async function findByToken(token) {
-  if (!token) return null;
-  await ensureColumns();
-  return queryOne(
-    `SELECT a.*, m.name AS artist_name, m.id AS artist_id
-       FROM team_appointments a
-       LEFT JOIN team_members m ON m.id = a.team_member_id
-      WHERE a.chat_token = ?`, [String(token)]).catch(() => null);
+  return (await lookupByToken(token)).appt;
 }
 
 // Half the service, the same rule the public booking uses. Worked out from
@@ -109,8 +145,19 @@ module.exports = async function (req, res) {
 
   try {
     await ensureColumns();
-    const appt = await findByToken(token);
-    if (!appt) return res.status(404).json({ error: 'We could not find that appointment. Check the link, or message the studio.' });
+    const found = await lookupByToken(token);
+    const appt = found.appt;
+    if (!appt) {
+      /* Telling somebody with a real booking to check their link sends them
+         away for nothing. Say which of the two it actually was. */
+      if (found.failed) {
+        return res.status(503).json({
+          error: 'We could not reach the studio system just then — please pull this page down to refresh, or try again in a moment. Your appointment is safe.',
+          retry: true,
+        });
+      }
+      return res.status(404).json({ error: 'We could not find that appointment. Check the link, or message the studio.' });
+    }
 
     const deposit = await depositFor(appt);
     const paid = !!Number(appt.deposit_paid);
