@@ -791,6 +791,8 @@ const TIER_RULES = {
     addonDiscountPct: 0,
     // Not sold on Essential at any price — it is the reason Elite exists.
     lockedAddonNames: ['Russian Manicure Technique'],
+    // Short and medium. Long is the reason to move up.
+    lockedServiceNames: ['Long Gel X', 'Long Acrylic Set'],
     upgradeTo: 'ELITE',
     upgradeLabel: 'Elite',
     reminderText: 'Essential: your service is included this visit, and any design is free.',
@@ -807,6 +809,7 @@ const TIER_RULES = {
     freeAddonCount: 99,
     addonDiscountPct: 0,
     lockedAddonNames: [],
+    lockedServiceNames: [],
     reminderText: 'Elite: your service is included, with a Russian manicure and removal every visit.',
     priorityText: '✦  Elite members book a week ahead of everyone else.'
   },
@@ -1271,6 +1274,87 @@ function goUpgrade(){
   // difference is shown before they agree to it.
   window.location.href = '/client-portal.html?upgrade=ELITE';
 }
+
+/* ── SIZES THIS MEMBERSHIP COVERS ────────────────────────────────────────
+   Essential covers short and medium. A long set is left on screen and
+   marked, because hiding it would look like the studio does not do them. */
+function applyServiceLocks(){
+  const rules = TIER_RULES[booking.memberTier] || {};
+  const locked = rules.lockedServiceNames || [];
+
+  document.querySelectorAll('#step-2 .option-btn').forEach(function(btn){
+    if(!/^svc-btn/.test(btn.id || '')) return;
+    const nameEl = btn.querySelector('.option-name');
+    if(!nameEl) return;
+    const name = nameEl.textContent.trim();
+
+    const isLocked = locked.indexOf(name) >= 0;
+    let tag = btn.querySelector('.svc-lock');
+
+    if(!isLocked){
+      // Undo anything a previous membership left behind.
+      if(tag) tag.remove();
+      btn.style.opacity = '';
+      btn.removeAttribute('data-locked');
+      return;
+    }
+
+    // Selected already, then they switched? Take it back out of the basket.
+    if(btn.classList.contains('svc-selected')) toggleService(name, 0, 'manicure', btn);
+
+    btn.style.opacity = '0.55';
+    btn.setAttribute('data-locked', name);
+    if(!tag){
+      tag = document.createElement('div');
+      tag.className = 'svc-lock';
+      tag.style.cssText = 'font-family:\'Josefin Sans\',sans-serif;font-size:0.62rem;letter-spacing:0.08em;'
+        + 'text-transform:uppercase;color:var(--latte);margin-top:0.2rem;';
+      tag.textContent = '🔒 Elite only';
+      (btn.querySelector('div:last-child') || btn).appendChild(tag);
+    }
+  });
+}
+
+/* Tapping a locked size explains what it belongs to. Bound once on the
+   container so it keeps working when the list is folded and redrawn. */
+document.addEventListener('click', function(ev){
+  const btn = ev.target && ev.target.closest ? ev.target.closest('#step-2 .option-btn[data-locked]') : null;
+  if(!btn) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  showUpgradeForService(btn.getAttribute('data-locked'));
+}, true);
+
+function showUpgradeForService(serviceName){
+  const rules = TIER_RULES[booking.memberTier] || {};
+  const goingTo = rules.upgradeLabel || 'Elite';
+
+  let box = document.getElementById('upsell-screen');
+  if(!box){
+    box = document.createElement('div');
+    box.id = 'upsell-screen';
+    box.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(20,16,12,0.72);'
+      + 'display:flex;align-items:center;justify-content:center;padding:1.25rem;';
+    document.body.appendChild(box);
+  }
+
+  box.innerHTML =
+    '<div style="background:var(--cream);max-width:420px;width:100%;padding:2rem 1.6rem;text-align:center;'
+      + 'border:1px solid rgba(182,165,136,0.5);">'
+    + '<div style="font-family:\'Cinzel\',serif;font-size:1.35rem;color:var(--espresso);margin-bottom:0.5rem;">'
+      + esc(serviceName) + '</div>'
+    + '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.9rem;color:var(--latte);line-height:1.75;margin-bottom:1.4rem;">'
+      + 'Essential covers any set up to medium. Long sets come with '
+      + '<strong style="color:var(--espresso)">' + esc(goingTo) + '</strong> — every length, no limit, '
+      + 'plus a Russian manicure and free removal every visit.'
+    + '</p>'
+    + '<button class="btn-gold" style="animation:none;width:100%;margin-bottom:0.7rem;" '
+      + 'onclick="goUpgrade()">Move up to ' + esc(goingTo) + '</button>'
+    + '<button class="btn-outline-dark" style="width:100%;font-size:0.72rem;" '
+      + 'onclick="closeUpsell()">Pick a shorter set</button>'
+    + '</div>';
+  box.style.display = 'flex';
+}
 function updateAddonPriceTags() {
   if (!booking.memberTier) return;
   const rules = TIER_RULES[booking.memberTier];
@@ -1344,6 +1428,8 @@ function serviceButtons(){
 }
 
 function collapseServices(){
+  // Locks first: a locked set must never be the one left showing.
+  try { applyServiceLocks(); } catch (_) {}
   const btns = serviceButtons();
   if(!btns.length) return;
   const chosen = booking.items.length > 0;
@@ -1854,7 +1940,7 @@ function goStep(n) {
     el.className = 'gg-step' + (i === icon ? ' on' : i < icon ? ' done' : '');
     if (i < 3) document.getElementById('gg-l' + i).className = 'gg-line' + (i < icon ? ' done' : '');
   }
-  if (n === 2) { SHOW_ALL_SERVICES = false; collapseServices(); }
+  if (n === 2) { SHOW_ALL_SERVICES = false; collapseServices(); applyServiceLocks(); }
   if (n === 2 && booking.memberTier) updateServiceTags();
   if (n === 3) { loadCoverageWindows().then(renderBkCal); renderBkCal(); loadTimeslots(); }
   if (n === 4) { loadSummary(); renderWhoSection(); initPayment(); }

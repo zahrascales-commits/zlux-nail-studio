@@ -30,7 +30,7 @@ const PLANS = [
     capacity: 100,
     // Short, and in the order somebody skimming would want them.
     includes: [
-      'One full service of your choice — structured manicure, GelX, or acrylic, any length',
+      'One full service of your choice — structured manicure, GelX, or acrylic, any size up to medium',
       'Any design, no extra charge',
       'No deposit, ever',
       'Priority booking ahead of walk-ins',
@@ -44,7 +44,7 @@ const PLANS = [
     annual_cents: 11000 * (CYCLES_PER_YEAR - FREE_VISITS_ANNUAL),
     capacity: 50,
     includes: [
-      'Everything in Essential',
+      'Everything in Essential, at any length'+String.fromCharCode(44)+' short to long',
       'Russian manicure every visit',
       'Free removal',
       'Organic product every visit',

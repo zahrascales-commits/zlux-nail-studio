@@ -26,6 +26,8 @@ const TIERS = {
     label: 'Essential',
     // Not sold on this membership at any price — it is what Elite is for.
     lockedAddons: ['Russian Manicure'],
+    // Short and medium only. Long is what Elite is for.
+    lockedServices: ['Long Gel X', 'Long Acrylic Set'],
     price: 85,
     daysAhead: 3,
     perks: [
@@ -407,4 +409,11 @@ module.exports.tierPerks = function (tier) {
 module.exports.lockedAddonsFor = function (tier) {
   const t = TIERS[String(tier || '').toUpperCase()];
   return (t && t.lockedAddons) ? t.lockedAddons : [];
+};
+
+// Services a membership does not cover at any size, so the checkout can
+// refuse them rather than trusting a greyed-out button in a browser.
+module.exports.lockedServicesFor = function (tier) {
+  const t = TIERS[String(tier || '').toUpperCase()];
+  return (t && t.lockedServices) ? t.lockedServices : [];
 };

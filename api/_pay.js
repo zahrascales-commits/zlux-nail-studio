@@ -118,6 +118,16 @@ function computeDeposit({ service_name, addon_names = [], member_tier, free_serv
     free_service = false;
   }
 
+  /* A size this membership does not cover. Essential is short and medium;
+     long is what Elite is for. If one arrives anyway the booking is not
+     refused — it is simply not covered, so they pay for it rather than the
+     studio giving away a long set. */
+  if (free_service && member_tier) {
+    let lockedSvcs = [];
+    try { lockedSvcs = require('./_perks').lockedServicesFor(member_tier).map(norm); } catch (_) {}
+    if (lockedSvcs.includes(norm(svc.name || service_name))) free_service = false;
+  }
+
   /* Some things a membership does not include but does price differently —
      the Russian pedicure is $75 to a member and $95 to anyone else. */
   let memberCents = null;
