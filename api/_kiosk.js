@@ -95,6 +95,30 @@ async function findToday(name) {
   return null;
 }
 
+/* Who is being paid for, and what is genuinely left to pay.
+
+   The old lookup priced from the appointment row, which for anything the
+   studio booked by hand carries no price at all — so the balance was
+   zero and a card payment took only the tip. This prices it the same way
+   the booking page does, membership and all. */
+async function resolveVisit(body) {
+  const find = require('./_kiosk-find');
+  const bill = require('./_kiosk-bill');
+  const q = body.q || body.name || '';
+  let appt = null;
+  try {
+    const { matches } = await find.findFor(q);
+    appt = matches.length === 1
+      ? matches[0]
+      : (matches.find(a => (a.src + a.id) === String(body.ref || '')) || null);
+  } catch (_) {}
+  if (!appt) return { appt: null, remainder: 0 };
+  try {
+    const b = await bill.billFor(appt);
+    return { appt, remainder: Math.max(0, Number(b.remainder_cents) || 0), bill: b };
+  } catch (_) { return { appt, remainder: 0 }; }
+}
+
 module.exports = async function (req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -137,7 +161,9 @@ module.exports = async function (req, res) {
     if (req.method === 'POST' && action === 'checkin') {
       const { name } = req.body || {};
       if (!name || !String(name).trim()) return res.status(400).json({ error: 'Name required' });
-      const appt = await findToday(name);
+      // One person or none. Stamping somebody else as arrived turns a real
+      // client into a no-show in every report that follows.
+      const appt = (await resolveVisit({ q: name, ref: (req.body || {}).ref })).appt;
       // Arrival is the thing that separates a no-show from a client. It has
       // to land on the appointment, not only in the log.
       await stampAppointment(appt, { checked_in_ts: Date.now() });
@@ -148,19 +174,132 @@ module.exports = async function (req, res) {
     }
 
     if (req.method === 'GET' && action === 'balance') {
-      const appt = await findToday(req.query.name);
+      const resolvedBal = await resolveVisit({ q: req.query.q || req.query.name, ref: req.query.ref });
+      const appt = resolvedBal.appt;
       if (!appt) return res.json({ found: false });
-      const balance = Math.max(0, appt.total_cents - (appt.deposit_paid ? appt.deposit_cents : 0));
+      const balance = resolvedBal.remainder;
       return res.json({ found: true, service: appt.service, time: appt.time, balance_cents: balance, ref: appt.src + appt.id, name: appt.name });
     }
 
     // Card: PaymentIntent for the remaining balance + optional tip. Members
     // with a $0 balance can still leave a tip-only payment.
+    /* ── PAY WITH THE CARD ALREADY ON FILE ──
+       The one payment nobody watches happen: the client taps nothing and
+       enters nothing. So it does not happen without a signature, and the
+       signature is stored with exactly what it authorised. Without that, a
+       chargeback months later is simply lost. */
+    if (req.method === 'POST' && action === 'pay_on_file') {
+      const body = req.body || {};
+      const charge = require('./_kiosk-charge');
+
+      const sigProblem = charge.signatureProblem(body.signature);
+      if (sigProblem) return res.status(400).json({ error: sigProblem });
+
+      const find = require('./_kiosk-find');
+      const bill = require('./_kiosk-bill');
+      const { matches } = await find.findFor(body.q);
+      // The desk has already chosen who this is; anything ambiguous here
+      // means the wrong person is about to be charged.
+      const appt = matches.length === 1
+        ? matches[0]
+        : matches.find(a => (a.src + a.id) === String(body.ref || ''));
+      if (!appt) return res.status(404).json({ error: 'Could not match that to one appointment — search again.' });
+
+      const b = await bill.billFor(appt);
+      const tip = Math.max(0, Math.round(Number(body.tip_cents) || 0));
+      // The amount is recomputed here. What the iPad believes is a display.
+      const amount = b.remainder_cents + tip;
+      if (amount < 50) return res.status(400).json({ error: 'There is nothing to charge.' });
+
+      const pay = require('./_pay');
+      const sk = await pay.getStripeSecret();
+      if (!sk) return res.status(400).json({ error: 'Card payments are not set up.' });
+      if (!b.stripe_customer_id) return res.status(400).json({ error: 'No card on file for this client.' });
+
+      const card = await bill.cardOnFile(sk, b.stripe_customer_id);
+      if (!card) return res.status(400).json({ error: 'No usable card on file — take payment another way.' });
+
+      const out = await charge.chargeOnFile({
+        sk,
+        customerId: b.stripe_customer_id,
+        paymentMethodId: card.id,
+        amountCents: amount,
+        description: 'ZOLA checkout — ' + (b.name || 'client') + ' (' + (b.service || '') + ')',
+        metadata: {
+          ref: appt.src + appt.id,
+          remainder_cents: String(b.remainder_cents),
+          tip_cents: String(tip),
+        },
+      });
+
+      // Recorded either way. A refused charge that somebody signed for is
+      // still something worth being able to look up.
+      await charge.recordAuthorization({
+        ref: appt.src + appt.id,
+        client_name: b.name,
+        client_email: appt.email || '',
+        amount_cents: amount,
+        remainder_cents: b.remainder_cents,
+        tip_cents: tip,
+        method: 'card_on_file',
+        card_brand: card.brand,
+        card_last4: card.last4,
+        signature: body.signature,
+        payment_intent: out.id || '',
+        outcome: out.ok ? 'paid' : ('failed: ' + (out.why || '')).slice(0, 200),
+      });
+
+      if (!out.ok) return res.status(402).json({ error: out.why || 'The card was declined.' });
+
+      await stampAppointment(appt, {
+        checked_out_ts: Date.now(),
+        paid_cents: amount,
+        tip_cents: tip,
+        pay_method: 'card_on_file',
+        status: 'COMPLETED',
+        deposit_paid: 1,
+      });
+      await execute('INSERT INTO kiosk_log (type, name, method, amount_cents, detail, ts) VALUES (?,?,?,?,?,?)',
+        ['checkout', String(b.name || '').slice(0, 80), 'card_on_file', amount,
+         'card on file · signed' + (tip ? ' · tip $' + (tip / 100).toFixed(2) : ''), Date.now()]);
+      try {
+        await notify.notifyInApp('owner', null,
+          '💳 ' + b.name + ' paid $' + (amount / 100).toFixed(2) + ' on file',
+          card.brand + ' ····' + card.last4 + (tip ? ' · includes a $' + (tip / 100).toFixed(2) + ' tip 💛' : ''));
+      } catch (_) {}
+
+      return res.json({
+        ok: true, amount_cents: amount, tip_cents: tip,
+        card: card.brand + ' ····' + card.last4,
+      });
+    }
+
+    /* Every card-on-file charge with the signature behind it, so a dispute
+       can be answered rather than argued. */
+    if (req.method === 'GET' && action === 'authorizations') {
+      if (req.headers['x-ceo-password'] !== (process.env.CEO_PASSWORD || 'ZOLA2026')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      const charge = require('./_kiosk-charge');
+      const to = Number(req.query.to) || Date.now();
+      const from = Number(req.query.from) || (to - 90 * 86400000);
+      return res.json({ authorizations: await charge.listAuthorizations({ from, to, limit: req.query.limit }) });
+    }
+
+    if (req.method === 'GET' && action === 'signature') {
+      if (req.headers['x-ceo-password'] !== (process.env.CEO_PASSWORD || 'ZOLA2026')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      const charge = require('./_kiosk-charge');
+      return res.json({ signature: await charge.signatureFor(req.query.id) });
+    }
+
     if (req.method === 'POST' && action === 'pay_intent') {
       const body = req.body || {};
-      const appt = await findToday(body.name);
+      const resolved = await resolveVisit(body);
+      const appt = resolved.appt;
       const tip = Math.max(0, Math.round(Number(body.tip_cents) || 0));
-      const balance = appt ? Math.max(0, appt.total_cents - (appt.deposit_paid ? appt.deposit_cents : 0)) : 0;
+      const balance = resolved.remainder;
       const amount = balance + tip;
       if (amount < 50) return res.status(400).json({ error: 'Nothing to charge ✦' });
       const pay = require('./_pay');
@@ -183,9 +322,11 @@ module.exports = async function (req, res) {
     }
 
     if (req.method === 'POST' && action === 'checkout') {
-      const { name, method: payMethod, payment_intent_id, amount_cents, tip_cents } = req.body || {};
+      const { name, method: payMethod, payment_intent_id, tip_cents } = req.body || {};
       if (!name) return res.status(400).json({ error: 'Name required' });
-      let amount = Number(amount_cents) || 0;
+      // Cash is the one the browser could otherwise decide the size of.
+      const resolvedOut = await resolveVisit(req.body || {});
+      let amount = resolvedOut.remainder + Math.max(0, Math.round(Number(tip_cents) || 0));
       const tip = Math.max(0, Math.round(Number(tip_cents) || 0));
       if (payMethod === 'card' && payment_intent_id) {
         const v = await require('./_pay').verifyPaymentIntent(payment_intent_id);
@@ -195,7 +336,7 @@ module.exports = async function (req, res) {
       // Everything the reports need lands on the appointment now: that they
       // finished, what they paid, how, and what they tipped. A tip that
       // lives only in the kiosk log is a tip nobody can ever total up.
-      const appt = await findToday(name);
+      const appt = resolvedOut.appt;
       if (appt) {
         await stampAppointment(appt, {
           checked_out_ts: Date.now(),

@@ -123,6 +123,30 @@
   </div>
 
   <!-- CHECKOUT: BALANCE / PAY METHOD -->
+  <!-- CHECKOUT: WHICH OF THEM IS IT -->
+  <div class="screen" id="s-pick">
+    <h2>Which one is you?</h2>
+    <p class="sub">More than one person matches that. Tap your appointment.</p>
+    <div id="pick-list" style="margin-top:1.4rem;display:flex;flex-direction:column;gap:0.7rem;width:min(560px,92vw)"></div>
+    <div class="row"><button class="big-btn ghost" onclick="show('s-name')">Search again</button></div>
+  </div>
+
+  <!-- CHECKOUT: SIGN FOR THE CARD ON FILE -->
+  <div class="screen" id="s-sign">
+    <h2>Just your signature</h2>
+    <p class="sub" id="sign-what"></p>
+    <canvas id="sigpad" width="640" height="220"
+      style="margin-top:1.2rem;width:min(640px,92vw);height:220px;background:rgba(245,238,232,0.07);
+             border:1px solid rgba(182,165,136,0.4);border-radius:14px;touch-action:none;"></canvas>
+    <p class="sub" style="font-size:0.82rem;margin-top:0.5rem;">Sign above with your finger</p>
+    <div class="err" id="sign-err"></div>
+    <div class="row">
+      <button class="big-btn gold" id="sign-btn" onclick="submitSignature()">Authorise &amp; pay</button>
+      <button class="big-btn ghost" onclick="clearSignature()">Clear</button>
+      <button class="big-btn ghost" onclick="show('s-balance')">Back</button>
+    </div>
+  </div>
+
   <div class="screen" id="s-balance">
     <h2 id="bal-title">All finished ✦</h2>
     <p class="sub" id="bal-svc"></p>
@@ -130,6 +154,7 @@
     <p class="sub" id="bal-breakdown" style="margin-top:-0.4rem;"></p>
     <p class="sub" style="margin-top:0.8rem;">How would you like to pay?</p>
     <div class="row">
+      <button class="big-btn gold" id="onfile-btn" style="display:none" onclick="payOnFile()"></button>
       <button class="big-btn gold" onclick="payCard()">💳 &nbsp;Card / Apple Pay</button>
       <button class="big-btn ghost" onclick="payCash()">💵 &nbsp;Cash</button>
     </div>
@@ -251,17 +276,134 @@ async function nameNext(){
     }catch{ err.textContent='Hmm, try that once more ✦'; }
   } else {
     try{
-      const r=await fetch('/api/kiosk?action=balance&name='+encodeURIComponent(name));
+      /* Email or phone lands on one person outright; a name might not, and
+         the wrong guess here charges somebody else's card. */
+      const r=await fetch('/api/kiosk?action=find&q='+encodeURIComponent(name));
       const d=await r.json();
-      BAL = d.found ? (d.balance_cents||0) : 0;
-      SVC = d.found ? (d.service||'') : '';
-      TIP = 0;
-      // Everyone sees the tip screen — including members who owe $0
-      showTipScreen();
+      const list = d.matches || [];
+      if(list.length > 1){ offerChoices(list); return; }
+      takeBill(list[0] || null);
     }catch{ err.textContent='Hmm, try that once more ✦'; }
   }
 }
 
+
+/* ── WHO, AND WHAT THEY OWE ─────────────────────────────────────────────
+   Everything the desk needs comes back with the search: what the visit
+   costs, what their membership already covered, what deposit was taken,
+   and whether there is a card we can charge without asking again. */
+let KREF = '', KCARD = null, KMEMBER = false;
+
+function offerChoices(list){
+  document.getElementById('pick-list').innerHTML = list.map(function(x, i){
+    return '<button class="big-btn ghost" style="min-width:0;text-align:left;padding:1rem 1.2rem" '
+      + 'onclick="pickOne(' + i + ')">'
+      + '<div style="font-size:1.05rem;letter-spacing:0.04em;text-transform:none">' + escK(x.name) + '</div>'
+      + '<div style="font-size:0.78rem;letter-spacing:0.04em;text-transform:none;opacity:0.75;margin-top:0.2rem">'
+        + escK(x.service || '') + (x.time ? ' · ' + escK(x.time) : '') + (x.artist ? ' · ' + escK(x.artist) : '')
+      + '</div></button>';
+  }).join('');
+  window._picks = list;
+  show('s-pick');
+}
+
+function pickOne(i){ takeBill((window._picks || [])[i] || null); }
+
+function takeBill(x){
+  TIP = 0;
+  if(!x){ BAL = 0; SVC = ''; KREF = ''; KCARD = null; KMEMBER = false; showTipScreen(); return; }
+  BAL = Number(x.remainder_cents) || 0;
+  SVC = x.service || '';
+  KREF = x.ref || '';
+  KCARD = x.card_on_file || null;
+  KMEMBER = !!x.is_member;
+  showTipScreen();
+}
+
+function escK(v){
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* ── SIGNING FOR A CARD ON FILE ──────────────────────────────────────────
+   The only payment where the client touches nothing. Without a signature
+   there is nothing to show a bank months later, and on card-on-file
+   disputes the bank starts on the cardholder's side. */
+let SIGCTX = null, SIGDRAWN = false;
+
+function openSignature(){
+  const total = BAL + TIP;
+  document.getElementById('sign-what').textContent =
+    '$' + (total/100).toFixed(2) + ' on your ' + (KCARD ? KCARD.brand + ' ····' + KCARD.last4 : 'card on file')
+    + (BAL >= 50 && TIP ? '  ($' + (BAL/100).toFixed(2) + ' balance + $' + (TIP/100).toFixed(2) + ' tip)' : '')
+    + (BAL < 50 && TIP ? '  (tip)' : '');
+  document.getElementById('sign-err').textContent = '';
+  show('s-sign');
+  setTimeout(startSignaturePad, 60);
+}
+
+function startSignaturePad(){
+  const cv = document.getElementById('sigpad');
+  if(!cv) return;
+  // Drawn at the size it is displayed, so the mark is not stretched.
+  const rect = cv.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(rect.width * dpr);
+  cv.height = Math.round(rect.height * dpr);
+  const ctx = cv.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = '#F2ECE1';
+  SIGCTX = ctx; SIGDRAWN = false;
+
+  let drawing = false;
+  const at = function(e){
+    const r = cv.getBoundingClientRect();
+    const p = (e.touches && e.touches[0]) || e;
+    return { x: p.clientX - r.left, y: p.clientY - r.top };
+  };
+  const down = function(e){ e.preventDefault(); drawing = true; const p = at(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
+  const move = function(e){ if(!drawing) return; e.preventDefault(); const p = at(e); ctx.lineTo(p.x, p.y); ctx.stroke(); SIGDRAWN = true; };
+  const up = function(){ drawing = false; };
+
+  cv.onpointerdown = down; cv.onpointermove = move; cv.onpointerup = up; cv.onpointerleave = up;
+  // Older iPads answer to touch events rather than pointer events.
+  cv.ontouchstart = down; cv.ontouchmove = move; cv.ontouchend = up;
+}
+
+function clearSignature(){
+  const cv = document.getElementById('sigpad');
+  if(cv && SIGCTX) SIGCTX.clearRect(0, 0, cv.width, cv.height);
+  SIGDRAWN = false;
+}
+
+function payOnFile(){
+  if(!KCARD){ document.getElementById('bal-err').textContent = 'No card on file for you — pay by card or cash ✦'; return; }
+  openSignature();
+}
+
+async function submitSignature(){
+  const err = document.getElementById('sign-err');
+  const btn = document.getElementById('sign-btn');
+  err.textContent = '';
+  if(!SIGDRAWN){ err.textContent = 'Please sign first ✦'; return; }
+
+  const cv = document.getElementById('sigpad');
+  let sig = '';
+  try{ sig = cv.toDataURL('image/png'); }catch(_){ err.textContent = 'Could not read that signature — try again ✦'; return; }
+
+  btn.disabled = true; btn.textContent = 'Charging…';
+  try{
+    const r = await fetch('/api/kiosk?action=pay_on_file', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: KNAME, ref: KREF, tip_cents: TIP, signature: sig })
+    });
+    const d = await r.json();
+    if(!r.ok || d.error){ err.textContent = d.error || 'That card was declined ✦'; return; }
+    show('s-review');
+  }catch(_){ err.textContent = 'Connection hiccup — try again ✦'; }
+  finally{ btn.disabled = false; btn.textContent = 'Authorise & pay'; }
+}
 // ── TIP ──
 function showTipScreen(){
   const owes = BAL >= 50;
@@ -294,6 +436,15 @@ function goToPay(){
   if(total < 50){ show('s-review'); return; }   // nothing owed, no tip → straight to review
   document.getElementById('bal-svc').textContent = SVC ? (SVC + (BAL>=50?' · remaining balance':' · tip')) : 'Tip';
   document.getElementById('bal-amt').textContent = '$'+(total/100).toFixed(2);
+  const onfile = document.getElementById('onfile-btn');
+  if(onfile){
+    if(KCARD){
+      onfile.style.display = '';
+      onfile.innerHTML = '💳 &nbsp;Use my ' + escK(KCARD.brand) + ' ····' + escK(KCARD.last4);
+    } else {
+      onfile.style.display = 'none';
+    }
+  }
   document.getElementById('bal-breakdown').textContent = (BAL>=50 && TIP)
     ? ('$'+(BAL/100).toFixed(2)+' balance + $'+(TIP/100).toFixed(2)+' tip')
     : (TIP && BAL<50 ? 'Thank you so much 💛' : '');
@@ -305,7 +456,7 @@ async function payCard(){
   try{
     const cfg=await (await fetch('/api/pay?action=config')).json();
     if(!cfg.enabled||typeof Stripe==='undefined'){ err.textContent='Card isn\'t available right now — please pay cash at the desk ✦'; return; }
-    const r=await fetch('/api/kiosk?action=pay_intent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'pay_intent',name:KNAME,tip_cents:TIP})});
+    const r=await fetch('/api/kiosk?action=pay_intent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'pay_intent',name:KNAME,q:KNAME,ref:KREF,tip_cents:TIP})});
     const d=await r.json();
     if(!d.client_secret){ err.textContent=d.error||'Could not start payment.'; return; }
     _pi=d.payment_intent_id;
@@ -325,13 +476,13 @@ async function confirmCard(){
   btn.disabled=false; btn.textContent='Pay Now';
   if(error){ err.textContent=error.message||'Card declined — try again.'; return; }
   await fetch('/api/kiosk?action=checkout',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action:'checkout',name:KNAME,method:'card',payment_intent_id:(paymentIntent&&paymentIntent.id)||_pi,tip_cents:TIP})});
+    body:JSON.stringify({action:'checkout',name:KNAME,q:KNAME,ref:KREF,method:'card',payment_intent_id:(paymentIntent&&paymentIntent.id)||_pi,tip_cents:TIP})});
   show('s-review');
 }
 
 async function payCash(){
   await fetch('/api/kiosk?action=checkout',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action:'checkout',name:KNAME,method:'cash',amount_cents:BAL+TIP,tip_cents:TIP})});
+    body:JSON.stringify({action:'checkout',name:KNAME,q:KNAME,ref:KREF,method:'cash',tip_cents:TIP})});
   show('s-review');
 }
 
