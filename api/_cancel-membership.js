@@ -16,7 +16,9 @@
 //     loses time they have bought, and there are no refunds to work out.
 const { queryOne, execute } = require('./_db');
 
-const TIER_LABEL = { SIGNATURE: 'Signature', LUXE: 'Luxe', BLACK_CARD: 'Black Card' };
+// Every membership, so a cancellation never names a tier "ELITE".
+const TIER_LABEL = {};
+try { for (const p of require('./_plans').ALL()) TIER_LABEL[p.key] = p.name; } catch (_) {}
 const MINIMUM_MONTHS = 3;
 
 async function authMember(req) {

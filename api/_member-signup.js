@@ -391,7 +391,17 @@ function formatPhone(raw) {
 }
 
 async function sendWelcome({ fullName, email, phone, memberId, tier }) {
-  const tierLabel = { SIGNATURE: 'Signature Club', LUXE: 'Luxe Club', BLACK_CARD: 'Black Card' }[tier];
+  /* The membership's own name. This was a list of three, so somebody
+     joining Essential or Elite was welcomed to "undefined". */
+  const known = { SIGNATURE: 'Signature Club', LUXE: 'Luxe Club', BLACK_CARD: 'Black Card' }[tier];
+  let tierLabel = known;
+  if (!tierLabel) {
+    try {
+      const p = require('./_plans').byKey(tier);
+      tierLabel = p ? p.name : '';
+    } catch (_) { tierLabel = ''; }
+  }
+  if (!tierLabel) tierLabel = String(tier || 'ZOLA').replace(/_/g, ' ');
   const firstName = fullName.split(' ')[0];
 
   if (email) {

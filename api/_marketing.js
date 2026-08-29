@@ -182,8 +182,14 @@ async function resolveAudience(key, picked, preloaded) {
     return [...out.values()];
   }
 
-  if (key === 'members' || key === 'black_card' || key === 'luxe' || key === 'signature') {
-    const want = { members: null, black_card: 'BLACK_CARD', luxe: 'LUXE', signature: 'SIGNATURE' }[key];
+  // "members" means all of them; anything else is a membership key, in
+  // whatever spelling the caller used.
+  const asTier = (() => {
+    const up = String(key || '').toUpperCase();
+    try { return require('./_plans').byKey(up) ? up : null; } catch (_) { return null; }
+  })();
+  if (key === 'members' || asTier) {
+    const want = key === 'members' ? null : asTier;
     for (const m of members) {
       if (want && String(m.tier) !== want) continue;
       add(m.name, m.email, String(m.tier || 'member').replace('_', ' ').toLowerCase());

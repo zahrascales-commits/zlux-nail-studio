@@ -6,7 +6,10 @@ async function authAdmin(req) {
   return queryOne('SELECT * FROM sessions WHERE token = ? AND role = ? AND expires_at > CURRENT_TIMESTAMP', [token, 'ADMIN']);
 }
 
-const TIER_PRICE = { SIGNATURE: 99, LUXE: 199, BLACK_CARD: 299 };
+// Dollars per cycle for every membership. Typing three of them here meant
+// an Essential or Elite member counted as nothing.
+const TIER_PRICE = {};
+try { for (const p of require('./_plans').ALL()) TIER_PRICE[p.key] = Math.round(p.cycle_cents / 100); } catch (_) {}
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
