@@ -5036,6 +5036,25 @@ async function downloadReport(key){
    money or costs a client their appointment. */
 let NEEDS = null;
 
+
+/* Carry each artist's existing week forward. Nothing is invented and nothing
+   already on the books is touched — she can still change any single day
+   afterwards on the Schedule tab. */
+async function extendRota(weeks){
+  const msg = document.getElementById('ny-cal-msg');
+  if(msg) msg.textContent = 'Filling the calendar…';
+  try{
+    const r = await api('/api/manager?action=extend_shifts', { method:'POST', body: JSON.stringify({ weeks: weeks }) });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+    const lines = (d.report || []).map(function(x){
+      return x.added ? x.name + ' +' + x.added + ' days' : x.name + ' — ' + (x.why || 'already covered');
+    });
+    if(msg) msg.textContent = d.added + ' days added. ' + lines.join(', ');
+  }catch(err){ if(msg) msg.textContent = 'Could not do that: ' + err.message; return; }
+  setTimeout(function(){ loadNeedsYou(); }, 900);
+}
+
 async function loadNeedsYou(){
   const el = document.getElementById('needs-you');
   if(!el) return;
@@ -5056,6 +5075,43 @@ async function loadNeedsYou(){
   }
 
   let html = '';
+
+  /* ── THE CALENDAR RUNS OUT HERE ──
+     Shifts are ticked one day at a time, so booking stops dead on the last
+     day anybody is scheduled. Nothing on the client's side explains that —
+     they open the next month, find it empty, and go somewhere else. This is
+     the only warning that costs money purely by being missed. */
+  const cal = NEEDS.calendar;
+  if(cal && cal.short){
+    const dry = !cal.studio_last || cal.days_left < 0;
+    html += '<div class="ny" style="border-color:rgba(224,138,138,0.5);'
+        + 'background:linear-gradient(150deg,rgba(224,138,138,0.12),rgba(224,138,138,0.02))">'
+      + '<div class="ny-h"><div class="ny-t">' + (dry ? 'Nobody can book anything' : 'Your calendar runs out') + '</div>'
+        + '<div class="ny-n" style="color:#e08a8a">' + (dry ? '!' : cal.days_left + 'd') + '</div></div>'
+      + '<div class="ny-sub">'
+        + (dry
+            ? 'There are no working days scheduled at all, so every date on the booking page is closed.'
+            : 'The last day anyone is scheduled to work is <strong>' + esc(niceDay(cal.studio_last)) + '</strong>. '
+              + 'After that the booking page shows empty months — a client looking for their next fill '
+              + 'finds nothing and does not tell you.')
+      + '</div>'
+      + (cal.artists || []).map(function(a){
+          const none = !a.last_date;
+          return '<div class="ny-row" style="border-left-color:' + (none ? '#e08a8a' : 'var(--gold)') + '">'
+            + '<div class="ny-who" style="flex:1"><b>' + esc(a.name) + '</b><i>'
+              + (none ? 'no days scheduled' : 'scheduled through ' + esc(niceDay(a.last_date)) + ' · ' + a.upcoming + ' days')
+            + '</i></div></div>';
+        }).join('')
+      + '<div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-top:0.9rem">'
+        + '<button class="btn btn-sm" onclick="extendRota(12)">Repeat the rota 3 months out</button>'
+        + '<button class="btn btn-ghost btn-sm" onclick="extendRota(26)">6 months</button>'
+        + '<span id="ny-cal-msg" style="font-size:0.78rem;color:var(--muted)"></span>'
+      + '</div>'
+      + '<div style="font-size:0.74rem;color:var(--muted);margin-top:0.5rem">'
+        + 'Copies the days and hours each artist already works. It never changes a day you have already set.'
+      + '</div>'
+    + '</div>';
+  }
 
   if(un.length){
     html += '<div class="ny">'

@@ -609,6 +609,80 @@ module.exports = async function (req, res) {
     // Apply a set of dates in one shot — the calendar sends every date that
     // should be ON for this artist in the given range, and we make the table
     // match exactly. One call covers ticking, unticking and bulk fills alike.
+    /* Repeat the rota forward. Reads the last four weeks each artist
+       actually has on the books, works out which weekdays she works and at
+       what hours, and lays that same week down week after week until the
+       target date. Days already scheduled are left exactly as they are —
+       this only ever fills empty space, so it can be run twice safely and it
+       can never quietly overwrite a day she changed on purpose. */
+    if (method === 'POST' && action === 'extend_shifts') {
+      const weeks = Math.min(26, Math.max(1, Number((req.body || {}).weeks) || 12));
+      const onlyId = (req.body || {}).member_id ? Number((req.body || {}).member_id) : null;
+
+      const pad = n => String(n).padStart(2, '0');
+      const ds = d => d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate());
+      const today = new Date();
+      const now = today.getFullYear() + '-' + pad(today.getMonth() + 1) + '-' + pad(today.getDate());
+
+      const team = await query(
+        onlyId ? 'SELECT id, name FROM team_members WHERE active=1 AND id=?' : 'SELECT id, name FROM team_members WHERE active=1',
+        onlyId ? [onlyId] : []);
+
+      const report = [];
+      for (const t of team) {
+        const mid = Number(t.id);
+
+        // The pattern comes from the most recent stretch she is actually
+        // scheduled for, not from all of history — hours change.
+        const recent = await query(
+          'SELECT date, start_time, end_time, lunch_start, lunch_end FROM tech_shifts WHERE member_id=? ORDER BY date DESC LIMIT 28',
+          [mid]);
+        if (!recent.length) { report.push({ name: t.name, added: 0, why: 'nothing scheduled to copy' }); continue; }
+
+        // One entry per weekday, taking the most recent hours for that day.
+        const byDow = {};
+        for (const r of recent) {
+          const d = new Date(r.date + 'T12:00:00Z');
+          if (isNaN(d)) continue;
+          const dow = d.getUTCDay();
+          if (byDow[dow]) continue;             // recent list is newest-first
+          byDow[dow] = { start: r.start_time, end: r.end_time, ls: r.lunch_start, le: r.lunch_end };
+        }
+        if (!Object.keys(byDow).length) { report.push({ name: t.name, added: 0, why: 'no usable pattern' }); continue; }
+
+        const lastRow = await queryOne('SELECT MAX(date) AS d FROM tech_shifts WHERE member_id=?', [mid]);
+        const lastHave = (lastRow && lastRow.d) || now;
+
+        // Start the day after wherever she already reaches, never in the past.
+        const startFrom = lastHave > now ? lastHave : now;
+        const cursor = new Date(startFrom + 'T12:00:00Z');
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+        const until = new Date(now + 'T12:00:00Z');
+        until.setUTCDate(until.getUTCDate() + weeks * 7);
+
+        let added = 0;
+        while (cursor <= until) {
+          const dow = cursor.getUTCDay();
+          const p = byDow[dow];
+          if (p) {
+            const date = ds(cursor);
+            // Never touch a day that already exists.
+            const have = await queryOne('SELECT id FROM tech_shifts WHERE member_id=? AND date=?', [mid, date]);
+            if (!have) {
+              await execute(
+                'INSERT INTO tech_shifts (member_id, date, start_time, end_time, lunch_start, lunch_end, created_ts) VALUES (?,?,?,?,?,?,?)',
+                [mid, date, p.start, p.end, p.ls || null, p.le || null, Date.now()]);
+              added++;
+            }
+          }
+          cursor.setUTCDate(cursor.getUTCDate() + 1);
+        }
+        report.push({ name: t.name, added, through: ds(until) });
+      }
+
+      return res.json({ ok: true, weeks, report, added: report.reduce((n, r) => n + r.added, 0) });
+    }
+
     if (method === 'PUT' && action === 'shifts') {
       const { member_id, from, to, dates, start_time, end_time, lunch_start, lunch_end } = req.body || {};
       if (!member_id) return res.status(400).json({ error: 'member_id required' });

@@ -102,6 +102,43 @@ module.exports = async function (req, res) {
       }));
     } catch (_) {}
 
+    /* ── How far the calendar actually goes ──
+       A client can only book a day somebody is scheduled to work. When the
+       last ticked date passes, the booking page does not explain itself — it
+       just shows an empty month, and the booking is lost silently. */
+    try {
+      const last = await query(
+        'SELECT member_id, MAX(date) AS last_date, COUNT(*) AS upcoming FROM tech_shifts WHERE date>=? GROUP BY member_id',
+        [now]);
+      const by = {};
+      for (const r of last) by[String(r.member_id)] = { last_date: r.last_date, upcoming: Number(r.upcoming) };
+
+      const gaps = [];
+      for (const t of (out.team || [])) {
+        const c = by[String(t.id)];
+        gaps.push({
+          id: Number(t.id), name: t.name,
+          last_date: (c && c.last_date) || '',
+          upcoming: (c && c.upcoming) || 0,
+        });
+      }
+      // The studio is bookable up to the furthest day anybody works.
+      const ends = gaps.map(g => g.last_date).filter(Boolean).sort();
+      const studioLast = ends.length ? ends[ends.length - 1] : '';
+      const daysLeft = studioLast
+        ? Math.round((new Date(studioLast + 'T12:00:00') - new Date(now + 'T12:00:00')) / 86400000)
+        : -1;
+
+      out.calendar = {
+        studio_last: studioLast,
+        days_left: daysLeft,
+        // Six weeks of runway. Below that, somebody booking their next fill
+        // is already hitting the wall.
+        short: daysLeft < 42,
+        artists: gaps,
+      };
+    } catch (_) { out.calendar = null; }
+
     // ── Anything the notification feed is holding ──
     try {
       const main = require('./_db');
@@ -114,7 +151,7 @@ module.exports = async function (req, res) {
     out.counts.new_members = out.new_members.length;
     out.counts.new_bookings = out.new_bookings.length;
     // One number for the tab badge: the things that genuinely cannot wait.
-    out.counts.needs_you = out.counts.unassigned;
+    out.counts.needs_you = out.counts.unassigned + ((out.calendar && out.calendar.short) ? 1 : 0);
 
     return res.json(out);
   } catch (err) {
