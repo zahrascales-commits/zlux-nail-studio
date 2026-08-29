@@ -82,11 +82,34 @@ module.exports = async function (req, res) {
       const { confirmation, client_name, client_email, service, appt_date, data_url } = req.body || {};
       if (!data_url || !String(data_url).startsWith('data:image/')) return res.status(400).json({ error: 'image required' });
       if (String(data_url).length > MAX_DATA_URL) return res.status(413).json({ error: 'Image too large — try again, it will be compressed automatically.' });
+      for (const sql of [
+        'ALTER TABLE client_inspo ADD COLUMN team_member_id INTEGER',
+        "ALTER TABLE client_inspo ADD COLUMN artist TEXT DEFAULT ''",
+      ]) { try { await execute(sql); } catch (_) {} }
+
+      /* Work out whose feed this belongs on. A photo sent from a member's
+         own account carries no booking code, so without this it would land
+         in a pile nobody owns — attach it to their next appointment and it
+         reaches the person actually doing their nails. */
+      let artistId = null, artistName = '', tag = String(confirmation || '').slice(0, 40);
+      try {
+        const who = String(client_name || '').trim();
+        const today = new Date().toISOString().slice(0, 10);
+        const next = tag
+          ? await queryOne("SELECT a.id, a.chat_token, a.team_member_id, m.name AS artist FROM team_appointments a LEFT JOIN team_members m ON m.id=a.team_member_id WHERE a.chat_token=? OR a.notes LIKE ? ORDER BY a.id DESC LIMIT 1", [tag, '%' + tag + '%'])
+          : (who ? await queryOne("SELECT a.id, a.chat_token, a.team_member_id, m.name AS artist FROM team_appointments a LEFT JOIN team_members m ON m.id=a.team_member_id WHERE lower(a.client_name)=lower(?) AND a.date >= ? AND LOWER(COALESCE(a.status,'scheduled'))<>'cancelled' ORDER BY a.date, a.time LIMIT 1", [who, today]) : null);
+        if (next) {
+          artistId = next.team_member_id || null;
+          artistName = next.artist || '';
+          if (!tag && next.chat_token) tag = next.chat_token;
+        }
+      } catch (_) {}
+
       await execute(
-        'INSERT INTO client_inspo (confirmation, client_name, client_email, service, appt_date, data_url, ts) VALUES (?,?,?,?,?,?,?)',
-        [String(confirmation || '').slice(0, 40), String(client_name || 'Client').slice(0, 120),
+        'INSERT INTO client_inspo (confirmation, client_name, client_email, service, appt_date, data_url, team_member_id, artist, ts) VALUES (?,?,?,?,?,?,?,?,?)',
+        [tag, String(client_name || 'Client').slice(0, 120),
          String(client_email || '').slice(0, 160), String(service || '').slice(0, 120),
-         String(appt_date || '').slice(0, 12), data_url, Date.now()]);
+         String(appt_date || '').slice(0, 12), data_url, artistId, artistName, Date.now()]);
       // Alert Zahra + every active team member, tagged with who sent it
       try {
         const title = `Inspo photo 💅 from ${String(client_name || 'a client').split(' ')[0]}`;
@@ -117,6 +140,12 @@ module.exports = async function (req, res) {
 
     // ── OWNER or TEAM MEMBER: the client-inspo feed (who sent what) ──
     if (req.method === 'GET' && action === 'inspo_feed') {
+      // Added when appointment links arrived; harmless once present.
+      for (const sql of [
+        'ALTER TABLE client_inspo ADD COLUMN team_member_id INTEGER',
+        "ALTER TABLE client_inspo ADD COLUMN artist TEXT DEFAULT ''",
+        "ALTER TABLE client_inspo ADD COLUMN note TEXT DEFAULT ''",
+      ]) { try { await execute(sql); } catch (_) {} }
       const isOwner = req.headers['x-ceo-password'] === CEO_PASSWORD;
       let allowed = isOwner;
       if (!allowed) {
@@ -159,9 +188,13 @@ module.exports = async function (req, res) {
         }
       } catch (_) {}
 
+      // A photo sent through an appointment link already knows whose it is —
+      // it was tagged with the artist when it arrived. That is the most
+      // reliable signal there is, so it counts before any of the above.
       const visible = rows
-        .filter(r => mine.has(r.confirmation) || deciding.has(r.confirmation))
-        .map(r => ({ ...r, mine: mine.has(r.confirmation) }));
+        .filter(r => Number(r.team_member_id) === memberId
+          || mine.has(r.confirmation) || deciding.has(r.confirmation))
+        .map(r => ({ ...r, mine: Number(r.team_member_id) === memberId || mine.has(r.confirmation) }));
       return res.json({ inspo: visible });
     }
 

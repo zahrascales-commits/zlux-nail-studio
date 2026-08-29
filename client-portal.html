@@ -193,6 +193,7 @@
     <div class="portal-tab active" id="tab-home">
       <div id="contact-gap"></div>
       <div id="upgrade-offer"></div>
+      <div id="inspo-box"></div>
       <div id="perk-wallet"></div>
       <!-- Social-profile-style header -->
       <div id="profile-hero" style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;margin-bottom:1.75rem;padding:1.5rem;background:linear-gradient(135deg,rgba(182,165,136,0.10),rgba(182,165,136,0.02));border:1px solid rgba(182,165,136,0.2);">
@@ -435,6 +436,7 @@ async function loadDashboard(member) {
   loadWallet(member && member.memberId);
   askForContact(member && member.memberId);
   loadUpgrade();
+  loadInspoBox(member);
   fillSettings(member);
   // Ending a membership belongs in settings, at the bottom — findable in two
   // clicks, never the loudest thing on a page somebody opened for another
@@ -1351,6 +1353,127 @@ async function saveSettings(){
     msg.style.color = '#a04038';
     msg.textContent = err.message || 'That did not save.';
   }
+}
+
+
+/* ── SENDING A PICTURE OF WHAT YOU WANT ────────────────────────────────
+   Attached to their next appointment, so it reaches whoever is actually
+   doing their nails rather than a pile the whole studio has to search.
+   Nothing to send it to means nothing to show, so this only appears when
+   they have something booked. */
+async function loadInspoBox(member){
+  const el = document.getElementById('inspo-box');
+  if(!el) return;
+  let next = null;
+  try{
+    const r = await fetch('/api/member-profile', { headers: { Authorization: 'Bearer ' + authToken } });
+    const d = await r.json();
+    next = (d.upcoming || [])[0] || null;
+  }catch(_){}
+
+  if(!next){
+    el.innerHTML = '';
+    return;
+  }
+
+  const when = new Date(String(next.appointment_date || '').slice(0,10) + 'T12:00:00');
+  const whenTxt = isNaN(when) ? '' : when.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+
+  el.innerHTML =
+    '<div style="background:#fff;border:1px solid rgba(182,165,136,0.3);padding:1.4rem 1.3rem;margin-bottom:1.5rem;">'
+      + '<div style="font-family:\'Cinzel\',serif;font-size:1.15rem;color:var(--espresso);margin-bottom:0.3rem;">Show us what you want</div>'
+      + '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.85rem;color:var(--latte);line-height:1.7;margin-bottom:1rem;">'
+        + 'For your ' + esc(whenTxt) + ' appointment. Screenshots are perfect — any size, any phone.</p>'
+      + '<button class="btn-gold" style="animation:none;font-size:0.72rem;" onclick="document.getElementById(\'pf-inspo\').click()">Add a photo</button>'
+      + '<input type="file" id="pf-inspo" accept="image/*" multiple style="display:none" />'
+      + '<div id="pf-shots" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:0.5rem;margin-top:0.9rem;"></div>'
+      + '<button id="pf-send" class="btn-login" style="margin-top:0.8rem;display:none;" onclick="sendPortalInspo()">Send them</button>'
+      + '<div id="pf-msg" style="font-family:\'Josefin Sans\',sans-serif;font-size:0.82rem;color:var(--latte);margin-top:0.6rem;"></div>'
+    + '</div>';
+
+  document.getElementById('pf-inspo').onchange = async function(){
+    const files = [...(this.files || [])];
+    const msg = document.getElementById('pf-msg');
+    if(!files.length) return;
+    msg.textContent = 'Getting them ready…';
+    for(const f of files){
+      try{ PORTAL_SHOTS.push(await portalShrink(f)); }
+      catch(err){ msg.textContent = err.message; }
+    }
+    this.value = '';
+    drawPortalShots();
+    msg.textContent = PORTAL_SHOTS.length ? PORTAL_SHOTS.length + ' ready' : '';
+  };
+}
+
+let PORTAL_SHOTS = [];
+const PORTAL_LIMIT = 2600000;
+
+// Same loop as everywhere else: shrink until it fits rather than refusing.
+async function portalShrink(file){
+  let bmp = null;
+  try{ if(window.createImageBitmap) bmp = await createImageBitmap(file); }catch(_){}
+  if(!bmp){
+    bmp = await new Promise(function(res, rej){
+      const img = new Image(), r = new FileReader();
+      r.onload = e => { img.src = e.target.result; };
+      img.onload = () => res(img);
+      img.onerror = () => rej(new Error('That file is not a picture this phone can open.'));
+      r.onerror = () => rej(new Error('Could not read that file.'));
+      r.readAsDataURL(file);
+    });
+  }
+  const w0 = bmp.width || bmp.naturalWidth, h0 = bmp.height || bmp.naturalHeight;
+  if(!w0 || !h0) throw new Error('That file is not a picture.');
+  let maxDim = 2200, q = 0.9, out = '';
+  for(let i = 0; i < 12; i++){
+    const scale = Math.min(1, maxDim / Math.max(w0, h0));
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.round(w0 * scale));
+    cv.height = Math.max(1, Math.round(h0 * scale));
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(bmp, 0, 0, cv.width, cv.height);
+    out = cv.toDataURL('image/jpeg', q);
+    if(out.length <= PORTAL_LIMIT) return out;
+    if(q > 0.5) q -= 0.12; else maxDim = Math.round(maxDim * 0.8);
+  }
+  return out;
+}
+
+function drawPortalShots(){
+  const g = document.getElementById('pf-shots');
+  if(!g) return;
+  g.innerHTML = PORTAL_SHOTS.map(function(src, i){
+    return '<div style="position:relative"><img src="' + src + '" style="width:100%;aspect-ratio:1;object-fit:cover;display:block;border:1px solid rgba(182,165,136,0.3)">'
+      + '<button onclick="PORTAL_SHOTS.splice(' + i + ',1);drawPortalShots()" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,0.7);border:none;color:#fff;width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:0.7rem;line-height:1;padding:0">×</button></div>';
+  }).join('');
+  const b = document.getElementById('pf-send');
+  if(b) b.style.display = PORTAL_SHOTS.length ? 'block' : 'none';
+}
+
+async function sendPortalInspo(){
+  const msg = document.getElementById('pf-msg');
+  if(!PORTAL_SHOTS.length) return;
+  msg.textContent = 'Sending…';
+  let sent = 0;
+  for(const src of PORTAL_SHOTS){
+    try{
+      const r = await fetch('/api/photos?action=inspo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken },
+        body: JSON.stringify({
+          client_name: (profileData && profileData.fullName) || '',
+          client_email: (profileData && profileData.email) || '',
+          data_url: src,
+        })
+      });
+      const d = await r.json();
+      if(!d.error) sent++;
+    }catch(_){}
+  }
+  PORTAL_SHOTS = []; drawPortalShots();
+  msg.textContent = sent ? (sent + (sent === 1 ? ' photo sent ✦' : ' photos sent ✦')) : 'Those did not send — try again.';
 }
 
 </script>

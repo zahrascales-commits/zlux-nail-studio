@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Your Appointment — ZOLA Nail Studio</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" href="/img/zola-icon.png" />
+<meta name="theme-color" content="#140d07" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@200;300;400;600&family=Josefin+Sans:wght@300;400;600&display=swap" rel="stylesheet" />
+<script src="https://js.stripe.com/v3/"></script>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --espresso:#0D0D0D; --cream:#F5EEE8; --champagne:#C4A882;
+    --latte:#8C7A5E; --soft:#FAF7F4;
+  }
+  body{background:var(--soft);font-family:'Josefin Sans',sans-serif;color:var(--espresso);
+    min-height:100vh;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:520px;margin:0 auto;padding:2rem 1.25rem 4rem}
+
+  .brand{text-align:center;margin-bottom:1.75rem}
+  .brand .mark{font-family:'Cinzel',serif;font-size:1.5rem;letter-spacing:0.4em;
+    color:var(--espresso);text-indent:0.4em}
+  .brand .sub{font-size:0.62rem;letter-spacing:0.24em;text-transform:uppercase;
+    color:var(--latte);margin-top:0.35rem}
+
+  .card{background:#fff;border:1px solid rgba(182,165,136,0.28);padding:1.6rem 1.4rem;margin-bottom:1rem}
+  .card h2{font-family:'Cinzel',serif;font-weight:400;font-size:1.25rem;margin-bottom:0.3rem}
+  .card p{font-size:0.88rem;color:var(--latte);line-height:1.75}
+
+  .appt{background:var(--espresso);color:var(--cream);padding:1.5rem 1.4rem;margin-bottom:1rem}
+  .appt .who{font-family:'Cinzel',serif;font-size:1.35rem;margin-bottom:0.15rem}
+  .appt .what{font-size:0.88rem;color:var(--champagne);margin-bottom:0.9rem}
+  .appt .when{font-size:0.92rem;line-height:1.8}
+  .appt .when b{color:#fff;font-weight:400}
+
+  .amt{font-family:'Cinzel',serif;font-size:2.4rem;line-height:1;margin:0.4rem 0 0.2rem}
+  .paid{display:inline-block;font-size:0.66rem;letter-spacing:0.16em;text-transform:uppercase;
+    color:#3c8c50;border:1px solid #3c8c50;padding:0.35rem 0.8rem;border-radius:100px}
+
+  .btn{display:block;width:100%;background:var(--espresso);color:var(--champagne);border:none;
+    font-family:'Josefin Sans',sans-serif;font-size:0.74rem;font-weight:600;letter-spacing:0.18em;
+    text-transform:uppercase;padding:1rem;cursor:pointer;margin-top:1rem;min-height:50px}
+  .btn.gold{background:var(--champagne);color:var(--espresso)}
+  .btn:disabled{opacity:0.5;cursor:default}
+
+  #card-el{border:1px solid rgba(182,165,136,0.4);padding:0.9rem;background:var(--soft);margin-top:1rem}
+
+  .drop{border:1px dashed rgba(182,165,136,0.55);background:var(--soft);padding:1.6rem 1rem;
+    text-align:center;cursor:pointer;margin-top:1rem}
+  .drop:hover{border-color:var(--champagne)}
+  .drop .big{font-size:1.6rem;margin-bottom:0.4rem}
+  .drop .t{font-size:0.85rem;color:var(--espresso)}
+  .drop .s{font-size:0.74rem;color:var(--latte);margin-top:0.25rem}
+  #file{display:none}
+
+  .shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:0.5rem;margin-top:0.9rem}
+  .shot{position:relative}
+  .shot img{width:100%;aspect-ratio:1;object-fit:cover;display:block;border:1px solid rgba(182,165,136,0.3)}
+  .shot button{position:absolute;top:3px;right:3px;background:rgba(0,0,0,0.7);border:none;color:#fff;
+    width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:0.72rem;line-height:1;padding:0}
+
+  .msg{font-size:0.84rem;margin-top:0.8rem;min-height:1.2em}
+  .msg.err{color:#a04038}
+  .msg.ok{color:#3c8c50}
+  .note{width:100%;border:1px solid rgba(182,165,136,0.4);background:var(--soft);
+    font-family:inherit;font-size:0.88rem;padding:0.75rem 0.85rem;margin-top:0.8rem;outline:none;resize:vertical}
+  .foot{text-align:center;font-size:0.74rem;color:var(--latte);margin-top:2rem;line-height:1.8}
+  .foot a{color:var(--champagne)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="mark">ZOLA</div>
+    <div class="sub">Nail Studio · Porterville</div>
+  </div>
+
+  <div id="body"><div class="card"><p>Loading your appointment…</p></div></div>
+
+  <div class="foot">
+    Questions? DM <a href="https://instagram.com/zola_officials_" target="_blank" rel="noopener">@zola_officials_</a>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const money = c => '$' + (Number(c || 0) / 100).toFixed(2).replace(/\.00$/, '');
+
+const TOKEN = new URLSearchParams(location.search).get('t') || '';
+let V = null, stripe = null, elements = null, cardEl = null;
+let PICKED = [];   // photos chosen but not sent yet
+
+/* Shrink until it fits — the same loop the booking page uses. Any picture a
+   phone can produce ends up sendable, which is the whole point: somebody
+   sending a screenshot of a set they love should never meet an error. */
+const LIMIT = 2600000;
+async function shrinkToFit(file){
+  let bmp = null;
+  try { if (window.createImageBitmap) bmp = await createImageBitmap(file); } catch (_) {}
+  if (!bmp) {
+    bmp = await new Promise((resolve, reject) => {
+      const img = new Image(), r = new FileReader();
+      r.onload = e => { img.src = e.target.result; };
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('That file is not a picture this phone can open — a screenshot or a camera-roll photo will work.'));
+      r.onerror = () => reject(new Error('Could not read that file.'));
+      r.readAsDataURL(file);
+    });
+  }
+  const w0 = bmp.width || bmp.naturalWidth, h0 = bmp.height || bmp.naturalHeight;
+  if (!w0 || !h0) throw new Error('That file is not a picture.');
+  let maxDim = 2200, q = 0.9, out = '';
+  for (let i = 0; i < 12; i++) {
+    const scale = Math.min(1, maxDim / Math.max(w0, h0));
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.round(w0 * scale));
+    cv.height = Math.max(1, Math.round(h0 * scale));
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(bmp, 0, 0, cv.width, cv.height);
+    out = cv.toDataURL('image/jpeg', q);
+    if (out.length <= LIMIT) return out;
+    if (q > 0.5) q -= 0.12; else maxDim = Math.round(maxDim * 0.8);
+  }
+  return out;
+}
+
+async function load(){
+  if(!TOKEN){ $('body').innerHTML = '<div class="card"><h2>Link incomplete</h2><p>That link is missing its code. Check the message it came in, or DM the studio.</p></div>'; return; }
+  try{
+    V = await (await fetch('/api/visit?t=' + encodeURIComponent(TOKEN))).json();
+    if(V.error) throw new Error(V.error);
+  }catch(err){
+    $('body').innerHTML = '<div class="card"><h2>We could not find that</h2><p>' + esc(err.message) + '</p></div>';
+    return;
+  }
+  render();
+}
+
+function render(){
+  const owes = V.deposit_cents > 0 && !V.deposit_paid;
+  $('body').innerHTML =
+    '<div class="appt">'
+      + '<div class="who">' + esc(V.client || 'Your appointment') + '</div>'
+      + '<div class="what">' + esc(V.service) + (V.artist ? ' · with ' + esc(V.artist) : '') + '</div>'
+      + '<div class="when"><b>' + esc(V.date_pretty) + '</b> at <b>' + esc(V.time_pretty) + '</b></div>'
+    + '</div>'
+
+    // Deposit first — it is the thing with a deadline attached.
+    + '<div class="card" id="pay-card">'
+      + '<h2>' + (owes ? 'Your deposit' : 'Deposit') + '</h2>'
+      + (V.deposit_paid
+          ? '<p style="margin-bottom:0.6rem">Paid — nothing more to do.</p><span class="paid">Paid ✓</span>'
+          : (V.deposit_cents > 0
+              ? '<div class="amt">' + money(V.deposit_cents) + '</div>'
+                + '<p>This holds your spot and comes off the price of your service.</p>'
+                + '<div id="card-el"></div>'
+                + '<button class="btn" id="pay-btn" onclick="pay()">Pay ' + money(V.deposit_cents) + '</button>'
+                + '<div class="msg" id="pay-msg"></div>'
+              : '<p>No deposit needed for this one.</p>'))
+    + '</div>'
+
+    + '<div class="card">'
+      + '<h2>Show us what you want</h2>'
+      + '<p>Send a picture of the nails you have in mind'
+        + (V.artist ? ' — it goes straight to ' + esc(V.artist) : '') + '. '
+        + 'Screenshots are perfect. Add as many as you like.</p>'
+      + '<div class="drop" onclick="document.getElementById(\'file\').click()">'
+        + '<div class="big">📸</div>'
+        + '<div class="t">Tap to add a photo</div>'
+        + '<div class="s">Any size, any phone</div>'
+      + '</div>'
+      + '<input type="file" id="file" accept="image/*" multiple />'
+      + '<div class="shots" id="shots"></div>'
+      + '<textarea class="note" id="note" rows="2" placeholder="Anything to say about it? (optional)"></textarea>'
+      + '<button class="btn gold" id="send-btn" onclick="sendPhotos()" disabled>Send to the studio</button>'
+      + '<div class="msg" id="ins-msg">'
+        + (V.inspo_count ? V.inspo_count + ' already sent ✓' : '') + '</div>'
+    + '</div>';
+
+  if(owes) setupCard();
+  wireFile();
+}
+
+async function setupCard(){
+  try{
+    const cfg = await (await fetch('/api/pay?action=config')).json();
+    // The endpoint returns publishable_key; reading publishableKey gave
+    // undefined and Stripe failed silently at mount time.
+    const pk = cfg && (cfg.publishable_key || cfg.publishableKey);
+    if(!pk) { $('pay-msg').textContent = 'Card payments are not switched on yet — message the studio.'; return; }
+    stripe = Stripe(pk);
+    elements = stripe.elements();
+    cardEl = elements.create('card', { style: { base: { fontSize: '16px', color: '#0D0D0D' } } });
+    cardEl.mount('#card-el');
+  }catch(_){ $('pay-msg').textContent = 'Could not load the card form — refresh and try again.'; }
+}
+
+async function pay(){
+  const btn = $('pay-btn'), msg = $('pay-msg');
+  if(!stripe || !cardEl){ msg.textContent = 'Card form is still loading.'; return; }
+  btn.disabled = true; btn.textContent = 'Charging…';
+  msg.className = 'msg'; msg.textContent = '';
+  try{
+    const intent = await (await fetch('/api/visit?action=pay_intent', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ t: TOKEN })
+    })).json();
+    if(intent.error) throw new Error(intent.error);
+
+    const { error, paymentIntent } = await stripe.confirmCardPayment(intent.client_secret, {
+      payment_method: { card: cardEl }
+    });
+    if(error) throw new Error(error.message);
+    if(!paymentIntent || paymentIntent.status !== 'succeeded') throw new Error('That did not complete — you have not been charged.');
+
+    const done = await (await fetch('/api/visit?action=paid', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ t: TOKEN, payment_intent_id: paymentIntent.id })
+    })).json();
+    if(done.error) throw new Error(done.error);
+
+    V.deposit_paid = true;
+    render();
+  }catch(err){
+    btn.disabled = false; btn.textContent = 'Pay ' + money(V.deposit_cents);
+    msg.className = 'msg err';
+    msg.textContent = err.message || 'That did not go through.';
+  }
+}
+
+function wireFile(){
+  const f = $('file');
+  if(!f) return;
+  f.onchange = async () => {
+    const files = [...(f.files || [])];
+    if(!files.length) return;
+    const msg = $('ins-msg');
+    msg.className = 'msg'; msg.textContent = 'Getting your photos ready…';
+    for(const file of files){
+      try{ PICKED.push(await shrinkToFit(file)); }
+      catch(err){ msg.className = 'msg err'; msg.textContent = err.message; }
+    }
+    f.value = '';
+    drawShots();
+    if(PICKED.length){ msg.className = 'msg'; msg.textContent = PICKED.length + ' ready to send'; }
+  };
+}
+
+function drawShots(){
+  $('shots').innerHTML = PICKED.map((src, i) =>
+    '<div class="shot"><img src="' + src + '" alt=""><button onclick="dropShot(' + i + ')">×</button></div>'
+  ).join('');
+  $('send-btn').disabled = PICKED.length === 0;
+}
+function dropShot(i){ PICKED.splice(i, 1); drawShots(); }
+
+async function sendPhotos(){
+  const btn = $('send-btn'), msg = $('ins-msg');
+  if(!PICKED.length) return;
+  btn.disabled = true; btn.textContent = 'Sending…';
+  const note = ($('note') || {}).value || '';
+  let sent = 0;
+  for(const src of PICKED){
+    try{
+      const r = await fetch('/api/visit?action=inspo', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ t: TOKEN, data_url: src, note })
+      });
+      const d = await r.json();
+      if(!d.error) sent++;
+    }catch(_){}
+  }
+  PICKED = []; drawShots();
+  btn.textContent = 'Send to the studio';
+  msg.className = sent ? 'msg ok' : 'msg err';
+  msg.textContent = sent
+    ? (sent + (sent === 1 ? ' photo sent' : ' photos sent') + (V.artist ? ' to ' + V.artist : '') + ' ✓')
+    : 'None of those went through — try again in a moment.';
+  if(sent){ V.inspo_count = (V.inspo_count || 0) + sent; }
+}
+
+load();
+</script>
+</body>
+</html>

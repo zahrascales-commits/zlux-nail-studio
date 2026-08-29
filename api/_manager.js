@@ -793,6 +793,43 @@ module.exports = async function (req, res) {
       return res.json({ ok: true, removed: m.full_name || memberId, subscription_cancelled: cancelled });
     }
 
+    /* Everybody with a future appointment who never got the confirmation.
+       These are the people who booked before any of this existed — they have
+       no deposit link and no way to send a reference photo, and they are the
+       whole reason this exists. */
+    if (method === 'GET' && action === 'pending_confirms') {
+      const rows = await require('./_confirm-mail').pending();
+      return res.json({
+        pending: rows.map(r => ({
+          id: r.id, client: r.client_name, email: r.client_email,
+          service: r.service, date: r.date, time: r.time,
+          artist: r.artist_name || '', deposit_paid: !!Number(r.deposit_paid),
+        })),
+      });
+    }
+
+    if (method === 'POST' && action === 'send_confirms') {
+      const mail = require('./_confirm-mail');
+      const only = (req.body || {}).id ? Number((req.body || {}).id) : null;
+      const force = !!(req.body || {}).force;
+      let rows = await mail.pending();
+      if (only) {
+        const one = await queryOne(
+          `SELECT a.*, m.name AS artist_name FROM team_appointments a
+             LEFT JOIN team_members m ON m.id = a.team_member_id
+            WHERE a.id = ?`, [only]);
+        rows = one ? [one] : [];
+      }
+      let sent = 0, skipped = 0;
+      const why = [];
+      for (const r of rows) {
+        const out = await mail.sendFor(r, { force: force || !!only });
+        if (out.sent) sent++;
+        else { skipped++; if (out.why && why.length < 5) why.push((r.client_name || r.id) + ': ' + out.why); }
+      }
+      return res.json({ ok: true, sent, skipped, why });
+    }
+
     // ── MEMBERSHIP SALES STATS (real counts + revenue by tier) ──
     if (method === 'GET' && action === 'membership_stats') {
       // Revenue by tier has to be what those members pay, not what the tier
@@ -964,12 +1001,29 @@ module.exports = async function (req, res) {
     if (method === 'POST' && action === 'add_appt') {
       const { team_member_id, client_name, client_phone, client_email, service, date, time, notes } = req.body || {};
       if (!date || !time) return res.status(400).json({ error: 'Date and time required' });
+      // The email lives on the appointment now — it is what the confirmation
+      // with the deposit and inspiration links is sent to.
+      try { await require('./_visit').ensureColumns(); } catch (_) {}
       const tok = token();
       const r = await execute(
-        `INSERT INTO team_appointments (team_member_id, client_name, client_phone, service, date, time, notes, status, chat_token)
-         VALUES (?,?,?,?,?,?,?, 'scheduled', ?)`,
-        [team_member_id ? Number(team_member_id) : null, client_name || '', client_phone || '', service || '', date, time, notes || '', tok]
+        `INSERT INTO team_appointments (team_member_id, client_name, client_phone, client_email, service, date, time, notes, status, chat_token)
+         VALUES (?,?,?,?,?,?,?,?, 'scheduled', ?)`,
+        [team_member_id ? Number(team_member_id) : null, client_name || '', client_phone || '',
+         String(client_email || '').trim().toLowerCase(), service || '', date, time, notes || '', tok]
       );
+      /* The confirmation with both links — pay the deposit, send your
+         inspiration. Sent here so an appointment Zahra takes by hand
+         arrives exactly like one booked online, rather than with no money
+         down and nothing to work from. */
+      let confirmMail = null;
+      try {
+        const apptRow = await queryOne(
+          `SELECT a.*, m.name AS artist_name FROM team_appointments a
+             LEFT JOIN team_members m ON m.id = a.team_member_id
+            WHERE a.chat_token = ?`, [tok]);
+        if (apptRow) confirmMail = await require('./_confirm-mail').sendFor(apptRow);
+      } catch (_) {}
+
       // instant notifications (client confirmation + booked-artist alert) + client memory
       let notify = null;
       try {
@@ -998,6 +1052,17 @@ module.exports = async function (req, res) {
       const { id, team_member_id } = req.body || {};
       await execute('UPDATE team_appointments SET team_member_id=? WHERE id=?',
         [team_member_id ? Number(team_member_id) : null, Number(id)]);
+
+      // Somebody who has just been given an artist should hear about it, and
+      // that is the moment the deposit and inspiration links are worth
+      // sending. Only once — the row remembers.
+      try {
+        const row = await queryOne(
+          `SELECT a.*, m.name AS artist_name FROM team_appointments a
+             LEFT JOIN team_members m ON m.id = a.team_member_id
+            WHERE a.id = ?`, [Number(id)]);
+        if (row) await require('./_confirm-mail').sendFor(row);
+      } catch (_) {}
       // alert the newly assigned artist instantly
       try {
         if (team_member_id) {

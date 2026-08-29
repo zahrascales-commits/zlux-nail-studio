@@ -1021,6 +1021,7 @@
         </div>
       </div>
       <div id="needs-you"></div>
+      <div id="missing-confirms"></div>
       <div class="cards" id="ov-stats"></div>
       <div id="floor-board"></div>
       <div id="ov-dispatch"></div>
@@ -2195,7 +2196,7 @@ function logout(){sessionStorage.removeItem('zm_pwd');location.reload();}
 // Initialised after login instead — at parse time PWD is still empty,
 
 const TAB_LOADERS = {
-  overview:   () => { loadNeedsYou(); loadOverview(); loadDispatch(); loadFloor(); },
+  overview:   () => { loadNeedsYou(); loadMissingConfirms(); loadOverview(); loadDispatch(); loadFloor(); },
   records:    () => loadRecords(),
   insights:   () => loadInsights(),
   people:     () => loadPeople(),
@@ -5128,9 +5129,79 @@ async function assignNeed(id){
   // Confirm on the row itself before it disappears, so she sees it landed.
   if(row){
     const who = sel.options[sel.selectedIndex].text;
-    row.innerHTML = '<div class="ny-done">✓ Given to ' + esc(who) + '</div>';
-    setTimeout(function(){ loadNeedsYou(); reloadAppts && reloadAppts(); }, 900);
+    row.innerHTML = '<div class="ny-done">✓ Given to ' + esc(who) + ' — they have been emailed their deposit and photo link</div>';
+    setTimeout(function(){ loadNeedsYou(); loadMissingConfirms(); reloadAppts && reloadAppts(); }, 900);
   } else { loadNeedsYou(); }
+}
+
+
+/* ── WHO NEVER GOT THEIR CONFIRMATION ──
+   Everybody with an appointment still to come who has never been sent the
+   email with their deposit link and their inspiration link. Most of them
+   booked before either existed, which is exactly why they are sitting there
+   with no money down and nothing for their artist to work from. */
+async function loadMissingConfirms(){
+  const el = document.getElementById('missing-confirms');
+  if(!el) return;
+  let d;
+  try{
+    d = await (await api('/api/manager?action=pending_confirms')).json();
+    if(d.error) throw new Error(d.error);
+  }catch(_){ el.innerHTML = ''; return; }
+
+  const rows = d.pending || [];
+  if(!rows.length){ el.innerHTML = ''; return; }
+
+  el.innerHTML =
+    '<div class="ny" style="border-color:rgba(196,168,130,0.55);'
+      + 'background:linear-gradient(150deg,rgba(196,168,130,0.12),rgba(196,168,130,0.02))">'
+      + '<div class="ny-h"><div class="ny-t">Never sent their confirmation</div>'
+        + '<div class="ny-n" style="color:var(--gold)">' + rows.length + '</div></div>'
+      + '<div class="ny-sub">These clients have an appointment coming and have never been sent '
+        + 'the email with their deposit link and their photo link. Send it and they can do both from their phone.</div>'
+      + rows.slice(0, 12).map(function(r){
+          return '<div class="ny-row" style="border-left-color:var(--gold)">'
+            + '<div class="ny-when">' + esc(niceDay(r.date)) + '<i>' + esc(time12(r.time)) + '</i></div>'
+            + '<div class="ny-who"><b>' + esc(r.client || 'Guest') + '</b>'
+              + '<i>' + esc(r.service || '') + (r.artist ? ' · ' + esc(r.artist) : ' · nobody assigned yet')
+              + (r.deposit_paid ? ' · deposit paid' : '') + '</i></div>'
+            + '<button class="btn btn-ghost btn-sm" onclick="sendOneConfirm(' + r.id + ')">Send</button>'
+            + '</div>';
+        }).join('')
+      + (rows.length > 12 ? '<div style="font-size:0.76rem;color:var(--muted);margin:0.4rem 0 0.8rem">'
+          + 'and ' + (rows.length - 12) + ' more</div>' : '')
+      + '<div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-top:0.9rem">'
+        + '<button class="btn btn-sm" onclick="sendAllConfirms()">Send to all ' + rows.length + '</button>'
+        + '<span id="mc-msg" style="font-size:0.78rem;color:var(--muted)"></span>'
+      + '</div>'
+    + '</div>';
+}
+
+async function sendOneConfirm(id){
+  const msg = document.getElementById('mc-msg');
+  if(msg) msg.textContent = 'Sending…';
+  try{
+    const r = await api('/api/manager?action=send_confirms', { method:'POST', body: JSON.stringify({ id: id }) });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+    if(msg) msg.textContent = d.sent ? 'Sent ✦' : ('Not sent — ' + (d.why || []).join('; '));
+  }catch(err){ if(msg) msg.textContent = 'Could not send: ' + err.message; return; }
+  loadMissingConfirms();
+}
+
+async function sendAllConfirms(){
+  const msg = document.getElementById('mc-msg');
+  // Real email to real clients, so it is asked once and plainly.
+  if(!confirm('Send the confirmation to everybody on this list?\n\nEach one gets their appointment details, a link to pay their deposit, and a link to send photos.')) return;
+  if(msg) msg.textContent = 'Sending…';
+  try{
+    const r = await api('/api/manager?action=send_confirms', { method:'POST', body: JSON.stringify({}) });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+    if(msg) msg.textContent = d.sent + ' sent' + (d.skipped ? ', ' + d.skipped + ' skipped' : '')
+      + ((d.why || []).length ? ' — ' + d.why.join('; ') : '');
+  }catch(err){ if(msg) msg.textContent = 'Could not send: ' + err.message; return; }
+  loadMissingConfirms();
 }
 
 /* ══════════════ TODAY'S FLOOR ══════════════
