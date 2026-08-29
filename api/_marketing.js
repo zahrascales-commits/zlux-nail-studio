@@ -468,6 +468,9 @@ module.exports = async function (req, res) {
         subscribed: r.subscribed,
         unreachable: r.unreachable,
         unsubscribed: r.unsubscribed,
+        // Which memberships there are to pick from. Rebuilding the reply
+        // here and forgetting this is what kept Elite off the buttons.
+        tiers: r.tiers || [],
         counts: {
           subscribed: r.subscribed.length,
           unreachable: r.unreachable.length,
