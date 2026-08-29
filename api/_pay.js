@@ -332,3 +332,6 @@ module.exports.verifyPaymentIntent = async function (payment_intent_id) {
     };
   } catch (e) { return { paid: false, why: String(e.message || e) }; }
 };
+
+// The till prices a service the same way the booking page does.
+module.exports.serviceCategory = serviceCategory;
