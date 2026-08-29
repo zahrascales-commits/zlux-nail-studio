@@ -10,16 +10,37 @@
 // is real money, so it is shown before they agree rather than after.
 const { queryOne, execute } = require('./_db');
 
-const TIER_ORDER = ['SIGNATURE', 'LUXE', 'BLACK_CARD'];
-const TIER_LABEL = { SIGNATURE: 'Signature', LUXE: 'Luxe', BLACK_CARD: 'Black Card' };
-const TIER_CENTS = { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900 };
-const TIER_YEARLY_CENTS = { SIGNATURE: 99900, LUXE: 199900, BLACK_CARD: 299900 };
+/* Two ladders, deliberately not joined. Essential rises to Elite; the
+   retired three still rise through each other for the members left on
+   them. They are not linked because Elite costs less than Luxe — offering
+   that as an "upgrade" would cut their bill and call it a promotion. */
+const CURRENT_ORDER = ['ESSENTIAL', 'ELITE'];
+const LEGACY_ORDER = ['SIGNATURE', 'LUXE', 'BLACK_CARD'];
+const TIER_ORDER = CURRENT_ORDER.concat(LEGACY_ORDER);
+
+// Where a member can go from where they are.
+function ladderFor(tier) {
+  if (CURRENT_ORDER.includes(tier)) return CURRENT_ORDER;
+  if (LEGACY_ORDER.includes(tier)) return LEGACY_ORDER;
+  return [];
+}
+
+const TIER_LABEL = { ESSENTIAL: 'Essential', ELITE: 'Elite', SIGNATURE: 'Signature', LUXE: 'Luxe', BLACK_CARD: 'Black Card' };
+const TIER_CENTS = { ESSENTIAL: 8500, ELITE: 11000, SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900 };
+const TIER_YEARLY_CENTS = { ESSENTIAL: 93500, ELITE: 121000, SIGNATURE: 99900, LUXE: 199900, BLACK_CARD: 299900 };
 
 // What you get by moving up, in the words a member would use. Kept here
 // rather than read from the marketing page: this has to be true, and a
 // sales page changes for reasons that have nothing to do with what is
 // actually included.
 const GAINS = {
+  ELITE: [
+    'A Russian manicure every visit, included',
+    'Removal free, every time',
+    'Organic product on every set',
+    'A personal nail record tracking how your nails are growing',
+    'You book a week ahead instead of three days',
+  ],
   LUXE: [
     'Two included services a month instead of one',
     'Booking opens earlier for you than for Signature',
@@ -71,7 +92,14 @@ async function priceFor(stripe, tier, yearly) {
       'SELECT value FROM site_settings WHERE key=?', ['stripe_price_' + tier.toLowerCase()]);
     if (row && row.value) return row.value;
   } catch (_) {}
-  return process.env['STRIPE_PRICE_' + tier] || null;
+  const saved = process.env['STRIPE_PRICE_' + tier];
+  if (saved) return saved;
+
+  /* Essential and Elite were never set up by hand — they bill every four
+     weeks off a price signup creates on first use. Without this an upgrade
+     to Elite resolved to no price at all and simply failed. */
+  try { return await require('./_member-signup').cyclePriceFor(stripe, tier); } catch (_) {}
+  return null;
 }
 
 module.exports = async function (req, res) {
@@ -87,8 +115,9 @@ module.exports = async function (req, res) {
     if (!member) return res.status(404).json({ error: 'Membership not found.' });
 
     const current = String(member.tier || '').toUpperCase();
-    const idx = TIER_ORDER.indexOf(current);
-    const higher = idx >= 0 ? TIER_ORDER.slice(idx + 1) : [];
+    const ladder = ladderFor(current);
+    const idx = ladder.indexOf(current);
+    const higher = idx >= 0 ? ladder.slice(idx + 1) : [];
     // Whether they pay monthly or yearly comes from the subscription itself,
     // not from a column. There is no billing_period on members, so reading
     // one would have quoted every yearly member a monthly price — and then
@@ -130,8 +159,9 @@ module.exports = async function (req, res) {
     // ── Do it ──
     if (req.method === 'POST') {
       const to = String((req.body || {}).tier || '').toUpperCase();
-      if (!TIER_ORDER.includes(to)) return res.status(400).json({ error: 'Unknown tier.' });
-      if (TIER_ORDER.indexOf(to) <= idx) {
+      const ladder = ladderFor(current);
+      if (!ladder.includes(to)) return res.status(400).json({ error: 'That is not a move available from this membership.' });
+      if (ladder.indexOf(to) <= idx) {
         // Downgrades are a different conversation with different terms, and
         // doing one silently through the upgrade route would break the
         // three-month minimum.
@@ -224,4 +254,5 @@ module.exports = async function (req, res) {
 };
 
 module.exports.TIER_ORDER = TIER_ORDER;
+module.exports.ladderFor = ladderFor;
 module.exports.TIER_LABEL = TIER_LABEL;
