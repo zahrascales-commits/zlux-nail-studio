@@ -55,7 +55,25 @@ const PLANS = [
 ];
 
 // Sold at any visit, on either tier.
-const ADDON = { name: 'Russian pedicure', cents: 9500 };
+/* The pedicure is the one thing a member buys at a members' price rather
+   than gets included. Full price for anyone else. */
+const MEMBER_SERVICE_CENTS = {
+  'Russian Dry Pedicure': 7500,
+  'Russian Dry Pedicure — Full Correction': 8500,
+};
+
+// Only the memberships now sold. The retired three already include
+// pedicures outright, so a members' price would be a downgrade.
+function memberPriceFor(tier, serviceName) {
+  if (!PLANS.some(p => p.key === String(tier || '').toUpperCase())) return null;
+  const want = String(serviceName || '').toLowerCase().replace(/[^a-z]/g, '');
+  for (const name of Object.keys(MEMBER_SERVICE_CENTS)) {
+    if (name.toLowerCase().replace(/[^a-z]/g, '') === want) return MEMBER_SERVICE_CENTS[name];
+  }
+  return null;
+}
+
+const ADDON = { name: 'Russian pedicure', cents: 7500, correction_cents: 8500 };
 
 // The original three, still buyable. They sit below Essential and Elite and
 // are described the same short way — the long comparison pages they used to
@@ -209,3 +227,6 @@ module.exports.byKey = byKey;
 module.exports.annualSaving = annualSaving;
 module.exports.counts = counts;
 module.exports.publicShape = publicShape;
+
+module.exports.MEMBER_SERVICE_CENTS = MEMBER_SERVICE_CENTS;
+module.exports.memberPriceFor = memberPriceFor;

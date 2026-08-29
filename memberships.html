@@ -235,7 +235,7 @@
       </details>
       <details style="border:1px solid rgba(182,165,136,0.2);padding:1rem 1.25rem;">
         <summary style="font-family:'Josefin Sans',sans-serif;font-weight:600;font-size:0.88rem;color:var(--espresso);cursor:pointer;">What about pedicures?</summary>
-        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);margin-top:0.75rem;line-height:1.7;">A Russian pedicure is $75 on any visit, on either membership.</p>
+        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:var(--latte);margin-top:0.75rem;line-height:1.7;">A Russian pedicure is $75 on any visit, or $85 with the full correction — on either membership. Walk-in prices are $95 and $125.</p>
       </details>
     </div>
   </div>
@@ -354,7 +354,7 @@ function plRender(){
       + '</ul>'
 
       + '<div class="pl-owe">You leave owing nothing.</div>'
-      + '<div class="pl-addon">Russian pedicure, ' + plMoney(PL.addon.cents) + ', any visit.</div>'
+      + '<div class="pl-addon">Russian pedicure ' + plMoney(PL.addon.cents) + ', or ' + plMoney(PL.addon.correction_cents) + ' with full correction — any visit.</div>'
 
       + (p.full
           ? '<span class="pl-cta" style="opacity:0.5;cursor:not-allowed">Fully booked</span>'

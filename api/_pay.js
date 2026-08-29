@@ -49,6 +49,22 @@ async function stripeApi(path, params) {
    the guest price. */
 const ADDON_DISCOUNT = { ESSENTIAL: 0, ELITE: 0, SIGNATURE: 0.50, LUXE: 1.00, BLACK_CARD: 1.00 };
 
+/* Hands or feet. The menu has no category on it, but every pedicure says
+   so in its name, and the difference decides both what a member pays and
+   what their included service is allowed to cover. */
+function serviceCategory(name) {
+  return /pedicure|pedi\b|toes?\b/i.test(String(name || '')) ? 'pedicure' : 'manicure';
+}
+
+/* Whether a membership's included service can be spent on this. Essential
+   and Elite include a manicure, so a pedicure is never free on them — it is
+   charged at the members' price instead. */
+function includesCategory(tier, category) {
+  const perks = perksFor(tier).filter(p => p.kind === 'free_service');
+  if (!perks.length) return false;
+  return perks.some(p => !p.of || p.of === 'any' || p.of === category);
+}
+
 function perksFor(tier) {
   try { return require('./_perks').tierPerks(tier) || []; } catch (_) { return []; }
 }
@@ -92,6 +108,22 @@ function findAddon(name) {
 function computeDeposit({ service_name, addon_names = [], member_tier, free_service, design_tier }) {
   const svc = findService(service_name);
   if (!svc) return null;
+
+  const category = serviceCategory(svc.name || service_name);
+
+  /* An allowance only covers what the membership actually includes. Without
+     this, a member booking a pedicure first had it taken off their included
+     service — free to them, and the studio never sees the money. */
+  if (free_service && member_tier && !includesCategory(member_tier, category)) {
+    free_service = false;
+  }
+
+  /* Some things a membership does not include but does price differently —
+     the Russian pedicure is $75 to a member and $95 to anyone else. */
+  let memberCents = null;
+  try { memberCents = require('./_plans').memberPriceFor(member_tier, svc.name || service_name); } catch (_) {}
+  const listCents = svc.price_cents;
+  const chargeCents = (memberCents !== null && memberCents !== undefined) ? memberCents : listCents;
   const pct = member_tier ? (ADDON_DISCOUNT[member_tier] || 0) : 0;
   const tiers = require('./_tiers');
 
@@ -107,8 +139,11 @@ function computeDeposit({ service_name, addon_names = [], member_tier, free_serv
   const tierListCents = design_tier ? tiers.priceFor(design_tier) : 0;
   const tierCents = designFree ? 0 : tierListCents;
 
-  let total = (free_service ? 0 : svc.price_cents) + tierCents;
-  let covered = (free_service ? svc.price_cents : 0) + (designFree ? tierListCents : 0);
+  let total = (free_service ? 0 : chargeCents) + tierCents;
+  // What the membership took off: the whole service if it is included, or
+  // the difference down to the members' price if it is not.
+  let covered = (free_service ? listCents : (listCents - chargeCents))
+    + (designFree ? tierListCents : 0);
 
   for (const name of addon_names) {
     const a = findAddon(name);
@@ -130,7 +165,9 @@ function computeDeposit({ service_name, addon_names = [], member_tier, free_serv
     deposit_cents: total <= 0 ? 0 : Math.max(50, Math.ceil(total * 0.5)),
     // What the membership just took off — shown to the member and recorded,
     // rather than silently disappearing into a smaller number.
-    service_list_cents: svc.price_cents,
+    service_list_cents: listCents,
+    service_charged_cents: chargeCents,
+    category,
     tier_cents: tierCents,
     tier_list_cents: tierListCents,
     covered_cents: covered,
