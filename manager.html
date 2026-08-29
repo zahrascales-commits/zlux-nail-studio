@@ -850,6 +850,7 @@
     <button class="tab" data-tab="scheduling" onclick="showTab('scheduling')">Scheduling <span class="dot" id="sched-dot" style="display:none">!</span></button>
     <button class="tab" data-tab="marketing" onclick="showTab('marketing')">Emails</button>
     <button class="tab" data-tab="team" onclick="showTab('team')">Team</button>
+    <button class="tab" data-tab="maillog" onclick="showTab('maillog')">Emails Sent</button>
     <button class="tab" data-tab="paymath" onclick="showTab('paymath')">Pay Math</button>
     <button class="tab" data-tab="clients" onclick="showTab('clients')">Clients</button>
     <button class="tab" data-tab="site" onclick="showTab('site')">Site</button>
@@ -1407,6 +1408,16 @@
         <button class="btn btn-sm" onclick="loadPayMath()">Show</button>
       </div></div>
       <div id="paymath-body"></div>
+    </section>
+        <section class="panel" id="panel-maillog">
+      <div class="page-head"><div>
+        <div class="page-title">Emails Sent</div>
+        <div class="page-desc">Every message this site has sent, and exactly what it said. Tap one to read it as the client saw it.</div>
+      </div>
+      <input id="ml-q" placeholder="Search a name, address or subject…" oninput="renderMailLog()"
+        style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:0.55rem 0.75rem;max-width:280px;outline:none" />
+      </div>
+      <div id="maillog-body"></div>
     </section>
     <section class="panel" id="panel-clients">
       <div class="page-head">
@@ -2224,6 +2235,7 @@ const TAB_LOADERS = {
   inbox:      () => loadInquiries(),
   site:       () => loadSite(),
   traffic:    () => loadTraffic(),
+  maillog:    () => loadMailLog(),
   paymath:    () => loadPayMath(),
   clients:    () => loadClients(),
   settings:   () => { loadSettings(); mountOwnerPush(); },
@@ -6961,6 +6973,90 @@ async function loadPayMath(){
               : '<div class="empty" style="margin-top:0.6rem">Nothing in this range.</div>')
         + '</div>';
       }).join('');
+}
+
+/* ── EMAILS SENT ─────────────────────────────────────────────────────────
+   Built after a client received a confirmation for an appointment that did
+   not exist and there was no way to answer what had actually gone out. The
+   whole body is kept, so this shows the real message rather than a label. */
+let MAILLOG = [];
+
+async function loadMailLog(){
+  const el = document.getElementById('maillog-body');
+  if(!el) return;
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try{
+    const d = await (await api('/api/manager?action=mail_log&limit=300')).json();
+    if(d.error) throw new Error(d.error);
+    MAILLOG = d.emails || [];
+  }catch(err){ el.innerHTML = emptyBox('⚠️','Could not load: ' + esc(err.message)); return; }
+  renderMailLog();
+}
+
+function renderMailLog(){
+  const el = document.getElementById('maillog-body');
+  if(!el) return;
+  const q = ((document.getElementById('ml-q')||{}).value || '').toLowerCase();
+  const rows = MAILLOG.filter(function(r){
+    if(!q) return true;
+    return String(r.recipient||'').toLowerCase().includes(q)
+      || String(r.subject||'').toLowerCase().includes(q)
+      || String(r.kind||'').toLowerCase().includes(q);
+  });
+
+  if(!rows.length){
+    el.innerHTML = emptyBox('📭', MAILLOG.length ? 'Nothing matches that.'
+      : 'Nothing sent yet — or nothing since this log was added.');
+    return;
+  }
+
+  el.innerHTML = rows.map(function(r){
+    const when = new Date(Number(r.ts));
+    return '<div class="member-card" style="--mc:' + (Number(r.sent) ? '#B6A588' : '#e08a8a') + '">'
+      + '<div class="mc-top"><div style="flex:1;min-width:0">'
+        + '<div class="mc-name">' + esc(r.subject || '(no subject)') + '</div>'
+        + '<div style="font-size:0.78rem;color:var(--muted);margin-top:0.15rem">'
+          + esc(r.recipient || '') + ' · ' + esc(when.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))
+          + (r.kind ? ' · ' + esc(r.kind) : '')
+          + (Number(r.sent) ? '' : ' · <span style="color:#e08a8a">did not send: ' + esc(r.detail || '') + '</span>')
+        + '</div></div>'
+        + '<button class="btn btn-ghost btn-sm" onclick="openMail(' + r.id + ')">Read</button>'
+      + '</div></div>';
+  }).join('');
+}
+
+async function openMail(id){
+  let d;
+  try{
+    d = await (await api('/api/manager?action=mail_item&id=' + id)).json();
+    if(d.error) throw new Error(d.error);
+  }catch(err){ toast('Could not open that: ' + err.message); return; }
+
+  const e = d.email;
+  let box = document.getElementById('mail-view');
+  if(!box){
+    box = document.createElement('div');
+    box.id = 'mail-view';
+    box.style.cssText = 'position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.72);'
+      + 'display:flex;align-items:center;justify-content:center;padding:1.5rem;';
+    document.body.appendChild(box);
+  }
+  // The body is shown inside a sandboxed frame: it is stored HTML and must
+  // not be able to touch the page it is being reviewed on.
+  box.innerHTML =
+    '<div style="background:var(--card);border:1px solid var(--border);max-width:680px;width:100%;'
+      + 'max-height:86vh;display:flex;flex-direction:column">'
+    + '<div style="padding:1rem 1.2rem;border-bottom:1px solid var(--border)">'
+      + '<div style="font-size:1rem;color:var(--cream)">' + esc(e.subject || '') + '</div>'
+      + '<div style="font-size:0.78rem;color:var(--muted);margin-top:0.2rem">To ' + esc(e.recipient || '')
+        + ' · ' + esc(new Date(Number(e.ts)).toLocaleString()) + '</div>'
+    + '</div>'
+    + '<iframe sandbox="" style="flex:1;width:100%;min-height:52vh;border:0;background:#fff"></iframe>'
+    + '<div style="padding:0.8rem 1.2rem;border-top:1px solid var(--border);text-align:right">'
+      + '<button class="btn btn-sm" onclick="document.getElementById(\'mail-view\').remove()">Close</button>'
+    + '</div></div>';
+  const frame = box.querySelector('iframe');
+  if(frame) frame.srcdoc = e.body || '';
 }
 async function loadClients(){
   const el=document.getElementById('clients-list');

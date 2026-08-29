@@ -83,7 +83,21 @@ function htmlToText(html) {
     .trim();
 }
 
+/* Every send is recorded — the real body, not a summary. A summary would
+   have said "confirmation sent" and hidden the part that was wrong. */
 async function sendEmail(to, subject, html, opts) {
+  const out = await sendEmailInner(to, subject, html, opts);
+  try {
+    await require('./_mail-log').record({
+      recipient: to, subject, body: html,
+      kind: (opts && opts.kind) || '',
+      sent: out && out.sent, detail: (out && out.why) || '',
+    });
+  } catch (_) {}
+  return out;
+}
+
+async function sendEmailInner(to, subject, html, opts) {
   if (!to || !/@/.test(to)) return { sent: false, why: 'no email' };
   try {
     const k = await getKeys();

@@ -1128,6 +1128,23 @@ module.exports = async function (req, res) {
       });
     }
 
+    /* Every email the site has sent, readable. Added because a client got a
+       confirmation for an appointment that did not exist and there was no
+       way to look up what had actually gone out. */
+    if (method === 'GET' && action === 'mail_log') {
+      const log = require('./_mail-log');
+      const to = Number(req.query.to) || Date.now();
+      const from = Number(req.query.from) || (to - 30 * 86400000);
+      return res.json({ emails: await log.list({ from, to, q: req.query.q, limit: req.query.limit }) });
+    }
+
+    if (method === 'GET' && action === 'mail_item') {
+      const log = require('./_mail-log');
+      const row = await log.item(req.query.id);
+      if (!row) return res.status(404).json({ error: 'No such email.' });
+      return res.json({ email: row });
+    }
+
     // ── MEMBERSHIP SALES STATS (real counts + revenue by tier) ──
     if (method === 'GET' && action === 'membership_stats') {
       // Revenue by tier has to be what those members pay, not what the tier
