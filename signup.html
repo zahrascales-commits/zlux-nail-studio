@@ -424,7 +424,7 @@
         <div class="tier-selector">
           <div class="tier-opt" data-tier="ESSENTIAL" onclick="selectTier('ESSENTIAL')">
             <div class="tier-opt-name">Essential</div>
-            <div class="tier-opt-price">$80</div>
+            <div class="tier-opt-price">$85</div>
             <div class="tier-opt-desc">One service every 4 weeks<br>Any design included</div>
           </div>
           <div class="tier-opt" data-tier="ELITE" onclick="selectTier('ELITE')">
@@ -660,11 +660,44 @@ setTimeout(function(){
   // The two tiers on sale. 'monthly' here means one four-week cycle — the
   // field name is what the rest of this page already calls it, and renaming
   // it would touch more than it is worth.
+  /* These are the fallback only. They must match the server exactly: a page
+     that quotes one price while Stripe takes another has overcharged the
+     client as far as the client is concerned. Eleven cycles' money for
+     thirteen cycles of membership, which is where the annual figure comes
+     from. */
   const PLANS = {
-    ESSENTIAL: { monthly: 8000,  yearly: 80000  },
-    ELITE:     { monthly: 11000, yearly: 110000 },
-    TEST:      { monthly: 158,   yearly: 1580   },
+    ESSENTIAL: { monthly: 8500,  yearly: 8500 * 11  },
+    ELITE:     { monthly: 11000, yearly: 11000 * 11 },
+    TEST:      { monthly: 158,   yearly: 1580       },
   };
+
+  /* And asked for properly, so the next price change cannot leave this page
+     quoting last month's number. */
+  (async function syncPlanPrices() {
+    try {
+      const d = await (await fetch('/api/plans')).json();
+      for (const p of (d.plans || [])) {
+        if (!PLANS[p.key]) continue;
+        if (Number(p.cycle_cents) > 0) PLANS[p.key].monthly = Number(p.cycle_cents);
+        if (Number(p.annual_cents) > 0) PLANS[p.key].yearly = Number(p.annual_cents);
+        // LIST_PRICE is declared further down; this runs after the script
+        // body so it exists, but the guard keeps a silent failure impossible.
+        if (Number(p.cycle_cents) > 0 && typeof LIST_PRICE !== 'undefined') {
+          LIST_PRICE[p.key] = Number(p.cycle_cents) * 13;
+        }
+      }
+      // Whatever is on screen was drawn with the old numbers.
+      // Redraw whatever is already on screen with the real numbers.
+      if (typeof selectedTier !== 'undefined' && selectedTier && typeof selectTier === 'function') {
+        selectTier(selectedTier);
+      }
+      document.querySelectorAll('[data-tier]').forEach(function (el) {
+        const key = el.getAttribute('data-tier');
+        const price = el.querySelector('.tier-opt-price');
+        if (key && price && PLANS[key]) price.textContent = '$' + Math.round(PLANS[key].monthly / 100);
+      });
+    } catch (_) { /* the fallback above is correct; a failed fetch changes nothing */ }
+  })();
   // Thirteen four-week cycles in a year, which is why a year costs ten
   // cycles' money and the difference is exactly three visits.
   const CYCLES_PER_YEAR = 13;
@@ -902,7 +935,7 @@ setTimeout(function(){
   // What a year of four-week payments actually costs. This is the only
   // honest thing to compare an annual price against — an inflated "normally
   // $599" number would be worth less than believability.
-  const LIST_PRICE = { ESSENTIAL: 8000 * 13, ELITE: 11000 * 13 };
+  const LIST_PRICE = { ESSENTIAL: 8500 * 13, ELITE: 11000 * 13 };
 
   function heldUntil() {
     const d = new Date();
