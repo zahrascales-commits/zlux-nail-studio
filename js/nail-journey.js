@@ -1,17 +1,21 @@
 /* ── THE NAIL JOURNEY ─────────────────────────────────────────────────────
    One question when the site opens, then the one thing that answers it.
 
-   The whole point is that nobody should have to work out which membership
-   they want by reading three pages and comparing prices. They say what they
-   are trying to achieve; we say what solves it and give them one button.
+   The recommendation is deliberately short. The first draft ran to three
+   screens and nobody finishes three screens on a phone — every extra
+   paragraph is another chance to close the tab. Each answer is now about
+   eight seconds long and built around one number.
 
-   Deliberately not shown on the pages where somebody is already doing the
-   thing — signing up, booking, paying. Interrupting a person mid-checkout to
-   suggest they go and check out is how you lose a sale you had already won.
+   That number is arrived at rather than asserted. "$185 of work, you pay
+   $110" gets believed; "save big" does not, because a round claim with no
+   arithmetic behind it reads as advertising and gets discounted on sight.
+   The sum is shown, so the saving lands as something they worked out
+   themselves rather than something they were told.
 
-   It also shows once per visit rather than on every page. A questionnaire
-   that reappears on every click stops reading as a consultation and starts
-   reading as a popup, and people leave.                                    */
+   Not shown on signup or booking. Somebody already there is mid-checkout,
+   and interrupting them to suggest they go and check out loses a sale that
+   was already won. Once per visit, too: a panel that returns on every click
+   stops being a consultation and becomes a popup.                          */
 (function () {
   'use strict';
 
@@ -28,153 +32,127 @@
     var p = window.location.pathname.replace(/\/+$/, '');
     return p === '' ? '/' : p;
   }
-
-  function allowedHere() {
-    var p = here();
-    return WELCOME_ON.indexOf(p) >= 0 || p === '/';
-  }
-
+  function allowedHere() { return WELCOME_ON.indexOf(here()) >= 0; }
   function alreadySeen() {
     try { return sessionStorage.getItem(KEY) === '1'; } catch (_) { return false; }
   }
-
   function remember() {
     try { sessionStorage.setItem(KEY, '1'); } catch (_) {}
   }
 
   /* ── WHAT WE SAY BACK ───────────────────────────────────────────────────
-     Every saving quoted here is below what the menu actually works out to,
-     deliberately. Essential covers a service up to medium plus any design —
-     $120 of menu for $85, so $35 a cycle and roughly $455 a year. Elite
-     covers a long set, a Russian manicure, removal and any design — $185 of
-     menu for $110, so $75 a cycle and roughly $975 a year. Claiming less
-     than the truth is the only safe direction to be wrong in.             */
+     Every figure is the real menu arithmetic, not a marketing number.
+
+     Elite: a long set ($110) with a Russian manicure ($20), removal ($35)
+     and art ($20) is $185 of menu. The membership is $110 — $75 a visit,
+     $975 across thirteen cycles.
+
+     Essential: a medium set ($100) with any art ($20) is $120 of menu
+     against $85 — $35 a visit, $455 a year.
+
+     Shown as the sum rather than the claim, because a number somebody can
+     check is worth more than a bigger one they cannot.                    */
   var ANSWERS = {
     grow: {
       option: 'I’m struggling to grow my natural nails.',
-      heading: 'We understand your goal: you want to finally see progress. ✨',
-      intro: [
-        'Growing your natural nails can feel frustrating when you keep starting over.',
-        'Breakage, inconsistency, and waiting too long between appointments can make it difficult to stay committed to your nail goals.',
+      headline: 'You keep starting over.',
+      empathy: 'Breakage. Long gaps. Back to square one. It is not you — it is going too long between visits.',
+      product: 'ELITE',
+      productLine: 'Your nails, seen every 4 weeks.',
+      math: [
+        ['Long set', '$110'],
+        ['Russian manicure', '$20'],
+        ['Removal', '$35'],
+        ['Any nail art', '$20'],
       ],
-      leadIn: 'That’s why we recommend your personalized solution:',
-      product: 'THE ELITE MEMBERSHIP 🤍',
-      body: [
-        'The ELITE Membership is designed for clients who want to make their natural nail journey a consistent part of their routine.',
-        'Instead of guessing when to come back, your membership follows a <strong>4-week cycle</strong> — helping you stay consistent with regular professional maintenance.',
-      ],
-      whyTitle: 'Why this is right for you:',
+      worth: '$185',
+      pay: '$110',
+      save: '$75',
+      savePer: 'every single visit',
+      year: '$975',
       why: [
-        'A consistent 4-week nail routine',
-        'Professional maintenance focused on your nail goals',
-        'Beautiful nails while working toward healthier-looking natural nails',
-        'Membership benefits and priority access',
-        'Save $30+ every 4 weeks compared with qualifying services purchased individually',
-        'Save $600+ or more over a year, depending on services and membership usage',
+        'Every 4 weeks, booked in',
+        'Russian manicure included',
+        'Removal free, every time',
+        'Any art you want, no extra',
       ],
-      closeTitle: 'The difference is consistency.',
-      close: [
-        'Your goal is not just to have beautiful nails for one appointment.',
-        '<strong>Your goal is to build a routine you can actually stay consistent with.</strong>',
-        'With ELITE, your nail appointments become part of your routine — so you can spend less time starting over and more time enjoying your progress.',
-      ],
-      kicker: 'Your personalized recommendation is waiting.',
-      cta: 'START MY ELITE JOURNEY ✨',
+      close: 'Consistency is the whole secret. This makes it automatic.',
+      cta: 'START MY ELITE JOURNEY',
       href: '/signup.html?tier=ELITE',
     },
 
     start: {
       option: 'I want to start my natural nail growth journey.',
-      heading: 'The best time to start your journey is now. ✨',
-      intro: [
-        'You already know what you want: beautiful nails while giving your natural nails the consistent care they deserve.',
+      headline: 'Start today, not “soon”.',
+      empathy: 'The hardest part of growing your nails is coming back. Elite books that in for you.',
+      product: 'ELITE',
+      productLine: 'Your nails, seen every 4 weeks.',
+      math: [
+        ['Long set', '$110'],
+        ['Russian manicure', '$20'],
+        ['Removal', '$35'],
+        ['Any nail art', '$20'],
       ],
-      leadIn: 'Your personalized recommendation:',
-      product: 'THE ELITE MEMBERSHIP 🤍',
-      body: [
-        'A natural nail journey is easier when you have a routine designed to keep you consistent.',
-        'The ELITE Membership follows a <strong>4-week cycle</strong>, helping make regular maintenance a simple part of your routine instead of something you have to keep remembering to schedule.',
-      ],
-      whyTitle: 'Why ELITE is perfect for your goal:',
+      worth: '$185',
+      pay: '$110',
+      save: '$75',
+      savePer: 'every single visit',
+      year: '$975',
       why: [
-        'Start your journey with a consistent routine',
-        'Regular professional maintenance every 4 weeks',
-        'Beautiful nails without losing sight of your natural nail goals',
-        'Exclusive membership benefits',
-        'Save $30+ every 4 weeks compared with qualifying individual services',
-        'Save $600+ or more over a year, depending on services and usage',
+        'A routine, not a reminder',
+        'Russian manicure included',
+        'Removal free, every time',
+        'Any art you want, no extra',
       ],
-      closeTitle: 'You do not need to figure it all out alone.',
-      close: [
-        'You tell us your goal.',
-        '<strong>We help guide your journey.</strong>',
-      ],
-      kicker: 'Ready to begin?',
-      cta: 'START MY ELITE JOURNEY ✨',
+      close: 'You tell us the goal. We keep you on it.',
+      cta: 'START MY ELITE JOURNEY',
       href: '/signup.html?tier=ELITE',
     },
 
     easy: {
       option: 'I want short-to-medium, stylish nails that are easy to maintain.',
-      heading: 'You want beautiful nails that fit your real life. ✨',
-      intro: [
-        'You want to look polished and put together — without committing to extra-long nails or a complicated routine.',
+      headline: 'Polished, without the upkeep.',
+      empathy: 'You want to look done. You do not want a project.',
+      product: 'ESSENTIAL',
+      productLine: 'Short to medium, always sorted.',
+      math: [
+        ['Medium set', '$100'],
+        ['Any nail art', '$20'],
       ],
-      leadIn: 'Your personalized recommendation:',
-      product: 'THE ESSENTIAL MEMBERSHIP 🤍',
-      body: [
-        'ESSENTIAL is designed for clients who love stylish, short-to-medium nails with the perfect balance of beauty, convenience, and value.',
-        'Whether your style is clean and minimal or you love a little nail art, this membership gives you a personalized nail routine that is easier to maintain.',
-      ],
-      whyTitle: 'Why ESSENTIAL is right for you:',
+      worth: '$120',
+      pay: '$85',
+      save: '$35',
+      savePer: 'every single visit',
+      year: '$455',
       why: [
-        'Ideal for short-to-medium lengths',
-        'Stylish, personalized nail looks',
-        'A practical routine for your lifestyle',
-        'Early schedule access and additional membership benefits',
-        'Save $35+ every 4 weeks compared with qualifying services purchased individually',
-        'Save $450+ or more over a year, depending on qualifying services and usage',
+        'Short to medium, your choice',
+        'Any design, no extra charge',
+        'No deposit, ever',
+        'You book before walk-ins',
       ],
-      closeTitle: 'Pretty should be easy.',
-      close: [
-        'You do not need extra-long nails to feel polished.',
-        'You just need the right routine and a look designed around <strong>you.</strong>',
-      ],
-      kicker: 'Your personalized recommendation is ready.',
-      cta: 'JOIN ESSENTIAL ✨',
+      close: 'Pretty should be easy. This is easy.',
+      cta: 'JOIN ESSENTIAL',
       href: '/signup.html?tier=ESSENTIAL',
     },
 
+    /* No membership on this one, so there is nothing to compare against.
+       The hero is the transformation instead of a number — inventing a
+       saving here to match the other three would make this the one
+       dishonest screen in four. */
     bold: {
       option: 'I want long, bold, creative nails that make a statement.',
-      heading: 'You want nails that turn heads. ✨',
-      intro: [
-        'You love the details.',
-        'The length. The creativity. The art. The full transformation.',
+      headline: 'You want nails people stop and look at.',
+      empathy: 'Long. Detailed. Yours. We do not do small.',
+      product: 'THE ZOLA SIGNATURE SET',
+      productLine: 'Built around your vision.',
+      showcase: [
+        'Any length you want',
+        'Real nail art, not stickers',
+        'Designed around your style',
+        'Gentle on your natural nail',
       ],
-      leadIn: 'Your personalized recommendation:',
-      product: 'THE ZOLA SIGNATURE NAIL EXPERIENCE 🤍',
-      body: [
-        'At ZOLA, you do not have to choose between <strong>creative nails and thoughtful nail care.</strong>',
-        'We specialize in both.',
-        'Your appointment is designed around your personal style, your nail goals, and the look you want to create.',
-      ],
-      whyTitle: 'Why ZOLA is right for you:',
-      why: [
-        'Long, customized nail sets',
-        'Creative and detailed nail art',
-        'A personalized look designed around your style',
-        'Precision and thoughtful application',
-        'Attention to your comfort and aftercare',
-      ],
-      closeTitle: 'Beauty is pain? Not here.',
-      close: [
-        'Your nail appointment should be an experience you look forward to.',
-        'At ZOLA, we believe beautiful nails should come with thoughtful care, attention to detail, and a focus on your overall experience.',
-        '<strong>You bring the vision. We bring it to life.</strong>',
-      ],
-      kicker: 'Ready for your transformation?',
-      cta: 'EXPLORE MY PERFECT SERVICES ✨',
+      close: 'You bring the vision. We bring it to life.',
+      cta: 'SEE MY PERFECT SERVICES',
       href: '/services.html',
     },
   };
@@ -184,13 +162,12 @@
   function styles() {
     return [
       '#nj-wrap{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;',
-      'justify-content:center;padding:clamp(14px,3.5vw,40px);opacity:0;transition:opacity .32s ease}',
+      'justify-content:center;padding:clamp(12px,3vw,40px);opacity:0;transition:opacity .32s ease}',
       '#nj-wrap.nj-on{opacity:1}',
-      /* The site stays visible around the edges, softened rather than hidden. */
-      '#nj-veil{position:absolute;inset:0;background:rgba(13,13,13,0.55);',
+      '#nj-veil{position:absolute;inset:0;background:rgba(13,13,13,0.58);',
       '-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px)}',
-      '#nj-box{position:relative;background:#F7F4EE;color:#0D0D0D;width:min(680px,100%);',
-      'max-height:calc(100dvh - clamp(28px,7vw,80px));overflow-y:auto;overscroll-behavior:contain;',
+      '#nj-box{position:relative;background:#F7F4EE;color:#0D0D0D;width:min(560px,100%);',
+      'max-height:calc(100dvh - clamp(24px,6vw,80px));overflow-y:auto;overscroll-behavior:contain;',
       'border:1px solid rgba(182,165,136,0.55);box-shadow:0 40px 120px rgba(13,13,13,0.5);',
       'transform:translateY(14px) scale(0.985);transition:transform .38s cubic-bezier(.2,.7,.3,1);',
       '-webkit-overflow-scrolling:touch}',
@@ -201,63 +178,102 @@
       'display:flex;align-items:center;justify-content:center;transition:all .18s ease}',
       '#nj-x:hover{background:#0D0D0D;color:#B6A588;border-color:#0D0D0D}',
       '#nj-x:focus-visible{outline:2px solid #0D0D0D;outline-offset:2px}',
-      '.nj-pad{padding:clamp(26px,5vw,46px) clamp(22px,5vw,46px) clamp(28px,5vw,44px)}',
-      '.nj-eyebrow{font-family:\'Josefin Sans\',sans-serif;font-size:0.62rem;letter-spacing:0.3em;',
-      'text-transform:uppercase;color:#8C7A5E;margin-bottom:1rem}',
-      '.nj-h1{font-family:\'Cinzel\',serif;font-size:clamp(1.5rem,4.2vw,2.05rem);line-height:1.25;',
-      'color:#0D0D0D;margin:0 0 0.7rem;font-weight:400}',
-      '.nj-lead{font-family:\'Josefin Sans\',sans-serif;font-size:clamp(0.92rem,2.4vw,1rem);',
-      'line-height:1.75;color:#5a4f3f;margin:0 0 0.6rem}',
-      '.nj-q{font-family:\'Cinzel\',serif;font-size:1.02rem;color:#0D0D0D;margin:1.7rem 0 0.9rem}',
+      '.nj-pad{padding:clamp(24px,5vw,40px) clamp(20px,5vw,38px) clamp(24px,5vw,36px)}',
+
+      '.nj-eyebrow{font-family:"Josefin Sans",sans-serif;font-size:0.6rem;letter-spacing:0.3em;',
+      'text-transform:uppercase;color:#8C7A5E;margin-bottom:0.9rem}',
+      '.nj-h1{font-family:"Cinzel",serif;font-size:clamp(1.45rem,4.4vw,1.95rem);line-height:1.22;',
+      'color:#0D0D0D;margin:0 0 0.6rem;font-weight:400}',
+      '.nj-lead{font-family:"Josefin Sans",sans-serif;font-size:clamp(0.95rem,2.6vw,1.02rem);',
+      'line-height:1.7;color:#5a4f3f;margin:0 0 0.5rem}',
+      '.nj-q{font-family:"Cinzel",serif;font-size:1rem;color:#0D0D0D;margin:1.5rem 0 0.85rem}',
       '.nj-opt{display:block;width:100%;text-align:left;background:#fff;color:#0D0D0D;',
-      'border:1px solid rgba(140,122,94,0.35);padding:1.05rem 1.15rem;margin-bottom:0.65rem;',
-      'font-family:\'Josefin Sans\',sans-serif;font-size:clamp(0.92rem,2.5vw,1rem);line-height:1.5;',
-      'cursor:pointer;transition:all .16s ease;border-radius:2px}',
+      'border:1px solid rgba(140,122,94,0.35);padding:1.05rem 1.15rem;margin-bottom:0.6rem;',
+      'font-family:"Josefin Sans",sans-serif;font-size:clamp(0.95rem,2.6vw,1.02rem);line-height:1.45;',
+      'cursor:pointer;transition:all .16s ease;border-radius:2px;font-weight:600}',
       '.nj-opt:hover{border-color:#0D0D0D;background:#0D0D0D;color:#F2ECE1;transform:translateY(-1px)}',
       '.nj-opt:focus-visible{outline:2px solid #0D0D0D;outline-offset:2px}',
-      '.nj-opt b{display:block;font-weight:600}',
-      /* the recommendation */
-      '.nj-goal{background:#0D0D0D;color:#F2ECE1;padding:0.85rem 1.05rem;margin-bottom:1.3rem;',
-      'font-family:\'Josefin Sans\',sans-serif;font-size:0.86rem;line-height:1.6}',
-      '.nj-goal span{display:block;font-size:0.6rem;letter-spacing:0.26em;text-transform:uppercase;',
-      'color:#B6A588;margin-bottom:0.3rem}',
-      '.nj-leadin{font-family:\'Josefin Sans\',sans-serif;font-size:0.88rem;color:#8C7A5E;',
-      'margin:1.4rem 0 0.5rem}',
-      '.nj-product{font-family:\'Cinzel\',serif;font-size:clamp(1.25rem,3.6vw,1.6rem);color:#0D0D0D;',
-      'margin:0 0 0.9rem;letter-spacing:0.02em}',
-      '.nj-why{list-style:none;padding:0;margin:0.7rem 0 0}',
-      '.nj-why li{font-family:\'Josefin Sans\',sans-serif;font-size:clamp(0.88rem,2.4vw,0.95rem);',
-      'line-height:1.7;color:#3a3027;padding:0.3rem 0 0.3rem 1.6rem;position:relative}',
-      '.nj-why li:before{content:\'✨\';position:absolute;left:0;top:0.3rem;font-size:0.8rem}',
-      '.nj-sub{font-family:\'Cinzel\',serif;font-size:1.05rem;color:#0D0D0D;margin:1.6rem 0 0.6rem}',
-      '.nj-kicker{font-family:\'Josefin Sans\',sans-serif;font-size:0.95rem;color:#0D0D0D;',
-      'margin:1.6rem 0 0.8rem;font-weight:600}',
-      /* one button, impossible to miss, and reachable on a phone */
-      '.nj-cta{display:block;width:100%;background:#0D0D0D;color:#B6A588;border:none;',
-      'padding:1.15rem 1.2rem;font-family:\'Josefin Sans\',sans-serif;font-size:clamp(0.78rem,2.2vw,0.85rem);',
-      'font-weight:600;letter-spacing:0.16em;text-transform:uppercase;text-align:center;',
-      'text-decoration:none;cursor:pointer;transition:all .18s ease;border-radius:2px}',
-      '.nj-cta:hover{background:#B6A588;color:#0D0D0D}',
+
+      /* ── the recommendation: fewer words, bigger type ── */
+      '.nj-said{display:inline-block;font-family:"Josefin Sans",sans-serif;font-size:0.7rem;',
+      'letter-spacing:0.06em;color:#8C7A5E;border:1px solid rgba(140,122,94,0.35);',
+      'padding:0.35rem 0.7rem;margin-bottom:1.1rem;line-height:1.4}',
+      '.nj-big{font-family:"Cinzel",serif;font-size:clamp(1.65rem,5.6vw,2.3rem);line-height:1.15;',
+      'color:#0D0D0D;margin:0 0 0.6rem;font-weight:400}',
+      '.nj-emp{font-family:"Josefin Sans",sans-serif;font-size:clamp(1rem,2.8vw,1.08rem);',
+      'line-height:1.65;color:#5a4f3f;margin:0 0 1.5rem}',
+      '.nj-name{font-family:"Cinzel",serif;font-size:clamp(1.9rem,6.4vw,2.6rem);line-height:1;',
+      'letter-spacing:0.04em;color:#0D0D0D;margin:0}',
+      '.nj-nameline{font-family:"Josefin Sans",sans-serif;font-size:0.92rem;color:#8C7A5E;',
+      'margin:0.35rem 0 1.3rem}',
+
+      /* the sum, then the number it comes to */
+      '.nj-money{background:#0D0D0D;color:#F2ECE1;padding:1.25rem 1.3rem;margin-bottom:1.4rem}',
+      '.nj-row{display:flex;justify-content:space-between;font-family:"Josefin Sans",sans-serif;',
+      'font-size:0.9rem;line-height:1.9;color:#B6A588}',
+      '.nj-rule{border-top:1px solid rgba(182,165,136,0.35);margin:0.55rem 0}',
+      '.nj-tot{display:flex;justify-content:space-between;font-family:"Josefin Sans",sans-serif;',
+      'font-size:0.95rem;color:#F2ECE1;font-weight:600}',
+      '.nj-pay{display:flex;justify-content:space-between;font-family:"Josefin Sans",sans-serif;',
+      'font-size:0.95rem;color:#F2ECE1;font-weight:600;margin-top:0.2rem}',
+      '.nj-save{text-align:center;margin-top:1.1rem;padding-top:1.05rem;',
+      'border-top:1px solid rgba(182,165,136,0.35)}',
+      '.nj-savenum{font-family:"Cinzel",serif;font-size:clamp(2.8rem,11vw,3.9rem);line-height:1;',
+      'color:#B6A588;display:block}',
+      '.nj-savelbl{font-family:"Josefin Sans",sans-serif;font-size:0.86rem;letter-spacing:0.08em;',
+      'text-transform:uppercase;color:#F2ECE1;margin-top:0.45rem;display:block}',
+      '.nj-year{font-family:"Josefin Sans",sans-serif;font-size:0.95rem;color:#B6A588;',
+      'margin-top:0.75rem;display:block;line-height:1.5}',
+      '.nj-year b{color:#F2ECE1;font-size:1.15rem}',
+
+      /* the no-membership version, same weight without a price */
+      '.nj-show{background:#0D0D0D;color:#F2ECE1;padding:1.35rem 1.4rem;margin-bottom:1.4rem}',
+      '.nj-show ul{margin:0;padding:0}',
+      '.nj-show li{font-family:"Josefin Sans",sans-serif;font-size:clamp(1rem,2.9vw,1.1rem);',
+      'line-height:1.55;padding:0.42rem 0 0.42rem 1.7rem;position:relative;color:#F2ECE1;list-style:none}',
+      '.nj-show li:before{content:"\\2726";position:absolute;left:0;top:0.42rem;color:#B6A588}',
+
+      '.nj-why{list-style:none;padding:0;margin:0 0 1.35rem}',
+      '.nj-why li{font-family:"Josefin Sans",sans-serif;font-size:clamp(0.98rem,2.8vw,1.05rem);',
+      'line-height:1.55;color:#0D0D0D;padding:0.34rem 0 0.34rem 1.6rem;position:relative}',
+      '.nj-why li:before{content:"\\2713";position:absolute;left:0;top:0.34rem;color:#8C7A5E;font-weight:700}',
+      '.nj-close{font-family:"Cinzel",serif;font-size:clamp(1.02rem,3vw,1.15rem);line-height:1.5;',
+      'color:#0D0D0D;margin:0 0 1.4rem}',
+
+      /* ── the button ──
+         It breathes, and a highlight passes across it. Movement is noticed
+         before anything is read, so on a screen with exactly one action the
+         moving thing is the one that gets pressed. Slow enough to read as
+         expensive rather than as an advert. */
+      '.nj-cta{display:block;position:relative;overflow:hidden;width:100%;background:#0D0D0D;',
+      'color:#B6A588;border:none;padding:1.3rem 1.2rem;font-family:"Josefin Sans",sans-serif;',
+      'font-size:clamp(0.84rem,2.5vw,0.95rem);font-weight:700;letter-spacing:0.16em;',
+      'text-transform:uppercase;text-align:center;text-decoration:none;cursor:pointer;',
+      'border-radius:2px;animation:njBreathe 2.8s ease-in-out infinite;',
+      'box-shadow:0 10px 30px rgba(13,13,13,0.22)}',
+      '.nj-cta:after{content:"";position:absolute;top:0;left:-60%;width:45%;height:100%;',
+      'background:linear-gradient(100deg,transparent,rgba(242,236,225,0.28),transparent);',
+      'animation:njShine 3.4s ease-in-out infinite}',
+      '.nj-cta:hover{background:#B6A588;color:#0D0D0D;animation-play-state:paused}',
       '.nj-cta:focus-visible{outline:2px solid #0D0D0D;outline-offset:3px}',
-      '.nj-back{display:block;width:100%;margin-top:0.75rem;background:none;border:none;',
-      'font-family:\'Josefin Sans\',sans-serif;font-size:0.78rem;color:#8C7A5E;cursor:pointer;',
+      '@keyframes njBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.022)}}',
+      '@keyframes njShine{0%{left:-60%}55%,100%{left:120%}}',
+
+      '.nj-back{display:block;width:100%;margin-top:0.8rem;background:none;border:none;',
+      'font-family:"Josefin Sans",sans-serif;font-size:0.78rem;color:#8C7A5E;cursor:pointer;',
       'text-decoration:underline;text-underline-offset:3px;padding:0.5rem}',
+
       '@media (max-width:520px){#nj-box{width:100%}}',
-      '@media (prefers-reduced-motion:reduce){#nj-wrap,#nj-box{transition:none}}',
+      /* Anyone who has asked their device to stop moving things gets a still
+         button. The offer has to stand up without the animation. */
+      '@media (prefers-reduced-motion:reduce){#nj-wrap,#nj-box{transition:none}',
+      '.nj-cta{animation:none}.nj-cta:after{display:none}}',
     ].join('');
   }
 
   function esc(s) {
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
-
-  // The copy carries a little <strong> on purpose, so it is inserted as
-  // written rather than escaped. Nothing here comes from a visitor.
-  function paras(list, cls) {
-    return (list || []).map(function (p) {
-      return '<p class="' + cls + '">' + p + '</p>';
-    }).join('');
   }
 
   var wrap, box;
@@ -267,7 +283,10 @@
     if (!wrap) return;
     wrap.classList.remove('nj-on');
     document.documentElement.style.overflow = '';
-    setTimeout(function () { if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap); wrap = null; }, 340);
+    setTimeout(function () {
+      if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap);
+      wrap = null;
+    }, 340);
   }
 
   function showQuestion() {
@@ -280,8 +299,8 @@
       + '<p class="nj-lead">Tell us what you want, and we’ll show you the ZOLA experience designed specifically for you. ✨</p>'
       + '<div class="nj-q">Which one sounds most like you?</div>'
       + ORDER.map(function (k, i) {
-          return '<button class="nj-opt" data-nj="' + k + '"><b>' + (i + 1) + '. '
-            + esc(ANSWERS[k].option) + '</b></button>';
+          return '<button class="nj-opt" data-nj="' + k + '">' + (i + 1) + '. '
+            + esc(ANSWERS[k].option) + '</button>';
         }).join('')
       + '</div>';
 
@@ -289,6 +308,29 @@
     Array.prototype.forEach.call(box.querySelectorAll('[data-nj]'), function (b) {
       b.addEventListener('click', function () { showAnswer(b.getAttribute('data-nj')); });
     });
+    box.scrollTop = 0;
+  }
+
+  // The sum, then what it comes to. Shown rather than claimed.
+  function moneyBlock(a) {
+    return '<div class="nj-money">'
+      + a.math.map(function (r) {
+          return '<div class="nj-row"><span>' + esc(r[0]) + '</span><span>' + esc(r[1]) + '</span></div>';
+        }).join('')
+      + '<div class="nj-rule"></div>'
+      + '<div class="nj-tot"><span>Paid separately</span><span>' + esc(a.worth) + '</span></div>'
+      + '<div class="nj-pay"><span>You pay</span><span>' + esc(a.pay) + '</span></div>'
+      + '<div class="nj-save">'
+        + '<span class="nj-savenum">' + esc(a.save) + '</span>'
+        + '<span class="nj-savelbl">saved ' + esc(a.savePer) + '</span>'
+        + '<span class="nj-year">That’s <b>' + esc(a.year) + '</b> a year that stays yours.</span>'
+      + '</div></div>';
+  }
+
+  function showcaseBlock(a) {
+    return '<div class="nj-show"><ul>'
+      + a.showcase.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('')
+      + '</ul></div>';
   }
 
   function showAnswer(key) {
@@ -298,24 +340,22 @@
     box.innerHTML =
       '<button id="nj-x" aria-label="Close">×</button>'
       + '<div class="nj-pad">'
-      + '<div class="nj-goal"><span>Your goal</span>' + esc(a.option) + '</div>'
-      + '<h2 class="nj-h1">' + a.heading + '</h2>'
-      + paras(a.intro, 'nj-lead')
-      + '<div class="nj-leadin">' + a.leadIn + '</div>'
-      + '<div class="nj-product">' + a.product + '</div>'
-      + paras(a.body, 'nj-lead')
-      + '<div class="nj-sub">' + a.whyTitle + '</div>'
-      + '<ul class="nj-why">' + a.why.map(function (w) { return '<li>' + w + '</li>'; }).join('') + '</ul>'
-      + '<div class="nj-sub">' + a.closeTitle + '</div>'
-      + paras(a.close, 'nj-lead')
-      + '<div class="nj-kicker">' + a.kicker + '</div>'
-      + '<a class="nj-cta" href="' + a.href + '">' + a.cta + '</a>'
-      + '<button class="nj-back" type="button">Actually, that’s not quite me</button>'
+      + '<div class="nj-said">You said: ' + esc(a.option) + '</div>'
+      + '<h2 class="nj-big">' + esc(a.headline) + '</h2>'
+      + '<p class="nj-emp">' + esc(a.empathy) + '</p>'
+      + '<div class="nj-name">' + esc(a.product) + '</div>'
+      + '<div class="nj-nameline">' + esc(a.productLine) + '</div>'
+      + (a.showcase ? showcaseBlock(a) : moneyBlock(a))
+      + (a.why
+          ? '<ul class="nj-why">' + a.why.map(function (w) { return '<li>' + esc(w) + '</li>'; }).join('') + '</ul>'
+          : '')
+      + '<p class="nj-close">' + esc(a.close) + '</p>'
+      + '<a class="nj-cta" href="' + a.href + '">' + esc(a.cta) + ' ✨</a>'
+      + '<button class="nj-back" type="button">That’s not quite me</button>'
       + '</div>';
 
     box.querySelector('#nj-x').addEventListener('click', close);
     box.querySelector('.nj-back').addEventListener('click', showQuestion);
-    // Taking them somewhere is an answer; it should not reopen next page.
     box.querySelector('.nj-cta').addEventListener('click', remember);
     box.scrollTop = 0;
   }
@@ -340,8 +380,6 @@
     document.body.appendChild(wrap);
 
     showQuestion();
-
-    // The page behind should not scroll under the panel.
     document.documentElement.style.overflow = 'hidden';
 
     wrap.querySelector('#nj-veil').addEventListener('click', close);
@@ -356,13 +394,12 @@
 
   function boot() {
     if (!allowedHere() || alreadySeen()) return;
-    // A beat, so the page paints first. Arriving on a blank screen behind a
-    // panel feels like an ad; arriving on ZOLA that then offers to help does
-    // not.
+    // A beat, so the page paints first. Landing on a blank screen behind a
+    // panel reads as an advert; ZOLA appearing and then offering to help
+    // does not.
     setTimeout(open, 900);
   }
 
-  // Available deliberately, so a link or a button anywhere can reopen it.
   window.ZolaJourney = { open: open, close: close };
 
   if (document.readyState === 'loading') {
