@@ -76,6 +76,14 @@ app.all('/api/client-link',      require('./_client-link-api'));
 app.all('/api/insights',         require('./_insights'));
 app.all('/api/people',           require('./_roster-people'));
 app.all('/api/money',            require('./_money'));
+
+/* Anything her rules have queued and is now due. Runs at most once a
+   minute and never blocks the request it rode in on — a delayed email
+   should not wait for a quiet afternoon or for the daily cron. */
+app.use(function (req, res, next) {
+  try { require('./_email-rules').flush().catch(function () {}); } catch (_) {}
+  next();
+});
 app.all('/api/team-math',        require('./_team-math'));
 app.all('/api/reports',          require('./_reports'));
 app.all('/api/journeys',         require('./_journeys'));

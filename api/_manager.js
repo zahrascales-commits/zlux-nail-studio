@@ -1128,6 +1128,81 @@ module.exports = async function (req, res) {
       });
     }
 
+    /* ── THE EMAILS SHE WRITES ──
+       Rules rather than a mailing list, because a rule keyed to an event
+       reaches everybody who does that thing from now on — including people
+       who are not in the system yet. A list only ever reaches the people
+       already in it. */
+    if (method === 'GET' && action === 'email_rules') {
+      const er = require('./_email-rules');
+      return res.json({
+        rules: await er.listRules(),
+        triggers: er.TRIGGERS,
+        audiences: er.AUDIENCES,
+        fields: er.FIELDS,
+      });
+    }
+
+    if (method === 'POST' && action === 'email_rule') {
+      const er = require('./_email-rules');
+      try {
+        const id = await er.saveRule(req.body || {});
+        return res.json({ ok: true, id });
+      } catch (e) { return res.status(400).json({ error: String(e.message || e) }); }
+    }
+
+    if (method === 'DELETE' && action === 'email_rule') {
+      const er = require('./_email-rules');
+      await er.deleteRule((req.body || {}).id);
+      return res.json({ ok: true });
+    }
+
+    // What these rules have actually done, most recent first.
+    if (method === 'GET' && action === 'email_activity') {
+      const er = require('./_email-rules');
+      return res.json({ activity: await er.recent(req.query.limit) });
+    }
+
+    // Send anything already due, without waiting for the next visitor.
+    if (method === 'POST' && action === 'email_flush') {
+      const er = require('./_email-rules');
+      return res.json(await er.flush({ force: true }));
+    }
+
+    /* Shows her the real thing before anybody receives it. */
+    if (method === 'POST' && action === 'email_preview') {
+      const er = require('./_email-rules');
+      const b = req.body || {};
+      const sample = {
+        first_name: 'Alia', name: 'Alia Chavez', service: 'Medium Acrylic Set',
+        date: 'Friday, September 18', time: '3:00pm', artist: 'Brianna',
+        tier: 'Elite', amount: '$110', studio: 'ZOLA Nail Studio',
+        link: 'https://zolanailstudio.com/visit.html?t=example',
+      };
+      return res.json({
+        subject: er.fill(b.subject || '', sample),
+        html: er.toHtml(b.body || '', sample),
+      });
+    }
+
+    /* Sends one to her, so she reads it the way a client will. */
+    if (method === 'POST' && action === 'email_test') {
+      const er = require('./_email-rules');
+      const b = req.body || {};
+      const to = String(b.to || '').trim();
+      if (!to || !/@/.test(to)) return res.status(400).json({ error: 'Where should the test go?' });
+      const sample = {
+        first_name: 'Alia', name: 'Alia Chavez', service: 'Medium Acrylic Set',
+        date: 'Friday, September 18', time: '3:00pm', artist: 'Brianna',
+        tier: 'Elite', amount: '$110', studio: 'ZOLA Nail Studio',
+        link: 'https://zolanailstudio.com/visit.html?t=example',
+      };
+      const out = await require('./_notify').sendEmail(
+        to, er.fill(b.subject || 'ZOLA', sample) + ' (test)',
+        er.toHtml(b.body || '', sample), { kind: 'rule-test' });
+      return res.json({ ok: !!(out && out.sent), why: (out && out.why) || '' });
+    }
+
     /* Every email the site has sent, readable. Added because a client got a
        confirmation for an appointment that did not exist and there was no
        way to look up what had actually gone out. */

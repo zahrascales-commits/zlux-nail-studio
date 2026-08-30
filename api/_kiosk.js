@@ -263,6 +263,14 @@ module.exports = async function (req, res) {
         ['checkout', String(b.name || '').slice(0, 80), 'card_on_file', amount,
          'card on file · signed' + (tip ? ' · tip $' + (tip / 100).toFixed(2) : ''), Date.now()]);
       try {
+        await require('./_email-rules').fire('visit_finished', {
+          email: appt.email || '', name: b.name,
+          first_name: String(b.name || '').trim().split(/\s+/)[0],
+          service: b.service, tier: b.tier_label, tier_key: b.tier,
+          amount: '$' + (amount / 100).toFixed(2), studio: 'ZOLA Nail Studio',
+        });
+      } catch (_) {}
+      try {
         await notify.notifyInApp('owner', null,
           '💳 ' + b.name + ' paid $' + (amount / 100).toFixed(2) + ' on file',
           card.brand + ' ····' + card.last4 + (tip ? ' · includes a $' + (tip / 100).toFixed(2) + ' tip 💛' : ''));

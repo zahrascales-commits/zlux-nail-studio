@@ -362,6 +362,23 @@ module.exports = async (req, res) => {
 
     try { await sendWelcome({ fullName, email, phone, memberId, tier }); } catch (_) {}
 
+    /* Her own welcome, in her words, on her timing. Separate from the
+       built-in one above so she can write whatever she likes without
+       anybody losing their membership number. */
+    try {
+      const plans = require('./_plans');
+      const plan = plans.byKey(tier);
+      await require('./_email-rules').fire('membership_bought', {
+        email,
+        name: fullName,
+        first_name: String(fullName || '').trim().split(/\s+/)[0],
+        tier: plan ? plan.name : tier,
+        tier_key: tier,
+        amount: plan ? ('$' + Math.round(plan.cycle_cents / 100)) : '',
+        studio: 'ZOLA Nail Studio',
+      });
+    } catch (_) {}
+
     return res.status(201).json({
       success: true,
       memberId,

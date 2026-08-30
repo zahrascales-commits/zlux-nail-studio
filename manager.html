@@ -433,6 +433,28 @@
   .tier-bar span{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light));border-radius:6px;transition:width 0.9s cubic-bezier(0.2,0.8,0.2,1)}
   .tier-rev{font-size:0.72rem;color:var(--latte);margin-top:0.55rem}
   .tier-rev strong{color:var(--cream)}
+  /* The Email Setup screen. Pure black and white, deliberately: every
+     other palette on this site has produced something she could not read. */
+  #panel-autoemail{background:#000;color:#fff}
+  #panel-autoemail .page-title,#panel-autoemail h3,#panel-autoemail label,
+  #panel-autoemail .page-desc,#panel-autoemail p,#panel-autoemail span,
+  #panel-autoemail div,#panel-autoemail small,#panel-autoemail li{color:#fff}
+  #panel-autoemail input,#panel-autoemail textarea,#panel-autoemail select{
+    background:#000;color:#fff;border:1px solid #fff;padding:0.6rem 0.7rem;
+    font-family:inherit;font-size:0.92rem;width:100%;outline:none;border-radius:0}
+  #panel-autoemail input:focus,#panel-autoemail textarea:focus,#panel-autoemail select:focus{
+    box-shadow:0 0 0 2px #fff}
+  #panel-autoemail input::placeholder,#panel-autoemail textarea::placeholder{color:#fff;opacity:0.55}
+  #panel-autoemail option{background:#000;color:#fff}
+  #panel-autoemail .ae-card{border:1px solid #fff;padding:1.1rem 1.2rem;margin-bottom:1rem;background:#000}
+  #panel-autoemail .ae-btn{background:#fff;color:#000;border:1px solid #fff;padding:0.6rem 1.1rem;
+    font-weight:700;letter-spacing:0.08em;text-transform:uppercase;font-size:0.72rem;cursor:pointer}
+  #panel-autoemail .ae-btn.ghost{background:#000;color:#fff}
+  #panel-autoemail .ae-row{display:flex;gap:0.8rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:0.8rem}
+  #panel-autoemail .ae-field{flex:1;min-width:180px}
+  #panel-autoemail .ae-tag{border:1px solid #fff;padding:0.15rem 0.45rem;font-size:0.72rem;cursor:pointer;
+    display:inline-block;margin:0.15rem 0.25rem 0.15rem 0;background:#000;color:#fff}
+  #panel-autoemail .ae-off{opacity:0.55}
   .mix-bar{display:flex;height:26px;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
   .mix-bar span{display:block;height:100%;transition:width 0.9s cubic-bezier(0.2,0.8,0.2,1)}
   .mix-sig{background:#8C7A5E}.mix-lux{background:#B6A588}.mix-blk{background:#DDD0B8}
@@ -850,6 +872,7 @@
     <button class="tab" data-tab="scheduling" onclick="showTab('scheduling')">Scheduling <span class="dot" id="sched-dot" style="display:none">!</span></button>
     <button class="tab" data-tab="marketing" onclick="showTab('marketing')">Emails</button>
     <button class="tab" data-tab="team" onclick="showTab('team')">Team</button>
+    <button class="tab" data-tab="autoemail" onclick="showTab('autoemail')">Email Setup</button>
     <button class="tab" data-tab="maillog" onclick="showTab('maillog')">Emails Sent</button>
     <button class="tab" data-tab="paymath" onclick="showTab('paymath')">Pay Math</button>
     <button class="tab" data-tab="clients" onclick="showTab('clients')">Clients</button>
@@ -1409,7 +1432,14 @@
       </div></div>
       <div id="paymath-body"></div>
     </section>
-        <section class="panel" id="panel-maillog">
+            <section class="panel" id="panel-autoemail">
+      <div class="page-head"><div>
+        <div class="page-title">Email Setup</div>
+        <div class="page-desc">You write these. Each one is attached to something that happens, so it reaches everybody who does that thing from now on — including people who have never been to the site.</div>
+      </div></div>
+      <div id="autoemail-body"></div>
+    </section>
+    <section class="panel" id="panel-maillog">
       <div class="page-head"><div>
         <div class="page-title">Emails Sent</div>
         <div class="page-desc">Every message this site has sent, and exactly what it said. Tap one to read it as the client saw it.</div>
@@ -2235,6 +2265,7 @@ const TAB_LOADERS = {
   inbox:      () => loadInquiries(),
   site:       () => loadSite(),
   traffic:    () => loadTraffic(),
+  autoemail:  () => loadAutoEmail(),
   maillog:    () => loadMailLog(),
   paymath:    () => loadPayMath(),
   clients:    () => loadClients(),
@@ -6981,6 +7012,228 @@ async function loadPayMath(){
    whole body is kept, so this shows the real message rather than a label. */
 let MAILLOG = [];
 
+
+/* ── EMAIL SETUP ─────────────────────────────────────────────────────────
+   Rules, not a mailing list. A rule attached to "someone buys a
+   membership" reaches every future member automatically; a list of names
+   only ever reaches the names already on it. */
+let AE = { rules: [], triggers: [], audiences: [], fields: [], editing: null };
+
+async function loadAutoEmail(){
+  const el = document.getElementById('autoemail-body');
+  if(!el) return;
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try{
+    const d = await (await api('/api/manager?action=email_rules')).json();
+    if(d.error) throw new Error(d.error);
+    AE.rules = d.rules || []; AE.triggers = d.triggers || [];
+    AE.audiences = d.audiences || []; AE.fields = d.fields || [];
+  }catch(err){ el.innerHTML = emptyBox('⚠️','Could not load: ' + esc(err.message)); return; }
+  renderAutoEmail();
+}
+
+function aeTriggerLabel(k){
+  const t = AE.triggers.find(function(x){ return x.key === k; });
+  return t ? t.label : k;
+}
+
+function aeDelayText(mins){
+  const n = Number(mins) || 0;
+  if(!n) return 'straight away';
+  if(n < 60) return n + ' minute' + (n === 1 ? '' : 's') + ' later';
+  if(n % 1440 === 0) return (n/1440) + ' day' + (n === 1440 ? '' : 's') + ' later';
+  if(n % 60 === 0) return (n/60) + ' hour' + (n === 60 ? '' : 's') + ' later';
+  return n + ' minutes later';
+}
+
+function renderAutoEmail(){
+  const el = document.getElementById('autoemail-body');
+  if(!el) return;
+
+  const byTrigger = AE.triggers.map(function(t){
+    const mine = AE.rules.filter(function(r){ return r.trigger_key === t.key; });
+    return '<div class="ae-card">'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.8rem;flex-wrap:wrap">'
+        + '<div><div style="font-size:1.02rem;font-weight:600">' + esc(t.label) + '</div>'
+        + '<div style="font-size:0.8rem;opacity:0.75;margin-top:0.15rem">' + esc(t.note) + '</div></div>'
+        + '<button class="ae-btn" onclick="aeNew(\'' + t.key + '\')">Write one</button>'
+      + '</div>'
+      + (mine.length
+          ? '<div style="margin-top:0.9rem">' + mine.map(function(r){
+              return '<div class="' + (Number(r.active) ? '' : 'ae-off') + '" '
+                + 'style="border-top:1px solid #fff;padding:0.6rem 0;display:flex;justify-content:space-between;gap:0.7rem;flex-wrap:wrap">'
+                + '<div style="flex:1;min-width:190px">'
+                  + '<div style="font-weight:600">' + esc(r.name || r.subject || '(no name)') + '</div>'
+                  + '<div style="font-size:0.8rem;opacity:0.8">' + esc(r.subject || '') + '</div>'
+                  + '<div style="font-size:0.78rem;opacity:0.7;margin-top:0.15rem">'
+                    + esc(aeDelayText(r.delay_minutes)) + ' · ' + esc(r.audience)
+                    + (Number(r.active) ? '' : ' · switched off') + '</div>'
+                + '</div>'
+                + '<div style="display:flex;gap:0.4rem;align-items:flex-start">'
+                  + '<button class="ae-btn ghost" onclick="aeEdit(' + r.id + ')">Edit</button>'
+                  + '<button class="ae-btn ghost" onclick="aeToggle(' + r.id + ')">' + (Number(r.active) ? 'Pause' : 'Turn on') + '</button>'
+                + '</div></div>';
+            }).join('') + '</div>'
+          : '<div style="margin-top:0.7rem;font-size:0.84rem;opacity:0.7">Nothing written yet — nobody gets an email for this.</div>')
+    + '</div>';
+  }).join('');
+
+  el.innerHTML = byTrigger + '<div id="ae-editor"></div>'
+    + '<div class="ae-card" style="margin-top:1.4rem">'
+      + '<div style="font-weight:600;margin-bottom:0.5rem">What these have done</div>'
+      + '<div id="ae-activity" style="font-size:0.84rem;opacity:0.85">Loading…</div>'
+      + '<button class="ae-btn ghost" style="margin-top:0.7rem" onclick="aeFlush()">Send anything due now</button>'
+    + '</div>';
+  loadAeActivity();
+}
+
+function aeNew(triggerKey){ aeOpen({ trigger_key: triggerKey, active: 1, delay_minutes: 0, audience: 'everyone' }); }
+function aeEdit(id){ aeOpen(AE.rules.find(function(r){ return Number(r.id) === Number(id); })); }
+
+function aeOpen(rule){
+  if(!rule) return;
+  AE.editing = Object.assign({}, rule);
+  const box = document.getElementById('ae-editor');
+  if(!box) return;
+
+  box.innerHTML = '<div class="ae-card" style="border-width:2px">'
+    + '<div style="font-weight:600;margin-bottom:0.8rem">' + esc(aeTriggerLabel(rule.trigger_key)) + '</div>'
+    + '<div class="ae-row">'
+      + '<div class="ae-field"><label>Name it (just for you)</label>'
+        + '<input id="ae-name" value="' + esc(rule.name || '') + '" placeholder="Welcome email" /></div>'
+      + '<div class="ae-field"><label>Who gets it</label><select id="ae-aud">'
+        + AE.audiences.map(function(a){
+            return '<option value="' + esc(a.key) + '"' + (a.key === rule.audience ? ' selected' : '') + '>' + esc(a.label) + '</option>';
+          }).join('') + '</select></div>'
+      + '<div class="ae-field"><label>When</label>'
+        + '<input id="ae-delay" type="number" min="0" value="' + (Number(rule.delay_minutes)||0) + '" />'
+        + '<div style="font-size:0.76rem;opacity:0.75;margin-top:0.2rem">Minutes after it happens. 0 means straight away.</div></div>'
+    + '</div>'
+    + '<div style="margin-bottom:0.7rem"><label>Subject</label>'
+      + '<input id="ae-subject" value="' + esc(rule.subject || '') + '" placeholder="Welcome to ZOLA" /></div>'
+    + '<div><label>What it says</label>'
+      + '<textarea id="ae-body" rows="11" placeholder="Hi {{first_name}},&#10;&#10;Write it exactly how you want it to sound.">' + esc(rule.body || '') + '</textarea></div>'
+    + '<div style="margin-top:0.6rem;font-size:0.8rem">Tap to drop in: '
+      + AE.fields.map(function(f){
+          return '<span class="ae-tag" title="' + esc(f.note) + '" onclick="aeInsert(\'' + f.tag + '\')">' + esc(f.tag) + '</span>';
+        }).join('') + '</div>'
+    + '<div class="ae-row" style="margin-top:1rem">'
+      + '<button class="ae-btn" onclick="aeSave()">Save</button>'
+      + '<button class="ae-btn ghost" onclick="aePreview()">Preview</button>'
+      + '<button class="ae-btn ghost" onclick="aeSendTest()">Email it to me</button>'
+      + (rule.id ? '<button class="ae-btn ghost" onclick="aeDelete(' + rule.id + ')">Delete</button>' : '')
+      + '<button class="ae-btn ghost" onclick="document.getElementById(\'ae-editor\').innerHTML=\'\'">Close</button>'
+    + '</div>'
+    + '<div id="ae-msg" style="margin-top:0.6rem;font-size:0.84rem"></div>'
+    + '<div id="ae-preview" style="margin-top:0.9rem"></div>'
+  + '</div>';
+  box.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function aeInsert(tag){
+  const t = document.getElementById('ae-body');
+  if(!t) return;
+  const at = t.selectionStart == null ? t.value.length : t.selectionStart;
+  t.value = t.value.slice(0, at) + tag + t.value.slice(t.selectionEnd == null ? at : t.selectionEnd);
+  t.focus();
+  t.selectionStart = t.selectionEnd = at + tag.length;
+}
+
+function aeCollect(){
+  return {
+    id: AE.editing && AE.editing.id,
+    trigger_key: AE.editing && AE.editing.trigger_key,
+    name: (document.getElementById('ae-name')||{}).value || '',
+    subject: (document.getElementById('ae-subject')||{}).value || '',
+    body: (document.getElementById('ae-body')||{}).value || '',
+    audience: (document.getElementById('ae-aud')||{}).value || 'everyone',
+    delay_minutes: Number((document.getElementById('ae-delay')||{}).value) || 0,
+    active: AE.editing && AE.editing.active !== undefined ? Number(AE.editing.active) : 1,
+  };
+}
+
+async function aeSave(){
+  const msg = document.getElementById('ae-msg');
+  const r = aeCollect();
+  if(!r.subject.trim()){ if(msg) msg.textContent = 'Give it a subject first.'; return; }
+  if(!r.body.trim()){ if(msg) msg.textContent = 'Write what it should say.'; return; }
+  try{
+    const d = await (await api('/api/manager?action=email_rule', { method:'POST', body: JSON.stringify(r) })).json();
+    if(d.error) throw new Error(d.error);
+    if(msg) msg.textContent = 'Saved ✦';
+    await loadAutoEmail();
+  }catch(err){ if(msg) msg.textContent = 'Could not save: ' + err.message; }
+}
+
+async function aeToggle(id){
+  const r = AE.rules.find(function(x){ return Number(x.id) === Number(id); });
+  if(!r) return;
+  const body = Object.assign({}, r, { active: Number(r.active) ? 0 : 1 });
+  try{
+    await api('/api/manager?action=email_rule', { method:'POST', body: JSON.stringify(body) });
+    await loadAutoEmail();
+  }catch(_){ toast('Could not change that'); }
+}
+
+async function aeDelete(id){
+  if(!confirm('Delete this email? Nobody will receive it again.')) return;
+  try{
+    await api('/api/manager?action=email_rule', { method:'DELETE', body: JSON.stringify({ id: id }) });
+    document.getElementById('ae-editor').innerHTML = '';
+    await loadAutoEmail();
+  }catch(_){ toast('Could not delete that'); }
+}
+
+async function aePreview(){
+  const r = aeCollect();
+  const box = document.getElementById('ae-preview');
+  try{
+    const d = await (await api('/api/manager?action=email_preview', { method:'POST', body: JSON.stringify(r) })).json();
+    if(d.error) throw new Error(d.error);
+    box.innerHTML = '<div style="border:1px solid #fff;padding:0.5rem">'
+      + '<div style="font-size:0.8rem;margin-bottom:0.4rem">Subject: ' + esc(d.subject) + '</div>'
+      + '<iframe sandbox="" style="width:100%;height:420px;border:0;background:#fff"></iframe></div>';
+    const f = box.querySelector('iframe'); if(f) f.srcdoc = d.html;
+  }catch(err){ box.textContent = 'Could not preview: ' + err.message; }
+}
+
+async function aeSendTest(){
+  const to = prompt('Send a test copy to which address?', 'nenerayani@icloud.com');
+  if(!to) return;
+  const msg = document.getElementById('ae-msg');
+  const r = aeCollect(); r.to = to;
+  try{
+    const d = await (await api('/api/manager?action=email_test', { method:'POST', body: JSON.stringify(r) })).json();
+    if(msg) msg.textContent = d.ok ? ('Sent to ' + to + ' ✦') : ('Did not send: ' + (d.why || d.error || ''));
+  }catch(err){ if(msg) msg.textContent = 'Could not send: ' + err.message; }
+}
+
+async function loadAeActivity(){
+  const box = document.getElementById('ae-activity');
+  if(!box) return;
+  try{
+    const d = await (await api('/api/manager?action=email_activity&limit=40')).json();
+    const rows = d.activity || [];
+    box.innerHTML = rows.length
+      ? rows.map(function(a){
+          const when = new Date(Number(a.sent_ts) || Number(a.send_after_ts) || Number(a.created_ts));
+          return '<div style="border-top:1px solid #fff;padding:0.35rem 0">'
+            + esc(when.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))
+            + ' · ' + esc(a.recipient || '') + ' · ' + esc(a.subject || '')
+            + ' · ' + esc(a.status) + (a.detail ? ' (' + esc(a.detail) + ')' : '')
+          + '</div>';
+        }).join('')
+      : 'Nothing yet.';
+  }catch(err){ box.textContent = 'Could not load: ' + err.message; }
+}
+
+async function aeFlush(){
+  try{
+    const d = await (await api('/api/manager?action=email_flush', { method:'POST', body: '{}' })).json();
+    toast((d.sent || 0) + ' sent');
+    loadAeActivity();
+  }catch(_){ toast('Could not send those'); }
+}
 async function loadMailLog(){
   const el = document.getElementById('maillog-body');
   if(!el) return;
