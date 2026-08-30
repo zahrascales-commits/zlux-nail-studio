@@ -33,26 +33,10 @@ module.exports = async (req, res) => {
   const { memberId } = req.body;
   if (!memberId) return res.status(400).json({ error: 'Member ID required.' });
 
-  /* A run of wrong IDs from one place. Counted out of security_log rather
-     than memory: on serverless nearly every request is a fresh process, so
-     an in-memory tally is empty every time and stops nothing.
-     Legitimate clients type their ID once and never reach this. */
+  // Where it came from, for the wrong-guess count further down.
   const from = String(
     req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown'
   ).split(',')[0].trim().slice(0, 60);
-  try {
-    const row = await queryOne(
-      `SELECT COUNT(*) AS n FROM security_log
-        WHERE event = 'FAILED_MEMBER_LOGIN'
-          AND details LIKE ?
-          AND created_at > datetime('now', '-10 minutes')`,
-      ['%"ip":"' + from + '"%']);
-    if (Number((row || {}).n) >= 8) {
-      return res.status(429).json({
-        error: 'Too many tries. Wait a few minutes, or message the studio and we will look you up.',
-      });
-    }
-  } catch (_) { /* if the count cannot be read, let them through rather than lock out a real client */ }
 
   try {
     const member = await queryOne('SELECT * FROM members WHERE member_id = ?', [memberId.toUpperCase().trim()]);
@@ -60,6 +44,28 @@ module.exports = async (req, res) => {
     if (!member) {
       await execute('INSERT INTO security_log (event, details) VALUES (?,?)',
         ['FAILED_MEMBER_LOGIN', JSON.stringify({ memberId, ip: from })]);
+
+      /* Only a wrong ID is ever made to wait. Checking this before looking
+         the ID up meant a real member could be turned away because somebody
+         on the same wifi had been guessing — and on a phone network that is
+         thousands of strangers sharing one address.
+
+         Counted from security_log because on serverless an in-memory tally
+         is empty on nearly every request and stops nothing. */
+      try {
+        const row = await queryOne(
+          `SELECT COUNT(*) AS n FROM security_log
+            WHERE event = 'FAILED_MEMBER_LOGIN'
+              AND details LIKE ?
+              AND created_at > datetime('now', '-10 minutes')`,
+          ['%"ip":"' + from + '"%']);
+        if (Number((row || {}).n) >= 8) {
+          return res.status(429).json({
+            error: 'That is a lot of tries. Give it a few minutes, or message the studio and we will look you up.',
+          });
+        }
+      } catch (_) { /* unreadable count must not become a lockout */ }
+
       return res.status(401).json({ error: 'Member ID not found. Check your welcome email and try again.' });
     }
 
