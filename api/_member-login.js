@@ -2,6 +2,11 @@ const { queryOne, execute } = require('./_db');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
+/* Wrong attempts, per source, in memory. A serverless process forgets these
+   when it recycles, which is fine: this is a speed bump for a machine
+   grinding through IDs, not an account lockout. */
+const WRONG = new Map();
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -33,10 +38,26 @@ module.exports = async (req, res) => {
   const { memberId } = req.body;
   if (!memberId) return res.status(400).json({ error: 'Member ID required.' });
 
+  /* A run of wrong IDs from one place. Legitimate clients type theirs once,
+     so this is only ever reached by something working through the space. */
+  const from = String(
+    req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown'
+  ).split(',')[0].trim();
+  const now = Date.now();
+  const recent = (WRONG.get(from) || []).filter(t => now - t < 10 * 60000);
+  if (recent.length >= 8) {
+    WRONG.set(from, recent);
+    return res.status(429).json({
+      error: 'Too many tries. Wait a few minutes, or message the studio and we will look you up.',
+    });
+  }
+
   try {
     const member = await queryOne('SELECT * FROM members WHERE member_id = ?', [memberId.toUpperCase().trim()]);
 
     if (!member) {
+      recent.push(now);
+      WRONG.set(from, recent);
       await execute('INSERT INTO security_log (event, details) VALUES (?,?)', ['FAILED_MEMBER_LOGIN', JSON.stringify({ memberId })]);
       return res.status(401).json({ error: 'Member ID not found. Check your welcome email and try again.' });
     }
