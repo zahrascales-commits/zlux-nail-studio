@@ -1128,6 +1128,40 @@ module.exports = async function (req, res) {
       });
     }
 
+    /* ── WHERE PEOPLE CAN SEND MONEY ──
+       Venmo, Cash App and Apple Cash all settle outside Stripe, so the
+       studio can only ever say it was sent, never that it arrived. They are
+       still worth offering — a client who has no card on them has one of
+       these — but everything paid this way is marked unverified until she
+       says otherwise. */
+    if (method === 'GET' && action === 'pay_handles') {
+      const rows = await query(
+        "SELECT key, value FROM site_settings WHERE key IN ('venmo_handle','cashapp_tag','applepay_phone')");
+      const out = {};
+      for (const r of rows) out[r.key] = r.value || '';
+      return res.json({
+        venmo_handle: out.venmo_handle || '',
+        cashapp_tag: out.cashapp_tag || '',
+        applepay_phone: out.applepay_phone || '',
+      });
+    }
+
+    if (method === 'POST' && action === 'pay_handles') {
+      const b = req.body || {};
+      const clean = v => String(v || '').trim().slice(0, 60);
+      const pairs = [
+        ['venmo_handle', clean(b.venmo_handle).replace(/^@/, '')],
+        ['cashapp_tag', clean(b.cashapp_tag).replace(/^$/, '')],
+        ['applepay_phone', clean(b.applepay_phone)],
+      ];
+      for (const [k, v] of pairs) {
+        await execute(
+          'INSERT INTO site_settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+          [k, v]);
+      }
+      return res.json({ ok: true });
+    }
+
     /* ── THE EMAILS SHE WRITES ──
        Rules rather than a mailing list, because a rule keyed to an event
        reaches everybody who does that thing from now on — including people
