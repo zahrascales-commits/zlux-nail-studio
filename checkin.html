@@ -13,6 +13,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=Josefin+Sans:wght@300;400;600&display=swap" rel="stylesheet" />
 <script src="https://js.stripe.com/v3/"></script>
+<script src="js/qrcode.min.js"></script>
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
@@ -70,10 +71,10 @@
 
   <!-- NAME (shared) -->
   <div class="screen" id="s-name">
-    <h2 id="name-title">What's your email?</h2>
-    <p class="sub" style="margin-top:0.5rem;">Your name works too — email just finds you straight away.</p>
-    <input class="name-input" id="kname" placeholder="you@email.com" autocomplete="off"
-      inputmode="email" autocapitalize="none" spellcheck="false"
+    <h2 id="name-title">Email or phone number</h2>
+    <p class="sub" style="margin-top:0.5rem;">Either one finds you straight away. Your name works too.</p>
+    <input class="name-input" id="kname" placeholder="you@email.com  ·  or  ·  559 000 0000" autocomplete="off"
+      autocapitalize="none" spellcheck="false"
       onkeydown="if(event.key==='Enter')nameNext()" />
     <div class="err" id="name-err"></div>
     <div class="row">
@@ -134,6 +135,20 @@
     <div class="row"><button class="big-btn ghost" onclick="show('s-name')">Search again</button></div>
   </div>
 
+  <!-- CHECKOUT: VENMO / CASH APP / APPLE CASH -->
+  <div class="screen" id="s-app">
+    <h2 id="app-title">Scan to pay</h2>
+    <p class="sub" id="app-amt"></p>
+    <div id="app-qr" style="margin:1.2rem auto 0;background:#fff;padding:14px;width:max-content;border-radius:10px"></div>
+    <p class="sub" id="app-handle" style="margin-top:0.9rem;font-size:1.15rem;color:#F2ECE1"></p>
+    <p class="sub" id="app-note" style="font-size:0.85rem;margin-top:0.5rem"></p>
+    <div class="err" id="app-err"></div>
+    <div class="row">
+      <button class="big-btn gold" onclick="appSent()">I've sent it</button>
+      <button class="big-btn ghost" onclick="show('s-balance')">Back</button>
+    </div>
+  </div>
+
   <!-- CHECKOUT: SIGN FOR THE CARD ON FILE -->
   <div class="screen" id="s-sign">
     <h2>Just your signature</h2>
@@ -153,13 +168,19 @@
   <div class="screen" id="s-balance">
     <h2 id="bal-title">All finished ✦</h2>
     <p class="sub" id="bal-svc"></p>
+    <!-- The sum, so nobody has to take the total on trust. -->
+    <div id="bal-breakdown-box" style="width:min(460px,92vw);margin:1.1rem 0 0.4rem;
+      border:1px solid rgba(182,165,136,0.35);padding:0.9rem 1.1rem;text-align:left;font-size:0.98rem"></div>
     <div class="balance" id="bal-amt">$0</div>
     <p class="sub" id="bal-breakdown" style="margin-top:-0.4rem;"></p>
     <p class="sub" style="margin-top:0.8rem;">How would you like to pay?</p>
     <div class="row">
       <button class="big-btn gold" id="onfile-btn" style="display:none" onclick="payOnFile()"></button>
-      <button class="big-btn gold" onclick="payCard()">💳 &nbsp;Card / Apple Pay</button>
+      <button class="big-btn gold" onclick="payCard()">💳 &nbsp;Credit / debit card</button>
       <button class="big-btn ghost" onclick="payCash()">💵 &nbsp;Cash</button>
+      <button class="big-btn ghost" id="btn-venmo" style="display:none" onclick="payApp('venmo')">Venmo</button>
+      <button class="big-btn ghost" id="btn-cashapp" style="display:none" onclick="payApp('cashapp')">Cash App</button>
+      <button class="big-btn ghost" id="btn-applepay" style="display:none" onclick="payApp('applepay')">Apple Pay</button>
     </div>
     <div class="err" id="bal-err"></div>
   </div>
@@ -296,6 +317,10 @@ async function nameNext(){
    costs, what their membership already covered, what deposit was taken,
    and whether there is a card we can charge without asking again. */
 let KREF = '', KCARD = null, KMEMBER = false;
+/* The rest of the bill. LIST is what the service is worth, which is what a
+   tip should be a percentage of — a member owing nothing was being offered
+   a tip on nothing, so her artist got tipped on nothing. */
+let LIST = 0, COVERED = 0, DEPOSIT = 0, HANDLES = null;
 
 function offerChoices(list){
   document.getElementById('pick-list').innerHTML = list.map(function(x, i){
@@ -320,6 +345,9 @@ function takeBill(x){
   KREF = x.ref || '';
   KCARD = x.card_on_file || null;
   KMEMBER = !!x.is_member;
+  LIST = Number(x.list_cents) || 0;
+  COVERED = Number(x.covered_by_membership) || 0;
+  DEPOSIT = Number(x.deposit_taken_cents) || 0;
   showTipScreen();
 }
 
@@ -414,10 +442,16 @@ function showTipScreen(){
   document.getElementById('tip-sub').textContent = owes
     ? '100% goes straight to your artist 💛'
     : 'Your services are covered by your membership — a tip is never expected, always appreciated 💛';
-  // Percentages off the service value when known; friendly flat amounts otherwise
-  const base = BAL >= 50 ? BAL : 0;
-  const choices = base ? [[18,'18%'],[20,'20%'],[25,'25%']].map(([p,l])=>({label:l+' · $'+((base*p/100)/100).toFixed(2), cents:Math.round(base*p/100)}))
-                       : [5,10,20].map(d=>({label:'$'+d, cents:d*100}));
+  /* A percentage of what the service is worth, not of what is left to pay.
+     A member whose visit is covered still had the whole service done, and
+     18% of nothing is nothing. */
+  const base = LIST > 0 ? LIST : BAL;
+  const choices = base >= 100
+    ? [18, 20, 25].map(function (p) {
+        const c = Math.round(base * p / 100);
+        return { label: p + '% · $' + (c / 100).toFixed(2), cents: c };
+      })
+    : [5, 10, 20].map(function (d) { return { label: '$' + d, cents: d * 100 }; });
   document.getElementById('tip-choices').innerHTML = choices.map(c=>
     `<button class="big-btn gold" onclick="setTip(${c.cents})">${c.label}</button>`).join('');
   document.getElementById('tip-total').textContent = owes ? ('Balance due: $'+(BAL/100).toFixed(2)) : '';
@@ -434,9 +468,32 @@ function customTip(){
   if(cents < 0) return;
   setTip(cents);
 }
+function money(c){ return '$' + ((Number(c)||0)/100).toFixed(2); }
+
+/* The sum written out, so nobody has to take the total on trust. A bare
+   number gets queried, and queries at the till hold up the next client. */
+function renderBill(){
+  const box = document.getElementById('bal-breakdown-box');
+  if(!box) return;
+  const line = function(a, b, dim){
+    return '<div style="display:flex;justify-content:space-between;padding:0.2rem 0;'
+      + (dim ? 'color:#B6A588' : 'color:#F2ECE1') + '"><span>' + a + '</span><span>' + b + '</span></div>';
+  };
+  var html = '';
+  if(LIST) html += line(SVC || 'Service', money(LIST), true);
+  if(COVERED) html += line('Your membership covers', '\u2212 ' + money(COVERED), true);
+  if(DEPOSIT) html += line('Deposit already paid', '\u2212 ' + money(DEPOSIT), true);
+  html += '<div style="border-top:1px solid rgba(182,165,136,0.35);margin:0.45rem 0"></div>';
+  html += line('Left to pay', money(BAL));
+  if(TIP) html += line('Tip', money(TIP), true);
+  box.innerHTML = html;
+}
+
 function goToPay(){
   const total = BAL + TIP;
   if(total < 50){ show('s-review'); return; }   // nothing owed, no tip → straight to review
+  renderBill();
+  loadHandles();
   document.getElementById('bal-svc').textContent = SVC ? (SVC + (BAL>=50?' · remaining balance':' · tip')) : 'Tip';
   document.getElementById('bal-amt').textContent = '$'+(total/100).toFixed(2);
   const onfile = document.getElementById('onfile-btn');
@@ -454,6 +511,89 @@ function goToPay(){
   show('s-balance');
 }
 
+
+/* ── VENMO, CASH APP, APPLE CASH ─────────────────────────────────────────
+   These settle outside Stripe. The studio can know a client said they sent
+   it and never that it arrived, so nothing here is treated as money in —
+   it is recorded as unpaid-and-claimed, and she is told. Offering them
+   anyway matters: a client with no card on them has one of these. */
+async function loadHandles(){
+  if(HANDLES) return applyHandles();
+  try{
+    HANDLES = await (await fetch('/api/pay-handles')).json();
+  }catch(_){ HANDLES = {}; }
+  applyHandles();
+}
+
+function applyHandles(){
+  const show1 = function(id, on){ const b = document.getElementById(id); if(b) b.style.display = on ? '' : 'none'; };
+  show1('btn-venmo', !!(HANDLES && HANDLES.venmo_handle));
+  show1('btn-cashapp', !!(HANDLES && HANDLES.cashapp_tag));
+  show1('btn-applepay', !!(HANDLES && HANDLES.applepay_phone));
+}
+
+let APPMETHOD = '';
+
+function payApp(which){
+  APPMETHOD = which;
+  const total = BAL + TIP;
+  const dollars = (total/100).toFixed(2);
+  const t = document.getElementById('app-title');
+  const amt = document.getElementById('app-amt');
+  const handle = document.getElementById('app-handle');
+  const note = document.getElementById('app-note');
+  const qr = document.getElementById('app-qr');
+  document.getElementById('app-err').textContent = '';
+  qr.innerHTML = '';
+
+  let link = '', label = '', shown = '', hint = '';
+  if(which === 'venmo'){
+    const h = (HANDLES.venmo_handle||'').replace(/^@/,'');
+    label = 'Pay by Venmo';
+    shown = '@' + h;
+    link = 'https://venmo.com/' + encodeURIComponent(h) + '?txn=pay&amount=' + dollars + '&note=ZOLA';
+    hint = 'Scan with your phone camera, or search @' + h + ' in Venmo.';
+  } else if(which === 'cashapp'){
+    const h = (HANDLES.cashapp_tag||'').replace(/^\$/,'');
+    label = 'Pay by Cash App';
+    shown = '$' + h;
+    link = 'https://cash.app/$' + encodeURIComponent(h) + '/' + dollars;
+    hint = 'Scan with your phone camera, or search $' + h + ' in Cash App.';
+  } else {
+    // Apple Cash is person to person over iMessage. There is no link to
+    // scan, so the number is the whole instruction.
+    label = 'Pay by Apple Pay';
+    shown = HANDLES.applepay_phone || '';
+    link = '';
+    hint = 'Open Messages, send to this number, and tap the Apple Pay button.';
+  }
+
+  t.textContent = label;
+  amt.textContent = 'Send ' + money(total) + (TIP ? '  (includes ' + money(TIP) + ' tip)' : '');
+  handle.textContent = shown;
+  note.textContent = hint;
+
+  if(link && typeof QRCode !== 'undefined'){
+    try{ new QRCode(qr, { text: link, width: 200, height: 200, colorDark: '#0D0D0D', colorLight: '#FFFFFF' }); }
+    catch(_){ qr.innerHTML = ''; }
+  }
+  show('s-app');
+}
+
+async function appSent(){
+  const err = document.getElementById('app-err');
+  err.textContent = '';
+  try{
+    const r = await fetch('/api/kiosk?action=checkout', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'checkout', name:KNAME, q:KNAME, ref:KREF,
+                             method:APPMETHOD, tip_cents:TIP })
+    });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+    show('s-review');
+  }catch(e){ err.textContent = 'Something went wrong \u2726 please tell the desk'; }
+}
 async function payCard(){
   const err=document.getElementById('bal-err'); err.textContent='';
   try{

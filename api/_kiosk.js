@@ -333,8 +333,16 @@ module.exports = async function (req, res) {
       const { name, method: payMethod, payment_intent_id, tip_cents } = req.body || {};
       if (!name) return res.status(400).json({ error: 'Name required' });
       // Cash is the one the browser could otherwise decide the size of.
+      try { await execute('ALTER TABLE team_appointments ADD COLUMN paid_verified INTEGER DEFAULT 1'); } catch (_) {}
       const resolvedOut = await resolveVisit(req.body || {});
       let amount = resolvedOut.remainder + Math.max(0, Math.round(Number(tip_cents) || 0));
+
+      const APPS = ['venmo', 'cashapp', 'applepay'];
+      const PAY_METHOD = payMethod === 'card' ? 'card'
+        : (APPS.indexOf(String(payMethod)) >= 0 ? String(payMethod) : 'cash');
+      // Cash is counted at the desk and a card clears through Stripe. The
+      // three apps are somebody's word until she checks her phone.
+      const VERIFIED = PAY_METHOD === 'card' || PAY_METHOD === 'cash';
       const tip = Math.max(0, Math.round(Number(tip_cents) || 0));
       if (payMethod === 'card' && payment_intent_id) {
         const v = await require('./_pay').verifyPaymentIntent(payment_intent_id);
@@ -350,13 +358,18 @@ module.exports = async function (req, res) {
           checked_out_ts: Date.now(),
           paid_cents: amount,
           tip_cents: tip,
-          pay_method: payMethod === 'card' ? 'card' : 'cash',
+          /* Venmo, Cash App and Apple Cash settle outside Stripe, so all
+             the studio ever knows is that somebody said they sent it. Kept
+             under its own name and never called paid, because counting it
+             as money in is how a total stops being true. */
+          pay_method: PAY_METHOD,
+          paid_verified: VERIFIED ? 1 : 0,
           status: 'COMPLETED',
           deposit_paid: 1,
         });
       }
       await execute('INSERT INTO kiosk_log (type, name, method, amount_cents, detail, ts) VALUES (?,?,?,?,?,?)',
-        ['checkout', String(name).trim().slice(0, 80), payMethod === 'card' ? 'card' : 'cash', amount,
+        ['checkout', String(name).trim().slice(0, 80), PAY_METHOD, amount,
          tip ? ('tip $' + (tip / 100).toFixed(2)) : '', Date.now()]);
       const amt = '$' + (amount / 100).toFixed(2);
       const tipNote = tip ? (' · includes a $' + (tip / 100).toFixed(2) + ' tip 💛') : '';

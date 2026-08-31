@@ -76,6 +76,7 @@ app.all('/api/client-link',      require('./_client-link-api'));
 app.all('/api/insights',         require('./_insights'));
 app.all('/api/people',           require('./_roster-people'));
 app.all('/api/money',            require('./_money'));
+app.all('/api/pay-handles',      require('./_pay-handles'));
 
 /* Anything her rules have queued and is now due. Runs at most once a
    minute and never blocks the request it rode in on — a delayed email
