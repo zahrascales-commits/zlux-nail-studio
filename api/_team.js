@@ -60,7 +60,14 @@ module.exports = async function (req, res) {
       if (!appt) return res.status(404).json({ error: 'Thread not found' });
       await execute('INSERT INTO team_chat (appointment_id, sender, sender_name, body, ts) VALUES (?, "client", ?, ?, ?)',
         [appt.id, appt.client_name || 'Client', body, Date.now()]);
-      return res.json({ ok: true });
+
+      // And the artist hears about it without watching the portal.
+      let notified = null;
+      try {
+        notified = await require('./_chat-notify').notifyArtist(appt.id, appt.client_name || 'A client', body);
+      } catch (_) {}
+
+      return res.json({ ok: true, notified });
     }
 
     // ── AUTHENTICATED TEAM-MEMBER ENDPOINTS ──
@@ -153,7 +160,15 @@ module.exports = async function (req, res) {
       if (!owns) return res.status(403).json({ error: 'Not your appointment' });
       await execute('INSERT INTO team_chat (appointment_id, sender, sender_name, body, ts) VALUES (?, "team", ?, ?, ?)',
         [Number(appointment_id), member.name, body, Date.now()]);
-      return res.json({ ok: true });
+
+      /* Tell the client, with a link straight back into this thread. A
+         message nobody is told about is not a message. */
+      let notified = null;
+      try {
+        notified = await require('./_chat-notify').notifyClient(Number(appointment_id), member.name, body);
+      } catch (_) {}
+
+      return res.json({ ok: true, notified });
     }
 
     if (method === 'PUT' && action === 'status') {
