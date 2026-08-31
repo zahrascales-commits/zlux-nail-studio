@@ -58,8 +58,8 @@ module.exports = async function (req, res) {
       if (!body) return res.status(400).json({ error: 'Message required' });
       const appt = await queryOne('SELECT id, client_name FROM team_appointments WHERE chat_token=?', [tok]);
       if (!appt) return res.status(404).json({ error: 'Thread not found' });
-      await execute('INSERT INTO team_chat (appointment_id, sender, sender_name, body, ts) VALUES (?, "client", ?, ?, ?)',
-        [appt.id, appt.client_name || 'Client', body, Date.now()]);
+      await execute('INSERT INTO team_chat (appointment_id, sender, sender_name, body, ts) VALUES (?, ?, ?, ?, ?)',
+        [appt.id, 'client', appt.client_name || 'Client', body, Date.now()]);
 
       // And the artist hears about it without watching the portal.
       let notified = null;
@@ -158,8 +158,8 @@ module.exports = async function (req, res) {
       if (!body) return res.status(400).json({ error: 'Message required' });
       const owns = await queryOne('SELECT id FROM team_appointments WHERE id=? AND team_member_id=?', [Number(appointment_id), member.id]);
       if (!owns) return res.status(403).json({ error: 'Not your appointment' });
-      await execute('INSERT INTO team_chat (appointment_id, sender, sender_name, body, ts) VALUES (?, "team", ?, ?, ?)',
-        [Number(appointment_id), member.name, body, Date.now()]);
+      await execute('INSERT INTO team_chat (appointment_id, sender, sender_name, body, ts) VALUES (?, ?, ?, ?, ?)',
+        [Number(appointment_id), 'team', member.name, body, Date.now()]);
 
       /* Tell the client, with a link straight back into this thread. A
          message nobody is told about is not a message. */
