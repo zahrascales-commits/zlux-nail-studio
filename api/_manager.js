@@ -1394,9 +1394,34 @@ module.exports = async function (req, res) {
     }
 
     if (method === 'PUT' && action === 'update_member') {
-      const { id, name, role, color, active, phone, email, bio, title, show_on_site, photo, trainee, commission_pct } = req.body || {};
-      await execute('UPDATE team_members SET name=?, role=?, color=?, active=?, phone=?, email=?, bio=?, title=?, show_on_site=? WHERE id=?',
-        [name, role, color || '#C4A882', active ? 1 : 0, phone || '', email || '', bio || '', title || '', show_on_site ? 1 : 0, Number(id)]);
+      const { id, photo, trainee, commission_pct } = req.body || {};
+      const body = req.body || {};
+      if (!id) return res.status(400).json({ error: 'Which team member?' });
+
+      /* Only the fields actually sent. This used to write all nine columns
+         on every call, so a request carrying one of them blanked the other
+         eight — a note to fix somebody's email would have wiped her name,
+         her phone and her role, and switched her off. Same shape of bug as
+         the one that wiped an appointment. */
+      const sets = [], vals = [];
+      const take = (key, transform) => {
+        if (body[key] === undefined) return;
+        sets.push(key + '=?');
+        vals.push(transform ? transform(body[key]) : body[key]);
+      };
+      take('name');
+      take('role');
+      take('color', v => v || '#C4A882');
+      take('active', v => (v ? 1 : 0));
+      take('phone', v => v || '');
+      take('email', v => String(v || '').trim().toLowerCase());
+      take('bio', v => v || '');
+      take('title', v => v || '');
+      take('show_on_site', v => (v ? 1 : 0));
+      if (sets.length) {
+        vals.push(Number(id));
+        await execute('UPDATE team_members SET ' + sets.join(', ') + ' WHERE id=?', vals);
+      }
       // Photo is written separately so leaving it untouched in the form never
       // wipes an existing headshot.
       if (photo !== undefined) await execute('UPDATE team_members SET photo=? WHERE id=?', [photo || '', Number(id)]);
