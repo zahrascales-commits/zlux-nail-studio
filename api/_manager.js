@@ -1564,6 +1564,12 @@ module.exports = async function (req, res) {
       take('time');
       take('notes');
       take('status', v => v || 'scheduled');
+      // What was taken up front, so the till knows what is left.
+      take('deposit_cents', v => Math.max(0, Math.round(Number(v) || 0)));
+      take('deposit_paid', v => (v ? 1 : 0));
+      take('paid_cents', v => Math.max(0, Math.round(Number(v) || 0)));
+      take('tip_cents', v => Math.max(0, Math.round(Number(v) || 0)));
+      take('paid_verified', v => (v ? 1 : 0));
 
       if (!sets.length) return res.json({ ok: true, changed: 0 });
 
