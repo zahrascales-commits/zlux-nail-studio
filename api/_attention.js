@@ -8,7 +8,7 @@
 // The rule for what belongs here: it is something only she can resolve, and
 // leaving it costs her money or costs a client their appointment. Everything
 // else belongs on its own screen.
-const { query, queryOne } = require('./_team-db');
+const { query, queryOne, execute } = require('./_team-db');
 
 const CEO_PASSWORD = process.env.CEO_PASSWORD || 'ZOLA2026';
 
@@ -128,6 +128,53 @@ module.exports = async function (req, res) {
       const daysLeft = studioLast
         ? Math.round((new Date(studioLast + 'T12:00:00') - new Date(now + 'T12:00:00')) / 86400000)
         : -1;
+
+      /* ── LEFT WITHOUT PAYING ──
+         An appointment that has happened with nothing collected. The work
+         is done and the product is gone, so this is not a debt to chase
+         later — it is the first thing she should see. */
+      try {
+        try { await execute('ALTER TABLE team_appointments ADD COLUMN paid_verified INTEGER DEFAULT 1'); } catch (_) {}
+        const rows = await query(
+          `SELECT id, client_name, client_phone, service, date, time,
+                  deposit_cents, deposit_paid, paid_cents, pay_method,
+                  checked_out_ts, paid_verified, status
+             FROM team_appointments
+            WHERE date <= ? AND date >= ?`,
+          [now, new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)]);
+
+        const owing = [];
+        for (const r of rows) {
+          if (/cancel/i.test(String(r.status || ''))) continue;
+
+          const collected = (Number(r.deposit_paid) ? Number(r.deposit_cents) || 0 : 0)
+            + (Number(r.paid_cents) || 0);
+          const unverified = Number(r.paid_verified) === 0;
+
+          // Still in the chair is not the same as gone without paying.
+          const finished = Number(r.checked_out_ts) > 0 || String(r.date) < now;
+          if (!finished) continue;
+          if (collected > 0 && !unverified) continue;
+
+          owing.push({
+            id: Number(r.id),
+            name: r.client_name || 'Client',
+            phone: r.client_phone || '',
+            service: r.service || '',
+            date: r.date, time: r.time || '',
+            collected_cents: collected,
+            method: r.pay_method || '',
+            // Said to have been sent by an app, not yet confirmed by her.
+            unverified: unverified,
+          });
+        }
+        owing.sort((a, b) => String(b.date + b.time).localeCompare(String(a.date + a.time)));
+
+        out.unpaid = {
+          count: owing.length,
+          rows: owing.slice(0, 12),
+        };
+      } catch (_) { out.unpaid = { count: 0, rows: [] }; }
 
       out.calendar = {
         studio_last: studioLast,
