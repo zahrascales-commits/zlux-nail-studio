@@ -32,7 +32,19 @@
     var p = window.location.pathname.replace(/\/+$/, '');
     return p === '' ? '/' : p;
   }
-  function allowedHere() { return WELCOME_ON.indexOf(here()) >= 0; }
+  /* Anything that is not the client-facing site. The allowlist above is the
+     rule; this is the second lock. The tag went onto the Team Portal by
+     mistake once and staff got a client questionnaire in the middle of
+     their shift — a list somebody has to keep correct is not enough on its
+     own. */
+  var STAFF = /team|manager|portal|worker|admin|ceo|dashboard|checkin|kiosk|account|visit|staff/i;
+
+  function allowedHere() {
+    if (STAFF.test(here())) return false;
+    // A staff screen that is signed in says so in the page title.
+    if (/portal|manager|dashboard|admin|check-?in/i.test(document.title || '')) return false;
+    return WELCOME_ON.indexOf(here()) >= 0;
+  }
   function alreadySeen() {
     try { return sessionStorage.getItem(KEY) === '1'; } catch (_) { return false; }
   }
