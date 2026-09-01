@@ -455,6 +455,18 @@
   #panel-autoemail .ae-tag{border:1px solid #fff;padding:0.15rem 0.45rem;font-size:0.72rem;cursor:pointer;
     display:inline-block;margin:0.15rem 0.25rem 0.15rem 0;background:#000;color:#fff}
   #panel-autoemail .ae-off{opacity:0.55}
+  /* The client picker. Sits over the form rather than pushing it about,
+     because a list that moves the fields makes people lose their place. */
+  #ac-list{position:absolute;left:0;right:0;top:100%;z-index:60;max-height:264px;overflow-y:auto;
+    background:var(--card);border:1px solid var(--border);border-top:none;display:none}
+  #ac-list.on{display:block}
+  .ac-row{padding:0.6rem 0.75rem;cursor:pointer;border-bottom:1px solid var(--border)}
+  .ac-row:last-child{border-bottom:none}
+  .ac-row:hover,.ac-row.sel{background:var(--gold);color:#0D0D0D}
+  .ac-row b{display:block;font-size:0.92rem}
+  .ac-row span{display:block;font-size:0.75rem;color:var(--muted);margin-top:0.1rem}
+  .ac-row:hover span,.ac-row.sel span{color:rgba(13,13,13,0.7)}
+  .ac-new{padding:0.6rem 0.75rem;font-size:0.8rem;color:var(--muted);font-style:italic}
   .mix-bar{display:flex;height:26px;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
   .mix-bar span{display:block;height:100%;transition:width 0.9s cubic-bezier(0.2,0.8,0.2,1)}
   .mix-sig{background:#8C7A5E}.mix-lux{background:#B6A588}.mix-blk{background:#DDD0B8}
@@ -2087,7 +2099,10 @@
     <input type="hidden" id="a-id" />
     <div class="field"><label class="fld-label">Assign To</label><select id="a-member"></select></div>
     <div class="field two">
-      <div><label class="fld-label">Client Name</label><input id="a-client" placeholder="Client name" /></div>
+      <div style="position:relative"><label class="fld-label">Client Name</label>
+        <input id="a-client" placeholder="Start typing, or tap for your clients" autocomplete="off"
+          oninput="acFilter()" onfocus="acFilter()" onkeydown="acKey(event)" />
+        <div id="ac-list"></div></div>
       <div><label class="fld-label">Client Phone</label><input id="a-phone" placeholder="(555) 000-0000" /></div>
     </div>
     <div class="field"><label class="fld-label">Client Email (for instant confirmation)</label><input id="a-email" placeholder="client@email.com" /></div>
@@ -7402,6 +7417,128 @@ async function openMail(id){
   const frame = box.querySelector('iframe');
   if(frame) frame.srcdoc = e.body || '';
 }
+
+/* ── PICKING A CLIENT SHE ALREADY HAS ────────────────────────────────────
+   Sixty-three on file and the name box was blank every time, so the same
+   person got typed slightly differently on different days and became two
+   clients — and the till could not find either by phone, because the
+   number went in once and not the second time. */
+let AC = { list: [], shown: [], sel: -1, loaded: false };
+
+async function acLoad(){
+  if(AC.loaded) return;
+  AC.loaded = true;
+  try{
+    const d = await (await api('/api/clients')).json();
+    AC.list = (d.clients || []).filter(function(c){ return String(c.name || '').trim(); });
+  }catch(_){ AC.list = []; }
+}
+
+function acFilter(){
+  acLoad().then(function(){
+    const box = document.getElementById('a-client');
+    const out = document.getElementById('ac-list');
+    if(!box || !out) return;
+
+    const q = String(box.value || '').trim().toLowerCase();
+
+    /* Every letter narrows it. Matching anywhere in the name, not just the
+       start, because she thinks of people by whichever part she remembers
+       — and by phone too, since that is often what she has in front of
+       her. */
+    let rows = AC.list;
+    if(q){
+      rows = AC.list.filter(function(c){
+        return String(c.name || '').toLowerCase().includes(q)
+          || String(c.phone || '').replace(/[^0-9]/g, '').includes(q.replace(/[^0-9]/g, ''))
+          || String(c.email || '').toLowerCase().includes(q);
+      });
+      // Somebody whose name starts with what she typed is the likelier one.
+      rows = rows.slice().sort(function(a, b){
+        const A = String(a.name || '').toLowerCase().startsWith(q) ? 0 : 1;
+        const B = String(b.name || '').toLowerCase().startsWith(q) ? 0 : 1;
+        return A - B;
+      });
+    }
+
+    AC.shown = rows.slice(0, 40);
+    AC.sel = -1;
+
+    if(!AC.shown.length){
+      out.innerHTML = q
+        ? '<div class="ac-new">Nobody by that name — carry on typing and they will be added as a new client.</div>'
+        : '';
+      out.className = q ? 'on' : '';
+      return;
+    }
+
+    out.innerHTML = AC.shown.map(function(c, i){
+      const bits = [];
+      if(c.phone) bits.push(esc(c.phone));
+      if(c.visits) bits.push(c.visits + (c.visits === 1 ? ' visit' : ' visits'));
+      if(c.last_service) bits.push(esc(c.last_service));
+      return '<div class="ac-row" data-i="' + i + '" onmousedown="acPick(' + i + ')">'
+        + '<b>' + esc(c.name) + '</b>'
+        + (bits.length ? '<span>' + bits.join(' · ') + '</span>' : '')
+        + '</div>';
+    }).join('');
+    out.className = 'on';
+  });
+}
+
+/* onmousedown rather than onclick: the box loses focus first on a click,
+   and the list would be gone before the click landed. */
+function acPick(i){
+  const c = AC.shown[i];
+  if(!c) return;
+  const set = function(id, v){ const el = document.getElementById(id); if(el && v) el.value = v; };
+  set('a-client', c.name);
+  set('a-phone', c.phone);
+  set('a-email', c.email);
+
+  /* What they usually have, pre-picked — she can change it, and it saves
+     the most common bit of typing. */
+  const svc = document.getElementById('a-service');
+  const usual = c.last_service || c.most_common_service;
+  if(svc && usual){
+    const hit = [...svc.options].find(function(o){ return o.value === usual; });
+    if(hit) svc.value = usual;
+  }
+
+  acClose();
+}
+
+function acClose(){
+  const out = document.getElementById('ac-list');
+  if(out){ out.className = ''; out.innerHTML = ''; }
+  AC.sel = -1;
+}
+
+// Arrow keys and enter, so it can be driven without leaving the keyboard.
+function acKey(e){
+  const out = document.getElementById('ac-list');
+  if(!out || out.className !== 'on' || !AC.shown.length) return;
+
+  if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+    e.preventDefault();
+    AC.sel += (e.key === 'ArrowDown' ? 1 : -1);
+    if(AC.sel < 0) AC.sel = AC.shown.length - 1;
+    if(AC.sel >= AC.shown.length) AC.sel = 0;
+    [...out.querySelectorAll('.ac-row')].forEach(function(r, i){
+      r.className = 'ac-row' + (i === AC.sel ? ' sel' : '');
+      if(i === AC.sel) r.scrollIntoView({ block: 'nearest' });
+    });
+    return;
+  }
+  if(e.key === 'Enter' && AC.sel >= 0){ e.preventDefault(); acPick(AC.sel); return; }
+  if(e.key === 'Escape'){ acClose(); }
+}
+
+// Clicking anywhere else puts it away.
+document.addEventListener('click', function(e){
+  if(e.target && e.target.id === 'a-client') return;
+  acClose();
+});
 async function loadClients(){
   const el=document.getElementById('clients-list');
   el.innerHTML='<div class="empty">Loading clients…</div>';
