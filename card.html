@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Save your card — ZOLA Nail Studio</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" href="/img/zola-icon.png" />
+<link rel="apple-touch-icon" href="/img/zola-icon.png" />
+<meta name="theme-color" content="#140d07" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Josefin+Sans:wght@300;400;600&display=swap" rel="stylesheet" />
+<script src="https://js.stripe.com/v3/"></script>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Josefin Sans',sans-serif;background:#140d07;color:#F2ECE1;
+    min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:1.2rem}
+  .card{width:min(460px,100%);background:rgba(245,238,232,0.04);
+    border:1px solid rgba(182,165,136,0.35);padding:2rem 1.6rem}
+  .brand{text-align:center;margin-bottom:1.6rem}
+  .brand b{font-family:'Cinzel',serif;font-size:1.5rem;letter-spacing:0.24em;color:#F2ECE1;font-weight:400}
+  .brand span{display:block;font-size:0.6rem;letter-spacing:0.24em;text-transform:uppercase;
+    color:#B6A588;margin-top:0.4rem}
+  h1{font-family:'Cinzel',serif;font-size:1.3rem;font-weight:400;color:#F2ECE1;margin-bottom:0.5rem}
+  p{font-size:0.92rem;line-height:1.7;color:#B6A588;margin-bottom:0.8rem}
+  .note{font-size:0.82rem;line-height:1.65;color:#8C7A5E;margin-top:1rem}
+  #pay-el{margin:1.3rem 0 0.6rem}
+  button{width:100%;padding:1.05rem;border:none;background:#B6A588;color:#140d07;
+    font-family:'Josefin Sans',sans-serif;font-size:0.82rem;font-weight:700;letter-spacing:0.16em;
+    text-transform:uppercase;cursor:pointer;margin-top:0.9rem}
+  button:disabled{opacity:0.55;cursor:default}
+  .err{color:#e08a8a;font-size:0.86rem;margin-top:0.7rem;min-height:1.2em}
+  .ok{text-align:center}
+  .ok .tick{font-size:2.6rem;color:#7ec98f}
+  .have{background:rgba(126,201,143,0.1);border:1px solid rgba(126,201,143,0.35);
+    padding:0.9rem 1rem;margin-bottom:1rem;font-size:0.88rem;color:#F2ECE1}
+</style>
+</head>
+<body>
+<div class="card" id="root">
+  <div class="brand"><b>ZOLA</b><span>Nail Studio · Porterville</span></div>
+  <p>Loading…</p>
+</div>
+
+<script>
+/* Putting a card on file without charging anything.
+   Stripe calls this a SetupIntent — the card is authorised for later rather
+   than billed now, which is what makes the charge at the desk legitimate
+   instead of a surprise. */
+const TOKEN = new URLSearchParams(location.search).get('t') || '';
+const $ = s => document.querySelector(s);
+let stripe, elements;
+
+function esc(v){
+  return String(v == null ? '' : v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function load(){
+  if(!TOKEN){
+    $('#root').innerHTML = '<h1>Link incomplete</h1><p>That link is missing its code. '
+      + 'Check the message it came in, or reply to us.</p>';
+    return;
+  }
+
+  let info;
+  try{
+    const r = await fetch('/api/save-card?t=' + encodeURIComponent(TOKEN));
+    info = await r.json();
+    if(info.error) throw new Error(info.error);
+  }catch(err){
+    $('#root').innerHTML = '<h1>We could not open that</h1><p>' + esc(err.message) + '</p>';
+    return;
+  }
+
+  // Somebody who has already done this should be told, not asked twice.
+  const already = info.existing
+    ? '<div class="have">You already have a ' + esc(info.existing.brand)
+      + ' ending ' + esc(info.existing.last4) + ' saved. Adding another will replace it.</div>'
+    : '';
+
+  $('#root').innerHTML =
+    '<div class="brand"><b>ZOLA</b><span>Nail Studio · Porterville</span></div>'
+    + '<h1>' + (info.first ? 'Hi ' + esc(info.first) + ' ✦' : 'Save your card ✦') + '</h1>'
+    + already
+    + '<p>Add your card once and checking out takes a single tap — no card to '
+    + 'dig out while you are drying.</p>'
+    + '<p><strong style="color:#F2ECE1">Nothing is charged now.</strong> And nothing is ever '
+    + 'charged to it without your signature at the desk.</p>'
+    + '<div id="pay-el"></div>'
+    + '<div class="err" id="err"></div>'
+    + '<button id="go" onclick="save()">Save my card</button>';
+
+  try{
+    const r = await fetch('/api/save-card?t=' + encodeURIComponent(TOKEN), { method: 'POST' });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+    stripe = Stripe(d.publishable_key);
+    elements = stripe.elements({
+      clientSecret: d.client_secret,
+      appearance: { theme: 'night', variables: { colorPrimary: '#B6A588', colorBackground: '#1c130c' } },
+    });
+    elements.create('payment', { layout: 'tabs' }).mount('#pay-el');
+  }catch(err){
+    $('#err').textContent = err.message || 'Could not start that.';
+    $('#go').disabled = true;
+  }
+}
+
+async function save(){
+  const btn = $('#go'), err = $('#err');
+  err.textContent = '';
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  const { error } = await stripe.confirmSetup({ elements, redirect: 'if_required' });
+
+  if(error){
+    err.textContent = error.message || 'That card was not accepted.';
+    btn.disabled = false; btn.textContent = 'Save my card';
+    return;
+  }
+
+  $('#root').innerHTML =
+    '<div class="brand"><b>ZOLA</b><span>Nail Studio · Porterville</span></div>'
+    + '<div class="ok"><div class="tick">✓</div>'
+    + '<h1 style="margin-top:0.6rem">You are all set</h1>'
+    + '<p>Your card is on file. Next time, checking out is one tap.</p>'
+    + '<p class="note">Nothing has been charged. Nothing will be, without your '
+    + 'signature at the desk.</p></div>';
+}
+
+load();
+</script>
+</body>
+</html>

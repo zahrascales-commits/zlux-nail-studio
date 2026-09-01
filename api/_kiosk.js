@@ -433,6 +433,33 @@ module.exports = async function (req, res) {
       if (!sk) return res.status(400).json({ error: 'Card payments not configured' });
       const who = appt ? appt.name : (body.name || 'Guest');
       const what = balance > 0 ? ('balance' + (tip ? ' + tip' : '')) : 'tip';
+
+      /* Keep this card too. Somebody who paid their deposit in cash and the
+         rest by card was still ending up with nothing on file, and handing
+         it over again every visit. */
+      let payCustomer = '';
+      try {
+        const bill = require('./_kiosk-bill');
+        const b2 = appt ? await bill.billFor(appt) : null;
+        payCustomer = await bill.customerIdFor(
+          sk, b2 && b2.stripe_customer_id, (appt && appt.email) || '') || '';
+
+        // No customer yet and an address to make one with.
+        if (!payCustomer && appt && appt.email && /@/.test(appt.email)) {
+          const made = await fetch('https://api.stripe.com/v1/customers', {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + sk, 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              email: String(appt.email).toLowerCase(),
+              name: appt.name || '',
+              ...(appt.phone ? { phone: String(appt.phone) } : {}),
+            }).toString(),
+          });
+          const cust = await made.json();
+          if (cust && cust.id) payCustomer = cust.id;
+        }
+      } catch (_) { /* a payment must not fail because the card could not be kept */ }
+
       const resp = await fetch('https://api.stripe.com/v1/payment_intents', {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + sk, 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -440,6 +467,10 @@ module.exports = async function (req, res) {
           amount: String(amount), currency: 'usd', 'automatic_payment_methods[enabled]': 'true',
           description: ('ZOLA checkout ' + what + ' — ' + who + (appt ? ' (' + appt.service + ')' : '')).slice(0, 300),
           'metadata[tip_cents]': String(tip),
+          ...(payCustomer ? {
+            customer: payCustomer,
+            setup_future_usage: 'off_session',
+          } : {}),
         }).toString(),
       });
       const pi = await resp.json();
