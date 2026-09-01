@@ -82,10 +82,10 @@
 
   <!-- NAME (shared) -->
   <div class="screen" id="s-name">
-    <h2 id="name-title">Email or phone number</h2>
-    <p class="sub" style="margin-top:0.5rem;">Either one finds you straight away. Your name works too.</p>
-    <input class="name-input" id="kname" placeholder="you@email.com  ·  or  ·  559 000 0000" autocomplete="off"
-      autocapitalize="none" spellcheck="false"
+    <h2 id="name-title">What's your phone number?</h2>
+    <p class="sub" style="margin-top:0.5rem;">The number your appointment is under. Email works too.</p>
+    <input class="name-input" id="kname" placeholder="559 000 0000" autocomplete="off"
+      inputmode="tel" autocapitalize="none" spellcheck="false"
       onkeydown="if(event.key==='Enter')nameNext()" />
     <div class="err" id="name-err"></div>
     <div class="row">
@@ -138,6 +138,18 @@
   </div>
 
   <!-- CHECKOUT: BALANCE / PAY METHOD -->
+  <!-- CHECKOUT: NOT FOUND -->
+  <div class="screen" id="s-nomatch">
+    <h2>We could not find that</h2>
+    <p class="sub" id="nm-what"></p>
+    <p class="sub" style="margin-top:0.9rem;font-size:0.9rem">
+      Try the phone number on your booking, or ask at the desk — we will find you.</p>
+    <div class="row">
+      <button class="big-btn gold" onclick="show('s-name')">Try again</button>
+      <button class="big-btn ghost" onclick="reset()">Back to start</button>
+    </div>
+  </div>
+
   <!-- CHECKOUT: WHICH OF THEM IS IT -->
   <div class="screen" id="s-pick">
     <h2>Which one is you?</h2>
@@ -328,7 +340,7 @@ function go(mode){ MODE=mode;
 async function nameNext(){
   const name=document.getElementById('kname').value.trim();
   const err=document.getElementById('name-err'); err.textContent='';
-  if(!name){ err.textContent='Please type your email or name ✦'; return; }
+  if(!name){ err.textContent='Please type your phone number ✦'; return; }
   KNAME=name;
   if(MODE==='in'){
     try{
@@ -383,7 +395,15 @@ function pickOne(i){ takeBill((window._picks || [])[i] || null); }
 
 function takeBill(x){
   TIP = 0;
-  if(!x){ BAL = 0; SVC = ''; KREF = ''; KCARD = null; KMEMBER = false; showTipScreen(); return; }
+  /* Not finding somebody is not the same as them owing nothing. Sending
+     an unmatched client to the tip screen shows them a $0 bill and asks
+     for a gratuity on a service they have not paid for. */
+  if(!x){
+    const el = document.getElementById('nm-what');
+    if(el) el.textContent = KNAME ? ('Nothing today under \u201c' + escK(KNAME) + '\u201d.') : '';
+    show('s-nomatch');
+    return;
+  }
   BAL = Number(x.remainder_cents) || 0;
   SVC = x.service || '';
   KREF = x.ref || '';

@@ -108,11 +108,33 @@ async function todaysAppointments(day) {
 
 /* Who this is. Returns either one appointment, or the shortlist to choose
    from — never a guess. */
+function shiftDay(dateStr, days) {
+  const d = new Date(dateStr + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 async function findFor(qRaw, day) {
   const q = String(qRaw || '').trim();
   if (!q) return { matches: [], how: 'nothing typed' };
 
-  const all = await todaysAppointments(day);
+  /* Today, and a day either side. A date boundary is not a real edge for a
+     studio — a late finish, an early arrival, a checkout after midnight —
+     and being unfindable at the till is how somebody walks out unpaid.
+     Today is listed first so it wins when the same person appears twice. */
+  const centre = day || studioDay();
+  const days = [centre, shiftDay(centre, 1), shiftDay(centre, -1)];
+
+  const all = [];
+  const seenRow = new Set();
+  for (const d of days) {
+    for (const row of await todaysAppointments(d)) {
+      const id = row.src + row.id;
+      if (seenRow.has(id)) continue;
+      seenRow.add(id);
+      all.push(row);
+    }
+  }
 
   if (looksEmail(q)) {
     const hit = all.filter(a => a.email && a.email === lower(q));
