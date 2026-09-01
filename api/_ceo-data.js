@@ -140,20 +140,41 @@ module.exports = async (req, res) => {
         }
       }
 
-      /* The studio's book is written second, so its row is the one with the
-         deposit and the artist on it. Where both exist, keep that one. */
-      const seen = new Set();
+      /* Matched on the first name with the date and time. The whole name
+         does not work — the studio book says "Alia" where her membership
+         says "Alia Chavez" — and nobody has two appointments in the same
+         minute, so this is enough to be the same visit. */
+      const keyOf = b => {
+        const first = String(b.guest_name || '').trim().toLowerCase().split(/\s+/)[0] || '';
+        return first + '|' + String(b.appointment_date || '')
+          + '|' + String(b.appointment_time || '').slice(0, 5);
+      };
+
+      /* Merged, not chosen between. Each side knows something the other does
+         not: the website holds the deposit that was taken online, the studio
+         book holds the artist and the corrected name. Picking a winner threw
+         away a real $45 deposit. */
+      const byKey = new Map();
       const out = [];
       for (const b of studio.concat(online)) {
-        const key = String(b.guest_name || '').trim().toLowerCase()
-          + '|' + String(b.appointment_date || '')
-          + '|' + String(b.appointment_time || '').slice(0, 5);
-        // A row with no name at all cannot be matched to anything; keep it
-        // rather than silently dropping a real booking.
-        if (key.startsWith('|')) { out.push(b); continue; }
-        if (seen.has(key)) continue;
-        seen.add(key);
-        out.push(b);
+        const key = keyOf(b);
+        if (key.startsWith('|')) { out.push(b); continue; }   // nameless, cannot match
+
+        const had = byKey.get(key);
+        if (!had) { byKey.set(key, b); out.push(b); continue; }
+
+        // Keep whichever value is actually filled in, from either row.
+        if (!Number(had.total_cents) && Number(b.total_cents)) had.total_cents = b.total_cents;
+        if (!Number(had.deposit_cents) && Number(b.deposit_cents)) had.deposit_cents = b.deposit_cents;
+        if (!Number(had.deposit_paid) && Number(b.deposit_paid)) had.deposit_paid = b.deposit_paid;
+        if (!Number(had.paid_cents) && Number(b.paid_cents)) had.paid_cents = b.paid_cents;
+        if (!had.service && b.service) { had.service = b.service; had.service_name = b.service; }
+        if (!had.staff_id && b.staff_id) had.staff_id = b.staff_id;
+        if (!had.guest_email && b.guest_email) had.guest_email = b.guest_email;
+        // The longer name is the fuller one.
+        if (String(b.guest_name || '').length > String(had.guest_name || '').length) {
+          had.guest_name = b.guest_name;
+        }
       }
       return out.sort((a, b) =>
         String(b.appointment_date + b.appointment_time).localeCompare(
