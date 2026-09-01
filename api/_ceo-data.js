@@ -60,8 +60,84 @@ module.exports = async (req, res) => {
           staff_id: r.staff_id,
           member_id: r.member_id,
           created_at: r.created_at,
+          source: 'online',
         }));
       } catch (_) { return []; }
+    }
+
+    /* The ones she writes in herself. They live in a different table with
+       different column names, which is the only reason they were ever
+       treated differently — a client booked at the desk is not a lesser
+       booking than one made on the website. */
+    async function studioBookings() {
+      try {
+        const rows = await query(
+          `SELECT id, client_name, client_email, service, date, time, status,
+                  deposit_cents, deposit_paid, paid_cents, tip_cents, team_member_id, created_at
+             FROM team_appointments ORDER BY date DESC, time DESC`);
+        return rows.map(r => {
+          const deposit = Number(r.deposit_cents) || 0;
+          const paid = Number(r.paid_cents) || 0;
+          /* No price is stored against a booking made by hand, so the menu
+             is what it is worth. Without this every one of them counted as
+             nothing and the takings read low. */
+          let total = 0;
+          try {
+            const { services } = require('./_store');
+            const norm = s => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
+            const want = norm(r.service);
+            const hit = services.find(s => norm(s.name) === want)
+              || services.find(s => want && (want.includes(norm(s.name)) || norm(s.name).includes(want)));
+            if (hit) total = Number(hit.price_cents) || 0;
+          } catch (_) {}
+          if (!total) total = deposit ? deposit * 2 : 0;
+
+          return {
+            id: 't' + r.id,
+            guest_name: r.client_name,
+            guest_email: r.client_email,
+            service_name: r.service,
+            service: r.service,
+            addons: '',
+            date: r.date,
+            appointment_date: r.date,
+            time_slot: r.time,
+            appointment_time: r.time,
+            // The two tables spell this differently; the dashboard only
+            // knows the shouted version.
+            status: String(r.status || 'scheduled').toUpperCase(),
+            total_cents: total,
+            deposit_cents: deposit,
+            deposit_paid: Number(r.deposit_paid) || 0,
+            paid_cents: paid,
+            tip_cents: Number(r.tip_cents) || 0,
+            staff_id: r.team_member_id,
+            member_id: null,
+            created_at: r.created_at,
+            source: 'studio',
+          };
+        });
+      } catch (_) { return []; }
+    }
+
+    /* Both books, as one. An online booking is mirrored into the studio's
+       own, so the same visit can appear in each — counted twice it would
+       double the day's takings. */
+    async function everyBooking() {
+      const [online, studio] = await Promise.all([allBookings(), studioBookings()]);
+      const seen = new Set();
+      const out = [];
+      for (const b of online.concat(studio)) {
+        const key = String(b.guest_name || '').trim().toLowerCase()
+          + '|' + String(b.appointment_date || '')
+          + '|' + String(b.appointment_time || '').slice(0, 5);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(b);
+      }
+      return out.sort((a, b) =>
+        String(b.appointment_date + b.appointment_time).localeCompare(
+          String(a.appointment_date + a.appointment_time)));
     }
     // Cancelled bookings still belong in the history, but never in revenue.
     /* ── WHAT COUNTS AS MONEY ────────────────────────────────────────
@@ -173,7 +249,7 @@ module.exports = async (req, res) => {
       const byTier = { SIGNATURE: 0, LUXE: 0, BLACK_CARD: 0 };
       members.forEach(mm => { if (byTier[mm.tier] !== undefined) byTier[mm.tier]++; });
 
-      const all = await allBookings();
+      const all = await everyBooking();
       const todayList = all.filter(b => b.date === TODAY);
       const upcoming = all.filter(isUpcoming)
         .sort((a, b) => String(a.date).localeCompare(String(b.date))
@@ -211,7 +287,7 @@ module.exports = async (req, res) => {
     }
 
     if (section === 'bookings') {
-      const all = await allBookings();
+      const all = await everyBooking();
       const dateFilter = req.query.date;
       return res.json({ bookings: dateFilter ? all.filter(b => b.date === dateFilter) : all });
     }
@@ -220,7 +296,7 @@ module.exports = async (req, res) => {
        Every number carries the bookings behind it, so any figure on the
        screen can be opened and checked rather than trusted.            */
     if (section === 'reports') {
-      const all = await allBookings();
+      const all = await everyBooking();
       const earned = all.filter(isEarned);
       const week = between(earned, daysAgo(7), TODAY);
       const month = between(earned, daysAgo(30), TODAY);
@@ -262,7 +338,7 @@ module.exports = async (req, res) => {
        actual people behind it. A figure nobody can open is a figure
        nobody can check.                                                */
     if (section === 'records') {
-      const all = await allBookings();
+      const all = await everyBooking();
       const earned = all.filter(isEarned);
 
       let members = [];

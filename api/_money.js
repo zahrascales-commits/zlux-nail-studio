@@ -124,6 +124,26 @@ async function outstanding() {
       if (left > 0) { owed += left; n++; }
     }
   } catch (_) {}
+
+  /* The ones she books herself. They were missing entirely, so anything
+     written in at the desk looked fully paid whatever was outstanding. */
+  try {
+    const rows = await query(
+      'SELECT service, deposit_cents, deposit_paid, paid_cents, status FROM team_appointments WHERE date >= ?',
+      [ds]);
+    const { services } = require('./_store');
+    const norm = x => String(x || '').toLowerCase().replace(/[^a-z]/g, '');
+    for (const r of rows) {
+      if (/cancel/i.test(String(r.status || ''))) continue;
+      const want = norm(r.service);
+      const hit = services.find(s => norm(s.name) === want)
+        || services.find(s => want && (want.includes(norm(s.name)) || norm(s.name).includes(want)));
+      const total = hit ? money(hit.price_cents) : 0;
+      const taken = (Number(r.deposit_paid) ? money(r.deposit_cents) : 0) + money(r.paid_cents);
+      const left = Math.max(0, total - taken);
+      if (left > 0) { owed += left; n++; }
+    }
+  } catch (_) {}
   return { cents: owed, appointments: n };
 }
 

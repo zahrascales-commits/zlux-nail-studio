@@ -35,7 +35,13 @@ module.exports = async (req, res) => {
     const waitlistCountRow   = await queryOne('SELECT COUNT(*) as n FROM waitlist WHERE invited=0', []);
 
     const thisMonth = new Date().toISOString().slice(0, 7);
+    /* Both books. Counting only the website ones made a month she booked
+       mostly by hand read as a quiet month. */
     const apptThisMonthRow  = await queryOne(`SELECT COUNT(*) as n FROM appointments WHERE appointment_date LIKE ? AND status != 'CANCELLED'`, [thisMonth + '%']);
+    const studioThisMonthRow = await queryOne(
+      `SELECT COUNT(*) as n FROM team_appointments WHERE date LIKE ?
+         AND LOWER(COALESCE(status,'')) NOT LIKE '%cancel%'`,
+      [thisMonth + '%']).catch(() => ({ n: 0 }));
     const noShowsMonthRow   = await queryOne('SELECT COUNT(*) as n FROM no_shows WHERE date LIKE ?', [thisMonth + '%']);
 
     const recentMembers = await query('SELECT member_id, full_name, tier, created_at FROM members ORDER BY created_at DESC LIMIT 10', []);
@@ -46,7 +52,11 @@ module.exports = async (req, res) => {
       d.setDate(d.getDate() + i);
       const ds = d.toISOString().slice(0, 10);
       const row = await queryOne(`SELECT COUNT(*) as n FROM appointments WHERE appointment_date = ? AND status = 'SCHEDULED'`, [ds]);
-      upcoming.push({ date: ds, count: row ? row.n : 0 });
+      const srow = await queryOne(
+        `SELECT COUNT(*) as n FROM team_appointments WHERE date = ?
+           AND LOWER(COALESCE(status,'')) NOT LIKE '%cancel%'`,
+        [ds]).catch(() => ({ n: 0 }));
+      upcoming.push({ date: ds, count: (Number(row&&row.n)||0) + (Number(srow&&srow.n)||0) });
     }
 
     const failedLoginsRow    = await queryOne(`SELECT COUNT(*) as n FROM security_log WHERE event LIKE 'FAILED%' AND created_at > datetime('now', '-1 day')`, []);
@@ -59,7 +69,7 @@ module.exports = async (req, res) => {
       tierMap,
       flaggedMembers:     flaggedMembersRow.n,
       waitlistCount:      waitlistCountRow.n,
-      apptThisMonth:      apptThisMonthRow.n,
+      apptThisMonth:      (Number(apptThisMonthRow.n)||0) + (Number((studioThisMonthRow||{}).n)||0),
       noShowsThisMonth:   noShowsMonthRow.n,
       recentMembers,
       upcoming,
