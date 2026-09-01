@@ -125,12 +125,32 @@ module.exports = async (req, res) => {
        double the day's takings. */
     async function everyBooking() {
       const [online, studio] = await Promise.all([allBookings(), studioBookings()]);
+
+      /* A member's booking carries their id, not their name — the name is on
+         their membership. Without filling it in, the same visit looks like
+         two different people and gets counted twice. */
+      const nameFor = {};
+      try {
+        const rows = await query('SELECT member_id, full_name FROM members');
+        for (const r of rows) nameFor[r.member_id] = r.full_name;
+      } catch (_) {}
+      for (const b of online) {
+        if (!b.guest_name && b.member_id && nameFor[b.member_id]) {
+          b.guest_name = nameFor[b.member_id];
+        }
+      }
+
+      /* The studio's book is written second, so its row is the one with the
+         deposit and the artist on it. Where both exist, keep that one. */
       const seen = new Set();
       const out = [];
-      for (const b of online.concat(studio)) {
+      for (const b of studio.concat(online)) {
         const key = String(b.guest_name || '').trim().toLowerCase()
           + '|' + String(b.appointment_date || '')
           + '|' + String(b.appointment_time || '').slice(0, 5);
+        // A row with no name at all cannot be matched to anything; keep it
+        // rather than silently dropping a real booking.
+        if (key.startsWith('|')) { out.push(b); continue; }
         if (seen.has(key)) continue;
         seen.add(key);
         out.push(b);
