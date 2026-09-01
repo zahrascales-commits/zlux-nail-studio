@@ -46,7 +46,14 @@ async function suggestFor(appt) {
   // reported a moment ago.
   const stillOwed = Math.max(0, Number(freeLeft) || 0);
 
-  if (tier && stillOwed > 0) {
+  /* Only a membership that includes more than one service has a second
+     visit to fit into the cycle. Essential and Elite include one, so having
+     one left is simply the normal state until they use it — not a reason to
+     come back early. */
+  let includes = 0;
+  try { includes = require('./_perks').includedCount(tier) || 0; } catch (_) {}
+
+  if (tier && includes > 1 && stillOwed > 0) {
     /* A second service they have already paid for and have not used. It
        expires with the cycle, so the soonest sensible date wins — two weeks
        is enough for a set to grow out and still inside the cycle. */
@@ -98,6 +105,14 @@ async function chargeStateFor(memberId, dateStr) {
     if (!m || !m.next_billing_at) return { relevant: false };
 
     const due = String(m.next_billing_at).slice(0, 10);
+
+    /* A billing date in the past means the stored value is stale, not that
+       a payment is overdue — the subscription has rolled since and nobody
+       updated this column. Saying nothing beats telling a paying member
+       their membership is unpaid. */
+    const todayStr = ymd(studioToday());
+    if (due < todayStr) return { relevant: false, stale: true };
+
     // The visit falls on or after their next payment, so that payment has to
     // land first. Until it does the appointment is booked but not yet paid
     // for.
