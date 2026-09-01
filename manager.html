@@ -7448,9 +7448,14 @@ function acFilter(){
        her. */
     let rows = AC.list;
     if(q){
+      /* The digits she typed, if any. Comparing against an empty string
+         matched every client on the phone rule — every string contains the
+         empty string — so typing a name narrowed nothing at all. */
+      const qDigits = q.replace(/[^0-9]/g, '');
       rows = AC.list.filter(function(c){
         return String(c.name || '').toLowerCase().includes(q)
-          || String(c.phone || '').replace(/[^0-9]/g, '').includes(q.replace(/[^0-9]/g, ''))
+          || (qDigits.length >= 3
+              && String(c.phone || '').replace(/[^0-9]/g, '').includes(qDigits))
           || String(c.email || '').toLowerCase().includes(q);
       });
       // Somebody whose name starts with what she typed is the likelier one.
