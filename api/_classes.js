@@ -95,6 +95,13 @@ module.exports = async function (req, res) {
         'metadata[class_name]': cls.name,
       };
       if (buyer_email && /@/.test(buyer_email)) params.receipt_email = buyer_email;
+
+      /* Keep the card. Somebody who paid for a class by card should not be
+         asked for it again when they book a set. */
+      try {
+        const keepOn = await require('./_pay').keepCardFor(buyer_email, buyer_name, null);
+        if (keepOn) { params.customer = keepOn; params.setup_future_usage = 'off_session'; }
+      } catch (_) {}
       const r = await fetch('https://api.stripe.com/v1/payment_intents', {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + stripeKey, 'Content-Type': 'application/x-www-form-urlencoded' },

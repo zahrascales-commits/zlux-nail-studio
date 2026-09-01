@@ -100,6 +100,15 @@ module.exports = async function (req, res) {
         body: new URLSearchParams({
           amount: String(charge), currency: 'usd', 'automatic_payment_methods[enabled]': 'true',
           description: ('ZOLA Press-Ons — ' + p.name + (ebOff ? ' (early bird)' : '')).slice(0, 300),
+          /* Keep the card. Read straight off the request: the buyer fields
+             are destructured in a different action, not this one. */
+          ...(await (async () => {
+            try {
+              const b = req.body || {};
+              const k = await require('./_pay').keepCardFor(b.buyer_email, b.buyer_name, b.buyer_phone);
+              return k ? { customer: k, setup_future_usage: 'off_session' } : {};
+            } catch (_) { return {}; }
+          })()),
           'metadata[product_id]': String(p.id),
           'metadata[early_bird_cents]': String(ebOff),
         }).toString(),

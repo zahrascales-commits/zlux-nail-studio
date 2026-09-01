@@ -65,6 +65,35 @@ function includesCategory(tier, category) {
   return perks.some(p => !p.of || p.of === 'any' || p.of === category);
 }
 
+/* The customer this card should be kept on, made if they do not have one.
+   One per email — a customer per payment puts the card on a record nobody
+   ever looks at, which is the same as not saving it. */
+async function keepCardFor(email, name, phone) {
+  const addr = String(email || '').trim().toLowerCase();
+  if (!addr || !/@/.test(addr)) return null;
+  const sk = stripeKey();
+  if (!sk) return null;
+  try {
+    const found = await fetch(
+      'https://api.stripe.com/v1/customers?limit=1&email=' + encodeURIComponent(addr),
+      { headers: { Authorization: 'Bearer ' + sk } });
+    const list = await found.json();
+    if (list && list.data && list.data[0]) return list.data[0].id;
+
+    const made = await fetch('https://api.stripe.com/v1/customers', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + sk, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        email: addr,
+        ...(name ? { name: String(name) } : {}),
+        ...(phone ? { phone: String(phone) } : {}),
+      }).toString(),
+    });
+    const cust = await made.json();
+    return (cust && cust.id) ? cust.id : null;
+  } catch (_) { return null; }
+}
+
 function perksFor(tier) {
   try { return require('./_perks').tierPerks(tier) || []; } catch (_) { return []; }
 }
@@ -291,6 +320,15 @@ module.exports = async function (req, res) {
         'metadata[early_bird_cents]': String(ebOff),
       };
       if (customer_email && /@/.test(customer_email)) params.receipt_email = customer_email;
+
+      /* Keep the card, so the rest of this visit — and the next one — can be
+         settled at the desk without them getting it out again. */
+      const keepOn = await keepCardFor(customer_email, customer_name, req.body && req.body.customer_phone);
+      if (keepOn) {
+        params.customer = keepOn;
+        params.setup_future_usage = 'off_session';
+      }
+
       const pi = await stripeApi('payment_intents', params);
       return res.json({
         client_secret: pi.client_secret, payment_intent_id: pi.id,
@@ -315,6 +353,13 @@ module.exports = async function (req, res) {
         'metadata[client]': customer_name || '',
       };
       if (customer_email && /@/.test(customer_email)) params.receipt_email = customer_email;
+
+      const keepOn2 = await keepCardFor(customer_email, customer_name, req.body && req.body.customer_phone);
+      if (keepOn2) {
+        params.customer = keepOn2;
+        params.setup_future_usage = 'off_session';
+      }
+
       const pi = await stripeApi('payment_intents', params);
       return res.json({ client_secret: pi.client_secret, payment_intent_id: pi.id, deposit_cents: calc.deposit_cents, total_cents: calc.total_cents });
     }
@@ -356,3 +401,7 @@ module.exports.serviceCategory = serviceCategory;
 // The till has to reach the same answer as the booking page about how much
 // of a membership is still unspent.
 module.exports.freeServicesLeft = freeServicesLeft;
+
+// Used by every other file that takes a card, so a payment path added
+// later cannot quietly forget to keep it.
+module.exports.keepCardFor = keepCardFor;
