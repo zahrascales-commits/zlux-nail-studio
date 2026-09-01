@@ -257,8 +257,8 @@ module.exports = async function (req, res) {
       const time = String(body.time || '').slice(0, 5);
       const service = String(body.service || appt.service || '').slice(0, 120);
       const artistId = Number(body.artist_id) || null;
-      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) return res.status(400).json({ error: 'Pick a date.' });
-      if (!/^\\d{2}:\\d{2}$/.test(time)) return res.status(400).json({ error: 'Pick a time.' });
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Pick a date.' });
+      if (!/^\d{2}:\d{2}$/.test(time)) return res.status(400).json({ error: 'Pick a time.' });
 
       // The same slot twice is a double booking, not a rebooking.
       try {
