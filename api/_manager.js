@@ -1499,6 +1499,12 @@ module.exports = async function (req, res) {
 
     if (method === 'POST' && action === 'add_appt') {
       const { team_member_id, client_name, client_phone, client_email, service, date, time, notes } = req.body || {};
+      /* Create the booking without telling anybody. For a test row or a
+         correction — I have twice sent a real client a confirmation for an
+         appointment that never existed, because there was no way to add a
+         row without the email going with it. A promise not to do it again
+         is not a safeguard; this is. */
+      const QUIET = (req.body || {}).no_notify === true;
       if (!date || !time) return res.status(400).json({ error: 'Date and time required' });
       // The email lives on the appointment now — it is what the confirmation
       // with the deposit and inspiration links is sent to.
@@ -1520,8 +1526,10 @@ module.exports = async function (req, res) {
           `SELECT a.*, m.name AS artist_name FROM team_appointments a
              LEFT JOIN team_members m ON m.id = a.team_member_id
             WHERE a.chat_token = ?`, [tok]);
-        if (apptRow) confirmMail = await require('./_confirm-mail').sendFor(apptRow);
+        if (apptRow && !QUIET) confirmMail = await require('./_confirm-mail').sendFor(apptRow);
       } catch (_) {}
+
+      if (QUIET) return res.json({ ok: true, id: r.lastInsertRowid, chat_token: tok, quiet: true, notify: null });
 
       // instant notifications (client confirmation + booked-artist alert) + client memory
       let notify = null;
