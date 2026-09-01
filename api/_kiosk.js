@@ -143,7 +143,7 @@ module.exports = async function (req, res) {
       const out = [];
       for (const a of matches.slice(0, 8)) {
         const b = await bill.billFor(a);
-        const card = await bill.cardOnFile(sk, b.stripe_customer_id);
+        const card = await bill.cardOnFile(sk, await bill.customerIdFor(sk, b.stripe_customer_id, a.email || ''));
         out.push({
           ref: a.src + a.id,
           name: b.name, service: b.service, time: b.time, artist: b.artist,
@@ -331,9 +331,10 @@ module.exports = async function (req, res) {
       const pay = require('./_pay');
       const sk = await pay.getStripeSecret();
       if (!sk) return res.status(400).json({ error: 'Card payments are not set up.' });
-      if (!b.stripe_customer_id) return res.status(400).json({ error: 'No card on file for this client.' });
+      // A drop-in has no membership to hold a customer id; the card is
+      // found by the email they paid the deposit with instead.
 
-      const card = await bill.cardOnFile(sk, b.stripe_customer_id);
+      const card = await bill.cardOnFile(sk, await bill.customerIdFor(sk, b.stripe_customer_id, appt.email || ''));
       if (!card) return res.status(400).json({ error: 'No usable card on file — take payment another way.' });
 
       const out = await charge.chargeOnFile({

@@ -189,6 +189,38 @@ module.exports = async function (req, res) {
       const pay = require('./_pay');
       const sk = await pay.getStripeSecret();
       if (!sk) return res.status(400).json({ error: 'Card payments are not set up yet — message the studio.' });
+      /* The card is attached to a customer and kept, so the rest of the same
+         appointment can be settled at the desk without them getting it out
+         again. Told plainly on the page they pay on, and never charged
+         without a signature. */
+      let customerId = '';
+      try {
+        const email = String(appt.client_email || '').trim().toLowerCase();
+        if (email) {
+          // One customer per person, or a client ends up with a row per visit
+          // and the card is on whichever one nobody looks at.
+          const found = await fetch(
+            'https://api.stripe.com/v1/customers?limit=1&email=' + encodeURIComponent(email),
+            { headers: { Authorization: 'Bearer ' + sk } });
+          const list = await found.json();
+          if (list && list.data && list.data[0]) {
+            customerId = list.data[0].id;
+          } else {
+            const made = await fetch('https://api.stripe.com/v1/customers', {
+              method: 'POST',
+              headers: { Authorization: 'Bearer ' + sk, 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({
+                email,
+                name: appt.client_name || '',
+                ...(appt.client_phone ? { phone: String(appt.client_phone) } : {}),
+              }).toString(),
+            });
+            const cust = await made.json();
+            if (cust && cust.id) customerId = cust.id;
+          }
+        }
+      } catch (_) { /* a deposit must still be payable if this fails */ }
+
       const r = await fetch('https://api.stripe.com/v1/payment_intents', {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + sk, 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -196,6 +228,11 @@ module.exports = async function (req, res) {
           amount: String(deposit), currency: 'usd', 'automatic_payment_methods[enabled]': 'true',
           description: ('ZOLA deposit — ' + (appt.client_name || 'client') + ' · ' + (appt.service || '')).slice(0, 300),
           'metadata[appt_token]': token,
+          ...(customerId ? {
+            customer: customerId,
+            // Kept for the rest of this appointment, at the desk.
+            setup_future_usage: 'off_session',
+          } : {}),
         }).toString(),
       });
       const pi = await r.json();

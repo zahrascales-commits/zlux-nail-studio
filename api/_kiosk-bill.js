@@ -110,6 +110,21 @@ async function billFor(appt) {
 /* A card we can charge without them getting it out again. Only a real Stripe
    payment method counts — the "card on file" flag imported from the old
    booking system is a note, not a card, and cannot be charged. */
+/* Their Stripe customer, however they came to have one. A member has the
+   id on their membership; anybody else who has paid a deposit by card has
+   one findable by the email they paid with. */
+async function customerIdFor(sk, stored, email) {
+  if (stored) return stored;
+  if (!sk || !email || !/@/.test(email)) return null;
+  try {
+    const r = await fetch(
+      'https://api.stripe.com/v1/customers?limit=1&email=' + encodeURIComponent(String(email).toLowerCase()),
+      { headers: { Authorization: 'Bearer ' + sk } });
+    const j = await r.json();
+    return (j && j.data && j.data[0]) ? j.data[0].id : null;
+  } catch (_) { return null; }
+}
+
 async function cardOnFile(sk, customerId) {
   if (!sk || !customerId) return null;
   try {
@@ -127,4 +142,4 @@ async function cardOnFile(sk, customerId) {
   } catch (_) { return null; }
 }
 
-module.exports = { billFor, memberFor, memberTierOf, cardOnFile, freeLeftFor };
+module.exports = { billFor, memberFor, memberTierOf, cardOnFile, freeLeftFor, customerIdFor };

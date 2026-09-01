@@ -185,6 +185,12 @@ function render(){
           : (V.deposit_cents > 0
               ? '<div class="amt">' + money(V.deposit_cents) + '</div>'
                 + '<p>This holds your spot and comes off the price of your service.</p>'
+                /* Said before they pay, not buried afterwards. Keeping
+                   somebody's card without telling them is not a feature. */
+                + '<p style="font-size:0.82rem;opacity:0.75;margin-top:0.5rem">'
+                  + 'We’ll keep this card on file so you can settle the rest at the studio '
+                  + 'without getting it out again. Nothing is ever charged to it without your '
+                  + 'signature at the desk.</p>'
                 + '<div id="card-el"></div>'
                 + '<button class="btn" id="pay-btn" onclick="pay()">Pay ' + money(V.deposit_cents) + '</button>'
                 + '<div class="msg" id="pay-msg"></div>'
