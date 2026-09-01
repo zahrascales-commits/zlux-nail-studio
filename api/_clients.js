@@ -369,12 +369,34 @@ async function handler(req, res) {
     }
 
     if (req.method === 'PUT' && action === 'update') {
-      const { id, name, email, phone, likes, dislikes, notes, marketing_opt_in, sizes } = req.body || {};
+      const body = req.body || {};
+      const id = Number(body.id);
+      if (!id) return res.status(400).json({ error: 'Which client?' });
       try { await execute("ALTER TABLE clients ADD COLUMN sizes TEXT DEFAULT ''"); } catch (_) {}
-      await execute('UPDATE clients SET name=?,email=?,phone=?,likes=?,dislikes=?,notes=?,marketing_opt_in=? WHERE id=?',
-        [name || '', email || '', phone || '', likes || '', dislikes || '', notes || '', marketing_opt_in ? 1 : 0, Number(id)]);
-      if (sizes !== undefined) await execute('UPDATE clients SET sizes=? WHERE id=?', [String(sizes || ''), Number(id)]);
-      return res.json({ ok: true });
+
+      /* Only the fields actually sent. This wrote all seven columns on every
+         call, so correcting a mistyped phone number would have taken the
+         client's name, email, notes and preferences with it. */
+      const sets = [], vals = [];
+      const take = (key, transform) => {
+        if (body[key] === undefined) return;
+        sets.push(key + '=?');
+        vals.push(transform ? transform(body[key]) : body[key]);
+      };
+
+      take('name', v => v || '');
+      take('email', v => String(v || '').trim().toLowerCase());
+      take('phone', v => v || '');
+      take('likes', v => v || '');
+      take('dislikes', v => v || '');
+      take('notes', v => v || '');
+      take('marketing_opt_in', v => (v ? 1 : 0));
+      take('sizes', v => String(v || ''));
+
+      if (!sets.length) return res.json({ ok: true, changed: 0 });
+      vals.push(id);
+      await execute('UPDATE clients SET ' + sets.join(', ') + ' WHERE id=?', vals);
+      return res.json({ ok: true, changed: sets.length });
     }
 
     if (req.method === 'DELETE') {
