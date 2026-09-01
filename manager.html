@@ -872,6 +872,7 @@
     <button class="tab" data-tab="scheduling" onclick="showTab('scheduling')">Scheduling <span class="dot" id="sched-dot" style="display:none">!</span></button>
     <button class="tab" data-tab="marketing" onclick="showTab('marketing')">Emails</button>
     <button class="tab" data-tab="team" onclick="showTab('team')">Team</button>
+    <button class="tab" data-tab="cards" onclick="showTab('cards')">Cards on File</button>
     <button class="tab" data-tab="autoemail" onclick="showTab('autoemail')">Email Setup</button>
     <button class="tab" data-tab="maillog" onclick="showTab('maillog')">Emails Sent</button>
     <button class="tab" data-tab="paymath" onclick="showTab('paymath')">Pay Math</button>
@@ -1432,7 +1433,16 @@
       </div></div>
       <div id="paymath-body"></div>
     </section>
-            <section class="panel" id="panel-autoemail">
+                <section class="panel" id="panel-cards">
+      <div class="page-head"><div>
+        <div class="page-title">Cards on File</div>
+        <div class="page-desc">A saved card means checkout is one tap instead of digging through a bag with wet nails. Send anyone without one a link — nothing is charged, and nothing ever is without their signature at the desk.</div>
+      </div>
+      <button class="btn btn-sm" onclick="loadCards()">↻ Refresh</button>
+      </div>
+      <div id="cards-body"></div>
+    </section>
+    <section class="panel" id="panel-autoemail">
       <div class="page-head"><div>
         <div class="page-title">Email Setup</div>
         <div class="page-desc">You write these. Each one is attached to something that happens, so it reaches everybody who does that thing from now on — including people who have never been to the site.</div>
@@ -2265,6 +2275,7 @@ const TAB_LOADERS = {
   inbox:      () => loadInquiries(),
   site:       () => loadSite(),
   traffic:    () => loadTraffic(),
+  cards:      () => loadCards(),
   autoemail:  () => loadAutoEmail(),
   maillog:    () => loadMailLog(),
   paymath:    () => loadPayMath(),
@@ -7019,6 +7030,86 @@ let MAILLOG = [];
    only ever reaches the names already on it. */
 let AE = { rules: [], triggers: [], audiences: [], fields: [], editing: null };
 
+
+/* ── CARDS ON FILE ───────────────────────────────────────────────────────
+   Reading Stripe takes a moment, so this says so rather than looking
+   broken. The ask is one tap per client and the email explains itself. */
+let CARDS = null;
+
+async function loadCards(){
+  const el = document.getElementById('cards-body');
+  if(!el) return;
+  el.innerHTML = '<div class="empty">Checking with Stripe — this takes a few seconds…</div>';
+  try{
+    const d = await (await api('/api/cards')).json();
+    if(d.error) throw new Error(d.error);
+    CARDS = d;
+  }catch(err){ el.innerHTML = emptyBox('⚠️','Could not load: ' + esc(err.message)); return; }
+  renderCards();
+}
+
+function renderCards(){
+  const el = document.getElementById('cards-body');
+  if(!el || !CARDS) return;
+  const has = (CARDS.clients || []).filter(c => c.has_card);
+  const not = (CARDS.clients || []).filter(c => !c.has_card);
+
+  el.innerHTML =
+    '<div class="cards">'
+      + statCard(CARDS.with_card, 'Can check out in one tap')
+      + statCard(CARDS.without_card, 'Still have to hand a card over')
+    + '</div>'
+
+    + '<div class="page-head" style="margin-top:2rem"><div>'
+      + '<div class="page-title" style="font-size:1.05rem">No card yet</div>'
+      + '<div class="page-desc">Most recent first. One tap sends them the link.</div>'
+    + '</div></div>'
+    + (not.length ? not.map(function(c){
+        return '<div class="member-card" id="cardrow-' + c.id + '" style="--mc:#8B7355">'
+          + '<div class="mc-top"><div style="flex:1;min-width:0">'
+            + '<div class="mc-name">' + esc(c.name || '(no name)') + '</div>'
+            + '<div style="font-size:0.78rem;color:var(--muted);margin-top:0.15rem">'
+              + c.visits + ' visit' + (c.visits === 1 ? '' : 's')
+              + (c.last_visit ? ' · last ' + esc(c.last_visit) : '')
+              + ' · ' + esc(c.email)
+            + '</div></div>'
+            + '<button class="btn btn-ghost btn-sm" onclick="askForCard(' + c.id + ')">Send the link</button>'
+          + '</div></div>';
+      }).join('') : '<div class="empty">Everybody has one ✦</div>')
+
+    + '<div class="page-head" style="margin-top:2rem"><div>'
+      + '<div class="page-title" style="font-size:1.05rem">Card on file</div>'
+    + '</div></div>'
+    + (has.length ? has.map(function(c){
+        return '<div class="member-card" style="--mc:#6ab07a">'
+          + '<div class="mc-top"><div style="flex:1">'
+            + '<div class="mc-name">' + esc(c.name || '(no name)') + '</div>'
+            + '<div style="font-size:0.78rem;color:var(--muted);margin-top:0.15rem">' + esc(c.card)
+              + (c.is_member ? ' · member' : '') + '</div>'
+          + '</div>'
+          + '<span class="status-pill status-on">one tap</span>'
+          + '</div></div>';
+      }).join('') : '<div class="empty">Nobody yet.</div>');
+}
+
+async function askForCard(id){
+  const c = (CARDS.clients || []).find(function(x){ return Number(x.id) === Number(id); });
+  if(!c) return;
+  const row = document.getElementById('cardrow-' + id);
+  const btn = row && row.querySelector('button');
+  if(btn){ btn.disabled = true; btn.textContent = 'Sending…'; }
+  try{
+    const d = await (await api('/api/cards?action=ask', {
+      method: 'POST', body: JSON.stringify({ action: 'ask', email: c.email, name: c.name })
+    })).json();
+    if(d.error) throw new Error(d.error);
+    if(btn){ btn.textContent = d.ok ? 'Sent ✦' : 'Did not send'; }
+    if(!d.ok) toast(d.why || 'That did not send');
+  }catch(err){
+    if(btn){ btn.disabled = false; btn.textContent = 'Send the link'; }
+    toast('Could not send: ' + err.message);
+  }
+}
 async function loadAutoEmail(){
   const el = document.getElementById('autoemail-body');
   if(!el) return;
