@@ -36,6 +36,17 @@
   .big-btn:active{transform:scale(0.97)}
   .gold{background:linear-gradient(135deg,#C9B896,#B6A588);color:#140d07;box-shadow:0 14px 40px rgba(182,165,136,0.25)}
   .ghost{background:none;border:1px solid rgba(182,165,136,0.45);color:#DDD0B8}
+  /* The rebooking form. Rows rather than a wall of inputs, because the
+     whole point is that most people change nothing. */
+  .rb-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;
+    padding:0.6rem 0;border-bottom:1px solid rgba(182,165,136,0.18)}
+  .rb-row:last-child{border-bottom:none}
+  .rb-row > span{font-size:0.82rem;letter-spacing:0.12em;text-transform:uppercase;color:#B6A588;flex:0 0 auto}
+  .rb-row select,.rb-row input{flex:1;max-width:62%;background:rgba(245,238,232,0.07);
+    border:1px solid rgba(182,165,136,0.4);color:#F2ECE1;font-family:inherit;font-size:1rem;
+    padding:0.6rem 0.7rem;border-radius:8px;outline:none}
+  .rb-row select:focus,.rb-row input:focus{border-color:#C9B896}
+  .rb-row option{background:#140d07;color:#F2ECE1}
   .stars{display:flex;gap:1rem;font-size:3.4rem;margin:1.6rem 0 0.4rem;cursor:pointer;user-select:none}
   .stars span{transition:transform 0.12s}
   .stars span:active{transform:scale(1.2)}
@@ -198,6 +209,35 @@
   </div>
 
   <!-- REVIEW -->
+  <!-- BOOK THE NEXT ONE -->
+  <div class="screen" id="s-rebook">
+    <h2 id="rb-title">Same time in 4 weeks?</h2>
+    <p class="sub" id="rb-why"></p>
+
+    <div id="rb-card" style="width:min(520px,92vw);margin:1.3rem 0 0;text-align:left;
+      border:1px solid rgba(182,165,136,0.4);padding:1.1rem 1.2rem">
+      <div class="rb-row"><span>Service</span>
+        <select id="rb-service"></select></div>
+      <div class="rb-row"><span>With</span>
+        <select id="rb-artist"></select></div>
+      <div class="rb-row"><span>Date</span>
+        <input id="rb-date" type="date" onchange="rbDateChanged()" /></div>
+      <div class="rb-row"><span>Time</span>
+        <select id="rb-time"></select></div>
+    </div>
+
+    <div id="rb-note" style="width:min(520px,92vw);margin-top:0.7rem;font-size:0.86rem;text-align:left"></div>
+    <div class="err" id="rb-err"></div>
+
+    <div class="row">
+      <button class="big-btn gold" id="rb-go" onclick="rbBook()">Book it ✦</button>
+    </div>
+    <button id="rb-skip" onclick="show('s-review')"
+      style="margin-top:0.9rem;background:none;border:none;color:#B6A588;font-family:inherit;
+             font-size:0.85rem;text-decoration:underline;cursor:pointer;padding:0.6rem 1rem">
+      No thanks, maybe next time</button>
+  </div>
+
   <div class="screen" id="s-review">
     <h2>How was everything?</h2>
     <p class="sub">Tap the stars — it means the world to us.</p>
@@ -431,7 +471,7 @@ async function submitSignature(){
     });
     const d = await r.json();
     if(!r.ok || d.error){ err.textContent = d.error || 'That card was declined ✦'; return; }
-    show('s-review');
+    offerRebook();
   }catch(_){ err.textContent = 'Connection hiccup — try again ✦'; }
   finally{ btn.disabled = false; btn.textContent = 'Authorise & pay'; }
 }
@@ -491,7 +531,7 @@ function renderBill(){
 
 function goToPay(){
   const total = BAL + TIP;
-  if(total < 50){ show('s-review'); return; }   // nothing owed, no tip → straight to review
+  if(total < 50){ offerRebook(); return; }   // nothing owed, no tip → straight to review
   renderBill();
   loadHandles();
   document.getElementById('bal-svc').textContent = SVC ? (SVC + (BAL>=50?' · remaining balance':' · tip')) : 'Tip';
@@ -591,8 +631,126 @@ async function appSent(){
     });
     const d = await r.json();
     if(d.error) throw new Error(d.error);
-    show('s-review');
+    offerRebook();
   }catch(e){ err.textContent = 'Something went wrong \u2726 please tell the desk'; }
+}
+
+/* ── BOOK THE NEXT ONE ───────────────────────────────────────────────────
+   Shown once they have paid and before the thank-you, because the moment
+   somebody is happiest is the moment they will book again — and once they
+   are out of the door it becomes a chore they have to remember.
+
+   Everything is filled in from the visit they just had. If it suits them
+   there is one button. If it does not, every field is theirs to change. */
+let RB = null;
+
+async function offerRebook(){
+  try{
+    const r = await fetch('/api/kiosk?action=rebook_options&q=' + encodeURIComponent(KNAME)
+      + '&ref=' + encodeURIComponent(KREF));
+    RB = await r.json();
+    if(RB.error) throw new Error(RB.error);
+  }catch(_){ show('s-review'); return; }   // never block the checkout on this
+
+  const s = RB.suggest || {};
+  document.getElementById('rb-title').textContent =
+    s.weeks === 4 ? 'Same time in 4 weeks?' : 'Same time in ' + (s.weeks || 2) + ' weeks?';
+  document.getElementById('rb-why').textContent = s.reason || '';
+
+  const svc = document.getElementById('rb-service');
+  svc.innerHTML = (RB.services || []).map(function(x){
+    return '<option' + (x.name === RB.service ? ' selected' : '') + '>' + escK(x.name) + '</option>';
+  }).join('') || ('<option>' + escK(RB.service || '') + '</option>');
+
+  const art = document.getElementById('rb-artist');
+  art.innerHTML = (RB.artists || []).map(function(a){
+    return '<option value="' + a.id + '"' + (String(a.id) === String(RB.artist_id) ? ' selected' : '')
+      + '>' + escK(a.name) + '</option>';
+  }).join('');
+
+  const dt = document.getElementById('rb-date');
+  dt.value = s.date || '';
+  dt.min = new Date().toISOString().slice(0,10);
+
+  fillTimes(RB.times || [], RB.time);
+  renderChargeNote(RB.charge);
+
+  document.getElementById('rb-err').textContent = '';
+  show('s-rebook');
+}
+
+function fillTimes(list, preferred){
+  const sel = document.getElementById('rb-time');
+  const times = (list && list.length) ? list : [preferred || '10:00'];
+  sel.innerHTML = times.map(function(t){
+    return '<option' + (t === preferred ? ' selected' : '') + '>' + escK(t) + '</option>';
+  }).join('');
+}
+
+/* Whether their membership will have paid for this visit by the time it
+   happens. Memberships bill themselves, so this is a status, not a
+   judgement — and the desk needs to be able to tell the difference. */
+function renderChargeNote(charge){
+  const box = document.getElementById('rb-note');
+  if(!box) return;
+  if(!charge || !charge.relevant){ box.innerHTML = ''; return; }
+  if(charge.charged){
+    box.innerHTML = '<span style="color:#7ec98f">✓ Covered by your membership — nothing to pay on the day.</span>';
+  }else{
+    box.innerHTML = '<span style="color:#d9a441">Your next membership payment is due '
+      + escK(charge.next_billing_at || '') + '. It goes out on its own — nothing for you to do.</span>';
+  }
+}
+
+async function rbDateChanged(){
+  const date = document.getElementById('rb-date').value;
+  const artist = document.getElementById('rb-artist').value;
+  if(!date) return;
+  try{
+    const d = await (await fetch('/api/kiosk?action=rebook_times&artist_id=' + encodeURIComponent(artist)
+      + '&date=' + encodeURIComponent(date))).json();
+    fillTimes(d.times || [], (document.getElementById('rb-time')||{}).value);
+  }catch(_){}
+}
+
+async function rbBook(){
+  const btn = document.getElementById('rb-go');
+  const err = document.getElementById('rb-err');
+  err.textContent = '';
+  btn.disabled = true; btn.textContent = 'Booking…';
+  try{
+    const r = await fetch('/api/kiosk?action=rebook', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        q: KNAME, ref: KREF,
+        date: document.getElementById('rb-date').value,
+        time: document.getElementById('rb-time').value,
+        service: document.getElementById('rb-service').value,
+        artist_id: document.getElementById('rb-artist').value,
+      })
+    });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+
+    document.getElementById('rb-title').textContent = 'You\u2019re booked in ✦';
+    document.getElementById('rb-why').textContent =
+      d.service + ' with ' + (d.artist || 'us') + ' on ' + niceDate(d.date) + ' at ' + d.time;
+    document.getElementById('rb-card').style.display = 'none';
+    document.getElementById('rb-skip').style.display = 'none';
+    btn.textContent = 'Lovely — see you then';
+    btn.disabled = false;
+    btn.onclick = function(){ show('s-review'); };
+  }catch(e){
+    err.textContent = e.message || 'Could not book that — please tell the desk';
+    btn.disabled = false; btn.textContent = 'Book it ✦';
+  }
+}
+
+function niceDate(d){
+  try{
+    return new Date(d + 'T12:00:00').toLocaleDateString('en-US',
+      { weekday:'long', month:'long', day:'numeric' });
+  }catch(_){ return d; }
 }
 async function payCard(){
   const err=document.getElementById('bal-err'); err.textContent='';
@@ -620,13 +778,13 @@ async function confirmCard(){
   if(error){ err.textContent=error.message||'Card declined — try again.'; return; }
   await fetch('/api/kiosk?action=checkout',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({action:'checkout',name:KNAME,q:KNAME,ref:KREF,method:'card',payment_intent_id:(paymentIntent&&paymentIntent.id)||_pi,tip_cents:TIP})});
-  show('s-review');
+  offerRebook();
 }
 
 async function payCash(){
   await fetch('/api/kiosk?action=checkout',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({action:'checkout',name:KNAME,q:KNAME,ref:KREF,method:'cash',tip_cents:TIP})});
-  show('s-review');
+  offerRebook();
 }
 
 document.getElementById('kstars').addEventListener('click',e=>{

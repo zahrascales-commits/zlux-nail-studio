@@ -183,6 +183,123 @@ module.exports = async function (req, res) {
 
     // Card: PaymentIntent for the remaining balance + optional tip. Members
     // with a $0 balance can still leave a tip-only payment.
+    /* ── BOOK THE NEXT ONE, BEFORE THEY LEAVE ──
+       Everything filled in from the visit they have just had: same artist,
+       same service, same time, on the date their own membership says they
+       are next due. If it suits them there is one button to press. */
+    if (req.method === 'GET' && action === 'rebook_options') {
+      const find = require('./_kiosk-find');
+      const rb = require('./_rebook');
+
+      const { matches } = await find.findFor(req.query.q);
+      const appt = matches.length === 1
+        ? matches[0]
+        : matches.find(a => (a.src + a.id) === String(req.query.ref || ''));
+      if (!appt) return res.status(404).json({ error: 'Could not find that visit.' });
+
+      const suggest = await rb.suggestFor(appt);
+      const charge = await rb.chargeStateFor(suggest.member_id, suggest.date);
+
+      // Whoever they just saw, so the default is the artist they know.
+      let artistId = null, artistName = appt.artist || '';
+      try {
+        const row = await queryOne(
+          'SELECT a.team_member_id, m.name FROM team_appointments a LEFT JOIN team_members m ON m.id = a.team_member_id WHERE a.id = ?',
+          [appt.src === 't' ? Number(appt.id) : 0]);
+        if (row) { artistId = row.team_member_id; artistName = row.name || artistName; }
+      } catch (_) {}
+
+      let services = [];
+      try { services = require('./_store').services.map(s => ({ name: s.name, price_cents: s.price_cents })); } catch (_) {}
+
+      let artists = [];
+      try {
+        artists = await query('SELECT id, name FROM team_members WHERE active = 1 ORDER BY name');
+      } catch (_) {}
+
+      return res.json({
+        name: appt.name,
+        suggest,
+        charge,
+        artist_id: artistId,
+        artist_name: artistName,
+        service: appt.service || '',
+        time: String(appt.time || '').slice(0, 5),
+        times: await rb.timesFor(artistId, suggest.date, appt.time),
+        services,
+        artists,
+      });
+    }
+
+    // Different day chosen — which times are free then.
+    if (req.method === 'GET' && action === 'rebook_times') {
+      const rb = require('./_rebook');
+      return res.json({
+        times: await rb.timesFor(req.query.artist_id, String(req.query.date || '').slice(0, 10), req.query.time),
+      });
+    }
+
+    /* Make the booking. Everything is taken from the request because they
+       are allowed to change any of it — but the client it belongs to comes
+       from the visit they just paid for, never from the browser. */
+    if (req.method === 'POST' && action === 'rebook') {
+      const body = req.body || {};
+      const find = require('./_kiosk-find');
+      const rb = require('./_rebook');
+
+      const { matches } = await find.findFor(body.q);
+      const appt = matches.length === 1
+        ? matches[0]
+        : matches.find(a => (a.src + a.id) === String(body.ref || ''));
+      if (!appt) return res.status(404).json({ error: 'Could not find that visit.' });
+
+      const date = String(body.date || '').slice(0, 10);
+      const time = String(body.time || '').slice(0, 5);
+      const service = String(body.service || appt.service || '').slice(0, 120);
+      const artistId = Number(body.artist_id) || null;
+      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) return res.status(400).json({ error: 'Pick a date.' });
+      if (!/^\\d{2}:\\d{2}$/.test(time)) return res.status(400).json({ error: 'Pick a time.' });
+
+      // The same slot twice is a double booking, not a rebooking.
+      try {
+        const clash = await queryOne(
+          "SELECT id FROM team_appointments WHERE date=? AND time=? AND team_member_id=? AND status <> 'cancelled'",
+          [date, time, artistId]);
+        if (clash) return res.status(409).json({ error: 'That time has just gone. Pick another.' });
+      } catch (_) {}
+
+      const tok = Math.random().toString(36).slice(2, 14);
+      const suggest = await rb.suggestFor(appt);
+      const charge = await rb.chargeStateFor(suggest.member_id, date);
+
+      const out = await execute(
+        `INSERT INTO team_appointments
+           (team_member_id, client_name, client_phone, client_email, service, date, time, notes, status, chat_token)
+         VALUES (?,?,?,?,?,?,?,?,'scheduled',?)`,
+        [artistId, appt.name || '', appt.phone || '', appt.email || '', service, date, time,
+         'Rebooked at checkout', tok]);
+
+      try {
+        await execute('INSERT INTO kiosk_log (type, name, detail, ts) VALUES (?,?,?,?)',
+          ['rebook', String(appt.name || '').slice(0, 80), service + ' on ' + date + ' at ' + time, Date.now()]);
+      } catch (_) {}
+
+      try {
+        await notify.notifyInApp('owner', null,
+          '📅 ' + (appt.name || 'A client') + ' rebooked',
+          service + ' · ' + date + ' at ' + time
+            + (charge.relevant && !charge.charged ? ' · membership not charged for this one yet' : ''));
+      } catch (_) {}
+
+      return res.json({
+        ok: true,
+        id: out && out.lastInsertRowid,
+        date, time, service,
+        artist: (await queryOne('SELECT name FROM team_members WHERE id=?', [artistId]) || {}).name || '',
+        charge,
+      });
+    }
+
     /* ── PAY WITH THE CARD ALREADY ON FILE ──
        The one payment nobody watches happen: the client taps nothing and
        enters nothing. So it does not happen without a signature, and the
