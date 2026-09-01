@@ -1128,6 +1128,30 @@ module.exports = async function (req, res) {
       });
     }
 
+    /* ── TAKE A WEBSITE BOOKING OUT OF THE FIGURES ──
+       Marked cancelled rather than deleted. Cancelled rows are already
+       left out of every count, and a deletion that turns out to have
+       taken a real client's history with it cannot be undone. */
+    if (method === 'POST' && action === 'cancel_web_booking') {
+      const ids = (req.body || {}).ids;
+      if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'Which bookings?' });
+
+      const main = require('./_db');
+      const done = [];
+      for (const raw of ids.slice(0, 100)) {
+        const id = Number(raw);
+        if (!id) continue;
+        try {
+          const before = await main.queryOne(
+            'SELECT id, guest_name, appointment_date, status FROM appointments WHERE id = ?', [id]);
+          if (!before) continue;
+          await main.execute("UPDATE appointments SET status = 'CANCELLED' WHERE id = ?", [id]);
+          done.push({ id, name: before.guest_name, date: before.appointment_date, was: before.status });
+        } catch (_) {}
+      }
+      return res.json({ ok: true, cancelled: done.length, rows: done });
+    }
+
     /* ── WHERE PEOPLE CAN SEND MONEY ──
        Venmo, Cash App and Apple Cash all settle outside Stripe, so the
        studio can only ever say it was sent, never that it arrived. They are
