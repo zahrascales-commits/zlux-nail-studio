@@ -489,7 +489,11 @@ function showTipScreen(){
   const choices = base >= 100
     ? [18, 20, 25].map(function (p) {
         const c = Math.round(base * p / 100);
-        return { label: p + '% · $' + (c / 100).toFixed(2), cents: c };
+        /* The percentage only. Naming the dollars while somebody is
+           choosing turns a generous impulse into arithmetic, and the
+           figure they were about to pick starts looking like a lot. It
+           appears on the bill a moment later, where it belongs. */
+        return { label: p + '%', cents: c };
       })
     : [5, 10, 20].map(function (d) { return { label: '$' + d, cents: d * 100 }; });
   document.getElementById('tip-choices').innerHTML = choices.map(c=>
