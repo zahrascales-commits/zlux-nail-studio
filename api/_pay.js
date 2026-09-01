@@ -29,6 +29,30 @@ function stripeKey() { return _sk; }
 function publishableKey() { return _pk; }
 
 async function stripeApi(path, params) {
+  /* Keeping the client's card is the default here, not a thing each caller
+     has to remember. Every payment path in this studio had to be fixed one
+     at a time and the busiest one was still missed, so the rule lives in the
+     shared call: a payment that knows who is paying keeps their card.
+
+     Three ways out, all deliberate: no email to attach it to, a customer
+     already chosen by the caller, or save_card set to false for a genuine
+     one-off. */
+  if (path === 'payment_intents' && params && !params.customer) {
+    const email = params.receipt_email || params.__email;
+    const optedOut = params.save_card === false || params.save_card === 'false';
+    if (email && !optedOut) {
+      try {
+        const on = await keepCardFor(email, params.__name, params.__phone);
+        if (on) {
+          params.customer = on;
+          params.setup_future_usage = params.setup_future_usage || 'off_session';
+        }
+      } catch (_) { /* a payment must never fail because the card could not be kept */ }
+    }
+  }
+  // Hints for the above; Stripe would reject them as parameters.
+  if (params) { delete params.__email; delete params.__name; delete params.__phone; delete params.save_card; }
+
   const r = await fetch('https://api.stripe.com/v1/' + path, {
     method: 'POST',
     headers: {
