@@ -78,12 +78,23 @@ async function billFor(appt) {
     design_tier: null,
   });
 
+  /* A price agreed when they booked outranks today's menu. Greenley agreed
+     $90 and paid half; the menu moved to $95 afterwards and would
+     otherwise have asked her for the difference weeks later. */
+  const agreed = money(appt.total_cents);
+
   // A service that is not on the menu any more still has to check out. The
   // row's own price is the fallback, and zero is better than inventing one.
-  const listCents = calc ? money(calc.service_list_cents) : money(appt.total_cents);
-  const dueCents = calc
-    ? money(calc.total_cents)
-    : Math.max(0, money(appt.total_cents));
+  const listCents = agreed || (calc ? money(calc.service_list_cents) : money(appt.total_cents));
+
+  let dueCents;
+  if (agreed) {
+    // Whatever the membership covers still comes off the agreed price.
+    const covered = calc ? money(calc.covered_cents) : 0;
+    dueCents = Math.max(0, agreed - covered);
+  } else {
+    dueCents = calc ? money(calc.total_cents) : Math.max(0, money(appt.total_cents));
+  }
 
   // Only a deposit that was actually taken comes off.
   const depositTaken = Number(appt.deposit_paid) ? money(appt.deposit_cents) : 0;

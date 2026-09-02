@@ -48,7 +48,8 @@ async function todaysAppointments(day) {
   try {
     const rows = await query(
       `SELECT a.id, a.client_name, a.client_email, a.client_phone, a.service, a.time,
-              a.deposit_cents, a.deposit_paid, a.status, a.team_member_id, m.name AS artist
+              a.deposit_cents, a.deposit_paid, a.status, a.team_member_id,
+              a.price_cents, m.name AS artist
          FROM team_appointments a
          LEFT JOIN team_members m ON m.id = a.team_member_id
         WHERE a.date = ?`, [date]);
@@ -60,8 +61,10 @@ async function todaysAppointments(day) {
         service: r.service || '', time: r.time || '', artist: r.artist || '',
         deposit_cents: Number(r.deposit_cents) || 0,
         deposit_paid: Number(r.deposit_paid) ? 1 : 0,
-        // The studio's book stores no price — it is worked out from the menu.
-        total_cents: null,
+        /* Usually nothing, and the menu decides. When it is set, this is
+           the price actually agreed and it wins — a menu change months
+           later must not raise a bill somebody already accepted. */
+        total_cents: Number(r.price_cents) > 0 ? Number(r.price_cents) : null,
         member_id: null,
       });
     }

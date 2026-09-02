@@ -1529,6 +1529,7 @@ module.exports = async function (req, res) {
          row without the email going with it. A promise not to do it again
          is not a safeguard; this is. */
       const QUIET = (req.body || {}).no_notify === true;
+      try { await execute('ALTER TABLE team_appointments ADD COLUMN price_cents INTEGER DEFAULT 0'); } catch (_) {}
       if (!date || !time) return res.status(400).json({ error: 'Date and time required' });
       // The email lives on the appointment now — it is what the confirmation
       // with the deposit and inspiration links is sent to.
@@ -1597,6 +1598,8 @@ module.exports = async function (req, res) {
       take('notes');
       take('status', v => v || 'scheduled');
       // What was taken up front, so the till knows what is left.
+      // The price actually agreed, when it is not simply the menu price.
+      take('price_cents', v => Math.max(0, Math.round(Number(v) || 0)));
       take('deposit_cents', v => Math.max(0, Math.round(Number(v) || 0)));
       take('deposit_paid', v => (v ? 1 : 0));
       take('paid_cents', v => Math.max(0, Math.round(Number(v) || 0)));
