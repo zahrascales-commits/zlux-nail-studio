@@ -1128,6 +1128,22 @@ module.exports = async function (req, res) {
       });
     }
 
+    /* ── SEND SOMEBODY THEIR CONFIRMATION AGAIN ──
+       The bulk send deliberately skips anyone who has had one, so there was
+       no way to send a single client theirs a second time — after a detail
+       was corrected, or when they simply cannot find it. */
+    if (method === 'POST' && action === 'resend_confirm') {
+      const id = Number((req.body || {}).id);
+      if (!id) return res.status(400).json({ error: 'Which appointment?' });
+      const row = await queryOne(
+        `SELECT a.*, m.name AS artist_name FROM team_appointments a
+           LEFT JOIN team_members m ON m.id = a.team_member_id
+          WHERE a.id = ?`, [id]);
+      if (!row) return res.status(404).json({ error: 'No such appointment.' });
+      const out = await require('./_confirm-mail').sendFor(row, { force: true });
+      return res.json({ ok: !!(out && out.sent), why: (out && out.why) || '', to: row.client_email || '' });
+    }
+
     /* ── TAKE A WEBSITE BOOKING OUT OF THE FIGURES ──
        Marked cancelled rather than deleted. Cancelled rows are already
        left out of every count, and a deletion that turns out to have
