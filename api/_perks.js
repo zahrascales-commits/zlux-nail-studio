@@ -59,8 +59,10 @@ const TIERS = {
     price: 99,
     daysAhead: 3,
     perks: [
-      { key: 'free_mani',   kind: 'free_service', label: 'One manicure, on us',            detail: 'Every month, any manicure on the menu. Yours before you spend a thing.', value: 1, of: 'manicure' },
-      { key: 'free_pedi',   kind: 'free_service', label: 'One pedicure, on us',            detail: 'Every month, alongside your manicure. They do not compete.',            value: 1, of: 'pedicure' },
+      /* One allowance, spent however they like. Two separate perks read as
+         two appointments — and behaved like it, handing out a second free
+         service nobody meant to give. */
+      { key: 'free_service', kind: 'free_service', label: 'One service, on us',            detail: 'Every month. A manicure or a pedicure — your choice, not ours.', value: 1, of: 'any' },
       { key: 'addons_half', kind: 'discount',     label: 'Every add-on at half price',     detail: 'Removal, Russian manicure, nail art, scrub, massage — all 50% off, every visit.', value: 50 },
       { key: 'calendar',    kind: 'calendar',     label: 'The calendar opens early',       detail: 'You see and book 3 days further out than anyone walking in off the street.', value: 3 },
       { key: 'account',     kind: 'account',      label: 'Your own account',               detail: 'Your visits, your perks, your nail record — all in one place.' },
@@ -73,8 +75,7 @@ const TIERS = {
     price: 199,
     daysAhead: 13,
     perks: [
-      { key: 'free_mani',   kind: 'free_service', label: 'Two manicures, on us',           detail: 'Every month. Your nails never have a bad week.',                        value: 2, of: 'manicure' },
-      { key: 'free_pedi',   kind: 'free_service', label: 'A pedicure, on us',              detail: 'Every month, on top of both manicures.',                                value: 1, of: 'pedicure' },
+      { key: 'free_service', kind: 'free_service', label: 'Two services, on us',           detail: 'Every month. Two manicures, two pedicures, or one of each — your choice.', value: 2, of: 'any' },
       { key: 'addons_free', kind: 'discount',     label: 'Every add-on free',              detail: 'Not discounted — free. Every add-on, every visit, no upsell, ever.',    value: 100 },
       { key: 'calendar',    kind: 'calendar',     label: '13 days of calendar, unlocked',  detail: 'You book almost two weeks further out than guests. The good slots are gone by the time they look.', value: 13 },
       { key: 'account',     kind: 'account',      label: 'Your own account',               detail: 'Your visits, your perks, your nail record — all in one place.' },

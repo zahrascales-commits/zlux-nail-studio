@@ -817,27 +817,29 @@ const TIER_RULES = {
     label: 'Signature Club',
     tagText: 'SIGNATURE',
     tagStyle: 'background:rgba(140,122,94,0.15);color:var(--latte);',
-    freeManicures: 1,
-    freePedicures: 1,
-    freeServiceCount: null,
+    /* One allowance, spent either way. Splitting it into a manicure and a
+       pedicure read as two appointments and behaved like it. */
+    freeManicures: null,
+    freePedicures: null,
+    freeServiceCount: 1,
     freeAddonNames: [],
     freeAddonCount: 0,
     addonDiscountPct: 50,
-    reminderText: 'Signature: 1 manicure + 1 pedicure included this month. Add-ons at 50% off.',
+    reminderText: 'Signature: one service included this month — manicure or pedicure. Add-ons at 50% off.',
     priorityText: '✦  Signature members book before guests — priority slots shown below.'
   },
   LUXE: {
     label: 'Luxe Club',
     tagText: 'LUXE',
     tagStyle: 'background:rgba(182,165,136,0.15);color:var(--champagne);',
-    freeManicures: 2,
-    freePedicures: 1,
-    freeServiceCount: null,
+    freeManicures: null,
+    freePedicures: null,
+    freeServiceCount: 2,
     freeAddonNames: [],
     freeAddonCount: 0,
     addonDiscountPct: 100,
     hasBirthdayUpgrade: true,
-    reminderText: 'Luxe: Up to 2 manicures + 1 pedicure included this month. All add-ons 100% off — free.',
+    reminderText: 'Luxe: two services included this month — manicures, pedicures, or one of each. All add-ons free.',
     priorityText: '✦  Luxe members have priority access — most slots reserved for you.'
   },
   BLACK_CARD: {

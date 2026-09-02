@@ -82,12 +82,12 @@ const ADDON = { name: 'Russian pedicure', cents: 7500, correction_cents: 8500 };
 const LEGACY = [
   {
     key: 'SIGNATURE', name: 'Signature', cycle_cents: 9900, annual_cents: 99900, capacity: 28,
-    includes: ['One manicure and one pedicure a month', 'Half off every add-on', 'Books 3 days before the public'],
+    includes: ['One service a month — a manicure or a pedicure, your choice', 'Half off every add-on', 'Books 3 days before the public'],
     line: 'Hands and feet, every month.',
   },
   {
     key: 'LUXE', name: 'Luxe', cycle_cents: 19900, annual_cents: 199900, capacity: 18,
-    includes: ['Two manicures and a pedicure a month', 'Every add-on free', 'Books 13 days before the public'],
+    includes: ['Two services a month — two manicures, two pedicures, or one of each', 'Every add-on free', 'Books 13 days before the public'],
     line: 'More of everything, nothing extra to pay.',
   },
   {
