@@ -1578,6 +1578,11 @@ module.exports = async function (req, res) {
       const id = Number(body.id);
       if (!id) return res.status(400).json({ error: 'Which appointment?' });
 
+      /* The agreed-price column is created when an appointment is added, so
+         a studio that has not booked anything since would have nowhere to
+         put one. Making it here means editing a price always works. */
+      try { await execute('ALTER TABLE team_appointments ADD COLUMN price_cents INTEGER DEFAULT 0'); } catch (_) {}
+
       /* Only what was actually sent. This used to write every column on
          every call, so a request carrying one field blanked all the others —
          name, service, date and time gone, on a real client's booking. */
