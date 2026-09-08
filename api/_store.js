@@ -2,6 +2,7 @@
 const services = [
   { id: 1,  name: 'Organic Structured Manicure', description: 'A healthy nail enhancement using organic product for a clean, structured look. As we learn you, we tailor every visit precisely to you.', duration_min: 60, price_cents: 9500, starting_at: true },
   { id: 12, name: 'Regular Gel Manicure',        description: 'A clean, classic gel manicure — shaped, cuticles tidied, gel colour of your choice.', duration_min: 60, price_cents: 5500  },
+  { id: 13, name: 'Kids Manicure — Gel Polish', description: 'A proper little manicure with gel polish, for ages 3 to 8. Nails shaped and tidied, then painted in whichever colour they pick.', duration_min: 40, price_cents: 3000 },
   { id: 2,  name: 'Medium Gel X',                description: 'Medium-length Gel X extensions for a sleek, polished finish.',                  duration_min: 75, price_cents: 10000 },
   { id: 3,  name: 'Short Gel X',                 description: 'Short Gel X extensions — low-maintenance, high-impact.',                         duration_min: 60, price_cents: 9500  },
   { id: 4,  name: 'Long Gel X',                  description: 'Long Gel X extensions for a dramatic, statement look.',                           duration_min: 90, price_cents: 11000 },
@@ -19,6 +20,7 @@ const addons = [
   { id: 3, name: 'Nail Art',          price_cents: 2500 },
   { id: 4, name: 'Scrub Treatment',   price_cents: 2000 },
   { id: 5, name: 'Lotion Massage',    price_cents: 1500 },
+  { id: 6, name: 'Kids Manicure', description: 'Bring your little one along — ages 3 to 8. Their own manicure with gel polish while you have yours done. Adds 40 minutes.', price_cents: 3000 },
 ];
 
 const bookings = [];

@@ -465,6 +465,18 @@
         </div>
       </label>
 
+      <label class="addon-row" for="addon-kids">
+        <input type="checkbox" id="addon-kids" onchange="toggleAddon('Kids Manicure',30,this)">
+        <div style="flex:1;">
+          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:var(--espresso);">Kids Manicure — Gel Polish</div>
+          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.75rem;color:var(--latte);">Ages 3–8. Their own manicure while you have yours. Adds 40 minutes.</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="addon-price-tag" id="addon-price-kids">+$30</div>
+          <div id="addon-tag-kids"></div>
+        </div>
+      </label>
+
       <label class="addon-row" for="addon-scrub">
         <input type="checkbox" id="addon-scrub" onchange="toggleAddon('Scrub Massage',25,this)">
         <div style="flex:1;">
@@ -1364,13 +1376,27 @@ function updateAddonPriceTags() {
   const addonMap = [
     { id: 'removal', name: 'Soak Off Removal', base: 35 },
     { id: 'russian', name: 'Russian Manicure Technique', base: 20 },
-    { id: 'scrub',   name: 'Scrub Massage', base: 25 }
+    { id: 'scrub',   name: 'Scrub Massage', base: 25 },
+    /* A second person, so no membership discount ever applies. Listed here
+       only so the row is drawn; alwaysFullPrice below keeps it at its own
+       price whatever the tier says about add-ons. */
+    { id: 'kids',    name: 'Kids Manicure', base: 30, neverDiscounted: true }
   ];
 
   addonMap.forEach(a => {
     const priceEl = document.getElementById('addon-price-' + a.id);
     const tagEl   = document.getElementById('addon-tag-' + a.id);
     if (!priceEl || !tagEl) return;
+
+    /* Somebody else's appointment. A membership buys the member their own
+       service, not a service for a second person, so this stays at its own
+       price and says so rather than letting them find out at the desk. */
+    if (a.neverDiscounted) {
+      priceEl.textContent = '+$' + a.base;
+      tagEl.innerHTML = '<span class="addon-free-tag" style="margin-top:0.2rem;'
+        + 'background:rgba(140,122,94,0.18);color:var(--latte);">not covered by membership</span>';
+      return;
+    }
 
     const row = priceEl.closest('.addon-row');
     const box = document.getElementById('addon-' + a.id);

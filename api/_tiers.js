@@ -25,6 +25,10 @@ const GRACE_MINUTES = 10;
 // "Russian Manicure" and "Russian Manicure Technique" both match.
 const ADDON_MINUTES = [
   { match: /russian/i, minutes: 15 },
+  /* A second person in the chair, not a flourish on the first. Without
+     this the appointment keeps its old length and the next client is
+     booked on top of a set that is still being painted. */
+  { match: /kids/i, minutes: 40 },
 ];
 
 const TIERS = [

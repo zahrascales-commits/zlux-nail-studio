@@ -66,6 +66,16 @@ async function stripeApi(path, params) {
   return data;
 }
 
+/* Add-ons that are somebody else's appointment rather than an extra on
+   this one. A membership buys the member their own service; it does not
+   buy a second person a service. Without this a Luxe member brought her
+   daughter in for nothing and the studio gave away forty minutes. */
+const NEVER_DISCOUNTED = [/kids/i];
+
+function alwaysFullPrice(name) {
+  return NEVER_DISCOUNTED.some(re => re.test(String(name || '')));
+}
+
 /* What comes off an add-on for a member. The retired tiers discounted
    everything by a flat rate; Essential and Elite do not — Elite includes two
    named add-ons outright and charges normally for the rest, which is what
@@ -218,6 +228,13 @@ function computeDeposit({ service_name, addon_names = [], member_tier, free_serv
     const a = findAddon(name);
     if (!a) continue;
     if (lockedAddons.includes(norm(a.name))) continue;   // not on offer here
+    /* Charged in full whoever they are — a second person's service is not
+       an add-on to this one, whatever the membership says about add-ons. */
+    if (alwaysFullPrice(a.name)) {
+      total += a.price_cents;
+      continue;
+    }
+
     // Included outright beats any percentage.
     if (freeAddons.includes(norm(a.name))) {
       covered += a.price_cents;
