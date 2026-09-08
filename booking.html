@@ -1447,11 +1447,13 @@ async function loadAddonOffer(){
 
 function takeAddonOffer(){
   if(!ADDON_OFFER) return;
-  // Tick the real checkbox, so there is one path through this and not two.
+  /* Tick the real checkbox, so there is one path through this and not two.
+     Matched on what the checkbox actually does rather than on the words in
+     the row — the list is folded, and innerText on a hidden element is an
+     empty string, so nothing ever matched. */
   const first = String(ADDON_OFFER.name).toLowerCase().split(' ')[0];
   const box = [...document.querySelectorAll('.addon-row input[type=checkbox]')].find(function(c){
-    const row = c.closest('.addon-row');
-    return row && row.innerText.toLowerCase().indexOf(first) > -1;
+    return String(c.getAttribute('onchange') || '').toLowerCase().indexOf(first) > -1;
   });
   if(box && !box.checked){ box.checked = true; box.dispatchEvent(new Event('change')); }
   loadAddonOffer();
