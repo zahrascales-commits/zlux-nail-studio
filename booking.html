@@ -443,7 +443,7 @@
                padding:0.9rem 1rem;margin-top:0.9rem;cursor:pointer;
                font-family:'Josefin Sans',sans-serif;font-size:0.82rem;letter-spacing:0.08em;
                text-transform:uppercase;color:var(--latte);">
-        + Add a second service
+        + <span id="add-second-svc-label">Add a second service</span>
       </button>
 
       <div class="section-label" style="margin:1.25rem 0 0.75rem;">Add-Ons <span style="font-size:0.65rem;color:var(--latte);text-transform:none;letter-spacing:0;">(optional)</span></div>
@@ -1455,6 +1455,13 @@ function updateAddonPriceTags() {
    service stays, everything else folds away, and one button brings the list
    back for anyone who genuinely wants two. */
 let SHOW_ALL_SERVICES = false;
+/* The group they said they wanted on the way in. While this is set, the
+   list shows only that group — being asked to choose again, from nine
+   options, is not a shorter journey than not having chosen at all. */
+let FOCUS_GROUP = (function(){
+  try { return new URLSearchParams(location.search).get('focus') || ''; }
+  catch (_) { return ''; }
+})();
 
 function serviceButtons(){
   return [...document.querySelectorAll('#step-2 .option-btn')].filter(function(b){
@@ -1469,11 +1476,18 @@ function collapseServices(){
   if(!btns.length) return;
   const chosen = booking.items.length > 0;
   const fold = chosen && !SHOW_ALL_SERVICES;
+  // Narrowed to one group on the way in, and nothing picked yet.
+  const narrowing = !!FOCUS_GROUP && !SHOW_ALL_SERVICES && !chosen;
 
   btns.forEach(function(b){
     // The owner's test button follows its own rule and is hidden anyway.
     if(b.id === 'test-service-btn') return;
     const picked = b.classList.contains('svc-selected');
+
+    if(narrowing){
+      b.style.display = (b.getAttribute('data-group') === FOCUS_GROUP) ? '' : 'none';
+      return;
+    }
     b.style.display = (!fold || picked) ? '' : 'none';
   });
 
@@ -1488,12 +1502,20 @@ function collapseServices(){
     lbl.style.display = anyVisible ? '' : 'none';
   });
 
+  /* The way back to everything else. Needed while narrowed to one group as
+     much as after picking — somebody sent to Gel X who actually wants a
+     pedicure must not be stuck there. */
   const add = document.getElementById('add-second-svc');
-  if(add) add.style.display = fold ? 'block' : 'none';
+  if(add){
+    add.style.display = (fold || narrowing) ? 'block' : 'none';
+    const label = document.getElementById('add-second-svc-label');
+    if(label) label.textContent = narrowing ? 'See all services' : 'Add another service';
+  }
 }
 
 function showAllServices(){
   SHOW_ALL_SERVICES = true;
+  FOCUS_GROUP = '';
   collapseServices();
   // Put the newly revealed options in front of them rather than leaving them
   // to work out that something changed further up the page.
@@ -2700,12 +2722,13 @@ if (new URLSearchParams(location.search).get('test') === '1') {
   if (!focus) return;
   goStep(2);
   const groupBtns = [...document.querySelectorAll('#step-2 .option-btn[data-group="' + focus + '"]')];
-  if (!groupBtns.length) return;
+  if (!groupBtns.length) { FOCUS_GROUP = ''; return; }
+  /* Show that group only. The old behaviour highlighted it for three seconds
+     among everything else, which faded and left them scrolling. */
   setTimeout(() => {
+    try { collapseServices(); } catch (_) {}
     groupBtns[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-    groupBtns.forEach(b => b.classList.add('focus-pulse'));
-    setTimeout(() => groupBtns.forEach(b => b.classList.remove('focus-pulse')), 3200);
-  }, 300);
+  }, 200);
 })();
 
 // ── Returning client: prefill saved details so rebooking takes seconds ──
