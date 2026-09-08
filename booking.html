@@ -485,13 +485,13 @@
       </label>
 
       <label class="addon-row" for="addon-scrub">
-        <input type="checkbox" id="addon-scrub" onchange="toggleAddon('Scrub Massage',25,this)">
+        <input type="checkbox" id="addon-scrub" onchange="toggleAddon('Lotion Massage',15,this)">
         <div style="flex:1;">
-          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:var(--espresso);">Scrub Massage</div>
-          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.75rem;color:var(--latte);">Exfoliating scrub + relaxing hand or foot massage</div>
+          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:var(--espresso);">Lotion Massage</div>
+          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.75rem;color:var(--latte);">A warm lotion massage for your hands or feet</div>
         </div>
         <div style="text-align:right;">
-          <div class="addon-price-tag" id="addon-price-scrub">+$25</div>
+          <div class="addon-price-tag" id="addon-price-scrub">+$15</div>
           <div id="addon-tag-scrub"></div>
         </div>
       </label>
@@ -1383,7 +1383,7 @@ function updateAddonPriceTags() {
   const addonMap = [
     { id: 'removal', name: 'Soak Off Removal', base: 35 },
     { id: 'russian', name: 'Russian Manicure Technique', base: 20 },
-    { id: 'scrub',   name: 'Scrub Massage', base: 25 },
+    { id: 'scrub',   name: 'Lotion Massage', base: 15 },
     /* A second person, so no membership discount ever applies. Listed here
        only so the row is drawn; alwaysFullPrice below keeps it at its own
        price whatever the tier says about add-ons. */
