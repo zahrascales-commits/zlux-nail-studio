@@ -431,6 +431,13 @@
         <div style="text-align:right;"><span class="option-price" id="price-8">$125</span><div id="tag-8"></div></div>
       </button>
 
+      <!-- Bookable on its own for somebody bringing a child in. The same
+           thing is also an add-on, for when mum is already in the chair. -->
+      <button class="option-btn" id="svc-btn-9" onclick="toggleService('Kids Manicure — Gel Polish',30,'manicure',this)">
+        <div><span class="option-name">Kids Manicure — Gel Polish</span><span class="option-sub">Ages 3–8. Nails shaped and tidied, then gel polish in whichever colour they pick</span></div>
+        <div style="text-align:right;"><span class="option-price" id="price-9">$30</span><div id="tag-9"></div></div>
+      </button>
+
       <button type="button" id="add-second-svc" onclick="showAllServices()"
         style="display:none;width:100%;background:none;border:1px dashed rgba(182,165,136,0.7);
                padding:0.9rem 1rem;margin-top:0.9rem;cursor:pointer;
@@ -893,7 +900,7 @@ const booking = {
 
 // minutes per service — used to show real time ranges like GlossGenius
 const SERVICE_MINUTES = {
-  'Organic Structured Manicure': 60, 'Short Gel X': 60, 'Medium Gel X': 75, 'Long Gel X': 90,
+  'Organic Structured Manicure': 60, 'Kids Manicure — Gel Polish': 40, 'Short Gel X': 60, 'Medium Gel X': 75, 'Long Gel X': 90,
   'Short Acrylic': 60, 'Medium Acrylic': 75, 'Long Acrylic': 90,
   'Russian Dry Pedicure': 60, 'Russian Dry Pedicure — Full Correction': 90, 'Test Run': 15,
 };
