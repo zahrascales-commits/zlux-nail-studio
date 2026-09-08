@@ -229,19 +229,40 @@ function computeDeposit({ service_name, addon_names = [], member_tier, free_serv
     if (!a) continue;
     if (lockedAddons.includes(norm(a.name))) continue;   // not on offer here
     /* Charged in full whoever they are — a second person's service is not
-       an add-on to this one, whatever the membership says about add-ons. */
+       an add-on to this one, whatever the membership says about add-ons.
+       Today's offer still applies: that is the studio choosing to discount
+       it, not a membership claiming it for nothing. */
     if (alwaysFullPrice(a.name)) {
-      total += a.price_cents;
+      let due = a.price_cents;
+      try {
+        const offer = require('./_addon-offer').pricedWith(a.name, a.price_cents, svc.name || service_name);
+        if (offer.discounted) { due = offer.cents; covered += offer.off_cents; }
+      } catch (_) {}
+      total += due;
       continue;
     }
+
+    /* Today's offer, if this is the one being featured. Worked out here from
+       the same rule the page reads, so what was quoted and what is taken
+       cannot drift apart. */
+    let offerCents = null;
+    try {
+      const offer = require('./_addon-offer').pricedWith(a.name, a.price_cents, svc.name || service_name);
+      if (offer.discounted) offerCents = offer.cents;
+    } catch (_) {}
 
     // Included outright beats any percentage.
     if (freeAddons.includes(norm(a.name))) {
       covered += a.price_cents;
       continue;
     }
-    total += Math.round(a.price_cents * (1 - pct));
-    covered += Math.round(a.price_cents * pct);
+    /* Whichever is better for the client — the membership discount they
+       already pay for, or today's offer. Never both: stacking them is how a
+       $35 removal ends up free and nobody can explain why. */
+    const memberPrice = Math.round(a.price_cents * (1 - pct));
+    const best = offerCents !== null ? Math.min(memberPrice, offerCents) : memberPrice;
+    total += best;
+    covered += a.price_cents - best;
   }
   return {
     total_cents: total,
@@ -284,6 +305,31 @@ module.exports = async function (req, res) {
 
   try {
     await loadStripeKeys();
+    /* Today's suggested add-on, so the page and the till are reading the
+       same rule rather than each keeping their own idea of the price. */
+    if (req.method === 'GET' && action === 'addon_offer') {
+      const offerLib = require('./_addon-offer');
+      const cfg = await offerLib.settings();
+      if (!cfg.on) return res.json({ on: false });
+
+      const service = String(req.query.service || '');
+      const pick = offerLib.pickFor(service);
+      if (!pick) return res.json({ on: false });
+
+      const found = findAddon(pick.name);
+      if (!found) return res.json({ on: false });
+
+      const priced = offerLib.pricedWith(found.name, found.price_cents, service);
+      return res.json({
+        on: !!priced.discounted,
+        name: found.name,
+        was_cents: found.price_cents,
+        cents: priced.cents,
+        off_cents: priced.off_cents || 0,
+        ends: pick.day,
+      });
+    }
+
     if (req.method === 'GET' && action === 'config') {
       return res.json({
         enabled: !!(stripeKey() && publishableKey()),
