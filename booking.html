@@ -1424,8 +1424,10 @@ async function loadAddonOffer(){
 
   if(!ADDON_OFFER || !ADDON_OFFER.on){ box.style.display = 'none'; return; }
 
-  // Already ticked? Then it is not a suggestion any more.
-  const already = (booking.addons || []).some(function(a){
+  /* Already ticked? Then it is not a suggestion any more. The basket is
+     selectedAddons — booking.addons does not exist, so this never once
+     noticed and the card kept offering something already in the basket. */
+  const already = (booking.selectedAddons || []).some(function(a){
     return String(a.name || a).toLowerCase().indexOf(String(ADDON_OFFER.name).toLowerCase().split(' ')[0]) > -1;
   });
 
