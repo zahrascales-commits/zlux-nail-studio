@@ -448,6 +448,20 @@
 
       <div class="section-label" style="margin:1.25rem 0 0.75rem;">Add-Ons <span style="font-size:0.65rem;color:var(--latte);text-transform:none;letter-spacing:0;">(optional)</span></div>
 
+      <!-- Today's suggestion, above the fold. One thing that fits beats five
+           that might. -->
+      <div id="addon-offer" style="display:none;border:1px solid var(--champagne);
+        padding:1rem 1.1rem;margin-bottom:0.9rem;background:rgba(182,165,136,0.07)"></div>
+
+      <button type="button" id="addon-toggle" onclick="toggleAddonList()"
+        style="width:100%;background:none;border:1px dashed rgba(182,165,136,0.7);
+               padding:0.9rem 1rem;margin-bottom:0.9rem;cursor:pointer;
+               font-family:'Josefin Sans',sans-serif;font-size:0.82rem;letter-spacing:0.08em;
+               text-transform:uppercase;color:var(--latte);">
+        + <span id="addon-toggle-label">Add something extra</span>
+      </button>
+
+      <div id="addon-list" style="display:none">
       <label class="addon-row" for="addon-removal">
         <input type="checkbox" id="addon-removal" onchange="toggleAddon('Soak Off Removal',35,this)">
         <div style="flex:1;">
@@ -495,6 +509,7 @@
           <div id="addon-tag-scrub"></div>
         </div>
       </label>
+      </div><!-- /addon-list -->
 
       <!-- Birthday upgrade choice (Luxe birthday month only) -->
       <div id="birthday-upgrade-section" style="display:none;">
@@ -1376,6 +1391,71 @@ function showUpgradeForService(serviceName){
     + '</div>';
   box.style.display = 'flex';
 }
+
+/* ── ADD-ONS ─────────────────────────────────────────────────────────────
+   Folded, because five checkboxes at the end of a booking is a wall people
+   scroll past. One suggestion sits above the fold instead — the one that
+   goes with what they just picked, at today's price.
+
+   The price comes from the server. A page promising one number while the
+   till charges another is worse than no offer at all. */
+let ADDONS_OPEN = false;
+let ADDON_OFFER = null;
+
+function toggleAddonList(){
+  ADDONS_OPEN = !ADDONS_OPEN;
+  const list = document.getElementById('addon-list');
+  const label = document.getElementById('addon-toggle-label');
+  if(list) list.style.display = ADDONS_OPEN ? '' : 'none';
+  if(label) label.textContent = ADDONS_OPEN ? 'Hide extras' : 'Add something extra';
+}
+
+async function loadAddonOffer(){
+  const box = document.getElementById('addon-offer');
+  if(!box) return;
+
+  // What they have actually chosen decides what is worth suggesting.
+  const svc = (booking.items && booking.items[0] && booking.items[0].service) || '';
+  if(!svc){ box.style.display = 'none'; return; }
+
+  try{
+    ADDON_OFFER = await (await fetch('/api/pay?action=addon_offer&service=' + encodeURIComponent(svc))).json();
+  }catch(_){ ADDON_OFFER = null; }
+
+  if(!ADDON_OFFER || !ADDON_OFFER.on){ box.style.display = 'none'; return; }
+
+  // Already ticked? Then it is not a suggestion any more.
+  const already = (booking.addons || []).some(function(a){
+    return String(a.name || a).toLowerCase().indexOf(String(ADDON_OFFER.name).toLowerCase().split(' ')[0]) > -1;
+  });
+
+  box.style.display = '';
+  box.innerHTML =
+    '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.62rem;letter-spacing:0.2em;'
+      + 'text-transform:uppercase;color:var(--latte);margin-bottom:0.4rem">Today only</div>'
+    + '<div style="font-family:\'Cinzel\',serif;font-size:1.05rem;color:var(--espresso);margin-bottom:0.3rem">'
+      + esc(ADDON_OFFER.name) + '</div>'
+    + '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.86rem;color:var(--latte);margin-bottom:0.7rem">'
+      + '<span style="text-decoration:line-through;opacity:0.6">$' + (ADDON_OFFER.was_cents/100).toFixed(0) + '</span> '
+      + '<strong style="color:var(--espresso);font-size:1rem">$' + (ADDON_OFFER.cents/100).toFixed(0) + '</strong>'
+      + ' — save $' + (ADDON_OFFER.off_cents/100).toFixed(0) + ' if you add it with this booking.</div>'
+    + (already
+        ? '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.84rem;color:var(--espresso)">Added ✦</div>'
+        : '<button type="button" onclick="takeAddonOffer()" class="btn-gold" '
+          + 'style="animation:none;font-size:0.7rem;padding:0.7rem 1.2rem">Add it</button>');
+}
+
+function takeAddonOffer(){
+  if(!ADDON_OFFER) return;
+  // Tick the real checkbox, so there is one path through this and not two.
+  const first = String(ADDON_OFFER.name).toLowerCase().split(' ')[0];
+  const box = [...document.querySelectorAll('.addon-row input[type=checkbox]')].find(function(c){
+    const row = c.closest('.addon-row');
+    return row && row.innerText.toLowerCase().indexOf(first) > -1;
+  });
+  if(box && !box.checked){ box.checked = true; box.dispatchEvent(new Event('change')); }
+  loadAddonOffer();
+}
 function updateAddonPriceTags() {
   if (!booking.memberTier) return;
   const rules = TIER_RULES[booking.memberTier];
@@ -1998,6 +2078,7 @@ function goStep(n) {
     if (i < 3) document.getElementById('gg-l' + i).className = 'gg-line' + (i < icon ? ' done' : '');
   }
   if (n === 2) { SHOW_ALL_SERVICES = false; collapseServices(); applyServiceLocks(); }
+  if (n === 3) { try { loadAddonOffer(); } catch (_) {} }
   if (n === 2 && booking.memberTier) updateServiceTags();
   if (n === 3) { loadCoverageWindows().then(renderBkCal); renderBkCal(); loadTimeslots(); }
   if (n === 4) { loadSummary(); renderWhoSection(); initPayment(); }
