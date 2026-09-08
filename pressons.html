@@ -239,6 +239,13 @@
         <input type="checkbox" id="po-kit" style="width:auto;margin-top:0.15rem;" />
         <span><strong>Add my FREE sizing kit</strong> — first order only. Message us your sizes when it arrives and we'll save them forever.</span>
       </label>
+      <label class="kit-check" id="po-apply-row" style="display:none">
+        <input type="checkbox" id="po-apply" style="width:auto;margin-top:0.15rem;" onchange="poApplyChanged()" />
+        <span><strong>Have them professionally applied</strong> <span id="po-apply-price"></span>
+          — come in and we put them on for you, properly fitted and finished.</span>
+      </label>
+      <div id="po-total" style="font-family:'Josefin Sans',sans-serif;font-size:0.95rem;
+        color:var(--espresso);margin:0.4rem 0 1rem;font-weight:600"></div>
       <div id="po-payment-el"></div>
       <div id="po-err" style="display:none;color:#b43232;font-family:'Josefin Sans',sans-serif;font-size:0.82rem;margin-bottom:1rem;"></div>
       <button class="btn-gold" style="width:100%;animation:none;" id="po-pay-btn" onclick="poConfirm()">Pay &amp; Order</button>
@@ -400,6 +407,10 @@ async function poCheckMe(){
 
 async function poOpen(id){
   PO_ACTIVE=PO_PRODUCTS.find(p=>String(p.id)===String(id)); if(!PO_ACTIVE)return;
+  // Ask what the application costs each time, so a price she changed a
+  // minute ago is the one on screen.
+  const applyBox = document.getElementById('po-apply'); if(applyBox) applyBox.checked = false;
+  poLoadApplyPrice();
   document.getElementById('po-form').style.display='block';
   document.getElementById('po-success').style.display='none';
   document.getElementById('po-co-name').textContent=PO_ACTIVE.name;
@@ -409,7 +420,7 @@ async function poOpen(id){
   try{
     const cfg=await (await fetch('/api/pay?action=config')).json();
     if(!cfg.enabled||typeof Stripe==='undefined'){ poErr('Card payments aren\'t available right now — DM us to order.'); return; }
-    const intent=await (await fetch('/api/pressons?action=purchase_intent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'purchase_intent',product_id:PO_ACTIVE.id})})).json();
+    const intent=await (await fetch('/api/pressons?action=purchase_intent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'purchase_intent',product_id:PO_ACTIVE.id,apply:poApplyWanted()})})).json();
     if(!intent.client_secret){ poErr(intent.error||'Could not start checkout.'); return; }
     _ppi=intent.payment_intent_id;
     _pst=Stripe(cfg.publishable_key);
@@ -421,6 +432,43 @@ async function poOpen(id){
 function poClose(){ document.getElementById('po-overlay').classList.remove('open'); document.getElementById('po-payment-el').innerHTML=''; _pst=null;_pel=null;_ppi=null; }
 function poErr(m){ const e=document.getElementById('po-err'); e.textContent=m; e.style.display='block'; }
 
+
+/* ── HAVING THEM PUT ON FOR YOU ──────────────────────────────────────────
+   The price is asked for rather than written here, so she can change it
+   without anybody touching this page. */
+let PO_APPLY_CENTS = 0;
+
+async function poLoadApplyPrice(){
+  try{
+    const d = await (await fetch('/api/pressons?action=apply_price')).json();
+    PO_APPLY_CENTS = Number(d.apply_cents) || 0;
+  }catch(_){ PO_APPLY_CENTS = 0; }
+
+  const row = document.getElementById('po-apply-row');
+  const lbl = document.getElementById('po-apply-price');
+  // Nothing to offer if she has turned it off by setting it to zero.
+  if(row) row.style.display = PO_APPLY_CENTS > 0 ? '' : 'none';
+  if(lbl) lbl.textContent = PO_APPLY_CENTS > 0 ? ('+' + pomoney(PO_APPLY_CENTS)) : '';
+  poApplyChanged();
+}
+
+function poApplyWanted(){
+  const box = document.getElementById('po-apply');
+  return !!(box && box.checked && PO_APPLY_CENTS > 0);
+}
+
+/* The running total, so nobody is surprised by the number on the card
+   screen. The server still works the charge out itself — this only shows
+   what to expect. */
+function poApplyChanged(){
+  const out = document.getElementById('po-total');
+  if(!out || !PO_ACTIVE) return;
+  const base = Number(PO_ACTIVE.price_cents) || 0;
+  const extra = poApplyWanted() ? PO_APPLY_CENTS : 0;
+  out.innerHTML = extra
+    ? (pomoney(base) + ' + ' + pomoney(extra) + ' application = <strong>' + pomoney(base + extra) + '</strong>')
+    : ('Total: <strong>' + pomoney(base) + '</strong>');
+}
 async function poConfirm(){
   const name=document.getElementById('po-name').value.trim();
   const email=document.getElementById('po-email').value.trim();

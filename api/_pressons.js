@@ -40,6 +40,8 @@ async function ensure() {
     buyer_phone TEXT,
     sizes TEXT DEFAULT '',
     kit INTEGER DEFAULT 0,
+    apply INTEGER DEFAULT 0,
+    apply_cents INTEGER DEFAULT 0,
     payment_intent_id TEXT,
     ts INTEGER
   )`);
@@ -47,12 +49,27 @@ async function ensure() {
   for (const sql of [
     "ALTER TABLE clients ADD COLUMN sizes TEXT DEFAULT ''",
     "ALTER TABLE clients ADD COLUMN sizing_kit_claimed INTEGER DEFAULT 0",
+    // Older order tables predate the application option.
+    'ALTER TABLE presson_orders ADD COLUMN apply INTEGER DEFAULT 0',
+    'ALTER TABLE presson_orders ADD COLUMN apply_cents INTEGER DEFAULT 0',
   ]) { try { await execute(sql); } catch (_) {} }
   _ready = true;
 }
 
 const isOwner = req => req.headers['x-ceo-password'] === CEO_PASSWORD;
 
+
+/* The studio-application price. Five dollars unless she has said
+   otherwise; zero is a real answer, meaning she is not charging for it. */
+async function applyPriceCents() {
+  try {
+    const row = await queryOne("SELECT value FROM site_settings WHERE key = 'presson_apply_cents'");
+    if (row && row.value !== null && row.value !== undefined && String(row.value) !== '') {
+      return Math.max(0, Math.round(Number(row.value) || 0));
+    }
+  } catch (_) {}
+  return 500;
+}
 module.exports = async function (req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -77,6 +94,21 @@ module.exports = async function (req, res) {
     }
 
     // ── PUBLIC: start a purchase (price always recomputed server-side) ──
+    /* What it costs to have the set put on in the studio. A setting rather
+       than a number in the code — she has already changed her mind about it
+       once and will again, and a price change should not need a deploy. */
+    if (req.method === 'GET' && action === 'apply_price') {
+      return res.json({ apply_cents: await applyPriceCents() });
+    }
+
+    if (req.method === 'POST' && action === 'apply_price') {
+      const cents = Math.max(0, Math.round(Number((req.body || {}).apply_cents) || 0));
+      await execute(
+        'INSERT INTO site_settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+        ['presson_apply_cents', String(cents)]);
+      return res.json({ ok: true, apply_cents: cents });
+    }
+
     if (req.method === 'POST' && action === 'purchase_intent') {
       const p = await queryOne('SELECT * FROM presson_products WHERE id=? AND active=1', [Number((req.body || {}).product_id)]);
       if (!p) return res.status(404).json({ error: 'Set not found' });
@@ -92,14 +124,22 @@ module.exports = async function (req, res) {
         const s = await require('./_earlybird').state();
         if (s.available) { ebOff = Math.min(s.amount_cents, Math.max(0, p.price_cents - 50)); ebLabel = s.label; }
       } catch (_) {}
-      const charge = Math.max(50, p.price_cents - ebOff);
+      /* Applying it in the studio, if they asked for it. Read here rather
+         than trusted from the browser — a price the page sends is a price
+         anybody can edit. */
+      const wantsApply = (req.body || {}).apply === true;
+      const applyCents = wantsApply ? await applyPriceCents() : 0;
+
+      const charge = Math.max(50, p.price_cents - ebOff + applyCents);
 
       const r = await fetch('https://api.stripe.com/v1/payment_intents', {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + sk, 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
           amount: String(charge), currency: 'usd', 'automatic_payment_methods[enabled]': 'true',
-          description: ('ZOLA Press-Ons — ' + p.name + (ebOff ? ' (early bird)' : '')).slice(0, 300),
+          description: ('ZOLA Press-Ons — ' + p.name + (ebOff ? ' (early bird)' : '')
+            + (applyCents ? ' + application' : '')).slice(0, 300),
+          'metadata[apply_cents]': String(applyCents),
           /* Keep the card. Read straight off the request: the buyer fields
              are destructured in a different action, not this one. */
           ...(await (async () => {
@@ -180,9 +220,18 @@ module.exports = async function (req, res) {
         await execute('UPDATE clients SET sizes=? WHERE id=?', [typedSizes, client.id]);
       }
       const sizes = typedSizes || (client && client.sizes ? String(client.sizes) : '');
+      /* Whether they paid to have it applied, taken from the payment itself
+         rather than from the browser — the charge is the record of what was
+         actually agreed. */
+      let appliedCents = 0;
+      try {
+        const v = await require('./_pay').verifyPaymentIntent(payment_intent_id);
+        appliedCents = Math.max(0, Math.round(Number((v.metadata || {}).apply_cents) || 0));
+      } catch (_) {}
+
       await execute(
-        'INSERT INTO presson_orders (product_id, product_name, price_cents, buyer_name, buyer_email, buyer_phone, sizes, kit, payment_intent_id, ts) VALUES (?,?,?,?,?,?,?,?,?,?)',
-        [p.id, p.name, p.price_cents, String(buyer_name || '').slice(0, 120), email, String(buyer_phone || '').slice(0, 40), sizes, kitGranted ? 1 : 0, payment_intent_id || null, Date.now()]);
+        'INSERT INTO presson_orders (product_id, product_name, price_cents, buyer_name, buyer_email, buyer_phone, sizes, kit, apply, apply_cents, payment_intent_id, ts) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+        [p.id, p.name, p.price_cents, String(buyer_name || '').slice(0, 120), email, String(buyer_phone || '').slice(0, 40), sizes, kitGranted ? 1 : 0, appliedCents > 0 ? 1 : 0, appliedCents, payment_intent_id || null, Date.now()]);
 
       try {
         await notify.notifyInApp('owner', null, '💅 Press-on order: ' + p.name,

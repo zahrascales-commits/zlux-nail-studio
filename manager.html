@@ -1808,6 +1808,24 @@
           </div>
           <div class="ai-tag" style="margin-top:0.6rem;">Categories</div>
           <div id="po-admin-cats" style="display:flex;gap:0.4rem;flex-wrap:wrap;margin:0.5rem 0 0.8rem;"></div>
+
+          <!-- What it costs to have a set put on in the studio. Kept here
+               with the sets themselves, because a price hidden on another
+               screen is a price that never gets changed. -->
+          <div style="border:1px solid var(--border);padding:0.9rem 1rem;margin:0.4rem 0 1rem">
+            <div style="font-size:0.9rem;margin-bottom:0.15rem">Professional application</div>
+            <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.6rem">
+              What you charge to put a set on in the studio. Offered at checkout as an extra.
+              Set it to 0 and the option disappears.</div>
+            <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+              <span style="color:var(--muted)">$</span>
+              <input id="po-apply-dollars" type="number" min="0" step="1" style="width:110px;
+                background:var(--card);border:1px solid var(--border);color:var(--text);
+                padding:0.5rem 0.6rem;outline:none" />
+              <button class="btn btn-sm" onclick="savePoApplyPrice()">Save</button>
+              <span id="po-apply-msg" style="font-size:0.8rem;color:var(--muted)"></span>
+            </div>
+          </div>
           <div style="display:flex;gap:0.5rem;max-width:340px;">
             <input id="po-newcat" placeholder="e.g. Wedding Nails, Birthday Nails" style="flex:1" />
             <button class="btn btn-ghost btn-sm" onclick="addPoCat()">Add</button>
@@ -2691,11 +2709,39 @@ async function schedSave(){
 /* ── PRESS-ONS ADMIN ── */
 let poAdmin={categories:[],products:[],orders:[]};
 let _pomPhoto='';
+
+/* What applying a set costs. Loaded and saved in whole dollars, because
+   that is how she thinks about it — cents are the machine's problem. */
+async function loadPoApplyPrice(){
+  const box = document.getElementById('po-apply-dollars');
+  if(!box) return;
+  try{
+    const d = await (await api('/api/pressons?action=apply_price')).json();
+    box.value = Math.round((Number(d.apply_cents) || 0) / 100);
+  }catch(_){}
+}
+
+async function savePoApplyPrice(){
+  const box = document.getElementById('po-apply-dollars');
+  const msg = document.getElementById('po-apply-msg');
+  if(!box) return;
+  const cents = Math.max(0, Math.round(Number(box.value) * 100)) || 0;
+  if(msg) msg.textContent = 'Saving…';
+  try{
+    const d = await (await api('/api/pressons?action=apply_price', {
+      method: 'POST', body: JSON.stringify({ action: 'apply_price', apply_cents: cents })
+    })).json();
+    if(d.error) throw new Error(d.error);
+    if(msg) msg.textContent = cents ? ('Saved — $' + (cents/100).toFixed(0) + ' at checkout')
+                                    : 'Saved — the option is now hidden';
+  }catch(err){ if(msg) msg.textContent = 'Could not save: ' + err.message; }
+}
 async function loadPressons(){
   try{
     const r=await api('/api/pressons?action=admin');const d=await r.json();
     poAdmin={categories:d.categories||[],products:d.products||[],orders:d.orders||[]};
     renderPoAdmin();
+    loadPoApplyPrice();
   }catch{}
 }
 function renderPoAdmin(){
