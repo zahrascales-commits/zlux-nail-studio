@@ -165,8 +165,19 @@ async function handler(req, res) {
           [Number(client.id) || 0, nm, nm]);
       } catch (_) {}
 
+      const dead = r => /cancel/i.test(String((r && r.status) || ''));
+
+      /* Keyed by date and time so a studio visit can find the website row
+         for the same slot and take the money off it. A cancelled row is not
+         that visit — it is the booking that was called off before it — and
+         letting it answer for the live one prices the visit off a booking
+         that no longer exists. The live row has already claimed the slot,
+         so the cancelled one is not listed again underneath it. */
       const money = {};
-      for (const p of payRows) money[p.appointment_date + ' ' + p.appointment_time] = p;
+      for (const p of payRows) {
+        if (dead(p)) continue;
+        money[p.appointment_date + ' ' + p.appointment_time] = p;
+      }
 
       const seen = new Set();
       const visits = [];
@@ -195,11 +206,30 @@ async function handler(req, res) {
            is the rule the till already follows. */
         const agreed = Number(t.price_cents) || 0;
 
+        /* Nothing agreed and no live website booking, which is every visit
+           she writes in herself. The menu is what it is worth — read through
+           the same function the till reads it through, because a profile and
+           a desk quoting different numbers at the same person is how
+           somebody ends up paying twice. */
+        let listed = 0;
+        if (!agreed && !p) {
+          try {
+            const calc = require('./_pay').computeDeposit({
+              service_name: t.service, addon_names: [],
+              member_tier: null, free_service: false, design_tier: null,
+            });
+            if (calc) listed = Number(calc.service_list_cents) || Number(calc.total_cents) || 0;
+          } catch (_) {}
+        }
+
         add({
           date: t.date, time: t.time,
           service: t.service || (p && p.service) || '',
           addons, provider: t.provider || '',
-          total_cents: agreed || (p ? Number(p.total_cents) || 0 : null),
+          total_cents: agreed || (p ? Number(p.total_cents) || 0 : (listed || null)),
+          // True when the figure is today's menu rather than a price anybody
+          // agreed to, so the sheet can say so instead of implying a record.
+          price_from_menu: !agreed && !p && listed > 0,
           deposit_cents: deposit,
           deposit_paid: deposit > 0,
           // Been in and settled up, so nothing is outstanding on this one.

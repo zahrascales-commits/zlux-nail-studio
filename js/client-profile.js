@@ -236,13 +236,18 @@
       return { cls: 'paid', text: 'Paid in full — ' + money(v.paid_cents || tot || dep)
         + (v.tip_cents ? ' plus ' + money(v.tip_cents) + ' tip' : '') };
     }
+    /* Said out loud when the figure is today's menu rather than a price
+       anybody agreed to. The number is the same one the till will quote,
+       but "left to pay" reads like a debt on record and this is not one. */
+    var src = v.price_from_menu ? ' (at menu price)' : '';
+
     if (dep > 0) {
       if (tot && tot > dep) {
-        return { cls: 'part', text: money(dep) + ' deposit paid · ' + money(tot - dep) + ' left to pay' };
+        return { cls: 'part', text: money(dep) + ' deposit paid · ' + money(tot - dep) + ' left to pay' + src };
       }
       return { cls: 'paid', text: money(dep) + ' deposit paid' };
     }
-    return { cls: 'none', text: tot ? 'No deposit paid yet · ' + money(tot) + ' for the visit'
+    return { cls: 'none', text: tot ? 'No deposit paid yet · ' + money(tot) + ' for the visit' + src
                                     : 'No deposit paid yet' };
   }
 
