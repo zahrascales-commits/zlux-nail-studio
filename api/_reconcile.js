@@ -94,10 +94,15 @@ async function findGaps(sk, sinceSec) {
       let rows = [];
       try {
         rows = await query(
+          /* Every appointment from that date, not only the ones with nothing
+             recorded. Filtering to unpaid ones meant a charge became
+             unmatchable the moment its deposit was written down — and the
+             client then looked like they were claiming a payment that never
+             happened. */
           `SELECT id, client_name, client_email, service, date, time,
                   deposit_cents, deposit_paid, checked_out_ts
              FROM team_appointments
-            WHERE date >= ? AND COALESCE(deposit_paid,0) = 0`, [paidOn]);
+            WHERE date >= ?`, [paidOn]);
       } catch (_) {}
 
       const fits = rows.filter(r =>
