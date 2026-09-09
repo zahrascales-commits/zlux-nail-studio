@@ -1168,6 +1168,31 @@ module.exports = async function (req, res) {
       return res.json({ ok: true, cancelled: done.length, rows: done });
     }
 
+    /* Whether Stripe is actually configured to tell this site when a
+       payment clears. The handler is useless if nobody is calling it, and
+       that failure is silent — deposits simply stop being recorded. */
+    if (method === 'GET' && action === 'stripe_webhooks') {
+      const sk = await require('./_pay').getStripeSecret();
+      if (!sk) return res.status(400).json({ error: 'No Stripe key saved.' });
+      const r = await fetch('https://api.stripe.com/v1/webhook_endpoints?limit=20', {
+        headers: { Authorization: 'Bearer ' + sk },
+      });
+      const j = await r.json();
+      if (!r.ok) return res.status(400).json({ error: (j.error && j.error.message) || 'Stripe error' });
+      const wanted = 'payment_intent.succeeded';
+      const rows = (j.data || []).map(w => ({
+        url: w.url,
+        status: w.status,
+        events: w.enabled_events || [],
+        covers_deposits: (w.enabled_events || []).includes(wanted)
+          || (w.enabled_events || []).includes('*'),
+      }));
+      return res.json({
+        endpoints: rows,
+        deposits_covered: rows.some(x => x.covers_deposits && x.status === 'enabled'),
+      });
+    }
+
     /* ── WHERE PEOPLE CAN SEND MONEY ──
        Venmo, Cash App and Apple Cash all settle outside Stripe, so the
        studio can only ever say it was sent, never that it arrived. They are
