@@ -67,6 +67,10 @@ async function depositCharges(sk, sinceSec) {
 async function findGaps(sk, sinceSec) {
   const charges = await depositCharges(sk, sinceSec);
   const gaps = [], ghosts = [], unplaced = [];
+  /* Appointments tied to a real Stripe payment, however it was matched.
+     Without this the ghost check below only recognised token-matched ones
+     and reported two clients whose deposits Stripe genuinely holds. */
+  const accountedFor = new Set();
 
   const norm = s => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
   const firstName = s => String(s || '').trim().toLowerCase().split(/\s+/)[0] || '';
@@ -113,6 +117,7 @@ async function findGaps(sk, sinceSec) {
     }
 
     if (!appt) continue;
+    accountedFor.add(Number(appt.id));
 
     const recorded = Number(appt.deposit_paid) ? money(appt.deposit_cents) : 0;
     if (recorded >= c.amount) continue;
@@ -140,9 +145,10 @@ async function findGaps(sk, sinceSec) {
       `SELECT id, client_name, chat_token, deposit_cents, date
          FROM team_appointments
         WHERE deposit_paid = 1 AND COALESCE(deposit_cents,0) > 0`);
-    const paidTokens = new Set(charges.map(c => c.token));
     for (const a of claimed) {
-      if (a.chat_token && !paidTokens.has(a.chat_token)) {
+      // Tied to a real payment above, by token or by name. Not a ghost.
+      if (accountedFor.has(Number(a.id))) continue;
+      {
         ghosts.push({
           appointment_id: Number(a.id),
           name: a.client_name || '',
