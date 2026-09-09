@@ -11,6 +11,11 @@
 // asks which of them it is. Nothing is ever picked for the client.
 const { query } = require('./_team-db');
 
+/* Why the website half of the book last failed to load, if it did. Read by
+   the reconcile check so a broken query shows up as a reported problem
+   rather than as an appointment nobody can find. */
+let lastWebsiteError = null;
+
 const digits = s => String(s || '').replace(/[^0-9]/g, '');
 const lower = s => String(s || '').trim().toLowerCase();
 const looksEmail = s => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(s || '').trim());
@@ -71,11 +76,12 @@ async function todaysAppointments(day) {
   } catch (_) {}
 
   // Bookings made on the website, by guests and by members.
+  lastWebsiteError = null;
   try {
     const main = require('./_db');
     const rows = await main.query(
       `SELECT a.id, a.service, a.appointment_time AS time, a.total_cents, a.deposit_cents,
-              a.deposit_paid, a.guest_name, a.guest_email, a.guest_phone,
+              a.deposit_paid, a.guest_name, a.guest_email,
               a.member_id, m.full_name, m.email AS member_email, m.phone AS member_phone, m.tier
          FROM appointments a
          LEFT JOIN members m ON a.member_id = m.member_id
@@ -85,7 +91,7 @@ async function todaysAppointments(day) {
         src: 'm', id: Number(r.id),
         name: r.full_name || r.guest_name || '',
         email: lower(r.member_email || r.guest_email),
-        phone: digits(r.member_phone || r.guest_phone),
+        phone: digits(r.member_phone),
         service: r.service || '', time: r.time || '', artist: '',
         deposit_cents: Number(r.deposit_cents) || 0,
         deposit_paid: Number(r.deposit_paid) ? 1 : 0,
@@ -94,7 +100,12 @@ async function todaysAppointments(day) {
         tier: r.tier || '',
       });
     }
-  } catch (_) {}
+  } catch (err) {
+    /* Not swallowed. This exact catch hid a broken query for months while
+       the till quietly pretended the website book was empty. */
+    lastWebsiteError = String((err && err.message) || err);
+    try { console.error('[kiosk-find] website bookings unreadable: ' + lastWebsiteError); } catch (_) {}
+  }
 
   /* The same appointment can sit in both tables — booking online mirrors
      into the studio's book. Shown twice it would be checked out twice, so
@@ -155,4 +166,5 @@ async function findFor(qRaw, day) {
   return { matches: all.filter(a => nameMatches(q, a.name)), how: 'name' };
 }
 
-module.exports = { findFor, todaysAppointments, studioDay, nameMatches, looksEmail, digits, lower };
+module.exports = { findFor, todaysAppointments, studioDay, nameMatches, looksEmail, digits, lower,
+  websiteReadError: () => lastWebsiteError };

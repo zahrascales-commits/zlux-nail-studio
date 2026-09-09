@@ -258,10 +258,10 @@ async function namelessBookings(sinceDate) {
   try {
     const main = require('./_db');
     const rows = await main.query(
-      `SELECT a.id, a.member_id, a.guest_name, a.guest_email, a.guest_phone,
+      `SELECT a.id, a.member_id, a.guest_name, a.guest_email,
               a.service, a.appointment_date AS date, a.appointment_time AS time,
               a.status, a.total_cents, a.deposit_cents, a.deposit_paid,
-              m.full_name, m.email AS member_email
+              m.full_name, m.email AS member_email, m.phone AS member_phone
          FROM appointments a
          LEFT JOIN members m ON a.member_id = m.member_id
         WHERE a.appointment_date >= ?
@@ -275,7 +275,7 @@ async function namelessBookings(sinceDate) {
         // Says whether the membership link is the thing that broke.
         membership_found: !!r.full_name,
         email: r.member_email || r.guest_email || '(none)',
-        phone: r.guest_phone || '(none)',
+        phone: r.member_phone || '(none)',
         service: r.service || '', date: r.date, time: r.time,
         status: r.status === null ? '(null)' : String(r.status),
         worth_cents: money(r.total_cents),
@@ -315,6 +315,19 @@ module.exports = async function (req, res) {
       return res.json({ ok: true, fixed: fixed.length, rows: fixed, ghosts: found.ghosts });
     }
 
+    /* Does the till's own lookup work? Run here rather than trusted,
+       because the failure that hid for months was a query throwing into a
+       catch that ignored it. */
+    let tillSeesWebsite = null;
+    try {
+      const find = require('./_kiosk-find');
+      await find.todaysAppointments(find.studioDay());
+      const why = find.websiteReadError ? find.websiteReadError() : null;
+      tillSeesWebsite = why ? { ok: false, why } : { ok: true };
+    } catch (err) {
+      tillSeesWebsite = { ok: false, why: String(err.message || err) };
+    }
+
     const statusless = await statuslessBookings();
     const sinceDay = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
     const nameless = await namelessBookings(sinceDay);
@@ -330,6 +343,8 @@ module.exports = async function (req, res) {
       disagreements,
       // Bookings with no name on them, which nothing can pair to a visit.
       nameless,
+      // Whether the front desk can read website bookings. It could not, for months.
+      till_sees_website_bookings: tillSeesWebsite,
       gaps: found.gaps,
       ghosts: found.ghosts,
       unplaced: found.unplaced,
