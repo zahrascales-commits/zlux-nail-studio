@@ -68,6 +68,43 @@ async function stampAppointment(appt, fields) {
   }
 }
 
+/* The same visit's other row, in the other book. Matched on the date, the
+   time and the first name, which is how the rest of the site pairs them.
+   Returns nothing rather than a maybe: writing a payment onto the wrong
+   person is far worse than leaving one row unstamped. */
+async function twinOf(appt) {
+  if (!appt || !appt.date || !appt.time) return null;
+  const first = s => String(s || '').trim().toLowerCase().split(/\s+/)[0] || '';
+  const who = first(appt.name);
+  if (!who) return null;
+  const hhmm = String(appt.time).slice(0, 5);
+
+  try {
+    if (appt.src === 't') {
+      const rows = await require('./_db').query(
+        `SELECT a.id, a.guest_name, a.appointment_time AS time, m.full_name
+           FROM appointments a
+           LEFT JOIN members m ON a.member_id = m.member_id
+          WHERE a.appointment_date = ?`, [appt.date]);
+      const hit = rows.filter(r => String(r.time || '').slice(0, 5) === hhmm
+        && first(r.full_name || r.guest_name) === who);
+      return hit.length === 1 ? { src: 'm', id: Number(hit[0].id) } : null;
+    }
+    const rows = await query(
+      'SELECT id, client_name, time FROM team_appointments WHERE date = ?', [appt.date]);
+    const hit = rows.filter(r => String(r.time || '').slice(0, 5) === hhmm
+      && first(r.client_name) === who);
+    return hit.length === 1 ? { src: 't', id: Number(hit[0].id) } : null;
+  } catch (_) { return null; }
+}
+
+// Both books, so neither can think a paid visit is unpaid.
+async function stampBothBooks(appt, fields) {
+  await stampAppointment(appt, fields);
+  const twin = await twinOf(appt);
+  if (twin) await stampAppointment(twin, fields);
+}
+
 // Find today's appointment for a typed name (case-insensitive, first-name ok)
 async function findToday(name) {
   const today = new Date().toISOString().slice(0, 10);
@@ -503,7 +540,7 @@ module.exports = async function (req, res) {
       // lives only in the kiosk log is a tip nobody can ever total up.
       const appt = resolvedOut.appt;
       if (appt) {
-        await stampAppointment(appt, {
+        await stampBothBooks(appt, {
           checked_out_ts: Date.now(),
           paid_cents: amount,
           tip_cents: tip,

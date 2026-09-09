@@ -61,7 +61,7 @@ async function todaysAppointments(day) {
     for (const r of rows) {
       if (/cancel/i.test(String(r.status || ''))) continue;
       out.push({
-        src: 't', id: Number(r.id),
+        src: 't', id: Number(r.id), date,
         name: r.client_name || '', email: lower(r.client_email), phone: digits(r.client_phone),
         service: r.service || '', time: r.time || '', artist: r.artist || '',
         deposit_cents: Number(r.deposit_cents) || 0,
@@ -88,7 +88,7 @@ async function todaysAppointments(day) {
         WHERE a.appointment_date = ? AND a.status <> 'CANCELLED'`, [date]);
     for (const r of rows) {
       out.push({
-        src: 'm', id: Number(r.id),
+        src: 'm', id: Number(r.id), date,
         name: r.full_name || r.guest_name || '',
         email: lower(r.member_email || r.guest_email),
         phone: digits(r.member_phone),
