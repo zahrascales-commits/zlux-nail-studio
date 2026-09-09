@@ -34,11 +34,18 @@ async function depositCharges(sk, sinceSec) {
 
     for (const pi of (j.data || [])) {
       if (pi.status !== 'succeeded') continue;
-      const token = (pi.metadata || {}).appt_token;
-      if (!token) continue;   // not a deposit against an appointment
+      const md = pi.metadata || {};
+      const looksLikeDeposit = md.appt_token || md.client || md.service || md.services;
+      if (!looksLikeDeposit) continue;
+      if (!/deposit/i.test(String(pi.description || ''))) continue;
+
       out.push({
         id: pi.id,
-        token,
+        // The appointment link puts this on; the booking flow does not.
+        token: md.appt_token || '',
+        // What the booking flow leaves instead.
+        client: md.client || '',
+        service: md.service || md.services || '',
         amount: money(pi.amount_received || pi.amount),
         created: pi.created,
         desc: pi.description || '',
@@ -59,13 +66,52 @@ async function depositCharges(sk, sinceSec) {
    different and much worse problem. */
 async function findGaps(sk, sinceSec) {
   const charges = await depositCharges(sk, sinceSec);
-  const gaps = [], ghosts = [];
+  const gaps = [], ghosts = [], unplaced = [];
+
+  const norm = s => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
+  const firstName = s => String(s || '').trim().toLowerCase().split(/\s+/)[0] || '';
 
   for (const c of charges) {
-    const appt = await queryOne(
-      `SELECT id, client_name, client_email, service, date, time,
-              deposit_cents, deposit_paid, checked_out_ts
-         FROM team_appointments WHERE chat_token = ?`, [c.token]);
+    let appt = null;
+
+    if (c.token) {
+      appt = await queryOne(
+        `SELECT id, client_name, client_email, service, date, time,
+                deposit_cents, deposit_paid, checked_out_ts
+           FROM team_appointments WHERE chat_token = ?`, [c.token]);
+    }
+
+    /* No token, so this came through the booking flow. Matched on the name it
+       does carry — but only when one appointment fits and there is nothing
+       recorded on it, because a wrong match writes a deposit against the
+       wrong person and that is worse than not finding it. */
+    if (!appt && c.client) {
+      const paidOn = new Date(Number(c.created) * 1000).toISOString().slice(0, 10);
+      let rows = [];
+      try {
+        rows = await query(
+          `SELECT id, client_name, client_email, service, date, time,
+                  deposit_cents, deposit_paid, checked_out_ts
+             FROM team_appointments
+            WHERE date >= ? AND COALESCE(deposit_paid,0) = 0`, [paidOn]);
+      } catch (_) {}
+
+      const fits = rows.filter(r =>
+        firstName(r.client_name) && firstName(r.client_name) === firstName(c.client)
+        && (!c.service || norm(r.service) === norm(c.service)));
+
+      if (fits.length === 1) {
+        appt = fits[0];
+      } else if (fits.length > 1) {
+        // Real, but not safe to place. Better said out loud than guessed.
+        unplaced.push({
+          name: c.client, amount_cents: c.amount, paid_on: paidOn,
+          service: c.service, candidates: fits.length, payment_intent: c.id,
+        });
+        continue;
+      }
+    }
+
     if (!appt) continue;
 
     const recorded = Number(appt.deposit_paid) ? money(appt.deposit_cents) : 0;
@@ -107,7 +153,7 @@ async function findGaps(sk, sinceSec) {
     }
   } catch (_) {}
 
-  return { gaps, ghosts, checked: charges.length };
+  return { gaps, ghosts, unplaced, checked: charges.length };
 }
 
 module.exports = async function (req, res) {
@@ -145,6 +191,7 @@ module.exports = async function (req, res) {
       checked: found.checked,
       gaps: found.gaps,
       ghosts: found.ghosts,
+      unplaced: found.unplaced,
       overcharged: found.gaps.filter(g => g.already_checked_out),
     });
   } catch (err) {
