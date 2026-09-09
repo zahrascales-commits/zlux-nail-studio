@@ -758,7 +758,7 @@ function renderTeamClients(){
     }
     return '<div class="appt" style="flex-direction:column;align-items:stretch;cursor:pointer" onclick="_tcOpen=_tcOpen==='+c.id+'?null:'+c.id+';renderTeamClients()">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem">'
-      +'<div><div class="appt-c">'+esc(c.name||'Unnamed')+(prof?' <span style="font-size:0.6rem;color:var(--gold)">✦ BC</span>':'')+'</div>'
+      +'<div><div class="appt-c">'+(c.name?clientLink(c.name,{id:c.id,email:c.email||'',phone:c.phone||''}):'Unnamed')+(prof?' <span style="font-size:0.6rem;color:var(--gold)">✦ BC</span>':'')+'</div>'
       +'<div class="appt-s">'+esc(c.phone||'')+(c.last_service?' · Last: '+esc(c.last_service):'')+'</div></div>'
       +'<div style="font-size:0.7rem;color:var(--muted)">'+(Number(c.visits)||0)+' visit'+(Number(c.visits)===1?'':'s')+' '+(open?'▲':'▼')+'</div>'
       +'</div>'+extra+'</div>';
@@ -922,7 +922,7 @@ function renderSchedule(){
     <div class="appt" style="animation-delay:${i*0.04}s">
       <div class="appt-t">${a.date===today?'<div class="badge-today">Today</div>':''}<div class="d">${fmtDate(a.date)}</div><div class="h">${fmtTime(a.time)}</div></div>
       <div class="appt-b">
-        <div class="appt-c">${esc(a.client_name||'Client')}</div>
+        <div class="appt-c">${a.client_name?clientLink(a.client_name,{phone:a.client_phone||''}):'Client'}</div>
         <div class="appt-s">${esc(a.service||'')}</div>
         ${a.client_phone?`<div class="appt-p">${esc(a.client_phone)}</div>`:''}
         ${a.notes?`<div class="appt-note">${esc(a.notes)}</div>`:''}
@@ -959,7 +959,8 @@ async function loadChats(){
 function openSheet(id){
   activeAppt=schedule.find(a=>a.id===id)||null;
   if(!activeAppt)return;
-  document.getElementById('sheet-name').textContent=activeAppt.client_name||'Client';
+  document.getElementById('sheet-name').innerHTML=activeAppt.client_name
+    ? clientLink(activeAppt.client_name,{phone:activeAppt.client_phone||''}) : 'Client';
   document.getElementById('sheet-sub').textContent=(activeAppt.service||'')+' · '+fmtDate(activeAppt.date)+' '+fmtTime(activeAppt.time);
   document.getElementById('sheet').classList.add('open');
   loadSheet();
@@ -989,7 +990,12 @@ async function sendMsg(){
 
 function hdr(){return{'Content-Type':'application/json','X-Team-Id':String(MID),'X-Team-Pin':PIN};}
 // Any client name in the portal opens their profile.
-function openClient(who){ if(window.ZolaClient) window.ZolaClient.open(who); }
+function openClient(who){
+  if(!window.ZolaClient) return;
+  // Same reason as Studio Manager: say who is asking at the moment of asking.
+  window.ZolaClient.init({ member_id: MID, pin: PIN });
+  window.ZolaClient.open(who);
+}
 function clientLink(name, extra){
   if(!name) return 'Client';
   const d = Object.assign({name:name}, extra||{});

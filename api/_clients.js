@@ -126,7 +126,10 @@ async function handler(req, res) {
       let teamRows = [];
       try {
         teamRows = await query(
-          `SELECT a.id, a.client_name, a.client_phone, a.service, a.date, a.time, a.notes, a.status,
+          `SELECT a.id, a.client_name, a.client_phone, a.client_email, a.service, a.date, a.time,
+                  a.notes, a.status,
+                  a.deposit_cents, a.deposit_paid, a.price_cents,
+                  a.checked_out_ts, a.paid_cents, a.tip_cents,
                   m.name AS provider
              FROM team_appointments a
              LEFT JOIN team_members m ON m.id = a.team_member_id
@@ -179,13 +182,30 @@ async function handler(req, res) {
         const conf = (String(t.notes || '').match(/ZOLA-\d+/) || [''])[0];
         let addons = [];
         try { addons = JSON.parse((p && p.addons) || '[]'); } catch (_) {}
+
+        /* The deposit can be written on either row. Whichever one actually
+           holds it is the true one — a zero here means "nothing recorded",
+           not "nothing paid", and treating those the same is how somebody
+           gets asked for money they have already handed over. */
+        const teamDep = Number(t.deposit_paid) ? Number(t.deposit_cents) || 0 : 0;
+        const siteDep = p && Number(p.deposit_paid) ? Number(p.deposit_cents) || 0 : 0;
+        const deposit = Math.max(teamDep, siteDep);
+
+        /* The price agreed when it was booked outranks today's menu, which
+           is the rule the till already follows. */
+        const agreed = Number(t.price_cents) || 0;
+
         add({
           date: t.date, time: t.time,
           service: t.service || (p && p.service) || '',
           addons, provider: t.provider || '',
-          total_cents: p ? Number(p.total_cents) || 0 : null,
-          deposit_cents: p ? Number(p.deposit_cents) || 0 : 0,
-          deposit_paid: p ? !!Number(p.deposit_paid) : false,
+          total_cents: agreed || (p ? Number(p.total_cents) || 0 : null),
+          deposit_cents: deposit,
+          deposit_paid: deposit > 0,
+          // Been in and settled up, so nothing is outstanding on this one.
+          paid_cents: Number(t.paid_cents) || 0,
+          tip_cents: Number(t.tip_cents) || 0,
+          checked_out: !!Number(t.checked_out_ts),
           status: t.status || (p && p.status) || 'scheduled',
           confirmation: conf,
         });
@@ -262,6 +282,29 @@ async function handler(req, res) {
       try {
         const built = await buildHistory(client);
         visits = built.visits; totals = built.totals;
+      } catch (_) {}
+
+      /* A number typed onto an appointment is still their number. The
+         profile is where somebody goes to find one, so an empty field here
+         while the same detail sits on their booking is just the record
+         failing to look. Shown, and marked so it is clear it came from a
+         booking rather than from her address book. */
+      try {
+        if (!client.phone || !client.email) {
+          const nm = String(client.name || '').trim();
+          const ph = String(client.phone || '').replace(/[^0-9]/g, '');
+          const row = await queryOne(
+            `SELECT client_phone, client_email FROM team_appointments
+               WHERE ((? <> '' AND lower(client_name) = lower(?))
+                  OR (? <> '' AND replace(replace(replace(replace(client_phone,'-',''),' ',''),'(',''),')','') = ?))
+                 AND (COALESCE(client_phone,'') <> '' OR COALESCE(client_email,'') <> '')
+               ORDER BY date DESC LIMIT 1`,
+            [nm, nm, ph, ph]);
+          if (row) {
+            if (!client.phone && row.client_phone) { client.phone = row.client_phone; client.phone_from_booking = true; }
+            if (!client.email && row.client_email) { client.email = row.client_email; client.email_from_booking = true; }
+          }
+        }
       } catch (_) {}
 
       // Membership, if any. An artist should know before someone sits down
@@ -370,8 +413,20 @@ async function handler(req, res) {
 
     if (req.method === 'PUT' && action === 'update') {
       const body = req.body || {};
-      const id = Number(body.id);
-      if (!id) return res.status(400).json({ error: 'Which client?' });
+      let id = Number(body.id);
+
+      /* No row yet. Somebody booked in by hand has a name on an appointment
+         and nothing in the client book, and refusing the edit would mean the
+         one screen that shows them is the one screen that cannot fix them.
+         Filing them on the first edit is the whole point. */
+      if (!id) {
+        const created = await upsertClient({
+          name: body.name || body.was_name || '',
+          email: body.email || '', phone: body.phone || '',
+        });
+        id = Number(created) || 0;
+      }
+      if (!id) return res.status(400).json({ error: 'Give them a name, an email or a phone number first.' });
       try { await execute("ALTER TABLE clients ADD COLUMN sizes TEXT DEFAULT ''"); } catch (_) {}
 
       /* Only the fields actually sent. This wrote all seven columns on every

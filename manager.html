@@ -2120,7 +2120,9 @@
       <div style="position:relative"><label class="fld-label">Client Name</label>
         <input id="a-client" placeholder="Start typing, or tap for your clients" autocomplete="off"
           oninput="acFilter()" onfocus="acFilter()" onkeydown="acKey(event)" />
-        <div id="ac-list"></div></div>
+        <div id="ac-list"></div>
+        <button type="button" onclick="openTypedClient()" class="btn btn-ghost btn-sm"
+          style="margin-top:0.4rem;padding:0.3rem 0.6rem;font-size:0.62rem">View their profile</button></div>
       <div><label class="fld-label">Client Phone</label><input id="a-phone" placeholder="(555) 000-0000" /></div>
     </div>
     <div class="field"><label class="fld-label">Client Email (for instant confirmation)</label><input id="a-email" placeholder="client@email.com" /></div>
@@ -2232,7 +2234,24 @@ let activeThreadToken=null;
 /* ── AUTH ── */
 // Any client name on any screen opens the same profile.
 function openClient(who){
-  if(window.ZolaClient) window.ZolaClient.open(who);
+  if(!window.ZolaClient){ toast('Still loading — try that again in a second'); return; }
+  // Said every time rather than once at login, because the auto-login can
+  // run before this file has finished loading.
+  window.ZolaClient.init({ pass: PWD });
+  window.ZolaClient.open(who);
+}
+// The Clients tab is showing stale rows once the sheet has saved a change.
+window.zolaClientSaved = function(){
+  if(typeof loadClients === 'function' && document.getElementById('clients-list')) loadClients();
+};
+/* Whoever is currently typed into the appointment form. Their name is
+   enough to find them, and the phone and email beside it make it exact. */
+function openTypedClient(){
+  const nm=(document.getElementById('a-client')||{}).value||'';
+  const ph=(document.getElementById('a-phone')||{}).value||'';
+  const em=(document.getElementById('a-email')||{}).value||'';
+  if(!nm.trim()&&!ph.trim()&&!em.trim()){ toast('Type who it is first'); return; }
+  openClient({name:nm.trim(),phone:ph.trim(),email:em.trim()});
 }
 function clientLink(name, extra){
   if(!name) return 'Guest';
@@ -2768,7 +2787,7 @@ function renderPoAdmin(){
   const ordEl=document.getElementById('po-admin-orders');
   ordEl.innerHTML=poAdmin.orders.length?poAdmin.orders.map(o=>`
     <div style="font-size:0.82rem;padding:0.5rem 0.7rem;background:var(--bg);border:1px solid var(--border);display:flex;justify-content:space-between;gap:0.6rem;flex-wrap:wrap;">
-      <span><strong>${esc(o.buyer_name||'—')}</strong> — ${esc(o.product_name)} ${Number(o.kit)?'<span style="color:var(--gold)">+ sizing kit</span>':''}</span>
+      <span><strong>${o.buyer_name?clientLink(o.buyer_name,{email:o.buyer_email||''}):'—'}</strong> — ${esc(o.product_name)} ${Number(o.kit)?'<span style="color:var(--gold)">+ sizing kit</span>':''}</span>
       <span style="color:var(--muted)">${esc(o.buyer_email||'')} · $${(o.price_cents/100).toFixed(2)}${o.sizes?' · sizes: '+esc(String(o.sizes).slice(0,40)):' · no sizes yet'}</span>
     </div>`).join(''):'<div class="empty" style="padding:0.8rem">No orders yet.</div>';
 }
@@ -3347,7 +3366,7 @@ function renderUpcoming(){
     html+=`<div class="appt" style="--at:${apptColor(a)}">
       <div class="appt-time" style="--at:${apptColor(a)}"><div class="t">${fmtTime(a.time)}</div><div class="d">${esc(apptOwnerName(a))}</div></div>
       <div class="appt-main">
-        <div class="appt-client">${esc(a.client_name||'Open')}</div>
+        <div class="appt-client">${a.client_name?clientLink(a.client_name,{phone:a.client_phone||'',email:a.client_email||''}):'Open'}</div>
         <div class="appt-svc">${esc(a.service||'—')}${a.client_phone?' · '+esc(a.client_phone):''}</div>
       </div>
       <div class="appt-actions"><button class="btn btn-ghost btn-sm" onclick="editAppt(${a.id})">Edit</button></div>
@@ -3373,7 +3392,7 @@ function renderWeek(){
     html+=`<div class="wk-hour">${fmtTime(slot).replace(':00','')}</div>`;
     for(const ds of days){
       const cell=list.filter(a=>a.date===ds&&a.time===slot);
-      const chips=cell.map(a=>`<span class="wk-chip" style="background:${a.member_color||'#8B7355'}" onclick="event.stopPropagation();editAppt(${a.id})">${esc((a.client_name||'Open').split(' ')[0])}</span>`).join('');
+      const chips=cell.map(a=>`<span class="wk-chip" style="background:${a.member_color||'#8B7355'}" onclick="event.stopPropagation();editAppt(${a.id})" title="${esc(a.client_name||'Open')}">${esc((a.client_name||'Open').split(' ')[0])}</span>`).join('');
       html+=`<div class="wk-cell" onclick="quickAdd('${ds}','${slot}')">${chips}</div>`;
     }
   }
@@ -3788,7 +3807,7 @@ async function loadClassPurchases(){
   if(!purchases.length){g.innerHTML='<div class="empty" style="padding:1rem">No purchases yet.</div>';return;}
   g.innerHTML=purchases.map(p=>`
     <div style="font-size:0.85rem;padding:0.5rem 0.7rem;background:var(--bg);border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:0.6rem;flex-wrap:wrap;">
-      <span><strong>${esc(p.buyer_name||'—')}</strong> — ${esc(p.class_name)}</span>
+      <span><strong>${p.buyer_name?clientLink(p.buyer_name,{email:p.buyer_email||'',phone:p.buyer_phone||''}):'—'}</strong> — ${esc(p.class_name)}</span>
       <span style="color:var(--muted);display:flex;align-items:center;gap:0.6rem;">${esc(p.buyer_email||'')} ${p.buyer_phone?'· '+esc(p.buyer_phone):''} · $${(p.price_cents/100).toFixed(2)}
         <button class="btn btn-danger btn-sm" onclick="delClassPurchase(${p.id})">Remove</button>
       </span>
@@ -3890,7 +3909,7 @@ function renderSchedule(){
     return `<div class="appt" style="--at:${color};animation-delay:${i*0.04}s">
       <div class="appt-time" style="--at:${color}"><div class="t">${fmtTime(a.time)}</div><div class="d">${a.status==='scheduled'?'Booked':a.status}</div></div>
       <div class="appt-main">
-        <div class="appt-client">${esc(a.client_name||'Walk-in / Open')}</div>
+        <div class="appt-client">${a.client_name?clientLink(a.client_name,{phone:a.client_phone||'',email:a.client_email||''}):'Walk-in / Open'}</div>
         <div class="appt-svc">${esc(a.service||'—')}${a.client_phone?' · '+esc(a.client_phone):''}</div>
         ${a.notes?`<div style="font-size:0.74rem;color:var(--muted);font-style:italic;margin-top:0.2rem">${esc(a.notes)}</div>`:''}
         <div class="appt-assign">
@@ -4068,7 +4087,7 @@ async function loadInquiries(){
     if(!inquiries.length){list.innerHTML='<div class="empty" style="padding:2rem 1rem"><div class="big">📥</div>No inquiries yet.<br><span style="font-size:0.72rem">Messages from your contact form appear here.</span></div>';return;}
     list.innerHTML=inquiries.map(q=>`
       <div class="inq ${activeInq&&activeInq.id===q.id?'active':''}" onclick="openInquiry(${q.id})">
-        <div class="inq-top"><span class="inq-name">${esc(q.name||'Anonymous')}</span><span class="inq-badge ${q.status==='new'?'bg-new':'bg-replied'}">${q.status}</span></div>
+        <div class="inq-top"><span class="inq-name">${q.name?clientLink(q.name,{email:(q.contact||'').includes('@')?q.contact:'',phone:(q.contact||'').includes('@')?'':(q.contact||'')}):'Anonymous'}</span><span class="inq-badge ${q.status==='new'?'bg-new':'bg-replied'}">${q.status}</span></div>
         <div class="inq-preview">${esc(q.message)}</div>
         <div class="inq-meta">${esc(q.contact||'no contact')} · ${new Date(Number(q.ts)).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>
       </div>`).join('');
@@ -4082,7 +4101,7 @@ function openInquiry(id){
   document.getElementById('inq-detail').innerHTML=`
     <div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap">
-        <div><div class="chat-head-name">${esc(activeInq.name||'Anonymous')}</div>
+        <div><div class="chat-head-name">${activeInq.name?clientLink(activeInq.name,{email:(activeInq.contact||'').includes('@')?activeInq.contact:'',phone:(activeInq.contact||'').includes('@')?'':(activeInq.contact||'')}):'Anonymous'}</div>
         <div class="chat-head-sub">${esc(activeInq.contact||'no contact given')} · via ${esc(activeInq.source)}</div></div>
         <div style="display:flex;gap:0.4rem">
           <button class="btn btn-ghost btn-sm" onclick="markInq('replied')">✓ Mark Replied</button>
@@ -4250,7 +4269,7 @@ async function loadClientInspo(){
     if(!rows.length){el.innerHTML='<div style="color:var(--muted);font-size:0.8rem;">No client inspo photos yet — they can attach one right after booking.</div>';return;}
     el.innerHTML=rows.map(p=>'<div style="border:1px solid var(--border);background:var(--bg);padding:0.5rem;">'
       +'<img src="'+p.data_url+'" style="width:100%;height:130px;object-fit:cover;display:block" alt="">'
-      +'<div style="font-family:\'Cinzel\',serif;font-size:0.82rem;color:var(--cream);margin-top:0.4rem">'+esc(p.client_name||'Client')+'</div>'
+      +'<div style="font-family:\'Cinzel\',serif;font-size:0.82rem;color:var(--cream);margin-top:0.4rem">'+(p.client_name?clientLink(p.client_name):'Client')+'</div>'
       +'<div style="font-size:0.62rem;color:var(--muted)">'+esc(p.service||'')+(p.appt_date?' · '+p.appt_date:'')+'</div>'
       +'<button class="btn btn-danger btn-sm" style="margin-top:0.35rem" onclick="delClientInspo('+p.id+')">Delete</button>'
       +'</div>').join('');
@@ -4509,7 +4528,8 @@ function cwStep2(){
           return '<label class="cw-p">'
             + (selectable ? '<input type="checkbox" ' + (CW.chosen.has(k)?'checked':'') + ' onchange="cwToggle(\'' + esc(k) + '\',this.checked)">' : '')
             + '<span class="av">' + esc(String(x.name||'?').trim().charAt(0).toUpperCase()) + '</span>'
-            + '<span class="nm">' + esc(x.name) + '<i>' + esc(sub || 'nothing on file') + '</i></span>'
+            + '<span class="nm">' + (x.name ? clientLink(x.name, { email: x.email || '', phone: x.phone || '' }) : 'Unnamed')
+              + '<i>' + esc(sub || 'nothing on file') + '</i></span>'
             + '</label>';
         }).join('') : '<div class="empty" style="padding:1rem">Nobody here.</div>')
     + '</div>';
@@ -4694,7 +4714,7 @@ async function loadGaps(){
     const need = g.missing === 'both' ? 'no email · no phone'
       : (g.missing === 'email' ? 'no email' : 'no phone');
     return '<div class="gap-row ' + g.missing + '">'
-      + '<div class="gap-name">' + esc(g.name)
+      + '<div class="gap-name">' + (g.name ? clientLink(g.name, { id: g.id }) : 'Unnamed')
         + '<i>' + g.visits + ' visit' + (g.visits === 1 ? '' : 's')
           + (g.last_visit ? ' · last ' + esc(g.last_visit) : ' · never been in')
           + (g.is_member ? ' · ' + esc(String(g.tier).replace('_',' ')) : '')
@@ -5003,7 +5023,7 @@ function claimCard(r, urgent){
   }
   return '<div class="member-card" style="--mc:' + (urgent ? '#d66' : '#B6A588') + '">'
     + '<div class="mc-top"><div style="flex:1">'
-      + '<div class="mc-name">' + esc(r.client_name || 'Client') + ' · ' + esc(r.service || '') + '</div>'
+      + '<div class="mc-name">' + (r.client_name ? clientLink(r.client_name) : 'Client') + ' · ' + esc(r.service || '') + '</div>'
       + '<div class="mc-role">' + esc(r.when) + ' · ' + who + '</div>'
     + '</div>' + dispatchPill(r) + '</div>' + assign + '</div>';
 }
@@ -5352,7 +5372,7 @@ async function loadNeedsYou(){
           return '<div class="ny-row' + (soon ? ' soon' : '') + '" id="ny-' + a.id + '">'
             + '<div class="ny-when">' + esc(niceDay(a.date)) + '<i>' + esc(time12(a.time))
               + ' · ' + (a.days_away === 0 ? 'today' : a.days_away === 1 ? 'tomorrow' : 'in ' + a.days_away + ' days') + '</i></div>'
-            + '<div class="ny-who"><b>' + esc(a.client) + '</b>'
+            + '<div class="ny-who"><b>' + (a.client ? clientLink(a.client, { phone: a.phone || '' }) : 'Guest') + '</b>'
               + '<i>' + esc(a.service || 'Appointment') + (a.phone ? ' · ' + esc(a.phone) : '') + '</i></div>'
             + '<select id="ny-sel-' + a.id + '">'
               + '<option value="">Give it to…</option>'
@@ -5377,7 +5397,7 @@ async function loadNeedsYou(){
       sub: esc(mm.email || ''), when: mm.started });
   }
   for(const b of (NEEDS.new_bookings || [])){
-    feed.push({ ic:'📅', text:'<b>' + esc(b.client) + '</b> booked ' + esc(b.service),
+    feed.push({ ic:'📅', text:'<b>' + (b.client ? clientLink(b.client) : 'Someone') + '</b> booked ' + esc(b.service),
       sub: niceDay(b.date) + ' at ' + time12(b.time) + (b.deposit_paid ? ' · deposit paid' : ' · no deposit'),
       when: b.date });
   }
@@ -5446,7 +5466,7 @@ async function loadMissingConfirms(){
       + rows.slice(0, 12).map(function(r){
           return '<div class="ny-row" style="border-left-color:var(--gold)">'
             + '<div class="ny-when">' + esc(niceDay(r.date)) + '<i>' + esc(time12(r.time)) + '</i></div>'
-            + '<div class="ny-who"><b>' + esc(r.client || 'Guest') + '</b>'
+            + '<div class="ny-who"><b>' + (r.client ? clientLink(r.client) : 'Guest') + '</b>'
               + '<i>' + esc(r.service || '') + (r.artist ? ' · ' + esc(r.artist) : ' · nobody assigned yet')
               + (r.deposit_paid ? ' · deposit paid' : '') + '</i></div>'
             + '<button class="btn btn-ghost btn-sm" onclick="sendOneConfirm(' + r.id + ')">Send</button>'
@@ -5524,7 +5544,7 @@ async function loadFloor(){
     + d.board.map(function(b){
         return '<div class="fl-row ' + b.state + '">'
           + '<div class="fl-time">' + esc(time12(b.time)) + '</div>'
-          + '<div class="fl-who"><b>' + esc(b.name) + '</b>'
+          + '<div class="fl-who"><b>' + (b.name ? clientLink(b.name) : 'Guest') + '</b>'
             + '<i>' + esc(b.service) + (b.artist ? ' · with ' + esc(b.artist) : '') + '</i></div>'
           + '<div class="fl-state">' + LABEL[b.state] + '</div>'
           + '<div class="fl-money">'
@@ -5678,7 +5698,7 @@ async function loadJourneys(){
     return '<div class="jn-card">'
       + '<div class="jn-top"><div style="flex:1;min-width:160px">'
         + '<div class="jn-name">' + esc(j.title) + '</div>'
-        + '<div class="jn-meta">' + (j.client_name ? esc(j.client_name) + ' · ' : '')
+        + '<div class="jn-meta">' + (j.client_name ? clientLink(j.client_name) + ' · ' : '')
           + j.steps.length + ' photo' + (j.steps.length === 1 ? '' : 's')
           + (j.span ? ' · ' + esc(j.span) + ' apart' : '') + '</div>'
       + '</div>'
@@ -6404,7 +6424,7 @@ async function loadAllBookings(){
     const b = d.bookings || [];
     el.innerHTML = b.length
       ? b.map(x => '<div class="member-card" style="--mc:#B6A588"><div class="mc-top"><div style="flex:1">'
-          + '<div class="mc-name">' + esc(x.guest_name || 'Client') + '</div>'
+          + '<div class="mc-name">' + (x.guest_name ? clientLink(x.guest_name, { email: x.guest_email || '' }) : 'Client') + '</div>'
           + '<div class="mc-role">' + esc(x.service || '—') + ' · ' + esc(x.appointment_date || '')
           + (x.appointment_time ? ' at ' + fmtTime(x.appointment_time) : '') + '</div></div>'
           + '<span class="status-pill ' + (String(x.status).toUpperCase()==='CANCELLED' ? 'status-off' : 'status-on') + '">'
@@ -6645,7 +6665,7 @@ async function loadGiftCards(){
     el.innerHTML = g.length
       ? g.map(x => '<div class="member-card" style="--mc:#B6A588"><div class="mc-top"><div style="flex:1">'
           + '<div class="mc-name">' + esc(x.code || 'Card') + '</div>'
-          + '<div class="mc-role">' + esc(x.recipient || x.buyer || '') + '</div></div>'
+          + '<div class="mc-role">' + ((x.recipient || x.buyer) ? clientLink(x.recipient || x.buyer) : '') + '</div></div>'
           + '<span class="status-pill status-on">' + cmoney(x.balance_cents != null ? x.balance_cents : x.amount_cents) + '</span></div></div>').join('')
       : emptyBox('🎁', 'No gift cards issued yet.');
   }catch(_){ el.innerHTML = emptyBox('⚠️', 'Could not load gift cards.'); }
@@ -6981,9 +7001,9 @@ async function loadClientDupes(){
     + pairs.map(function(p, i){
         const keep = p.clients[0], drop = p.clients[1];
         return '<div class="ny-row" id="dupe-' + i + '" style="border-left-color:var(--gold)">'
-          + '<div class="ny-who" style="flex:1"><b>' + esc(keep.name || 'Unnamed') + '</b>'
+          + '<div class="ny-who" style="flex:1"><b>' + (keep.name ? clientLink(keep.name, { id: keep.id }) : 'Unnamed') + '</b>'
             + '<i>keeping this one · ' + esc(keep.email || keep.phone || '') + '</i></div>'
-          + '<div class="ny-who" style="flex:1"><b style="color:var(--muted)">' + esc(drop.name || 'Unnamed') + '</b>'
+          + '<div class="ny-who" style="flex:1"><b style="color:var(--muted)">' + (drop.name ? clientLink(drop.name, { id: drop.id }) : 'Unnamed') + '</b>'
             + '<i>folding in · same ' + esc(p.matched_on) + '</i></div>'
           + '<button class="btn btn-ghost btn-sm" onclick="mergeClients(' + keep.id + ',' + drop.id + ',' + i + ')">Join</button>'
           + '</div>';
@@ -7062,7 +7082,7 @@ async function loadPayMath(){
                 + a.rows.map(function(r){
                     return '<tr style="border-top:1px solid var(--border)">'
                       + '<td style="padding:0.45rem 0.6rem 0.45rem 0;color:var(--muted);white-space:nowrap">' + esc(niceDay(r.date)) + '</td>'
-                      + '<td style="padding:0.45rem 0.6rem">' + esc(r.client) + '</td>'
+                      + '<td style="padding:0.45rem 0.6rem">' + (r.client ? clientLink(r.client) : '—') + '</td>'
                       + '<td style="padding:0.45rem 0.6rem;color:var(--muted)">' + esc(r.service) + '</td>'
                       + '<td style="padding:0.45rem 0.6rem;text-align:right;color:var(--muted)">' + mny(r.worth_cents) + '</td>'
                       + '<td style="padding:0.45rem 0.6rem;text-align:right;'
@@ -7128,7 +7148,7 @@ function renderCards(){
     + (not.length ? not.map(function(c){
         return '<div class="member-card" id="cardrow-' + c.id + '" style="--mc:#8B7355">'
           + '<div class="mc-top"><div style="flex:1;min-width:0">'
-            + '<div class="mc-name">' + esc(c.name || '(no name)') + '</div>'
+            + '<div class="mc-name">' + (c.name ? clientLink(c.name, { id: c.id, email: c.email || '' }) : '(no name)') + '</div>'
             + '<div style="font-size:0.78rem;color:var(--muted);margin-top:0.15rem">'
               + c.visits + ' visit' + (c.visits === 1 ? '' : 's')
               + (c.last_visit ? ' · last ' + esc(c.last_visit) : '')
@@ -7144,7 +7164,7 @@ function renderCards(){
     + (has.length ? has.map(function(c){
         return '<div class="member-card" style="--mc:#6ab07a">'
           + '<div class="mc-top"><div style="flex:1">'
-            + '<div class="mc-name">' + esc(c.name || '(no name)') + '</div>'
+            + '<div class="mc-name">' + (c.name ? clientLink(c.name, { id: c.id }) : '(no name)') + '</div>'
             + '<div style="font-size:0.78rem;color:var(--muted);margin-top:0.15rem">' + esc(c.card)
               + (c.is_member ? ' · member' : '') + '</div>'
           + '</div>'
@@ -7619,7 +7639,7 @@ function renderClients(){
     const isOpen=openClientId===c.id;
     const head=`<div class="client-row" style="animation-delay:${i*0.03}s;${isOpen?'border-color:var(--gold);':''}" onclick="toggleClient(${c.id})">
       <div class="avatar" style="background:${OWNER_COLOR};width:38px;height:38px;font-size:0.95rem">${initials(c.name||'?')}</div>
-      <div><div class="client-name">${esc(c.name||'Unnamed')}</div>
+      <div><div class="client-name">${c.name?clientLink(c.name,{id:c.id,email:c.email||'',phone:c.phone||''}):'Unnamed'}</div>
       <div class="client-sub">${esc(c.phone||'')}${c.phone&&c.email?' · ':''}${esc(c.email||'')}</div></div>
       <div class="client-stat">${Number(c.visits)||0} visit${Number(c.visits)===1?'':'s'}${c.last_service?'<br>Last: '+esc(c.last_service):''}<br>${Number(c.marketing_opt_in)?'<span class="optin-pill">On your list</span>':''}</div>
     </div>`;
@@ -7919,7 +7939,7 @@ function renderMassPicker(){
   else list.innerHTML=shown.map(c=>`
     <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.82rem;padding:0.2rem 0;">
       <input type="checkbox" class="mass-pick" value="${c.id}" ${massSelected.has(Number(c.id))?'checked':''} onchange="massToggle(${c.id},this.checked)" style="width:auto;" />
-      <span>${esc(c.name||'—')}${c.email?' <span style="color:var(--muted)">· '+esc(c.email)+'</span>':''}</span>
+      <span>${c.name?clientLink(c.name,{id:c.id,email:c.email||'',phone:c.phone||''}):'—'}${c.email?' <span style="color:var(--muted)">· '+esc(c.email)+'</span>':''}</span>
     </label>`).join('');
   document.getElementById('mass-pick-count').textContent=massSelected.size+' selected';
 }
@@ -8002,7 +8022,8 @@ async function openThread(id,el){
   const a=appts.find(x=>Number(x.id)===Number(id));
   document.getElementById('chat-head').style.display='flex';
   document.getElementById('chat-input-row').style.display='flex';
-  document.getElementById('chat-name').textContent=(a?a.client_name:el?.querySelector('.thread-name')?.childNodes[0].textContent)||'Client';
+  const chatWho=(a?a.client_name:el?.querySelector('.thread-name')?.childNodes[0].textContent)||'';
+  document.getElementById('chat-name').innerHTML=chatWho?clientLink(chatWho,{phone:(a&&a.client_phone)||'',email:(a&&a.client_email)||''}):'Client';
   document.getElementById('chat-sub').textContent=a?`${a.member_name||'Unassigned'} · ${a.service||''} · ${a.date} ${fmtTime(a.time)}`:'';
   await loadChat();
 }
