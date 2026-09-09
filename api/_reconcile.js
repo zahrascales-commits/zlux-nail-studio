@@ -251,6 +251,40 @@ async function bookDisagreements(sinceDate) {
   return out;
 }
 
+/* Website bookings nothing can pair to a person. Reported with whatever
+   they do carry, because the money on them is real even when the name is
+   missing. */
+async function namelessBookings(sinceDate) {
+  try {
+    const main = require('./_db');
+    const rows = await main.query(
+      `SELECT a.id, a.member_id, a.guest_name, a.guest_email, a.guest_phone,
+              a.service, a.appointment_date AS date, a.appointment_time AS time,
+              a.status, a.total_cents, a.deposit_cents, a.deposit_paid,
+              m.full_name, m.email AS member_email
+         FROM appointments a
+         LEFT JOIN members m ON a.member_id = m.member_id
+        WHERE a.appointment_date >= ?
+        ORDER BY a.appointment_date DESC`, [sinceDate]);
+
+    return rows
+      .filter(r => !String(r.full_name || r.guest_name || '').trim())
+      .map(r => ({
+        id: Number(r.id),
+        member_id: r.member_id || null,
+        // Says whether the membership link is the thing that broke.
+        membership_found: !!r.full_name,
+        email: r.member_email || r.guest_email || '(none)',
+        phone: r.guest_phone || '(none)',
+        service: r.service || '', date: r.date, time: r.time,
+        status: r.status === null ? '(null)' : String(r.status),
+        worth_cents: money(r.total_cents),
+        deposit_cents: money(r.deposit_cents),
+        deposit_paid: !!Number(r.deposit_paid),
+      }));
+  } catch (err) { return [{ error: String(err.message || err) }]; }
+}
+
 module.exports = async function (req, res) {
   if (req.headers['x-ceo-password'] !== CEO_PASSWORD) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -282,6 +316,8 @@ module.exports = async function (req, res) {
     }
 
     const statusless = await statuslessBookings();
+    const sinceDay = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+    const nameless = await namelessBookings(sinceDay);
     const disagreements = await bookDisagreements(
       new Date(Date.now() - days * 86400000).toISOString().slice(0, 10));
 
@@ -292,6 +328,8 @@ module.exports = async function (req, res) {
       statusless,
       // The same visit priced differently in the two books. Also empty when healthy.
       disagreements,
+      // Bookings with no name on them, which nothing can pair to a visit.
+      nameless,
       gaps: found.gaps,
       ghosts: found.ghosts,
       unplaced: found.unplaced,
