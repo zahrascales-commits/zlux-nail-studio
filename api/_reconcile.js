@@ -194,6 +194,63 @@ async function statuslessBookings() {
   } catch (_) { return []; }
 }
 
+/* The same visit, in both books, priced differently. Matched on first name
+   with the date and the time, which is how the rest of the site pairs them.
+   A cancelled row on either side is reported too, with its status, because
+   that is usually the explanation and it should be seen rather than
+   assumed. */
+async function bookDisagreements(sinceDate) {
+  const out = [];
+  try {
+    const main = require('./_db');
+    const site = await main.query(
+      `SELECT id, guest_name, guest_email, service, appointment_date AS date,
+              appointment_time AS time, status, total_cents, deposit_cents, deposit_paid
+         FROM appointments WHERE appointment_date >= ?`, [sinceDate]);
+    const studio = await query(
+      `SELECT id, client_name, client_email, service, date, time, status,
+              price_cents, deposit_cents, deposit_paid
+         FROM team_appointments WHERE date >= ?`, [sinceDate]);
+
+    const first = s => String(s || '').trim().toLowerCase().split(/\s+/)[0] || '';
+    const key = (nm, d, t) => first(nm) + '|' + String(d || '') + '|' + String(t || '').slice(0, 5);
+
+    const byKey = new Map();
+    for (const s of site) {
+      const k = key(s.guest_name, s.date, s.time);
+      if (!k.startsWith('|')) byKey.set(k, s);
+    }
+
+    for (const t of studio) {
+      const s = byKey.get(key(t.client_name, t.date, t.time));
+      if (!s) continue;
+
+      const siteTotal = money(s.total_cents);
+      const studioTotal = money(t.price_cents);
+      // Nothing recorded on the studio side is normal, not a disagreement.
+      if (!siteTotal || !studioTotal || siteTotal === studioTotal) {
+        // Still worth saying when only one side holds a price and the two
+        // statuses differ, because that is what decides who gets believed.
+        if (!siteTotal || String(s.status || '').toUpperCase() === String(t.status || '').toUpperCase()) continue;
+      }
+
+      out.push({
+        who: t.client_name || s.guest_name || '',
+        date: t.date, time: t.time,
+        studio: { id: Number(t.id), service: t.service, price_cents: studioTotal,
+                  deposit_cents: money(t.deposit_cents), deposit_paid: !!Number(t.deposit_paid),
+                  status: t.status === null ? '(null)' : String(t.status) },
+        website: { id: Number(s.id), service: s.service, total_cents: siteTotal,
+                   deposit_cents: money(s.deposit_cents), deposit_paid: !!Number(s.deposit_paid),
+                   status: s.status === null ? '(null)' : String(s.status) },
+      });
+    }
+  } catch (err) {
+    out.push({ error: String(err.message || err) });
+  }
+  return out;
+}
+
 module.exports = async function (req, res) {
   if (req.headers['x-ceo-password'] !== CEO_PASSWORD) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -225,12 +282,16 @@ module.exports = async function (req, res) {
     }
 
     const statusless = await statuslessBookings();
+    const disagreements = await bookDisagreements(
+      new Date(Date.now() - days * 86400000).toISOString().slice(0, 10));
 
     return res.json({
       ok: true,
       checked: found.checked,
       // Bookings nothing else can see. Empty is the healthy answer.
       statusless,
+      // The same visit priced differently in the two books. Also empty when healthy.
+      disagreements,
       gaps: found.gaps,
       ghosts: found.ghosts,
       unplaced: found.unplaced,
