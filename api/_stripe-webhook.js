@@ -38,6 +38,57 @@ module.exports = async (req, res) => {
 
   try {
     switch (event.type) {
+      /* A deposit cleared. Written down here rather than trusting the
+         client's browser to come back and mention it — that is how an
+         appointment ends up saying nothing was paid while Stripe holds the
+         money, and somebody gets asked for it twice at the desk. */
+      case 'payment_intent.succeeded': {
+        const pi = event.data.object || {};
+        const md = pi.metadata || {};
+        const cents = Number(pi.amount_received || pi.amount) || 0;
+        if (!cents) break;
+
+        const team = require('./_team-db');
+        let placed = false;
+
+        // The appointment link stamps its token on the payment.
+        if (md.appt_token) {
+          try {
+            await team.execute(
+              'UPDATE team_appointments SET deposit_paid = 1, deposit_cents = ? WHERE chat_token = ? AND COALESCE(deposit_cents,0) < ?',
+              [cents, md.appt_token, cents]);
+            placed = true;
+          } catch (_) {}
+        }
+
+        /* The booking flow creates its payment before the appointment
+           exists, so it has no token. The booking records the payment id
+           instead, which is just as exact. */
+        if (!placed && pi.id) {
+          try {
+            const main = require('./_db');
+            const row = await main.queryOne(
+              'SELECT guest_name, appointment_date, appointment_time FROM appointments WHERE payment_intent_id = ?',
+              [pi.id]);
+            if (row) {
+              await team.execute(
+                `UPDATE team_appointments SET deposit_paid = 1, deposit_cents = ?
+                  WHERE date = ? AND time = ? AND COALESCE(deposit_cents,0) < ?`,
+                [cents, row.appointment_date, row.appointment_time, cents]);
+              placed = true;
+            }
+          } catch (_) {}
+        }
+
+        try {
+          await require('./_notify').notifyInApp('owner', null,
+            '💳 Deposit paid — $' + (cents / 100).toFixed(2),
+            placed ? 'Recorded against their appointment.'
+                   : 'Could not match it to a booking — check Reconcile.');
+        } catch (_) {}
+        break;
+      }
+
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object;
         const customerId = invoice.customer;
