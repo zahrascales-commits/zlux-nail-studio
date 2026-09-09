@@ -168,6 +168,32 @@ async function findGaps(sk, sinceSec) {
     detail: charges.map(c => ({ amount: c.amount, token: c.token || '(none)', client: c.client || '(none)', service: c.service || '(none)', desc: c.desc })) };
 }
 
+/* Website bookings carrying a status nothing recognises — usually none at
+   all. Reported with what they are worth, because an invisible booking is
+   both a slot that can be double-booked and money the takings never see. */
+async function statuslessBookings() {
+  try {
+    const main = require('./_db');
+    const rows = await main.query(
+      `SELECT id, guest_name, guest_email, service, appointment_date, appointment_time,
+              status, total_cents, deposit_cents, deposit_paid
+         FROM appointments
+        WHERE status IS NULL OR TRIM(COALESCE(status,'')) = ''
+        ORDER BY appointment_date DESC`);
+    return rows.map(r => ({
+      id: Number(r.id),
+      name: r.guest_name || '(no name)',
+      email: r.guest_email || '',
+      service: r.service || '',
+      date: r.appointment_date, time: r.appointment_time,
+      status: r.status === null ? '(null)' : JSON.stringify(r.status),
+      worth_cents: money(r.total_cents),
+      deposit_cents: money(r.deposit_cents),
+      deposit_paid: !!Number(r.deposit_paid),
+    }));
+  } catch (_) { return []; }
+}
+
 module.exports = async function (req, res) {
   if (req.headers['x-ceo-password'] !== CEO_PASSWORD) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -198,9 +224,13 @@ module.exports = async function (req, res) {
       return res.json({ ok: true, fixed: fixed.length, rows: fixed, ghosts: found.ghosts });
     }
 
+    const statusless = await statuslessBookings();
+
     return res.json({
       ok: true,
       checked: found.checked,
+      // Bookings nothing else can see. Empty is the healthy answer.
+      statusless,
       gaps: found.gaps,
       ghosts: found.ghosts,
       unplaced: found.unplaced,
