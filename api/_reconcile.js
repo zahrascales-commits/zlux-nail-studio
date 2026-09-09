@@ -164,7 +164,8 @@ async function findGaps(sk, sinceSec) {
     }
   } catch (_) {}
 
-  return { gaps, ghosts, unplaced, checked: charges.length };
+  return { gaps, ghosts, unplaced, checked: charges.length,
+    detail: charges.map(c => ({ amount: c.amount, token: c.token || '(none)', client: c.client || '(none)', service: c.service || '(none)', desc: c.desc })) };
 }
 
 module.exports = async function (req, res) {
@@ -203,6 +204,8 @@ module.exports = async function (req, res) {
       gaps: found.gaps,
       ghosts: found.ghosts,
       unplaced: found.unplaced,
+      // What each payment actually carries, for working out why one did not match.
+      detail: String(req.query.detail||'')==='1' ? found.detail : undefined,
       overcharged: found.gaps.filter(g => g.already_checked_out),
     });
   } catch (err) {
