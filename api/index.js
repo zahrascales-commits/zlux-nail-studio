@@ -13,6 +13,7 @@ app.use(express.json({ limit: '6mb' }));
 
 // Original site API routes
 app.all('/api/services',         require('./_services'));
+app.all('/api/deals',            require('./_deals-api'));
 app.all('/api/availability',     require('./_availability'));
 app.all('/api/bookings',         require('./_bookings'));
 app.all('/api/addons',           require('./_addons'));

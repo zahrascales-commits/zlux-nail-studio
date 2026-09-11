@@ -77,16 +77,33 @@ function addonMinutes(addonNames) {
   return mins;
 }
 
+/* A deal day is a fixed appointment: one length, no tiers, no add-ons. Its
+   own number wins over everything below. */
+function dealMinutes(serviceName) {
+  if (!serviceName) return null;
+  try {
+    const d = require('./_deals').forService(serviceName);
+    return d ? d.minutes : null;
+  } catch (_) { return null; }
+}
+
 // How long the chair is occupied. No tier adds nothing — that is somebody
 // having a plain set, not somebody who forgot to answer.
-function minutesFor(tierKey, addonNames) {
+//
+// The service name is optional and only consulted for the deal days. Every
+// other service keeps the timing it has always had: re-timing the whole
+// menu off a duration column nobody has been maintaining is how a day
+// starts running an hour late.
+function minutesFor(tierKey, addonNames, serviceName) {
+  const fixed = dealMinutes(serviceName);
+  if (fixed) return fixed;
   const t = tierFor(tierKey);
   return BASE_MINUTES + (t ? t.minutes : 0) + addonMinutes(addonNames);
 }
 
 // And how long before the next client can start.
-function blockMinutes(tierKey, addonNames) {
-  return minutesFor(tierKey, addonNames) + GRACE_MINUTES;
+function blockMinutes(tierKey, addonNames, serviceName) {
+  return minutesFor(tierKey, addonNames, serviceName) + GRACE_MINUTES;
 }
 
 // What the design tier adds to the bill. No tier costs nothing.
@@ -98,8 +115,8 @@ function priceFor(tierKey) {
 // Hour slots one appointment consumes on the current booking grid. Rounded
 // up, because releasing a partly-used slot would let somebody book into the
 // last few minutes of an appointment already running.
-function slotsFor(tierKey, addonNames) {
-  return Math.ceil(blockMinutes(tierKey, addonNames) / 60);
+function slotsFor(tierKey, addonNames, serviceName) {
+  return Math.ceil(blockMinutes(tierKey, addonNames, serviceName) / 60);
 }
 
 function label(tierKey) {
@@ -109,5 +126,5 @@ function label(tierKey) {
 
 module.exports = {
   TIERS, BASE_MINUTES, GRACE_MINUTES, ADDON_MINUTES,
-  tierFor, addonMinutes, minutesFor, blockMinutes, priceFor, slotsFor, label,
+  tierFor, addonMinutes, minutesFor, blockMinutes, priceFor, slotsFor, label, dealMinutes,
 };

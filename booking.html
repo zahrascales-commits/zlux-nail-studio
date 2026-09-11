@@ -23,6 +23,42 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@200;300;400;600;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" /><link rel="stylesheet" href="css/styles.css" />
   <script src="https://js.stripe.com/v3/"></script>
   <style>
+/* The deal days. Deliberately the loudest thing on the step — it is the
+   offer she wants leading, and a card that looks like every other row
+   gets read as just another service. */
+.deal-card{position:relative;display:block;width:100%;text-align:left;cursor:pointer;
+  border:1px solid var(--champagne);background:rgba(182,165,136,0.08);
+  padding:1.15rem 1.2rem;margin-bottom:0.7rem;transition:border-color .2s,background .2s}
+.deal-card:hover{border-color:var(--espresso);background:rgba(182,165,136,0.14)}
+.deal-card.is-on{border-color:var(--espresso);background:rgba(182,165,136,0.2)}
+.deal-card .d-top{display:flex;align-items:baseline;gap:0.6rem;flex-wrap:wrap}
+.deal-card .d-name{font-family:"Cinzel",serif;font-size:1.18rem;color:var(--espresso);line-height:1.2}
+.deal-card .d-price{margin-left:auto;font-family:"Cinzel",serif;font-size:1.25rem;color:var(--espresso)}
+.deal-card .d-blurb{font-family:"Josefin Sans",sans-serif;font-size:0.86rem;color:var(--latte);
+  line-height:1.6;margin-top:0.4rem}
+.deal-card .d-meta{font-family:"Josefin Sans",sans-serif;font-size:0.72rem;color:var(--latte);
+  letter-spacing:0.06em;margin-top:0.5rem}
+.deal-card .d-go{display:inline-block;margin-top:0.8rem;background:var(--espresso);color:#fff;
+  font-family:"Josefin Sans",sans-serif;font-size:0.72rem;letter-spacing:0.14em;text-transform:uppercase;
+  padding:0.62rem 1.1rem}
+.deal-badge{display:inline-block;font-family:"Josefin Sans",sans-serif;font-size:0.58rem;
+  letter-spacing:0.18em;text-transform:uppercase;background:var(--espresso);color:#fff;
+  padding:0.24rem 0.55rem;vertical-align:middle}
+/* Chosen: what they picked, and the one way back out. */
+.deal-on{border:1px solid var(--espresso);background:rgba(182,165,136,0.14);padding:1.15rem 1.2rem;
+  margin-bottom:0.9rem}
+.deal-on .d-name{font-family:"Cinzel",serif;font-size:1.18rem;color:var(--espresso)}
+.deal-pick{display:grid;grid-template-columns:1fr 1fr;gap:0.55rem;margin-top:0.9rem}
+.deal-pick button{background:none;border:1px solid rgba(182,165,136,0.75);cursor:pointer;
+  padding:0.75rem 0.7rem;font-family:"Josefin Sans",sans-serif;font-size:0.84rem;color:var(--espresso);
+  text-align:left;line-height:1.45}
+.deal-pick button b{display:block;font-size:0.9rem;margin-bottom:0.15rem}
+.deal-pick button span{font-size:0.74rem;color:var(--latte)}
+.deal-pick button.on{border-color:var(--espresso);background:rgba(182,165,136,0.22)}
+.deal-note{font-family:"Josefin Sans",sans-serif;font-size:0.78rem;color:var(--latte);
+  margin-top:0.85rem;line-height:1.6}
+.deal-swap{background:none;border:none;padding:0;margin-top:0.7rem;cursor:pointer;
+  font-family:"Josefin Sans",sans-serif;font-size:0.74rem;color:var(--latte);text-decoration:underline}
     .checkout-line {
       display: flex;
       justify-content: space-between;
@@ -382,6 +418,14 @@
         <div id="step2-reminder-text" style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--espresso);"></div>
       </div>
 
+      <!-- ══ THE DEAL DAYS ══
+           First thing on the page. Filled from /api/deals so renaming them
+           is one edit in one file, which she has said is coming. -->
+      <div id="deal-block"></div>
+
+      <!-- Everything below folds away once a deal day is chosen. -->
+      <div id="normal-menu">
+
       <button class="option-btn" id="test-service-btn" onclick="toggleService('Test Run',1,'manicure',this)" style="display:none;border-style:dashed;border-color:var(--champagne);">
         <div><span class="option-name">🧪 Test Run — owner testing</span><span class="option-sub">Real $1 charge to test the full checkout</span></div>
         <div style="text-align:right;"><span class="option-price">$1</span></div>
@@ -446,7 +490,7 @@
         + <span id="add-second-svc-label">Add a second service</span>
       </button>
 
-      <div class="section-label" style="margin:1.25rem 0 0.75rem;">Add-Ons <span style="font-size:0.65rem;color:var(--latte);text-transform:none;letter-spacing:0;">(optional)</span></div>
+      <div class="section-label" id="addon-label" style="margin:1.25rem 0 0.75rem;">Add-Ons <span style="font-size:0.65rem;color:var(--latte);text-transform:none;letter-spacing:0;">(optional)</span></div>
 
       <!-- Today's suggestion, above the fold. One thing that fits beats five
            that might. -->
@@ -550,6 +594,8 @@
 
       <!-- Design tier — before the time, because it changes how long the
            appointment is and therefore which times exist. -->
+      </div><!-- /normal-menu -->
+
       <div style="margin-top:2rem;" id="tier-section">
         <div class="step-title" style="font-size:1.05rem;">Pick your design tier</div>
         <p style="font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--latte);line-height:1.7;">
@@ -928,7 +974,7 @@ function itemCount() { return booking.items.reduce((s, it) => s + it.qty, 0); }
 let bkCoverageWindows = [];
 // Guests get the public horizon the moment the page opens; a member ID
 // widens it a second later without the calendar ever looking broken.
-window.addEventListener('DOMContentLoaded', function(){ loadBookingWindow(null); });
+window.addEventListener('DOMContentLoaded', function(){ loadBookingWindow(null); loadDeals(); });
 let _coverageLoaded = false;
 async function loadCoverageWindows() {
   if (_coverageLoaded) return;
@@ -1609,6 +1655,133 @@ function showAllServices(){
   if(first && first.scrollIntoView) first.scrollIntoView({ behavior:'smooth', block:'center' });
 }
 
+
+/* ── THE DEAL DAYS ───────────────────────────────────────────────────────
+   Defined on the server so a rename is one edit in one file. The page only
+   lays them out and keeps the booking honest about which day they fall on. */
+let DEALS = [], DEAL_NOTE = '', ACTIVE_DEAL = null, DEAL_CHOICE = 'hands';
+
+async function loadDeals(){
+  try{
+    const d = await (await fetch('/api/deals')).json();
+    DEALS = d.deals || [];
+    DEAL_NOTE = d.instead_note || '';
+  }catch(_){ DEALS = []; }
+  renderDeals();
+
+  // Straight in from a "Book a Tuesday" button anywhere on the site.
+  const want = new URLSearchParams(location.search).get('deal');
+  if(want && DEALS.some(function(x){ return x.key === want; })) pickDeal(want);
+}
+
+function dealByKey(k){ return DEALS.find(function(x){ return x.key === k; }) || null; }
+
+function dealAttr(s){ return esc(s).split('"').join('&quot;'); }
+
+function renderDeals(){
+  const box = document.getElementById('deal-block');
+  if(!box) return;
+
+  if(ACTIVE_DEAL){ renderChosenDeal(box); return; }
+  if(!DEALS.length){ box.innerHTML = ''; return; }
+
+  // Featured first — that is the one she wants leading the page.
+  const order = DEALS.slice().sort(function(a,b){ return (b.featured?1:0) - (a.featured?1:0); });
+  box.innerHTML = order.map(function(d){
+    return '<div class="deal-card" onclick="pickDeal(&quot;' + dealAttr(d.key) + '&quot;)">'
+      + '<div class="d-top"><span class="d-name">' + esc(d.name) + '</span>'
+        + (d.badge ? ' <span class="deal-badge">' + esc(d.badge) + '</span>' : '')
+        + '<span class="d-price">$' + Math.round(d.price_cents/100) + '</span></div>'
+      + '<div class="d-blurb">' + esc(d.blurb) + '</div>'
+      + '<div class="d-meta">' + esc(d.duration_label) + ' &middot; hands or toes &middot; every '
+        + esc(d.weekday_name) + '</div>'
+      + '<span class="d-go">' + esc(d.cta) + '</span>'
+      + '</div>';
+  }).join('');
+}
+
+function renderChosenDeal(box){
+  const d = ACTIVE_DEAL;
+  box.innerHTML = '<div class="deal-on">'
+    + '<div class="d-top"><span class="d-name">' + esc(d.name) + '</span>'
+      + '<span class="d-price">$' + Math.round(d.price_cents/100) + '</span></div>'
+    + '<div class="d-blurb">' + esc(d.blurb) + '</div>'
+    + '<div class="deal-pick">'
+      + (d.choices||[]).map(function(c){
+          return '<button type="button" class="' + (DEAL_CHOICE === c.key ? 'on' : '') + '"'
+            + ' onclick="setDealChoice(&quot;' + dealAttr(c.key) + '&quot;)">'
+            + '<b>' + esc(c.label) + '</b><span>' + esc(c.detail) + '</span></button>';
+        }).join('')
+    + '</div>'
+    + '<div class="d-meta">' + esc(d.duration_label) + ' in the chair &middot; every '
+      + esc(d.weekday_name) + '</div>'
+    + (DEAL_NOTE ? '<div class="deal-note">' + esc(DEAL_NOTE) + '</div>' : '')
+    + '<button type="button" class="deal-swap" onclick="clearDeal()">Book something else instead</button>'
+    + '</div>';
+}
+
+/* Choosing a deal replaces the basket rather than adding to it. A $75
+   Tuesday alongside a $110 long set is two different appointments, and
+   letting them share one booking prices and times neither of them right. */
+function pickDeal(key){
+  const d = dealByKey(key);
+  if(!d) return;
+  ACTIVE_DEAL = d;
+  DEAL_CHOICE = (d.choices && d.choices[0] && d.choices[0].key) || 'hands';
+
+  booking.items = [{ service: d.name, price: Math.round(d.price_cents/100), category: 'manicure', qty: 1 }];
+  booking.selectedAddons = [];
+  booking.tier = null;
+  // A date already chosen may not be the right weekday any more.
+  if(booking.date && new Date(booking.date + 'T12:00:00').getDay() !== d.weekday){
+    booking.date = null; booking.time = null;
+  }
+  applyDealMode();
+}
+
+function setDealChoice(key){ DEAL_CHOICE = key; renderDeals(); }
+
+function clearDeal(){
+  ACTIVE_DEAL = null;
+  booking.items = [];
+  booking.date = null; booking.time = null;
+  document.querySelectorAll('#normal-menu .option-btn.svc-selected').forEach(function(b){
+    b.classList.remove('svc-selected');
+    const x = b.querySelector('.svc-extra'); if(x) x.remove();
+  });
+  applyDealMode();
+}
+
+/* Everything a deal day does not use, out of the way: the rest of the menu,
+   the add-ons, the design tier. The design is what the day is, and the
+   price only works at that length. */
+function applyDealMode(){
+  const on = !!ACTIVE_DEAL;
+  const show = function(id, visible){
+    const el = document.getElementById(id);
+    if(el) el.style.display = visible ? '' : 'none';
+  };
+  show('normal-menu', !on);
+  show('tier-section', !on);
+  show('addon-label', !on);
+  if(on){ ['addon-offer','addon-toggle','addon-list'].forEach(function(id){ show(id, false); }); }
+  else if(typeof loadAddonOffer === 'function'){ show('addon-toggle', true); loadAddonOffer(); }
+
+  syncLegacyMirror();
+  renderDeals();
+  updateStickyBar();
+  if(typeof renderBkCal === 'function' && document.getElementById('bk-cells')) renderBkCal();
+  if(booking.date && typeof renderTimeslots === 'function') renderTimeslots(booking.date);
+}
+
+// What the booking is actually called once it is saved, so the calendar and
+// the front desk can see at a glance whether it is hands or toes.
+function dealServiceName(){
+  if(!ACTIVE_DEAL) return null;
+  const c = (ACTIVE_DEAL.choices||[]).find(function(x){ return x.key === DEAL_CHOICE; });
+  return c ? ACTIVE_DEAL.name + ' — ' + c.label : ACTIVE_DEAL.name;
+}
+
 function toggleService(name, price, category, btn) {
   const idx = booking.items.findIndex(it => it.service === name);
   if (idx >= 0) {
@@ -1735,7 +1908,13 @@ function addonMinutes(){
     return t + (/russian/i.test(a.name || '') ? 15 : 0);
   }, 0);
 }
-function apptMinutes(){ return BASE_MINUTES + (TIER_MINUTES[booking.tier] || 0) + addonMinutes(); }
+/* A deal day is a fixed appointment: one length, no tier, no add-ons.
+   Its own number wins, and it has to match the server exactly or the
+   page offers a time the booking is then refused for. */
+function apptMinutes(){
+  if(ACTIVE_DEAL) return Number(ACTIVE_DEAL.minutes) || BASE_MINUTES;
+  return BASE_MINUTES + (TIER_MINUTES[booking.tier] || 0) + addonMinutes();
+}
 function blockMinutes(){ return apptMinutes() + GRACE_MINUTES; }
 // The day is cut into quarter hours, so everything that walks the grid walks
 // it in fifteens. Whole hours rounded every appointment up to the next hour
@@ -2411,12 +2590,17 @@ function renderBkCal() {
     // saying so is what makes the membership worth having.
     const beyond = !past && horizon && ds > horizon;
     if (beyond) sawLocked = true;
-    const block = !past && !beyond && (coverageBlockFor(ds) || dayFullyBooked(ds));
+    /* A deal day only happens on its own day. Offering the rest would
+       mean they fill in a whole booking and are refused at the end. */
+    const wrongDay = !!ACTIVE_DEAL
+      && new Date(ds + "T12:00:00").getDay() !== Number(ACTIVE_DEAL.weekday);
+    const block = !past && !beyond && !wrongDay && (coverageBlockFor(ds) || dayFullyBooked(ds));
     if (block) sawBlock = true;
-    const disabled = past || block || beyond;
+    const disabled = past || block || beyond || wrongDay;
     const cls = 'bk-day' + (disabled ? ' off' : '') + (block ? ' full' : '') + (beyond ? ' locked' : '')
       + (ds === booking.date ? ' sel' : '') + (ds === today ? ' today' : '');
-    const title = beyond ? ' title="Opens closer to the date — members see further ahead"'
+    const title = wrongDay ? ' title="' + ACTIVE_DEAL.name + ' are booked on ' + ACTIVE_DEAL.weekday_name + 's"'
+                : beyond ? ' title="Opens closer to the date — members see further ahead"'
                 : (block ? ' title="Fully booked"' : '');
     html += '<div class="' + cls + '"' + title + (disabled ? '' : ' onclick="pickBkDay(\'' + ds + '\')"') + '>' + day + '</div>';
   }
@@ -2424,6 +2608,7 @@ function renderBkCal() {
   const note = document.getElementById('bk-coverage-note');
   if (note){
     const bits = [];
+    if (ACTIVE_DEAL) bits.push(ACTIVE_DEAL.name + ' are every ' + ACTIVE_DEAL.weekday_name + ' — pick one below ✦');
     if (sawBlock) bits.push('Greyed dates are fully booked ✦');
     if (sawLocked){
       bits.push(BK_WINDOW && BK_WINDOW.extra > 0
@@ -2675,7 +2860,9 @@ async function submitBooking() {
     for (let u = 0; u < it.qty; u++) {
       const idx = units.length;
       units.push({
-        service_name: it.service,
+        // The hands-or-toes choice rides on the name, so the calendar and
+        // the front desk can see which one it is.
+        service_name: (ACTIVE_DEAL && dealServiceName()) || it.service,
         service_price: it.price,
         addon_names: (i === 0 && u === 0) ? booking.selectedAddons.map(a => a.name) : [],
         addon_charged: (i === 0 && u === 0) ? booking.selectedAddons.map(a => a.charged) : [],
@@ -2703,6 +2890,7 @@ async function submitBooking() {
             member_id: document.getElementById('member-id-input').value.trim().toUpperCase() || null,
             member_tier: booking.memberTier || null,
             design_tier: booking.tier || null,
+            deal_choice: ACTIVE_DEAL ? DEAL_CHOICE : null,
             date: booking.date, time_slot: unit.time_slot || booking.time,
             worker: booking.worker || null,
             payment_intent_id: paymentIntentId,

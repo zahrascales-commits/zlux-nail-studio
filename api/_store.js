@@ -14,6 +14,13 @@ const services = [
   { id: 11, name: 'Test Run',                    description: 'Owner testing only — $1 end-to-end checkout test.', duration_min: 15, price_cents: 100, hidden: true },
 ];
 
+/* The deal days, defined once in _deals.js because their names are going
+   to change. Put at the front so anything that shows the menu in order
+   leads with them, which is where she wants Tuesday. */
+try {
+  services.unshift.apply(services, require('./_deals').asServices());
+} catch (_) { /* a broken deal must never empty the menu */ }
+
 const addons = [
   { id: 1, name: 'Removal',           price_cents: 3500 },
   { id: 2, name: 'Russian Manicure',  price_cents: 2000 },

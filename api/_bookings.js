@@ -145,6 +145,28 @@ module.exports = async (req, res) => {
       for_name, // multi-person bookings: who this specific service is for
     } = req.body;
 
+    /* ── A DEAL DAY ────────────────────────────────────────────────
+       Only bookable on its own day, and only as itself: no add-ons, no
+       design tier, one fixed length. The page already shows it that way;
+       this is the copy that decides what is actually saved and charged. */
+    let deal = null;
+    try { deal = require('./_deals').forService(service_name); } catch (_) {}
+
+    if (deal && !require('./_deals').isRightDay(deal, date)) {
+      return res.status(400).json({
+        error: deal.name + ' are booked on ' + deal.weekday_name + 's. Pick a '
+          + deal.weekday_name + ' and it is all yours.',
+        wrong_day: true, weekday: deal.weekday,
+      });
+    }
+
+    // What actually gets priced, timed and saved.
+    const dealAddons = deal ? [] : addon_names;
+    const dealTier = deal ? null : design_tier;
+    const bookedService = deal
+      ? require('./_deals').serviceNameFor(deal, (req.body || {}).deal_choice)
+      : service_name;
+
     // If a card payment was made, verify it with Stripe before confirming
     let depositPaid = false;
     if (payment_intent_id) {
@@ -226,8 +248,8 @@ module.exports = async (req, res) => {
     // checkout and every figure in the reports came out $5, $10 or $20
     // short on every booking with art on it.
     const calc = require('./_pay').computeDeposit({
-      service_name, addon_names, member_tier, free_service: freeService,
-      design_tier: design_tier || null,
+      service_name, addon_names: dealAddons, member_tier, free_service: freeService,
+      design_tier: dealTier || null,
     });
     if (calc) {
       total_cents = calc.total_cents;
@@ -323,8 +345,9 @@ module.exports = async (req, res) => {
       let blockMins = 0, chosenTier = '';
       try {
         const tiers = require('./_tiers');
-        chosenTier = String(req.body.design_tier || '');
-        blockMins = tiers.blockMinutes(chosenTier, addon_names);
+        chosenTier = String(dealTier || '');
+        // The service name is what tells a deal day its own length.
+        blockMins = tiers.blockMinutes(chosenTier, dealAddons, bookedService);
       } catch (_) {}
       await execute(
         `INSERT INTO appointments (member_id, guest_name, guest_email, staff_id, service, addons, appointment_date, appointment_time, status, total_cents, deposit_cents, deposit_paid, design_tier, block_minutes)
@@ -334,8 +357,8 @@ module.exports = async (req, res) => {
           isMember ? null : customer_name,
           isMember ? null : customer_email,
           staffId,
-          service_name,
-          JSON.stringify(addon_names),
+          bookedService,
+          JSON.stringify(dealAddons),
           date,
           time_slot,
           total_cents,
@@ -352,8 +375,8 @@ module.exports = async (req, res) => {
       customerName: customer_name,
       customerEmail: customer_email,
       customerPhone: customer_phone,
-      serviceName: service_name,
-      addonNames: addon_names,
+      serviceName: bookedService,
+      addonNames: dealAddons,
       date,
       time: time_slot,
       confirmation,
@@ -367,13 +390,27 @@ module.exports = async (req, res) => {
       await teamDb.ensureTables();
       let m = null;
       if (worker) m = await teamDb.queryOne('SELECT id, name, phone, email FROM team_members WHERE name=? AND active=1', [worker]).catch(() => null);
+      /* The studio's copy carries the money too. It never did, so the front
+         desk had to re-derive a price from today's menu — and a booking
+         whose price had since moved got quoted a different number at the
+         desk than the client had agreed to. */
+      for (const sql of [
+        'ALTER TABLE team_appointments ADD COLUMN price_cents INTEGER DEFAULT 0',
+        'ALTER TABLE team_appointments ADD COLUMN deposit_cents INTEGER DEFAULT 0',
+        'ALTER TABLE team_appointments ADD COLUMN deposit_paid INTEGER DEFAULT 0',
+        "ALTER TABLE team_appointments ADD COLUMN client_email TEXT DEFAULT ''",
+      ]) { try { await teamDb.execute(sql); } catch (_) {} }
+
       const teamRow = await teamDb.execute(
-        `INSERT INTO team_appointments (team_member_id, client_name, client_phone, service, date, time, notes, status, chat_token)
-         VALUES (?,?,?,?,?,?,?, 'scheduled', ?)`,
-        [m ? m.id : null, (for_name && for_name.trim()) || customer_name, customer_phone || '', service_name, date, time_slot,
+        `INSERT INTO team_appointments (team_member_id, client_name, client_phone, client_email, service,
+           date, time, notes, status, chat_token, price_cents, deposit_cents, deposit_paid)
+         VALUES (?,?,?,?,?,?,?,?, 'scheduled', ?,?,?,?)`,
+        [m ? m.id : null, (for_name && for_name.trim()) || customer_name, customer_phone || '',
+         customer_email || '', bookedService, date, time_slot,
          'Booked online · ' + confirmation
            + (for_name && for_name.trim() && for_name.trim() !== customer_name ? ' · for ' + for_name.trim() + ' (booked by ' + customer_name + ')' : '')
-           + (addon_names.length ? ' · +' + addon_names.join(', ') : ''), teamDb.token()]
+           + (dealAddons.length ? ' · +' + dealAddons.join(', ') : ''), teamDb.token(),
+         total_cents, deposit_cents, depositPaid ? 1 : 0]
       );
       // Skip duplicate client email/SMS if the legacy SendGrid path is active
       const legacyActive = !!process.env.SENDGRID_API_KEY;
@@ -385,7 +422,7 @@ module.exports = async (req, res) => {
         clientName: customer_name,
         clientEmail: legacyActive ? null : customer_email,
         clientPhone: (legacyActive && process.env.TWILIO_ACCOUNT_SID) ? null : customer_phone,
-        service: service_name, date, time: time_slot,
+        service: bookedService, date, time: time_slot,
         dateLabel: formatDate(date), timeLabel: formatTime(time_slot),
         memberId: m ? m.id : null, memberName: m ? m.name : null,
         memberPhone: m ? m.phone : null, memberEmail: m ? m.email : null,
@@ -403,7 +440,7 @@ module.exports = async (req, res) => {
           });
         } catch (_) {}
       }
-      await upsertClient({ name: customer_name, email: customer_email, phone: customer_phone, service: service_name, date });
+      await upsertClient({ name: customer_name, email: customer_email, phone: customer_phone, service: bookedService, date });
       // Record marketing consent only when they actually ticked the box.
       // Never clear it here — someone who opted in previously and left the box
       // unticked on a later booking has not withdrawn consent, and silently

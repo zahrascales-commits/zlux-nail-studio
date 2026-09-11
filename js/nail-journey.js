@@ -167,9 +167,59 @@
       cta: 'SEE MY PERFECT SERVICES',
       href: '/services.html',
     },
+
+    /* ── THE DEAL DAYS ──────────────────────────────────────────────────
+       Two answers that are not a goal but a decision already made: they
+       know what they want and they want to book it. So there is no
+       membership arithmetic on these — nothing to compare a flat price
+       against, and inventing a saving to match the other four would make
+       these the dishonest screens.
+
+       The wording is refreshed from /api/deals when the panel opens, so
+       renaming the days on the server renames them here too. What is
+       written below is only what shows if that fetch does not land. */
+    tuesday: {
+      deal: 'tuesday',
+      option: 'I want to book a $75 Tuesday.',
+      headline: 'Tuesdays are $75.',
+      empathy: 'One price, one afternoon, sorted.',
+      product: '$75 TUESDAYS',
+      productLine: 'Every Tuesday. Hands or toes.',
+      showcase: [
+        'French tip, polka dots, chrome, solid colour or stripes',
+        'Hands, or the Russian dry pedicure',
+        '1 hr 30 in the chair',
+        '$75, every Tuesday',
+      ],
+      close: 'Pick a Tuesday and it is yours.',
+      cta: 'BOOK A TUESDAY',
+      href: '/booking.html?deal=tuesday',
+    },
+
+    wednesday: {
+      deal: 'wednesday',
+      option: 'I want to book a $65 Wednesday.',
+      headline: 'Wednesdays are $65.',
+      empathy: 'Clean colour, in and out.',
+      product: '$65 WEDNESDAYS',
+      productLine: 'Every Wednesday. Hands or toes.',
+      showcase: [
+        'Solid colour — any shade you like',
+        'Hands, or a pedicure',
+        '1 hr 10 in the chair',
+        '$65, every Wednesday',
+      ],
+      close: 'Pick a Wednesday and it is yours.',
+      cta: 'BOOK A WEDNESDAY',
+      href: '/booking.html?deal=wednesday',
+    },
+
   };
 
-  var ORDER = ['grow', 'start', 'easy', 'bold'];
+  // Goals first. The last two are not goals — they are somebody who has
+  // already decided and wants to book, so they sit at the end where a
+  // decision belongs rather than competing with the question.
+  var ORDER = ['grow', 'start', 'easy', 'bold', 'tuesday', 'wednesday'];
 
   function styles() {
     return [
@@ -404,12 +454,55 @@
     });
   }
 
+  /* The deal days are named on the server, and those names are going to
+     change. Rather than have the questionnaire be the one place that keeps
+     the old wording, it asks before it opens. If the answer does not come
+     back, what is written into ANSWERS above stands — a panel with slightly
+     stale wording beats no panel at all. */
+  function syncDealCopy(done) {
+    var keys = Object.keys(ANSWERS).filter(function (k) { return ANSWERS[k].deal; });
+    if (!keys.length) { done(); return; }
+
+    var finished = false;
+    var finish = function () { if (!finished) { finished = true; done(); } };
+    // Never let a slow request hold the panel back.
+    setTimeout(finish, 1200);
+
+    try {
+      fetch('/api/deals').then(function (r) { return r.json(); }).then(function (d) {
+        var deals = (d && d.deals) || [];
+        keys.forEach(function (k) {
+          var a = ANSWERS[k];
+          var x = deals.filter(function (y) { return y.key === a.deal; })[0];
+          if (!x) return;
+          var dollars = '$' + Math.round(Number(x.price_cents) / 100);
+          a.option = 'I want to book a ' + x.short + '.';
+          a.headline = x.weekday_name + 's are ' + dollars + '.';
+          a.product = String(x.name).toUpperCase();
+          a.productLine = 'Every ' + x.weekday_name + '. Hands or toes.';
+          a.showcase = (x.designs || []).join(', ')
+            ? [
+                (x.designs || []).join(', '),
+                (x.choices || []).map(function (c) { return c.detail; }).join(' Or: '),
+                x.duration_label + ' in the chair',
+                dollars + ', every ' + x.weekday_name,
+              ]
+            : a.showcase;
+          a.close = 'Pick a ' + x.weekday_name + ' and it is yours.';
+          a.cta = String(x.cta).toUpperCase();
+          a.href = '/booking.html?deal=' + encodeURIComponent(x.key);
+        });
+        finish();
+      }).catch(finish);
+    } catch (_) { finish(); }
+  }
+
   function boot() {
     if (!allowedHere() || alreadySeen()) return;
     // A beat, so the page paints first. Landing on a blank screen behind a
     // panel reads as an advert; ZOLA appearing and then offering to help
     // does not.
-    setTimeout(open, 900);
+    setTimeout(function () { syncDealCopy(open); }, 900);
   }
 
   window.ZolaJourney = { open: open, close: close };

@@ -174,6 +174,17 @@ function computeDeposit({ service_name, addon_names = [], member_tier, free_serv
 
   const category = serviceCategory(svc.name || service_name);
 
+  /* A deal day. Flat price, nothing comes off it and nothing goes on it.
+     Worked out before any membership rule runs, because every one of those
+     rules would otherwise discount a price that is already the discount. */
+  let deal = null;
+  try { deal = require('./_deals').forService(svc.name || service_name); } catch (_) {}
+  if (deal) {
+    free_service = false;
+    addon_names = [];
+    design_tier = null;
+  }
+
   /* An allowance only covers what the membership actually includes. Without
      this, a member booking a pedicure first had it taken off their included
      service — free to them, and the studio never sees the money. */
@@ -194,10 +205,12 @@ function computeDeposit({ service_name, addon_names = [], member_tier, free_serv
   /* Some things a membership does not include but does price differently —
      the Russian pedicure is $75 to a member and $95 to anyone else. */
   let memberCents = null;
-  try { memberCents = require('./_plans').memberPriceFor(member_tier, svc.name || service_name); } catch (_) {}
+  if (!deal) {
+    try { memberCents = require('./_plans').memberPriceFor(member_tier, svc.name || service_name); } catch (_) {}
+  }
   const listCents = svc.price_cents;
   const chargeCents = (memberCents !== null && memberCents !== undefined) ? memberCents : listCents;
-  const pct = member_tier ? (ADDON_DISCOUNT[member_tier] || 0) : 0;
+  const pct = (member_tier && !deal) ? (ADDON_DISCOUNT[member_tier] || 0) : 0;
   const tiers = require('./_tiers');
 
   // What this membership includes by name rather than by percentage.
