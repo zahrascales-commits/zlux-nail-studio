@@ -1459,6 +1459,8 @@ function toggleAddonList(){
 async function loadAddonOffer(){
   const box = document.getElementById('addon-offer');
   if(!box) return;
+  // A deal day takes no add-ons, so it is not offered one.
+  if(typeof ACTIVE_DEAL !== 'undefined' && ACTIVE_DEAL){ box.style.display = 'none'; return; }
 
   // What they have actually chosen decides what is worth suggesting.
   const svc = (booking.items && booking.items[0] && booking.items[0].service) || '';
@@ -1666,6 +1668,13 @@ async function loadDeals(){
     const d = await (await fetch('/api/deals')).json();
     DEALS = d.deals || [];
     DEAL_NOTE = d.instead_note || '';
+    // Both spellings, because the booked name carries hands or toes.
+    DEALS.forEach(function(x){
+      SERVICE_MINUTES[x.name] = x.minutes;
+      (x.choices || []).forEach(function(c){
+        SERVICE_MINUTES[x.name + ' — ' + c.label] = x.minutes;
+      });
+    });
   }catch(_){ DEALS = []; }
   renderDeals();
 
@@ -1684,6 +1693,13 @@ function renderDeals(){
 
   if(ACTIVE_DEAL){ renderChosenDeal(box); return; }
   if(!DEALS.length){ box.innerHTML = ''; return; }
+
+  /* Somebody who has picked a $110 long set is not shown a $75 day at
+     the moment they are about to book it. The deal days are for people
+     who came for a deal day — not a discount offered to somebody who
+     has already decided to pay full price. They come back if the
+     service is unpicked. */
+  if(booking.items.length){ box.innerHTML = ''; return; }
 
   // Featured first — that is the one she wants leading the page.
   const order = DEALS.slice().sort(function(a,b){ return (b.featured?1:0) - (a.featured?1:0); });
@@ -1806,6 +1822,8 @@ function toggleService(name, price, category, btn) {
   SHOW_ALL_SERVICES = false;
   syncLegacyMirror();
   collapseServices();
+  // On once a service is chosen, off again if they unpick it.
+  renderDeals();
   updateStickyBar();
 }
 function changeQty(name, delta, el) {
@@ -2128,7 +2146,12 @@ function loadSummary() {
   booking.items.forEach(it => {
     for (let u = 0; u < it.qty; u++) {
       let charge = it.price, note = '';
-      if (rules) {
+      /* A deal day is already below every membership rate on the menu,
+         so nothing comes off it again — no included service, no
+         discount. The server prices it exactly this way, and this list
+         has to match it or somebody agrees to one number and is charged
+         another. */
+      if (rules && !ACTIVE_DEAL) {
         if (freeAny > 0) { charge = 0; freeAny--; note = 'Included in ' + rules.label + ' (2 services/mo)'; }
         else if (it.category === 'manicure' && freeMani > 0) { charge = 0; freeMani--; note = 'Included in ' + rules.label; }
         else if (it.category === 'pedicure' && freePedi > 0) { charge = 0; freePedi--; note = 'Included in ' + rules.label; }
@@ -2260,7 +2283,9 @@ function goStep(n) {
     el.className = 'gg-step' + (i === icon ? ' on' : i < icon ? ' done' : '');
     if (i < 3) document.getElementById('gg-l' + i).className = 'gg-line' + (i < icon ? ' done' : '');
   }
-  if (n === 2) { SHOW_ALL_SERVICES = false; collapseServices(); applyServiceLocks(); }
+  if (n === 2) { SHOW_ALL_SERVICES = false; collapseServices(); applyServiceLocks();
+    // Stepping away and back must not put the hidden menu back on screen.
+    if (typeof applyDealMode === 'function') applyDealMode(); }
   if (n === 3) { try { loadAddonOffer(); } catch (_) {} }
   if (n === 2 && booking.memberTier) updateServiceTags();
   if (n === 3) { loadCoverageWindows().then(renderBkCal); renderBkCal(); loadTimeslots(); }
@@ -2406,7 +2431,11 @@ function renderTierChoice(){
 // Blocks the step rather than the booking: they can still choose nothing,
 // they just have to have seen what that means.
 function goToDates(){
-  if(!tierAnswered()){
+  /* A deal day has no tier to answer — the design is what the day is,
+     and that question is hidden. Asking it anyway left the button doing
+     nothing at all, because the warning it tried to point at was inside
+     the hidden section. */
+  if(!ACTIVE_DEAL && !tierAnswered()){
     const warn = document.getElementById('tier-warn');
     if(warn){
       warn.style.borderColor = '#c0524a';
