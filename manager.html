@@ -4463,6 +4463,12 @@ function cwStep2(){
 
   const list = cwBucketList();
   const q = (CW.search||'').toLowerCase().trim();
+  /* Defined before the filter below reads it. It used to sit further
+     down, which threw on every render and left this whole step blank —
+     the Continue button looked dead because the pane never repainted. */
+  const inGroup = function(x){
+    return !CW.group || CW.group === 'all' || (x.groups || []).indexOf(CW.group) >= 0;
+  };
   const shown = list.filter(function(x){
     if(!inGroup(x)) return false;
     if(!q) return true;
@@ -4484,9 +4490,6 @@ function cwStep2(){
     { k:'pressons', label:'Press-ons' },
     { k:'lapsed',   label:'Gone quiet' },
   ]);
-  const inGroup = function(x){
-    return !CW.group || CW.group === 'all' || (x.groups || []).indexOf(CW.group) >= 0;
-  };
   const chips = selectable
     ? '<div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.85rem">'
       + GROUPS.map(function(g){
