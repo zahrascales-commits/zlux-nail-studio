@@ -36,6 +36,8 @@ async function loadServices() {
     const services = await res.json();
     sel.innerHTML = '<option value="">Select a service…</option>';
     services.forEach((s) => {
+      // Deal days are booked from their own card, never from a service list.
+      if (s.deal) return;
       const opt = document.createElement('option');
       opt.value = s.id;
       opt.dataset.name = s.name;

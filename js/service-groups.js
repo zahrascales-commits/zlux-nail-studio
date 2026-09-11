@@ -74,9 +74,17 @@
     return true;
   }
 
+  /* A deal day is a service everywhere that matters — it prices, books,
+     checks out and reports through the same path as the rest. It is just
+     never a row in the menu. Listed beside a $110 acrylic set it stops
+     being an offer and becomes a reason not to book one. */
+  function isDealDay(s) { return !!(s && s.deal); }
+
   function group(services, opts) {
     opts = opts || {};
-    var list = (services || []).filter(opts.includeHidden ? function () { return true; } : isPublic);
+    var list = (services || [])
+      .filter(function (s) { return !isDealDay(s); })
+      .filter(opts.includeHidden ? function () { return true; } : isPublic);
     var byBase = {};
     var seq = 0;
 

@@ -1663,6 +1663,20 @@ function showAllServices(){
    lays them out and keeps the booking honest about which day they fall on. */
 let DEALS = [], DEAL_NOTE = '', ACTIVE_DEAL = null, DEAL_CHOICE = 'hands';
 
+/* Arrived already knowing what they want — from a Book This button
+   under a service, or a rebook link. The deal days stay off the page
+   for the whole visit in that case. Somebody who has pressed Book This
+   under a $110 acrylic set has decided; showing them $75 on the next
+   screen is how a full-price booking turns into a cheap one.
+
+   Not cleared by See All Services: they still came here for a set. */
+const CAME_FOR_A_SERVICE = (function(){
+  try{
+    const q = new URLSearchParams(location.search);
+    return !!(q.get('focus') || q.get('rebook')) && !q.get('deal');
+  }catch(_){ return false; }
+})();
+
 async function loadDeals(){
   try{
     const d = await (await fetch('/api/deals')).json();
@@ -1693,6 +1707,7 @@ function renderDeals(){
 
   if(ACTIVE_DEAL){ renderChosenDeal(box); return; }
   if(!DEALS.length){ box.innerHTML = ''; return; }
+  if(CAME_FOR_A_SERVICE){ box.innerHTML = ''; return; }
 
   /* Somebody who has picked a $110 long set is not shown a $75 day at
      the moment they are about to book it. The deal days are for people
