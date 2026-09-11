@@ -588,7 +588,7 @@
       </div>
 
       <div class="step-nav">
-        <button class="btn-outline-dark" onclick="goStep(1)">← Back</button>
+        <button class="btn-outline-dark" id="step2-back" onclick="goStep(1)">← Back</button>
       </div>
     </div>
 
@@ -974,7 +974,16 @@ function itemCount() { return booking.items.reduce((s, it) => s + it.qty, 0); }
 let bkCoverageWindows = [];
 // Guests get the public horizon the moment the page opens; a member ID
 // widens it a second later without the calendar ever looking broken.
-window.addEventListener('DOMContentLoaded', function(){ loadBookingWindow(null); loadDeals(); });
+window.addEventListener('DOMContentLoaded', function(){
+  loadBookingWindow(null);
+  /* A deal link skips the member question immediately, rather than
+     showing it for as long as the deal cards take to load and then
+     jumping. There is nothing for that step to decide on a flat price. */
+  try{
+    if(new URLSearchParams(location.search).get('deal')) goStep(2);
+  }catch(_){}
+  loadDeals();
+});
 let _coverageLoaded = false;
 async function loadCoverageWindows() {
   if (_coverageLoaded) return;
@@ -1694,7 +1703,11 @@ async function loadDeals(){
 
   // Straight in from a "Book a Tuesday" button anywhere on the site.
   const want = new URLSearchParams(location.search).get('deal');
-  if(want && DEALS.some(function(x){ return x.key === want; })) pickDeal(want);
+  if(want && DEALS.some(function(x){ return x.key === want; })){
+    pickDeal(want);
+    // Straight past the member question — it has nothing to ask here.
+    if(typeof goStep === 'function') goStep(2);
+  }
 }
 
 function dealByKey(k){ return DEALS.find(function(x){ return x.key === k; }) || null; }
@@ -1793,6 +1806,11 @@ function applyDealMode(){
     if(el) el.style.display = visible ? '' : 'none';
   };
   show('normal-menu', !on);
+  // Nothing behind the services step on a deal day.
+  show('step2-back', !on);
+  /* Hidden by a deal day, never shown by one: it is only ever put on
+     screen for a verified member, with their own wording in it. */
+  if(on) show('step2-member-reminder', false);
   show('tier-section', !on);
   show('addon-label', !on);
   if(on){ ['addon-offer','addon-toggle','addon-list'].forEach(function(id){ show(id, false); }); }
@@ -2282,6 +2300,10 @@ function _trackFunnel(step, dropped) {
 }
 
 function goStep(n) {
+  /* A deal day is a flat price for everybody, so there is nothing for
+     the member-or-guest step to decide. Anyone sent back to it goes to
+     the services step instead. */
+  if (n === 1 && typeof ACTIVE_DEAL !== "undefined" && ACTIVE_DEAL) n = 2;
   // The tier cards live on the service step and must exist before it shows.
   if(typeof renderTierChoice === 'function') { try { renderTierChoice(); } catch(_){} }
   // Leaving services without picking anything? Friendly stop.
