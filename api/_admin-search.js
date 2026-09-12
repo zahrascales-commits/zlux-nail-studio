@@ -109,25 +109,44 @@ const PLACES = [
     words: 'overview home today dashboard needs you floor takings now' },
 ];
 
+/* Words that carry no meaning in a question. "Where do pictures go" is
+   really "pictures", and expecting somebody to know that is the problem
+   this box exists to solve. */
+const FILLER = new Set(['a', 'an', 'the', 'my', 'me', 'i', 'is', 'are', 'do', 'does', 'did',
+  'can', 'how', 'what', 'where', 'who', 'when', 'why', 'to', 'for', 'of', 'on', 'in', 'at',
+  'and', 'or', 'it', 'this', 'that', 'go', 'goes', 'get', 'find', 'see', 'show', 'edit',
+  'change', 'set', 'up', 'page', 'screen', 'tab', 'section', 'part', 'thing', 'stuff',
+  'please', 'need', 'want', 'add', 'new', 'all']);
+
 function matchPlaces(q) {
   const n = String(q).toLowerCase().trim();
   if (!n) return [];
-  const terms = n.split(/\s+/).filter(Boolean);
 
-  return PLACES
-    .map(p => {
-      const hay = (p.title + ' ' + p.sub + ' ' + p.words).toLowerCase();
-      /* Every word has to appear somewhere, so "site photos" does not match
-         every screen with the word "site" in it. */
-      if (!terms.every(t => hay.indexOf(t) >= 0)) return null;
-      // A hit in the name beats a hit buried in the synonyms.
-      const score = p.title.toLowerCase().indexOf(n) === 0 ? 3
-        : (p.title.toLowerCase().indexOf(n) >= 0 ? 2 : 1);
-      return { kind: 'place', title: p.title, sub: p.sub, tab: p.tab, score };
-    })
-    .filter(Boolean)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5);
+  const all = n.split(/\s+/).filter(Boolean);
+  // Keep the filler only when that is genuinely all she typed.
+  const terms = all.filter(t => !FILLER.has(t));
+  const use = terms.length ? terms : all;
+
+  const scored = PLACES.map(p => {
+    const hay = (p.title + ' ' + p.sub + ' ' + p.words).toLowerCase();
+    const hits = use.filter(t => hay.indexOf(t) >= 0).length;
+    if (!hits) return null;
+
+    /* Everything matching beats some of it matching, and a hit in the name
+       beats one buried in the synonyms. Without the partial tier, one
+       unrecognised word in a sentence returns nothing at all. */
+    let score = hits === use.length ? 10 : hits * 2;
+    if (p.title.toLowerCase().indexOf(n) === 0) score += 6;
+    else if (p.title.toLowerCase().indexOf(n) >= 0) score += 4;
+
+    return { kind: 'place', title: p.title, sub: p.sub, tab: p.tab, score };
+  }).filter(Boolean).sort((a, b) => b.score - a.score);
+
+  /* A screen that matched every word is an answer; one that matched a
+     single word out of four is a guess. The guesses only appear when
+     there are no answers. */
+  const solid = scored.filter(x => x.score >= 10);
+  return (solid.length ? solid : scored).slice(0, 5);
 }
 
 module.exports = async function (req, res) {
