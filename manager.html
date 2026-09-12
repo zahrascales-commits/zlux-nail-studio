@@ -87,6 +87,34 @@
 
   /* ── APP SHELL ── */
   #app{display:none;position:relative;z-index:1;min-height:100vh}
+  /* Search. Given real room, because it is the way around a manager with
+     thirty-one tabs and it should not look like an afterthought. */
+  #gs-wrap{position:relative;flex:1;min-width:180px;max-width:520px;margin:0 1rem}
+  #gs-input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--cream);
+    border-radius:100px;padding:0.6rem 1rem;font:inherit;font-size:0.84rem;outline:none}
+  #gs-input:focus{border-color:var(--gold)}
+  #gs-input::placeholder{color:var(--muted)}
+  #gs-drop{display:none;position:absolute;top:calc(100% + 0.5rem);left:0;right:0;z-index:8000;
+    background:var(--card);border:1px solid var(--border-hi);border-radius:12px;
+    box-shadow:0 24px 60px rgba(0,0,0,0.55);max-height:70vh;overflow:auto;padding:0.4rem}
+  .gs-h{font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold);
+    padding:0.7rem 0.8rem 0.35rem}
+  .gs-row{display:flex;align-items:center;gap:0.7rem;width:100%;text-align:left;background:none;
+    border:none;color:inherit;font:inherit;padding:0.55rem 0.8rem;cursor:pointer;border-radius:8px}
+  .gs-row:hover,.gs-row.on{background:rgba(196,168,130,0.14)}
+  .gs-ic{width:1.4rem;text-align:center;flex-shrink:0;opacity:0.8}
+  .gs-t{flex:1;min-width:0}
+  .gs-t b{display:block;font-weight:500;font-size:0.88rem;color:var(--cream);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gs-t i{display:block;font-style:normal;font-size:0.72rem;color:var(--muted);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gs-go{font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);
+    flex-shrink:0;border:1px solid var(--border);border-radius:100px;padding:0.16rem 0.5rem}
+  .gs-empty{padding:1rem 0.9rem;font-size:0.82rem;color:var(--muted)}
+  @media(max-width:760px){
+    .topbar{flex-wrap:wrap}
+    #gs-wrap{order:3;flex-basis:100%;max-width:none;margin:0.6rem 0 0}
+  }
   .topbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;
     padding:1rem 1.5rem;background:rgba(11,11,11,0.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
   .brand{font-family:'Cinzel', serif;font-size:1.35rem;letter-spacing:0.08em;color:var(--cream)}
@@ -854,6 +882,13 @@
 <div id="app">
   <div class="topbar">
     <div class="brand"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span><small>Studio Manager</small></div>
+    <!-- One box for the whole of Studio Manager. Thirty-one tabs is more
+         than anybody can hold in their head. -->
+    <div id="gs-wrap">
+      <input id="gs-input" autocomplete="off" placeholder="Search anything — a name, a code, a photo, a screen…"
+        oninput="gsType()" onfocus="gsType()" onkeydown="gsKey(event)" />
+      <div id="gs-drop"></div>
+    </div>
     <div class="top-actions">
       <div class="bell-wrap">
         <button class="bell" onclick="toggleBell()" title="Notifications">🔔<span class="bell-badge" id="bell-badge" style="display:none">0</span></button>
@@ -2230,6 +2265,154 @@ let appts=[];
 let curDate=new Date().toISOString().slice(0,10);
 let activeThreadId=null;
 let activeThreadToken=null;
+
+
+/* ══════════════ SEARCH EVERYTHING ══════════════
+   Thirty-one tabs. Knowing which one holds discount codes, or where a photo
+   gets uploaded, is something you either remember or you do not — and when
+   you do not, the thing may as well not exist.
+
+   So this searches the real data and the screens themselves in one go.
+   Typing "discount" finds the Site screen even though nothing on it is
+   called "discount"; typing a client's name finds the client, their next
+   appointment, and their membership.
+
+   A result is not a link to read, it is somewhere to go: a client opens
+   their profile, an appointment opens that day on the calendar, everything
+   else lands on the screen that holds it. */
+let GS_TIMER = null, GS_ROWS = [], GS_AT = -1, GS_SEQ = 0;
+
+function gsBox(){ return document.getElementById('gs-drop'); }
+
+function gsOpen(on){
+  const d = gsBox();
+  if(d) d.style.display = on ? 'block' : 'none';
+  if(!on){ GS_AT = -1; }
+}
+
+function gsClear(){
+  const i = document.getElementById('gs-input');
+  if(i) i.value = '';
+  GS_ROWS = [];
+  gsOpen(false);
+}
+
+function gsType(){
+  clearTimeout(GS_TIMER);
+  const q = (document.getElementById('gs-input').value || '').trim();
+  if(q.length < 2){ gsOpen(false); return; }
+  // A pause, so it is not a request per keystroke.
+  GS_TIMER = setTimeout(function(){ gsRun(q); }, 180);
+}
+
+async function gsRun(q){
+  const seq = ++GS_SEQ;
+  const d = gsBox();
+  if(!d) return;
+  d.innerHTML = '<div class="gs-empty">Looking…</div>';
+  gsOpen(true);
+
+  let out;
+  try{
+    const r = await api('/api/admin-search?q=' + encodeURIComponent(q));
+    out = await r.json();
+  }catch(_){
+    if(seq === GS_SEQ) d.innerHTML = '<div class="gs-empty">Could not search just now.</div>';
+    return;
+  }
+  // An earlier request answering after a later one would show stale results.
+  if(seq !== GS_SEQ) return;
+
+  const groups = out.groups || [];
+  if(!groups.length){
+    d.innerHTML = '<div class="gs-empty">Nothing matches “' + esc(q) + '”.</div>';
+    GS_ROWS = [];
+    return;
+  }
+
+  GS_ROWS = [];
+  let html = '';
+  groups.forEach(function(g){
+    html += '<div class="gs-h">' + esc(g.label) + '</div>';
+    g.items.forEach(function(it){
+      const i = GS_ROWS.length;
+      GS_ROWS.push(it);
+      html += '<button class="gs-row" data-i="' + i + '" onclick="gsGo(' + i + ')">'
+        + '<span class="gs-ic">' + gsIcon(it.kind) + '</span>'
+        + '<span class="gs-t"><b>' + esc(it.title) + '</b>'
+          + (it.sub ? '<i>' + esc(it.sub) + '</i>' : '') + '</span>'
+        + '<span class="gs-go">' + esc(gsWhere(it.tab)) + '</span>'
+        + '</button>';
+    });
+  });
+  d.innerHTML = html;
+  GS_AT = -1;
+}
+
+function gsIcon(kind){
+  return { place: '→', client: '👤', appointment: '📅', member: '★', promo: '％',
+           team: '💅', service: '✦', presson: '📦', stock: '🧴' }[kind] || '•';
+}
+
+// The tab's own label, so the hint matches the button she then has to find.
+function gsWhere(tab){
+  const el = document.querySelector('.tab[data-tab="' + tab + '"]');
+  if(!el) return '';
+  return (el.textContent || '').replace(/[0-9]+$/, '').trim();
+}
+
+function gsGo(i){
+  const it = GS_ROWS[i];
+  if(!it) return;
+
+  if(it.tab) showTab(it.tab);
+  // An appointment opens the day it is on, not just the calendar.
+  if(it.go_date && typeof openDay === 'function'){ try{ openDay(it.go_date); }catch(_){} }
+  // A person opens as a person.
+  if(it.open_client && typeof openClient === 'function'){ try{ openClient(it.open_client); }catch(_){} }
+
+  gsClear();
+}
+
+function gsKey(e){
+  if(e.key === 'Escape'){ gsClear(); e.target.blur(); return; }
+  if(!GS_ROWS.length) return;
+
+  if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+    e.preventDefault();
+    GS_AT += (e.key === 'ArrowDown' ? 1 : -1);
+    if(GS_AT < 0) GS_AT = GS_ROWS.length - 1;
+    if(GS_AT >= GS_ROWS.length) GS_AT = 0;
+    const d = gsBox();
+    if(d){
+      [...d.querySelectorAll('.gs-row')].forEach(function(r){
+        const on = Number(r.dataset.i) === GS_AT;
+        r.classList.toggle('on', on);
+        if(on && r.scrollIntoView) r.scrollIntoView({ block: 'nearest' });
+      });
+    }
+    return;
+  }
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    gsGo(GS_AT >= 0 ? GS_AT : 0);
+  }
+}
+
+/* Anywhere outside closes it, and the slash key opens it from anywhere that
+   is not already a box she is typing in. */
+document.addEventListener('click', function(e){
+  const wrap = document.getElementById('gs-wrap');
+  if(wrap && !wrap.contains(e.target)) gsOpen(false);
+});
+document.addEventListener('keydown', function(e){
+  if(e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+  const t = e.target || {};
+  const tag = String(t.tagName || '').toLowerCase();
+  if(tag === 'input' || tag === 'textarea' || tag === 'select' || t.isContentEditable) return;
+  const i = document.getElementById('gs-input');
+  if(i){ e.preventDefault(); i.focus(); i.select(); }
+});
 
 /* ── AUTH ── */
 // Any client name on any screen opens the same profile.
