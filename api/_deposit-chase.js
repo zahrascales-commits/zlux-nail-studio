@@ -61,34 +61,58 @@ function subjectFor(n, dateStr) {
 /* Three tones, and the third one means it. The escalation is the whole
    point: an email that says the same thing five times is one email people
    stop opening after the first. */
-function wordsFor(n, { first, service, dateStr, timeStr, owed, waiting }) {
+/* Three tones, and the third one means it. The escalation is the whole
+   point: an email that says the same thing five times is one email people
+   stop opening after the first.
+
+   `also` is the other appointments they have outstanding. One person with
+   two unpaid visits gets one email naming both, rather than two emails a
+   second apart that make each other look automated. */
+function wordsFor(n, { first, service, dateStr, timeStr, owed, waiting, also }) {
   const pay = money(owed);
+  const many = Array.isArray(also) && also.length > 0;
+  const what = many
+    ? (also.length + 1) + ' appointments'
+    : service + ' on ' + dateStr + ' at ' + timeStr;
+  const extra = many
+    ? ['That covers ' + [service + ' on ' + dateStr]
+        .concat(also.map(a => a.service + ' on ' + a.dateStr)).join(', and ') + '.']
+    : [];
 
   if (n === 1) {
     return [
       'Hi ' + first + ',',
-      'Your ' + service + ' on ' + dateStr + ' at ' + timeStr + ' is booked in, but the deposit has not come through yet.',
-      'It is ' + pay + ', it comes off what you pay on the day, and it is what holds the time for you.',
-    ];
+      many
+        ? 'You have ' + what + ' booked in with me, and the deposits have not come through yet.'
+        : 'Your ' + what + ' is booked in, but the deposit has not come through yet.',
+    ].concat(extra).concat([
+      (many ? 'They come to ' + pay + ', which comes off' : 'It is ' + pay + ', it comes off')
+        + ' what you pay on the day, and it is what holds the time for you.',
+    ]);
   }
 
   if (n === 2) {
     return [
       'Hi ' + first + ',',
-      'A second reminder — the ' + pay + ' deposit for your ' + service + ' on ' + dateStr + ' is still outstanding.',
+      'A second reminder — the ' + pay + ' still outstanding on your ' + what + '.',
+    ].concat(extra).concat([
       'Your time is being held for now. If the deposit is not paid I will have to open the slot back up, and I would much rather keep it for you.',
-    ];
+    ]);
   }
 
   // Final. Says what will actually happen, and nothing that is not true.
   return [
     'Hi ' + first + ',',
-    'This is the last reminder about the ' + pay + ' deposit for your ' + service + ' on ' + dateStr + ' at ' + timeStr + '.',
+    'This is the last reminder about the ' + pay + ' owed on your ' + what + '.',
+  ].concat(extra).concat([
     waiting > 0
-      ? 'There ' + (waiting === 1 ? 'is 1 person' : 'are ' + waiting + ' people') + ' waiting for a spot, so if the deposit is not paid I will be releasing this one to them.'
-      : 'If the deposit is not paid I will be releasing this time and offering it to someone else.',
-    'If you still want it, the deposit takes a minute.',
-  ];
+      ? 'There ' + (waiting === 1 ? 'is 1 person' : 'are ' + waiting + ' people')
+        + ' waiting for a spot, so if the deposit is not paid I will be releasing '
+        + (many ? 'these' : 'this one') + ' to them.'
+      : 'If the deposit is not paid I will be releasing ' + (many ? 'these times' : 'this time')
+        + ' and offering ' + (many ? 'them' : 'it') + ' to someone else.',
+    'If you still want ' + (many ? 'them' : 'it') + ', the deposit takes a minute.',
+  ]);
 }
 
 function html({ lines, link, n, owed }) {
@@ -168,6 +192,10 @@ async function owing() {
 /* One pass. Called by the cron, twice a day, and sends at most one email
    per appointment per pass. Returns what it did rather than throwing —
    this runs unattended and a thrown error is an error nobody reads. */
+/* One pass. Called by the cron, twice a day, and sends at most one email
+   per person per pass — not one per appointment. Returns what it did rather
+   than throwing: this runs unattended, and a thrown error is an error
+   nobody reads. */
 async function run({ force } = {}) {
   const S = await settings();
   if (!S.on && !force) return { sent: 0, skipped: 'switched off' };
@@ -177,31 +205,59 @@ async function run({ force } = {}) {
   const list = await owing();
   const done = [];
 
-  for (const { row, owed, email } of list) {
-    const apptTs = new Date(String(row.date) + 'T' + String(row.time || '00:00') + ':00').getTime();
+  // Everything one person owes, together.
+  const byPerson = new Map();
+  for (const item of list) {
+    const apptTs = new Date(String(item.row.date) + 'T' + String(item.row.time || '00:00') + ':00').getTime();
     const hoursAway = (apptTs - now) / 3600000;
     // Close enough that chasing is no longer the right move — at that point
     // it is a phone call, or her decision to let it go.
     if (hoursAway < S.stopHoursBefore) continue;
 
-    /* Which number of reminder this is. Counted from the log rather than
-       stored on the row, so it survives anything else touching the
-       appointment. */
+    const key = String(item.email).toLowerCase();
+    if (!byPerson.has(key)) byPerson.set(key, []);
+    byPerson.get(key).push({ ...item, apptTs });
+  }
+
+  for (const [email, items] of byPerson) {
+    // Soonest first: that is the one at risk, and the one to name.
+    items.sort((a, b) => a.apptTs - b.apptTs);
+    const lead = items[0];
+    const row = lead.row;
+    const owedTotal = items.reduce((s, x) => s + x.owed, 0);
+
+    /* Which number of reminder this is, counted from the log rather than
+       stored on the row so it survives anything else touching the
+       appointment. The furthest-along one sets the tone: somebody already
+       on a final notice should not drop back to a gentle one. */
     let n = 0;
-    try {
-      const seen = await query(
-        "SELECT rkey FROM reminder_log WHERE rkey LIKE ?", ['dep:' + row.id + ':%']);
-      n = seen.length;
-    } catch (_) {}
+    for (const x of items) {
+      try {
+        const seen = await query('SELECT rkey FROM reminder_log WHERE rkey LIKE ?', ['dep:' + x.row.id + ':%']);
+        if (seen.length > n) n = seen.length;
+      } catch (_) {}
+    }
 
     const next = n + 1;
-    // One per pass, and the passes are what limit it to twice a day.
-    const rkey = 'dep:' + row.id + ':' + next + ':' + new Date(now).toISOString().slice(0, 13);
+    const hour = new Date(now).toISOString().slice(0, 13);
 
+    /* Claim the send before making it. Every appointment in the group is
+       logged so each one's count stays right, but only the first claim
+       decides whether the email goes — two passes in the same hour cannot
+       both send. */
     let firstTime = true;
-    try { await execute('INSERT INTO reminder_log (rkey, ts) VALUES (?,?)', [rkey, now]); }
-    catch (_) { firstTime = false; }
+    try {
+      await execute('INSERT INTO reminder_log (rkey, ts) VALUES (?,?)',
+        ['dep:' + row.id + ':' + next + ':' + hour, now]);
+    } catch (_) { firstTime = false; }
     if (!firstTime) continue;
+
+    for (const x of items.slice(1)) {
+      try {
+        await execute('INSERT INTO reminder_log (rkey, ts) VALUES (?,?)',
+          ['dep:' + x.row.id + ':' + next + ':' + hour, now]);
+      } catch (_) {}
+    }
 
     const first = String(row.client_name || 'there').trim().split(/\s+/)[0] || 'there';
     const dateStr = visit.pretty(row.date);
@@ -209,17 +265,28 @@ async function run({ force } = {}) {
     const link = SITE + '/visit.html?t=' + encodeURIComponent(row.chat_token || '');
 
     const lines = wordsFor(Math.min(next, FINAL_AT), {
-      first, service: row.service || 'your appointment', dateStr, timeStr, owed, waiting: S.waiting,
+      first,
+      service: row.service || 'your appointment',
+      dateStr, timeStr,
+      owed: owedTotal,
+      waiting: S.waiting,
+      also: items.slice(1).map(x => ({
+        service: x.row.service || 'your appointment',
+        dateStr: visit.pretty(x.row.date),
+      })),
     });
 
     const r = await notify.sendEmail(
       email,
       subjectFor(Math.min(next, FINAL_AT), dateStr),
-      html({ lines, link, n: next, owed }),
+      html({ lines, link, n: next, owed: owedTotal }),
       { kind: 'deposit_chase:' + next }
     ).catch(() => ({ sent: false }));
 
-    done.push({ id: row.id, client: row.client_name, to: email, reminder: next, sent: !!(r && r.sent) });
+    done.push({
+      client: row.client_name, to: email, reminder: next,
+      appointments: items.length, owed_cents: owedTotal, sent: !!(r && r.sent),
+    });
 
     /* She should know when somebody has been told their spot is going, so
        that releasing it is not a surprise to her either. */
@@ -227,7 +294,7 @@ async function run({ force } = {}) {
       try {
         await notify.notifyInApp('owner', null,
           '⚠️ ' + (row.client_name || 'A client') + ' has had their final deposit reminder',
-          (row.service || 'Appointment') + ' on ' + dateStr + ' · ' + money(owed)
+          (row.service || 'Appointment') + ' on ' + dateStr + ' · ' + money(owedTotal)
             + ' still owed. Nothing is cancelled automatically — that is your call.');
       } catch (_) {}
     }
