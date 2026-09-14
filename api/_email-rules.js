@@ -15,6 +15,13 @@ const { query, queryOne, execute } = require('./_team-db');
 /* Everything that can set an email off. The key is stored on the rule, so
    these names are permanent once used. */
 const TRIGGERS = [
+  /* The one everybody gets. It carries the deposit link and the photo link,
+     and it goes out however the appointment was made — booked online, or
+     written in by hand at the studio. Leaving it out of here meant the most
+     important email the studio sends was the only one she could not
+     change. */
+  { key: 'booking_confirmation', label: 'Someone books — their confirmation', who: 'any',
+    note: 'The deposit link and the photo link. Goes to everyone who books, however they booked. Leave this off and the built-in one is sent.' },
   { key: 'membership_bought', label: 'Someone buys a membership', who: 'member',
     note: 'Goes to the new member. Their welcome.' },
   { key: 'member_booked', label: 'A member books an appointment', who: 'member',
@@ -111,17 +118,39 @@ function fill(text, data) {
 /* Her words are typed as plain text, so line breaks are what she meant.
    Wrapped in the studio's frame so every automatic email still looks like
    it came from the same place. */
+/* The appointment link is the point of the email it appears in, so it gets
+   a button rather than a bare URL sitting in the middle of a sentence. The
+   tag is swapped for a marker before her words are escaped, then the marker
+   becomes real markup afterwards — escaping it as text would print the
+   markup at the client instead of rendering it. */
+const LINK_SLOT = '@@ZOLA_APPOINTMENT_LINK@@';
+
+function linkButton(href, label) {
+  return '<div style="text-align:center;margin:4px 0 22px">'
+    + '<a href="' + esc(href) + '" style="display:inline-block;background:#0D0D0D;color:#F5EEE8;'
+    + 'text-decoration:none;padding:14px 26px;font-size:14px;letter-spacing:2px;'
+    + 'text-transform:uppercase">' + esc(label || 'Open my appointment') + '</a></div>';
+}
+
 function toHtml(bodyText, data) {
-  const filled = fill(bodyText, data);
+  const href = (data && data.link) || '';
+  const wantsButton = String(bodyText || '').indexOf('{{link}}') >= 0 && !!href;
+  const staged = wantsButton ? String(bodyText).split('{{link}}').join(LINK_SLOT) : bodyText;
+
+  const filled = fill(staged, data);
   const paras = esc(filled)
     .split(/\n{2,}/)
     .map(p => '<p style="font-size:15px;line-height:1.75;color:#3a3027;margin:0 0 16px">'
       + p.replace(/\n/g, '<br>') + '</p>')
     .join('');
 
-  // A link she referenced is worth making tappable.
+  // A link she typed out in full is worth making tappable.
   const withLink = paras.replace(/(https?:\/\/[^\s<]+)/g,
     '<a href="$1" style="color:#8B6A3E">$1</a>');
+
+  const bodyHtml = wantsButton
+    ? withLink.split(LINK_SLOT).join(linkButton(href, (data && data.link_label) || ''))
+    : withLink;
 
   return `<div style="font-family:Helvetica,Arial,sans-serif;background:#faf7f4;padding:26px 14px">
   <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #eee5d8">
@@ -129,7 +158,7 @@ function toHtml(bodyText, data) {
       <div style="font-family:Georgia,serif;font-size:20px;letter-spacing:6px;color:#F5EEE8">ZOLA</div>
       <div style="font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#8B6A3E;margin-top:6px">Nail Studio · Porterville</div>
     </div>
-    <div style="padding:28px 24px">${withLink}</div>
+    <div style="padding:28px 24px">${bodyHtml}</div>
     <div style="background:#faf7f4;padding:16px 24px;text-align:center;border-top:1px solid #eee5d8">
       <p style="font-size:12px;color:#8C7A5E;margin:0;line-height:1.7">
         ZOLA Nail Studio · Porterville, California<br>Just reply to this email to reach us.
@@ -137,6 +166,50 @@ function toHtml(bodyText, data) {
     </div>
   </div>
 </div>`;
+}
+
+/* The wording of the built-in confirmation, as editable text. Offered as
+   the starting point when she chooses to take this email over, so she is
+   changing what already goes out rather than facing an empty box. */
+const BUILT_IN = {
+  booking_confirmation: {
+    name: 'Booking confirmation',
+    subject: "You're booked in — {{date}}",
+    body: [
+      'Hi {{first_name}},',
+      '',
+      "You're booked in with {{artist}} for {{service}} on {{date}} at {{time}}.",
+      '',
+      'Everything for this visit lives on one page — pay your deposit, and send me a photo of the nails you want. It takes a minute and it means we start on the right thing.',
+      '',
+      '{{link}}',
+      '',
+      'See you soon,',
+      'Zahra ✦ ZOLA Nail Studio',
+    ].join('\n'),
+  },
+};
+
+function builtIn(triggerKey) { return BUILT_IN[String(triggerKey)] || null; }
+
+/* Her own version of an email, if she has written and switched one on.
+   Returns null when she has not, which is the signal to send the built-in
+   one — so nothing changes until she decides it should. */
+async function renderFor(triggerKey, data) {
+  try {
+    await ensureTables();
+    const rows = await query(
+      'SELECT * FROM email_rules WHERE trigger_key=? AND active=1 ORDER BY id LIMIT 1',
+      [String(triggerKey)]);
+    const rule = rows && rows[0];
+    if (!rule) return null;
+    if (!audienceAllows(rule, data)) return null;
+    return {
+      rule_id: rule.id,
+      subject: fill(rule.subject || '', data).trim() || 'A note from ZOLA',
+      html: toHtml(rule.body || '', data),
+    };
+  } catch (_) { return null; }
 }
 
 // ── the rules themselves ──────────────────────────────────────────────────
@@ -273,6 +346,7 @@ async function recent(limit) {
 }
 
 module.exports = {
+  renderFor, builtIn, BUILT_IN,
   TRIGGERS, AUDIENCES, FIELDS,
   ensureTables, listRules, saveRule, deleteRule,
   fire, flush, recent, fill, toHtml,

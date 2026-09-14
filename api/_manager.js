@@ -1239,6 +1239,9 @@ module.exports = async function (req, res) {
         triggers: er.TRIGGERS,
         audiences: er.AUDIENCES,
         fields: er.FIELDS,
+        // What the emails that already send actually say, so taking one over
+        // starts from the real wording instead of an empty box.
+        built_in: er.BUILT_IN || {},
       });
     }
 
@@ -1594,6 +1597,41 @@ module.exports = async function (req, res) {
             WHERE a.chat_token = ?`, [tok]);
         if (apptRow && !QUIET) confirmMail = await require('./_confirm-mail').sendFor(apptRow);
       } catch (_) {}
+
+      /* And any email she has written for somebody booking, so a client
+          written in by hand is treated exactly like one who booked online.
+          Skipped when the booking is marked quiet, the same as everything
+          else that would otherwise reach the client. */
+      if (!QUIET) {
+        try {
+          const site = process.env.PUBLIC_BASE_URL || 'https://zolanailstudio.com';
+          const who = String(client_email || '').trim();
+          let tier = '';
+          if (who) {
+            try {
+              const main = require('./_db');
+              const mem = await main.queryOne('SELECT tier FROM members WHERE lower(email)=?', [who.toLowerCase()]);
+              tier = (mem && mem.tier) || '';
+            } catch (_) {}
+          }
+          const artistRow = team_member_id
+            ? await queryOne('SELECT name FROM team_members WHERE id=?', [Number(team_member_id)])
+            : null;
+          await require('./_email-rules').fire(tier ? 'member_booked' : 'dropin_booked', {
+            email: who,
+            first_name: String(client_name || '').trim().split(/\s+/)[0] || '',
+            name: client_name || '',
+            service: service || '',
+            date: date,
+            time: time,
+            artist: (artistRow && artistRow.name) || 'your artist',
+            tier: tier,
+            tier_key: tier,
+            link: site + '/visit.html?t=' + encodeURIComponent(tok),
+            studio: 'ZOLA Nail Studio',
+          });
+        } catch (_) { /* never let an email rule take a booking down */ }
+      }
 
       if (QUIET) return res.json({ ok: true, id: r.lastInsertRowid, chat_token: tok, quiet: true, notify: null });
 

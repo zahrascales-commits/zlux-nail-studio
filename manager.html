@@ -7386,6 +7386,7 @@ async function loadAutoEmail(){
     if(d.error) throw new Error(d.error);
     AE.rules = d.rules || []; AE.triggers = d.triggers || [];
     AE.audiences = d.audiences || []; AE.fields = d.fields || [];
+    AE.builtIn = d.built_in || {};
   }catch(err){ el.innerHTML = emptyBox('⚠️','Could not load: ' + esc(err.message)); return; }
   renderAutoEmail();
 }
@@ -7414,8 +7415,19 @@ function renderAutoEmail(){
       + '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.8rem;flex-wrap:wrap">'
         + '<div><div style="font-size:1.02rem;font-weight:600">' + esc(t.label) + '</div>'
         + '<div style="font-size:0.8rem;opacity:0.75;margin-top:0.15rem">' + esc(t.note) + '</div></div>'
-        + '<button class="ae-btn" onclick="aeNew(\'' + t.key + '\')">Write one</button>'
+        + '<button class="ae-btn" onclick="aeNew(\'' + t.key + '\')">'
+          + ((AE.builtIn || {})[t.key] && !mine.length ? 'Customise it' : 'Write one') + '</button>'
       + '</div>'
+      /* An email that already goes out says so. Without this the screen
+         reads as though nothing is being sent, which is exactly how she
+         came to think the confirmation did not exist. */
+      + ((AE.builtIn || {})[t.key] && !mine.length
+          ? '<div style="margin-top:0.7rem;border-top:1px solid #fff;padding-top:0.7rem;'
+            + 'font-size:0.82rem;opacity:0.85;line-height:1.6">'
+            + 'This one is already sending, in ZOLA\'s own wording. '
+            + '<strong>Customise it</strong> to write your own — it opens with what clients get today.'
+            + '</div>'
+          : '')
       + (mine.length
           ? '<div style="margin-top:0.9rem">' + mine.map(function(r){
               return '<div class="' + (Number(r.active) ? '' : 'ae-off') + '" '
@@ -7445,7 +7457,16 @@ function renderAutoEmail(){
   loadAeActivity();
 }
 
-function aeNew(triggerKey){ aeOpen({ trigger_key: triggerKey, active: 1, delay_minutes: 0, audience: 'everyone' }); }
+function aeNew(triggerKey){
+  /* Started from what the email says today when there is one, because
+     facing an empty box for a message already going out is how you end up
+     with something worse than what you had. */
+  const b = (AE.builtIn || {})[triggerKey] || {};
+  aeOpen({
+    trigger_key: triggerKey, active: 1, delay_minutes: 0, audience: 'everyone',
+    name: b.name || '', subject: b.subject || '', body: b.body || '',
+  });
+}
 function aeEdit(id){ aeOpen(AE.rules.find(function(r){ return Number(r.id) === Number(id); })); }
 
 function aeOpen(rule){

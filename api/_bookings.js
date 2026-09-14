@@ -388,6 +388,8 @@ module.exports = async (req, res) => {
     // remember the client, alert the booked artist + owner instantly.
     try {
       await teamDb.ensureTables();
+      // Their own page: deposit and photos. Needed below for the email.
+      const visitToken = teamDb.token();
       let m = null;
       if (worker) m = await teamDb.queryOne('SELECT id, name, phone, email FROM team_members WHERE name=? AND active=1', [worker]).catch(() => null);
       /* The studio's copy carries the money too. It never did, so the front
@@ -409,7 +411,7 @@ module.exports = async (req, res) => {
          customer_email || '', bookedService, date, time_slot,
          'Booked online · ' + confirmation
            + (for_name && for_name.trim() && for_name.trim() !== customer_name ? ' · for ' + for_name.trim() + ' (booked by ' + customer_name + ')' : '')
-           + (dealAddons.length ? ' · +' + dealAddons.join(', ') : ''), teamDb.token(),
+           + (dealAddons.length ? ' · +' + dealAddons.join(', ') : ''), visitToken,
          total_cents, deposit_cents, depositPaid ? 1 : 0]
       );
       // Skip duplicate client email/SMS if the legacy SendGrid path is active
@@ -441,6 +443,27 @@ module.exports = async (req, res) => {
         } catch (_) {}
       }
       await upsertClient({ name: customer_name, email: customer_email, phone: customer_phone, service: bookedService, date });
+
+      /* Any email she has written for somebody booking. Fired here rather
+         than nowhere, which is where it fired before: the trigger existed
+         in Email Setup and nothing ever set it off. */
+      try {
+        const site = process.env.PUBLIC_BASE_URL || 'https://zolanailstudio.com';
+        await require('./_email-rules').fire(member_id ? 'member_booked' : 'dropin_booked', {
+          email: customer_email,
+          first_name: String(customer_name || '').trim().split(/\s+/)[0] || '',
+          name: customer_name || '',
+          service: bookedService,
+          date: formatDate(date),
+          time: formatTime(time_slot),
+          artist: (m && m.name) || 'your artist',
+          tier: member_tier || '',
+          tier_key: member_tier || '',
+          amount: '$' + (Number(total_cents || 0) / 100).toFixed(2),
+          link: site + '/visit.html?t=' + encodeURIComponent(visitToken),
+          studio: 'ZOLA Nail Studio',
+        });
+      } catch (_) { /* an email rule must never take a booking down */ }
       // Record marketing consent only when they actually ticked the box.
       // Never clear it here — someone who opted in previously and left the box
       // unticked on a later booking has not withdrawn consent, and silently

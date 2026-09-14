@@ -150,11 +150,11 @@ async function sendFor(appt, { force } = {}) {
   const depositCents = await visit.depositFor(appt);
   const link = SITE + '/visit.html?t=' + encodeURIComponent(appt.chat_token);
 
-  const subject = artist
+  let subject = artist
     ? `You're booked in with ${artist} — ${visit.pretty(appt.date)}`
     : `You're booked in — ${visit.pretty(appt.date)}`;
 
-  const body = html({
+  let body = html({
     client: appt.client_name,
     service: appt.service || 'your appointment',
     artist,
@@ -164,6 +164,28 @@ async function sendFor(appt, { force } = {}) {
     depositCents,
     depositPaid: !!Number(appt.deposit_paid),
   });
+
+  /* If she has written her own version of this email in Email Setup, that
+     is the one that goes. Only when she has switched one on — with nothing
+     written, the built-in above is sent exactly as before, so taking this
+     email over is her decision rather than a change that happened to her. */
+  try {
+    const first = String(appt.client_name || '').trim().split(/\s+/)[0] || '';
+    const hers = await require('./_email-rules').renderFor('booking_confirmation', {
+      email: to,
+      first_name: first,
+      name: appt.client_name || '',
+      service: appt.service || 'your appointment',
+      date: visit.pretty(appt.date),
+      time: visit.time12(appt.time),
+      artist: artist || 'your artist',
+      amount: '$' + (Number(depositCents || 0) / 100).toFixed(2).replace(/\.00$/, ''),
+      link,
+      link_label: Number(appt.deposit_paid) ? 'Send my inspiration photo' : 'Pay my deposit & send a photo',
+      studio: 'ZOLA Nail Studio',
+    });
+    if (hers) { subject = hers.subject; body = hers.html; }
+  } catch (_) { /* her version failing must never stop the confirmation */ }
 
   const r = await sendEmail(to, subject, body);
   if (r && r.sent) {
