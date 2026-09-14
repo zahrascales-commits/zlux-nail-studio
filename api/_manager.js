@@ -886,6 +886,53 @@ module.exports = async function (req, res) {
        These are the people who booked before any of this existed — they have
        no deposit link and no way to send a reference photo, and they are the
        whole reason this exists. */
+    /* Who the deposit chase would write to on its next run, and what it
+       would say to each of them. Reads only — nothing is sent by looking. */
+    if (method === 'GET' && action === 'deposit_chase_preview') {
+      const chase = require('./_deposit-chase');
+      const visit = require('./_visit');
+      const S = await chase.settings();
+      const list = await chase.owing();
+      const now = Date.now();
+
+      const rows = [];
+      for (const { row, owed, email } of list) {
+        const apptTs = new Date(String(row.date) + 'T' + String(row.time || '00:00') + ':00').getTime();
+        const hoursAway = (apptTs - now) / 3600000;
+
+        let already = 0;
+        try {
+          const seen = await query(
+            'SELECT rkey FROM reminder_log WHERE rkey LIKE ?', ['dep:' + row.id + ':%']);
+          already = seen.length;
+        } catch (_) {}
+
+        const next = Math.min(already + 1, chase.FINAL_AT);
+        rows.push({
+          appointment_id: Number(row.id),
+          client: row.client_name || '',
+          email,
+          service: row.service || '',
+          date: row.date, time: row.time,
+          owed_cents: owed,
+          reminders_sent: already,
+          next_reminder: next,
+          is_final: next >= chase.FINAL_AT,
+          // Too close to the appointment to be worth an email.
+          on_hold: hoursAway < S.stopHoursBefore,
+          hours_away: Math.round(hoursAway),
+          subject: chase.subjectFor(next, visit.pretty(row.date)),
+        });
+      }
+
+      return res.json({
+        settings: S,
+        would_email: rows.filter(r => !r.on_hold).length,
+        holding: rows.filter(r => r.on_hold).length,
+        rows,
+      });
+    }
+
     if (method === 'GET' && action === 'pending_confirms') {
       const rows = await require('./_confirm-mail').pending();
       return res.json({
