@@ -115,9 +115,17 @@ async function depositFor(appt) {
   }
 
   try {
+    let ownRate = 0;
+    try {
+      ownRate = await require('./_client-rates').percentFor({
+        email: appt.client_email,
+        member_id: member && member.member_id,
+      });
+    } catch (_) {}
+
     const calc = require('./_pay').computeDeposit({
       service_name: appt.service, addon_names: [], member_tier: tier || null,
-      free_service: false,
+      free_service: false, percent_off: ownRate,
     });
     if (calc && calc.deposit_cents) return calc.deposit_cents;
   } catch (_) {}

@@ -168,7 +168,8 @@ function findAddon(name) {
 // The caller decides entitlement, because only it has read the usage counter.
 // The design tier is priced here with everything else. A tier that costs
 // $10 in the browser and $0 on the server is a discount nobody authorised.
-function computeDeposit({ service_name, addon_names = [], member_tier, free_service, design_tier }) {
+function computeDeposit({ service_name, addon_names = [], member_tier, free_service, design_tier,
+                          percent_off = 0 }) {
   const svc = findService(service_name);
   if (!svc) return null;
 
@@ -231,10 +232,24 @@ function computeDeposit({ service_name, addon_names = [], member_tier, free_serv
   const tierListCents = design_tier ? tiers.priceFor(design_tier) : 0;
   const tierCents = designFree ? 0 : tierListCents;
 
-  let total = (free_service ? 0 : chargeCents) + tierCents;
+  /* A rate that belongs to this one person — Katelynn books at 25% off.
+     Taken after the membership has had its say, so it is a quarter off what
+     she would actually have been charged rather than off a list price
+     nobody was paying.
+
+     Not on a deal day, which is already flat and below every membership
+     rate, and not on a service being covered in full, where there is
+     nothing to take a quarter of. */
+  const personalPct = (deal || free_service)
+    ? 0
+    : Math.max(0, Math.min(100, Number(percent_off) || 0)) / 100;
+  const personalOff = Math.round(chargeCents * personalPct);
+
+  let total = (free_service ? 0 : chargeCents - personalOff) + tierCents;
   // What the membership took off: the whole service if it is included, or
-  // the difference down to the members' price if it is not.
-  let covered = (free_service ? listCents : (listCents - chargeCents))
+  // the difference down to the members' price if it is not. Her own rate is
+  // counted here too, so the saving she is shown is the saving she got.
+  let covered = (free_service ? listCents : (listCents - chargeCents + personalOff))
     + (designFree ? tierListCents : 0);
 
   for (const name of addon_names) {
@@ -360,11 +375,17 @@ module.exports = async function (req, res) {
       // The allowance is spent one service at a time across the cart — a
       // member with one left booking three does not get all three free.
       let freeLeft = await freeServicesLeft(member_id, member_tier);
+      /* Her own rate, looked up once for the whole basket rather than per
+         item — it belongs to the person, not to what they picked. */
+      let ownRate = 0;
+      try {
+        ownRate = await require('./_client-rates').percentFor({ email: customer_email, member_id });
+      } catch (_) {}
       const lines = [];
       for (const it of items.slice(0, 10)) {
         const useFree = freeLeft > 0;
         if (useFree) freeLeft--;
-        const calc = computeDeposit({ service_name: it.service_name, addon_names: it.addon_names || [], member_tier: member_tier || null, free_service: useFree, design_tier: req.body.design_tier });
+        const calc = computeDeposit({ service_name: it.service_name, addon_names: it.addon_names || [], member_tier: member_tier || null, free_service: useFree, design_tier: req.body.design_tier, percent_off: ownRate });
         if (!calc) return res.status(400).json({ error: 'Unknown service: ' + it.service_name });
         total += calc.total_cents;
         deposit += calc.deposit_cents;

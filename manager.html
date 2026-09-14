@@ -1791,6 +1791,26 @@
           </div>
           <div id="eb-summary" style="margin-bottom:1.1rem"></div>
           <div id="promo-list" style="display:grid;gap:0.5rem"></div>
+
+          <!-- A rate that belongs to one client. Not a code — nobody can
+               pass it on, and it follows them whether they book online, at
+               the desk, or you write them in. -->
+          <div class="ai-tag" style="margin-top:1.6rem;">Someone's own rate</div>
+          <p style="font-size:0.8rem;color:var(--muted);line-height:1.6;margin:0.3rem 0 0.7rem">
+            A standing discount for one person. It comes off the service every time they book,
+            wherever they book it. It never applies to a $75 Tuesday or a $65 Wednesday, and it
+            never applies to a visit their membership already covers in full.
+          </p>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:0.9rem">
+            <div style="flex:2;min-width:190px"><label class="fld-label">Their email</label>
+              <input id="cr-email" placeholder="them@email.com" /></div>
+            <div style="width:100px"><label class="fld-label">% off</label>
+              <input id="cr-pct" type="number" min="0" max="100" step="1" placeholder="25" /></div>
+            <div style="flex:2;min-width:160px"><label class="fld-label">Note to yourself</label>
+              <input id="cr-label" placeholder="Why she has it" /></div>
+            <button class="btn btn-gold btn-sm" onclick="saveClientRate()">Save rate</button>
+          </div>
+          <div id="cr-list" style="display:grid;gap:0.5rem"></div>
         </div>
         <div class="site-card">
           <h3>Studio Address 📍</h3>
@@ -6934,6 +6954,71 @@ async function renderEbSummary(){
     + '</div>';
 }
 
+/* ── SOMEBODY'S OWN RATE ──
+   Shown next to the codes because that is where she looks for "who gets
+   money off". Unlike a code it cannot be handed to anybody else. */
+async function loadClientRates(){
+  const el = document.getElementById('cr-list');
+  if(!el) return;
+  try{
+    const d = await (await api('/api/manager?action=client_rates')).json();
+    const rows = d.rates || [];
+    el.innerHTML = rows.length ? rows.map(function(r){
+      return '<div style="display:flex;align-items:center;gap:0.7rem;padding:0.6rem 0.85rem;'
+        + 'border:1px solid var(--border);border-radius:8px;background:var(--card);flex-wrap:wrap'
+        + (Number(r.active)?'':';opacity:0.5') + '">'
+        + '<div style="flex:1;min-width:180px">'
+          + '<div style="font-size:0.92rem;color:var(--cream)">'
+            + (r.email ? clientLink(r.email,{email:r.email}) : esc(r.member_id || '—')) + '</div>'
+          + '<div style="font-size:0.7rem;color:var(--muted)">' + esc(r.label || 'no note')
+            + (Number(r.active)?'':' · switched off') + '</div>'
+        + '</div>'
+        + '<div style="font-family:Cinzel,serif;font-size:1.05rem;color:var(--gold)">'
+          + Number(r.percent_off) + '% off</div>'
+        + '<button class="btn btn-ghost btn-sm" onclick="toggleClientRate(' + r.id + ',' + (Number(r.active)?0:1) + ')">'
+          + (Number(r.active) ? 'Switch off' : 'Switch on') + '</button>'
+        + '<button class="btn btn-danger btn-sm" onclick="delClientRate(' + r.id + ')">Remove</button>'
+        + '</div>';
+    }).join('') : '<div style="color:var(--muted);font-size:0.8rem">Nobody has their own rate yet.</div>';
+    CR_ROWS = rows;
+  }catch(_){ el.innerHTML = '<div style="color:var(--muted);font-size:0.8rem">Could not load.</div>'; }
+}
+let CR_ROWS = [];
+
+async function saveClientRate(){
+  const email = (document.getElementById('cr-email').value || '').trim();
+  const pct = Number(document.getElementById('cr-pct').value);
+  const label = (document.getElementById('cr-label').value || '').trim();
+  if(!email){ toast('Whose rate is it? Put their email in'); return; }
+  if(!(pct > 0)){ toast('How much off?'); return; }
+  try{
+    const r = await api('/api/manager?action=client_rate', { method:'POST',
+      body: JSON.stringify({ email: email, percent_off: pct, label: label, active: 1 }) });
+    const d = await r.json();
+    if(d.error) throw new Error(d.error);
+    document.getElementById('cr-email').value='';
+    document.getElementById('cr-pct').value='';
+    document.getElementById('cr-label').value='';
+    toast('Saved — it applies from their next booking');
+    await loadClientRates();
+  }catch(err){ toast(err.message || 'Could not save that'); }
+}
+
+async function toggleClientRate(id, on){
+  const r = CR_ROWS.find(function(x){ return Number(x.id) === Number(id); });
+  if(!r) return;
+  await api('/api/manager?action=client_rate', { method:'POST', body: JSON.stringify({
+    id: id, email: r.email, member_id: r.member_id,
+    percent_off: r.percent_off, label: r.label, active: on }) });
+  await loadClientRates();
+}
+
+async function delClientRate(id){
+  if(!confirm('Remove this rate? They go back to normal prices from their next booking.')) return;
+  await api('/api/manager?action=client_rate', { method:'DELETE', body: JSON.stringify({ id: id }) });
+  await loadClientRates();
+}
+
 async function loadPromos(){
   renderEbSummary();
   const g=document.getElementById('promo-list'); if(!g) return;
@@ -7142,6 +7227,7 @@ async function igDelete(id){
 async function loadSite(){
   loadShopIg();
   loadPromos();
+  loadClientRates();
   loadSitePhotos();
   loadClasses();
   loadClassPurchases();

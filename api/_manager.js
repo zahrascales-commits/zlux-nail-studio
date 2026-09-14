@@ -888,6 +888,25 @@ module.exports = async function (req, res) {
        whole reason this exists. */
     /* Who the deposit chase would write to on its next run, and what it
        would say to each of them. Reads only — nothing is sent by looking. */
+    /* Rates that belong to one person. Kept separate from discount codes
+       on purpose: a code is something anybody holding it can use, a rate
+       follows one client and cannot be passed on. */
+    if (method === 'GET' && action === 'client_rates') {
+      return res.json({ rates: await require('./_client-rates').list() });
+    }
+
+    if (method === 'POST' && action === 'client_rate') {
+      try {
+        const id = await require('./_client-rates').save(req.body || {});
+        return res.json({ ok: true, id });
+      } catch (err) { return res.status(400).json({ error: String(err.message || err) }); }
+    }
+
+    if (method === 'DELETE' && action === 'client_rate') {
+      await require('./_client-rates').remove((req.body || {}).id);
+      return res.json({ ok: true });
+    }
+
     if (method === 'GET' && action === 'deposit_chase_preview') {
       const chase = require('./_deposit-chase');
       const visit = require('./_visit');

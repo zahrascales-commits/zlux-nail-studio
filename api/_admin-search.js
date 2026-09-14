@@ -36,6 +36,8 @@ async function safe(fn) {
    Kept on the server with everything else so there is one search to
    maintain rather than two that answer differently. */
 const PLACES = [
+  { tab: 'site', title: "Someone's own rate", sub: 'Site → a standing discount for one client',
+    words: 'rate rates personal discount one client standing percent off katelynn special price friends family comp' },
   { tab: 'site', title: 'Discount codes', sub: 'Site → the codes you hand out',
     words: 'discount code codes promo coupon voucher percent off dollars off early bird trainee special' },
   { tab: 'site', title: 'Site photos', sub: 'Site → tap a slot to upload from your phone',

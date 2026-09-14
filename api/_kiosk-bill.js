@@ -70,12 +70,24 @@ async function billFor(appt) {
   const tier = memberTierOf(member);
   const freeLeft = await freeLeftFor(member);
 
+  /* Her own rate, so the desk quotes the same number the booking page
+     did. Two screens disagreeing about what somebody owes is the bug this
+     studio has already been bitten by. */
+  let ownRate = 0;
+  try {
+    ownRate = await require('./_client-rates').percentFor({
+      email: appt.email || appt.client_email,
+      member_id: member && member.member_id,
+    });
+  } catch (_) {}
+
   const calc = pay.computeDeposit({
     service_name: appt.service,
     addon_names: [],
     member_tier: tier,
     free_service: freeLeft > 0,
     design_tier: null,
+    percent_off: ownRate,
   });
 
   /* A price agreed when they booked outranks today's menu. Greenley agreed

@@ -247,9 +247,17 @@ module.exports = async (req, res) => {
     // appointment was SAVED without the tier, so the balance owed at
     // checkout and every figure in the reports came out $5, $10 or $20
     // short on every booking with art on it.
+    /* A rate that belongs to this one client, if she has one. */
+    let ownRate = 0;
+    try {
+      ownRate = await require('./_client-rates').percentFor({
+        email: customer_email, member_id,
+      });
+    } catch (_) {}
+
     const calc = require('./_pay').computeDeposit({
       service_name, addon_names: dealAddons, member_tier, free_service: freeService,
-      design_tier: dealTier || null,
+      design_tier: dealTier || null, percent_off: ownRate,
     });
     if (calc) {
       total_cents = calc.total_cents;
