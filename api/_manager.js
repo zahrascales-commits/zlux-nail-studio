@@ -109,7 +109,36 @@ module.exports = async function (req, res) {
       const pub = db.stripe_publishable || process.env.STRIPE_PUBLISHABLE_KEY || '';
       const enabled = !!(secret && pub);
       const live = /_live_/.test(pub) || /_live_/.test(secret);
-      return res.json({ enabled, mode: enabled ? (live ? 'live' : 'test') : 'off' });
+
+      /* Which account, so the link opens the right one when she is signed
+         into more than one — and so test keys do not send her to the live
+         dashboard, where none of her test payments are. */
+      let accountId = '';
+      if (secret) {
+        try {
+          const r = await fetch('https://api.stripe.com/v1/account', {
+            headers: { Authorization: 'Bearer ' + secret },
+          });
+          const acct = await r.json();
+          if (r.ok && acct && acct.id) accountId = acct.id;
+        } catch (_) { /* a link without the id still works */ }
+      }
+
+      const base = 'https://dashboard.stripe.com'
+        + (accountId ? '/' + accountId : '')
+        + (live ? '' : '/test');
+
+      return res.json({
+        enabled, mode: enabled ? (live ? 'live' : 'test') : 'off',
+        account_id: accountId,
+        links: {
+          payments: base + '/payments',
+          payouts: base + '/payouts',
+          balance: base + '/balance',
+          customers: base + '/customers',
+          subscriptions: base + '/subscriptions',
+        },
+      });
     }
 
     // ── STRIPE HEALTH: can money actually reach her bank? ──

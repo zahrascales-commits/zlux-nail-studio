@@ -1674,6 +1674,13 @@
         <div class="site-card">
           <h3>Connect Payments 💳</h3>
           <div class="key-status" id="key-stripe">💳 Payments: checking…</div>
+
+          <!-- Straight into Stripe from here. Built on the server so it
+               opens the right account, and the test dashboard when test
+               keys are connected — a link to the live one would show her an
+               empty page and look broken. -->
+          <div id="stripe-links" style="display:none;margin:0.8rem 0 1rem"></div>
+
           <p>Paste your Stripe keys (Stripe Dashboard → Developers → API keys). Use your <b>live</b> keys to take real money. Payments turn on the moment you save — no redeploy.</p>
           <label class="fld-label">Publishable key (pk_live_… or pk_test_…)</label>
           <input id="k-stripe-pub" placeholder="pk_live_xxxxxxxx" style="margin-bottom:0.7rem" autocomplete="off" />
@@ -8102,7 +8109,42 @@ async function loadStripeStatus(){
     if(!d.enabled)el.innerHTML='💳 Payments: <span class="key-off">OFF — paste your Stripe keys below</span>';
     else if(d.mode==='live')el.innerHTML='💳 Payments: <span class="key-on">LIVE — taking real payments ✦</span>';
     else el.innerHTML='💳 Payments: <span class="key-off">TEST mode — paste your LIVE keys to take real money</span>';
+    renderStripeLinks(d);
   }catch{el.innerHTML='💳 Payments: —';}
+}
+
+/* Straight into Stripe. The links come from the server because it knows
+   which account is connected and whether the keys are live or test — the
+   test dashboard is a different URL, and a link to the wrong one shows her
+   an empty page that looks like something is broken.
+
+   Stripe will ask her to sign in the first time. It holds the money, so it
+   decides who looks at it; nobody can link around that. "Remember me"
+   there makes every visit after this one a single click. */
+function renderStripeLinks(d){
+  const box=document.getElementById('stripe-links');
+  if(!box) return;
+  if(!d || !d.enabled || !d.links){ box.style.display='none'; return; }
+
+  const L=d.links;
+  const btn=(href,label,main)=>'<a href="'+href+'" target="_blank" rel="noopener" '
+    + 'class="btn '+(main?'btn-gold':'btn-ghost')+' btn-sm" '
+    + 'style="text-decoration:none;display:inline-block">'+label+'</a>';
+
+  box.style.display='';
+  box.innerHTML='<div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">'
+    + btn(L.payments,'💳 My Stripe payments ↗',true)
+    + btn(L.payouts,'Payouts ↗')
+    + btn(L.balance,'Balance ↗')
+    + btn(L.subscriptions,'Memberships ↗')
+    + '</div>'
+    + '<div style="font-size:0.72rem;color:var(--muted);margin-top:0.5rem;line-height:1.6">'
+      + (d.mode==='test'
+          ? 'These open your <strong>test</strong> dashboard, because test keys are connected.'
+          : 'These open your live Stripe account'+(d.account_id?' ('+esc(d.account_id)+')':'')+'.')
+      + '<br>Stripe asks you to sign in the first time — it holds the money, so it decides who sees it. '
+      + 'Tick <strong>“Remember me”</strong> there and it is one click from here after that.'
+    + '</div>';
 }
 async function setupMembershipPrices(){
   const out=document.getElementById('memberprice-result');

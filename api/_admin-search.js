@@ -105,6 +105,8 @@ const PLACES = [
     words: 'sales sold showcase shop' },
   { tab: 'faq', title: 'Ask Zola', sub: 'The answers the site gives clients',
     words: 'faq questions answers ask zola help chatbot' },
+  { tab: 'settings', title: 'My Stripe account', sub: 'Settings → straight into your payments, payouts and balance',
+    words: 'stripe dashboard my payments payouts balance bank money out see my payments open stripe account login' },
   { tab: 'settings', title: 'Settings', sub: 'Passwords, keys and everything else',
     words: 'settings password stripe key api notifications preferences colour setup config' },
   { tab: 'overview', title: 'Overview', sub: 'Today, and what needs you',
