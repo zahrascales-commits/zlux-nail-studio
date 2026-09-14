@@ -204,6 +204,13 @@ async function renderFor(triggerKey, data) {
     const rule = rows && rows[0];
     if (!rule) return null;
     if (!audienceAllows(rule, data)) return null;
+
+    /* Her wording, with a hole in it, is worse than the built-in email it
+       would replace. Falls back rather than sending a broken one. */
+    try {
+      const gaps = require('./_email-fields').missingFor(rule.body, rule.subject, data);
+      if (gaps.length) return null;
+    } catch (_) {}
     return {
       rule_id: rule.id,
       subject: fill(rule.subject || '', data).trim() || 'A note from ZOLA',
@@ -274,9 +281,29 @@ async function fire(triggerKey, data) {
     const to = String((data && data.email) || '').trim();
     if (!to || !/@/.test(to)) return { fired: 0, why: 'no email address' };
 
-    let fired = 0;
+    let fired = 0, held = 0;
+    const holdReasons = [];
     for (const rule of rules) {
       if (!audienceAllows(rule, data)) continue;
+
+      /* Nothing goes out with a hole in it. A rule that says "Hi
+         {{first_name}}" when there is no name resolves to "Hi ,", and one
+         that offers {{link}} with no token sends somebody to a page that
+         cannot know who they are. Both look fine leaving here and land
+         broken. */
+      try {
+        const gaps = require('./_email-fields').missingFor(rule.body, rule.subject, data);
+        if (gaps.length) {
+          held++;
+          holdReasons.push({ rule: rule.name || rule.subject || rule.id, missing: gaps });
+          await execute(
+            `INSERT INTO email_queue (rule_id, trigger_key, recipient, subject, body, send_after_ts, sent_ts, status, detail, created_ts)
+             VALUES (?,?,?,?,?,?,0,'held',?,?)`,
+            [rule.id, triggerKey, to, fill(rule.subject || '', data), '',
+             Date.now(), 'nothing to put in: ' + gaps.join(', '), Date.now()]);
+          continue;
+        }
+      } catch (_) { /* the check failing must not stop a good email */ }
 
       const subject = fill(rule.subject || '', data).trim() || 'A note from ZOLA';
       const html = toHtml(rule.body || '', data);
@@ -300,7 +327,7 @@ async function fire(triggerKey, data) {
       }
       fired++;
     }
-    return { fired };
+    return { fired, held, held_because: holdReasons };
   } catch (err) {
     return { fired: 0, error: String(err.message || err) };
   }

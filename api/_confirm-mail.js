@@ -170,20 +170,15 @@ async function sendFor(appt, { force } = {}) {
      written, the built-in above is sent exactly as before, so taking this
      email over is her decision rather than a change that happened to her. */
   try {
-    const first = String(appt.client_name || '').trim().split(/\s+/)[0] || '';
-    const hers = await require('./_email-rules').renderFor('booking_confirmation', {
-      email: to,
-      first_name: first,
-      name: appt.client_name || '',
-      service: appt.service || 'your appointment',
-      date: visit.pretty(appt.date),
-      time: visit.time12(appt.time),
-      artist: artist || 'your artist',
-      amount: '$' + (Number(depositCents || 0) / 100).toFixed(2).replace(/\.00$/, ''),
-      link,
-      link_label: Number(appt.deposit_paid) ? 'Send my inspiration photo' : 'Pay my deposit & send a photo',
-      studio: 'ZOLA Nail Studio',
-    });
+    const data = await require('./_email-fields').forAppointment(
+      Object.assign({}, appt, { artist_name: artist }),
+      {
+        email: to,
+        link,
+        amount: '$' + (Number(depositCents || 0) / 100).toFixed(2).replace(/\.00$/, ''),
+        link_label: Number(appt.deposit_paid) ? 'Send my inspiration photo' : 'Pay my deposit & send a photo',
+      });
+    const hers = await require('./_email-rules').renderFor('booking_confirmation', data);
     if (hers) { subject = hers.subject; body = hers.html; }
   } catch (_) { /* her version failing must never stop the confirmation */ }
 

@@ -24,6 +24,40 @@ async function membersWithSkills() {
   return members;
 }
 
+/* The soonest real appointment, as merge fields. This is what a preview
+   and a test send are rendered against: a real client, their real deposit,
+   and a link that actually opens their page.
+
+   With nothing upcoming there is nothing honest to show, so it says so in
+   the fields themselves rather than quietly inventing somebody. */
+async function previewFields() {
+  const fields = require('./_email-fields');
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const row = await queryOne(
+      `SELECT a.*, m.name AS artist_name
+         FROM team_appointments a
+         LEFT JOIN team_members m ON m.id = a.team_member_id
+        WHERE a.date >= ?
+          AND LOWER(COALESCE(a.status,'scheduled')) <> 'cancelled'
+        ORDER BY a.date, a.time LIMIT 1`, [today]);
+    if (row) {
+      const f = await fields.forAppointment(row);
+      f.preview_of = row.client_name || '';
+      return f;
+    }
+  } catch (_) {}
+
+  const studio = await fields.studioName();
+  return {
+    first_name: '(their first name)', name: '(their name)',
+    service: '(their service)', date: '(their date)', time: '(their time)',
+    artist: '(their artist)', tier: '(their membership)', amount: '(their deposit)',
+    link: '(their own link)', studio,
+    preview_of: '',
+  };
+}
+
 module.exports = async function (req, res) {
   const method = req.method.toUpperCase();
   const action = req.query.action || (req.body && req.body.action);
@@ -1341,15 +1375,18 @@ module.exports = async function (req, res) {
     if (method === 'POST' && action === 'email_preview') {
       const er = require('./_email-rules');
       const b = req.body || {};
-      const sample = {
-        first_name: 'Alia', name: 'Alia Chavez', service: 'Medium Acrylic Set',
-        date: 'Friday, September 18', time: '3:00pm', artist: 'Brianna',
-        tier: 'Elite', amount: '$110', studio: 'ZOLA Nail Studio',
-        link: 'https://zolanailstudio.com/visit.html?t=example',
-      };
+      /* Rendered against a real upcoming appointment, so the preview is
+         the email. It used to show an invented client and a link ending
+         ?t=example — which meant the name was wrong for everybody and the
+         deposit link went nowhere, and there was no way to tell from
+         looking that the real one would be any different. */
+      const sample = await previewFields();
       return res.json({
         subject: er.fill(b.subject || '', sample),
         html: er.toHtml(b.body || '', sample),
+        // Whose appointment this is being shown against.
+        preview_of: sample.preview_of || '',
+        link: sample.link || '',
       });
     }
 
@@ -1359,12 +1396,12 @@ module.exports = async function (req, res) {
       const b = req.body || {};
       const to = String(b.to || '').trim();
       if (!to || !/@/.test(to)) return res.status(400).json({ error: 'Where should the test go?' });
-      const sample = {
-        first_name: 'Alia', name: 'Alia Chavez', service: 'Medium Acrylic Set',
-        date: 'Friday, September 18', time: '3:00pm', artist: 'Brianna',
-        tier: 'Elite', amount: '$110', studio: 'ZOLA Nail Studio',
-        link: 'https://zolanailstudio.com/visit.html?t=example',
-      };
+      /* Rendered against a real upcoming appointment, so the preview is
+         the email. It used to show an invented client and a link ending
+         ?t=example — which meant the name was wrong for everybody and the
+         deposit link went nowhere, and there was no way to tell from
+         looking that the real one would be any different. */
+      const sample = await previewFields();
       const out = await require('./_notify').sendEmail(
         to, er.fill(b.subject || 'ZOLA', sample) + ' (test)',
         er.toHtml(b.body || '', sample), { kind: 'rule-test' });
@@ -1670,32 +1707,17 @@ module.exports = async function (req, res) {
           else that would otherwise reach the client. */
       if (!QUIET) {
         try {
-          const site = process.env.PUBLIC_BASE_URL || 'https://zolanailstudio.com';
-          const who = String(client_email || '').trim();
-          let tier = '';
-          if (who) {
-            try {
-              const main = require('./_db');
-              const mem = await main.queryOne('SELECT tier FROM members WHERE lower(email)=?', [who.toLowerCase()]);
-              tier = (mem && mem.tier) || '';
-            } catch (_) {}
+          /* Built from the appointment itself rather than assembled here,
+             so every tag resolves to this client's own details — the date
+             written out, their deposit, their own link. */
+          const row = await queryOne(
+            `SELECT a.*, m.name AS artist_name FROM team_appointments a
+               LEFT JOIN team_members m ON m.id = a.team_member_id
+              WHERE a.chat_token = ?`, [tok]);
+          if (row) {
+            const data = await require('./_email-fields').forAppointment(row);
+            await require('./_email-rules').fire(data.tier_key ? 'member_booked' : 'dropin_booked', data);
           }
-          const artistRow = team_member_id
-            ? await queryOne('SELECT name FROM team_members WHERE id=?', [Number(team_member_id)])
-            : null;
-          await require('./_email-rules').fire(tier ? 'member_booked' : 'dropin_booked', {
-            email: who,
-            first_name: String(client_name || '').trim().split(/\s+/)[0] || '',
-            name: client_name || '',
-            service: service || '',
-            date: date,
-            time: time,
-            artist: (artistRow && artistRow.name) || 'your artist',
-            tier: tier,
-            tier_key: tier,
-            link: site + '/visit.html?t=' + encodeURIComponent(tok),
-            studio: 'ZOLA Nail Studio',
-          });
         } catch (_) { /* never let an email rule take a booking down */ }
       }
 

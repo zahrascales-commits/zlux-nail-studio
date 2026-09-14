@@ -456,21 +456,20 @@ module.exports = async (req, res) => {
          than nowhere, which is where it fired before: the trigger existed
          in Email Setup and nothing ever set it off. */
       try {
-        const site = process.env.PUBLIC_BASE_URL || 'https://zolanailstudio.com';
-        await require('./_email-rules').fire(member_id ? 'member_booked' : 'dropin_booked', {
-          email: customer_email,
-          first_name: String(customer_name || '').trim().split(/\s+/)[0] || '',
-          name: customer_name || '',
-          service: bookedService,
-          date: formatDate(date),
-          time: formatTime(time_slot),
-          artist: (m && m.name) || 'your artist',
-          tier: member_tier || '',
-          tier_key: member_tier || '',
-          amount: '$' + (Number(total_cents || 0) / 100).toFixed(2),
-          link: site + '/visit.html?t=' + encodeURIComponent(visitToken),
-          studio: 'ZOLA Nail Studio',
-        });
+        /* Built from the appointment rather than assembled here, so the
+           website and the studio's own book cannot fill the same tags
+           differently. {{amount}} is the deposit — half — because that is
+           the number the email is asking them for. */
+        const row = await teamDb.queryOne(
+          `SELECT a.*, m.name AS artist_name FROM team_appointments a
+             LEFT JOIN team_members m ON m.id = a.team_member_id
+            WHERE a.chat_token = ?`, [visitToken]);
+        if (row) {
+          const data = await require('./_email-fields').forAppointment(row, {
+            email: customer_email || undefined,
+          });
+          await require('./_email-rules').fire(member_id ? 'member_booked' : 'dropin_booked', data);
+        }
       } catch (_) { /* an email rule must never take a booking down */ }
       // Record marketing consent only when they actually ticked the box.
       // Never clear it here — someone who opted in previously and left the box
