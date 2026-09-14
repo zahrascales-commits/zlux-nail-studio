@@ -66,6 +66,15 @@ module.exports = async (req, res) => {
     sent++;
   }
 
+  /* ── UNPAID DEPOSITS ──
+     One confirmation and then silence is how a spot sits held for a week
+     and then goes empty. This asks again on every run, escalating, and
+     stops the moment it is paid. Never allowed to take the rest of the
+     run down with it. */
+  let depositChase = null;
+  try { depositChase = await require('./_deposit-chase').run(); sent += depositChase.sent || 0; }
+  catch (err) { depositChase = { error: String(err.message || err) }; }
+
   // ── APPOINTMENTS: owner-scheduled (team_appointments, worker-linked) ──
   const today = new Date().toISOString().slice(0,10);
   const y = new Date(now-2*86400000).toISOString().slice(0,10);
@@ -146,5 +155,5 @@ module.exports = async (req, res) => {
     }
   }
 
-  return res.json({ ok: true, sent, at: new Date().toISOString() });
+  return res.json({ ok: true, sent, deposit_chase: depositChase, at: new Date().toISOString() });
 };

@@ -1842,6 +1842,11 @@
             <button class="btn btn-gold" onclick="openPoModal()">+ Add Set</button>
           </div>
           <div class="ai-tag" style="margin-top:0.6rem;">Categories</div>
+          <div style="display:flex;gap:0.5rem;max-width:340px;margin:0.5rem 0;">
+            <input id="po-newcat" placeholder="e.g. Wedding Nails, Birthday Nails" style="flex:1"
+              onkeydown="if(event.key==='Enter')addPoCat()" />
+            <button class="btn btn-ghost btn-sm" onclick="addPoCat()">Add</button>
+          </div>
           <div id="po-admin-cats" style="display:flex;gap:0.4rem;flex-wrap:wrap;margin:0.5rem 0 0.8rem;"></div>
 
           <!-- What it costs to have a set put on in the studio. Kept here
@@ -1860,10 +1865,6 @@
               <button class="btn btn-sm" onclick="savePoApplyPrice()">Save</button>
               <span id="po-apply-msg" style="font-size:0.8rem;color:var(--muted)"></span>
             </div>
-          </div>
-          <div style="display:flex;gap:0.5rem;max-width:340px;">
-            <input id="po-newcat" placeholder="e.g. Wedding Nails, Birthday Nails" style="flex:1" />
-            <button class="btn btn-ghost btn-sm" onclick="addPoCat()">Add</button>
           </div>
           <div class="ai-tag" style="margin-top:1.1rem;">Sets</div>
           <div id="po-admin-products" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:0.8rem;margin-top:0.6rem;"></div>
@@ -2186,7 +2187,14 @@
     <div class="field"><label class="fld-label">Set name</label><input id="pom-name" placeholder="e.g. Pearl Bride — Almond" /></div>
     <div class="field two">
       <div><label class="fld-label">Price ($)</label><input id="pom-price" type="number" min="0" step="0.01" placeholder="45" /></div>
-      <div><label class="fld-label">Category</label><select id="pom-cat"></select></div>
+      <div><label class="fld-label">Category</label>
+        <div style="display:flex;gap:0.4rem">
+          <select id="pom-cat" style="flex:1"></select>
+          <!-- Naming a category is something you think of while adding the
+               set it belongs to, not before. -->
+          <button type="button" class="btn btn-ghost btn-sm" onclick="pomNewCat()"
+            style="white-space:nowrap">+ New</button>
+        </div></div>
     </div>
     <div class="field">
       <label class="fld-label">Photo</label>
@@ -2974,6 +2982,22 @@ function renderPoAdmin(){
       <span style="color:var(--muted)">${esc(o.buyer_email||'')} · $${(o.price_cents/100).toFixed(2)}${o.sizes?' · sizes: '+esc(String(o.sizes).slice(0,40)):' · no sizes yet'}</span>
     </div>`).join(''):'<div class="empty" style="padding:0.8rem">No orders yet.</div>';
 }
+/* A new category from inside the Add Set box, kept and selected straight
+   away. Without this she has to close what she is doing, add the category
+   on the screen behind, and start the set again. */
+async function pomNewCat(){
+  const name = (prompt('Name the new category — e.g. Wedding Nails') || '').trim();
+  if(!name) return;
+  try{
+    await api('/api/pressons?action=category_add',{method:'POST',body:JSON.stringify({action:'category_add',name})});
+    const r = await api('/api/pressons?action=admin'); const d = await r.json();
+    poAdmin.categories = d.categories || poAdmin.categories;
+    renderPoAdmin();
+    pomFillCats(name);
+    toast('Category added');
+  }catch(_){ toast('Could not add that category'); }
+}
+
 async function addPoCat(){
   const name=document.getElementById('po-newcat').value.trim();
   if(!name){toast('Type a category name');return;}
