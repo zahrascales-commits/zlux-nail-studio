@@ -970,6 +970,157 @@ module.exports = async function (req, res) {
       return res.json({ ok: true });
     }
 
+    /* ── SPLIT DEPOSITS ──
+       Somebody with several services on one day where some deposits are paid
+       and some are not. Before deposits were grouped each service had its own
+       link, and a client could pay one and leave the rest. Reads only. */
+    if (method === 'GET' && action === 'split_deposits') {
+      const grp = require('./_deposit-group');
+      const visit = require('./_visit');
+      await visit.ensureColumns();
+      const today = new Date().toISOString().slice(0, 10);
+      const rows = await query(
+        'SELECT a.*, m.name AS artist_name FROM team_appointments a ' +
+        'LEFT JOIN team_members m ON m.id = a.team_member_id ' +
+        "WHERE a.date >= ? AND LOWER(COALESCE(a.status,'scheduled')) <> 'cancelled' " +
+        'ORDER BY a.date, a.time', [today]);
+      const seen = new Set();
+      const out = [];
+      for (const r of rows) {
+        if (seen.has(Number(r.id))) continue;
+        const g = await grp.groupFor(r);
+        for (const x of g.rows) seen.add(Number(x.id));
+        if (g.rows.length < 2 || !g.paid.length || !g.owing.length) continue;
+        out.push({
+          client: r.client_name || '', email: r.client_email || '', date: r.date,
+          paid: g.paid.map(x => ({ id: Number(x.row.id), service: x.row.service, time: x.row.time, cents: x.cents })),
+          owing: g.owing.map(x => ({ id: Number(x.row.id), service: x.row.service, time: x.row.time, cents: x.owed })),
+          paid_cents: g.paidCents, due_cents: g.dueCents,
+        });
+      }
+      return res.json({ split: out });
+    }
+
+    /* ── ASK, KINDLY, FOR WHAT IS LEFT ──
+       One email to one person: thanks for what they have paid, a light
+       apology where the split was the studio's doing, everything for the day
+       in one place, and a button that charges exactly the rest.
+
+       Written for their convenience, not as a demand. Somebody who paid what
+       the page asked them to pay has done nothing wrong — the separate links
+       were ours — and an email that reads like a bill makes a loyal client
+       feel chased for our mistake.
+
+       Without confirm:true it only returns what would be sent, so the
+       wording and the amount can be checked before a client ever sees it. */
+    if (method === 'POST' && action === 'send_deposit_balance') {
+      const body = req.body || {};
+      const id = Number(body.appointment_id) || 0;
+      if (!id) return res.status(400).json({ error: 'Which appointment?' });
+
+      const visit = require('./_visit');
+      await visit.ensureColumns();
+      const appt = await queryOne(
+        'SELECT a.*, m.name AS artist_name FROM team_appointments a ' +
+        'LEFT JOIN team_members m ON m.id = a.team_member_id WHERE a.id = ?', [id]);
+      if (!appt) return res.status(404).json({ error: 'No such appointment.' });
+
+      const g = await require('./_deposit-group').groupFor(appt);
+      if (!g.owing.length || g.dueCents <= 0) {
+        return res.json({ ok: true, sent: false, why: 'Nothing is owed for that day.', due_cents: 0 });
+      }
+
+      const to = await require('./_confirm-mail').resolveEmail(appt);
+      if (!to) return res.status(400).json({ error: 'There is no email for this client.' });
+
+      // Opens on a service still owing, so the page leads with what is due.
+      const link = (process.env.PUBLIC_BASE_URL || 'https://zolanailstudio.com')
+        + '/visit.html?t=' + encodeURIComponent(g.owing[0].row.chat_token);
+
+      const money = c => '$' + (Number(c || 0) / 100).toFixed(2).replace(/\.00$/, '');
+      const esc = s => String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      const first = String(appt.client_name || 'there').trim().split(/\s+/)[0] || 'there';
+      const day = visit.pretty(appt.date);
+      const due = money(g.dueCents);
+      const split = g.paid.length > 0;
+
+      const paidLines = g.paid.map(x =>
+        (x.row.service || 'Appointment') + ' at ' + visit.time12(x.row.time) + ' — ' + money(x.cents) + ' paid ✓');
+      const owingLines = g.owing.map(x =>
+        (x.row.service || 'Appointment') + ' at ' + visit.time12(x.row.time) + ' — ' + money(x.owed));
+
+      /* The apology is only there when the split was ours: they paid exactly
+         what a page asked them to. With nothing paid yet there is nothing to
+         apologise for, so it is simply a friendly note. */
+      const opening = split
+        ? [
+            'Hi ' + first + ',',
+            'Thank you for your deposit — it came through perfectly.',
+            'I’m sorry for the mix-up on our side: your services on ' + day
+              + ' were set up with separate deposit links, so it only covered the first one. '
+              + 'To make things easier, here’s everything for that day in one place:',
+          ]
+        : [
+            'Hi ' + first + ',',
+            'You’re booked in for ' + g.rows.length + ' services on ' + day
+              + ' — here’s everything for that day in one place:',
+          ];
+
+      const closing = split
+        ? 'Whenever it suits you before your visit, the remaining ' + due
+          + ' is just one tap below — and it comes straight off what you pay on the day.'
+        : 'Whenever it suits you before your visit, your ' + due
+          + ' deposit is just one tap below — and it comes straight off what you pay on the day.';
+
+      const buttonLabel = split ? 'Pay the remaining ' + due : 'Pay my ' + due + ' deposit';
+      const signoff = 'Already taken care of? Then you’re all set — see you on ' + day + ' ✦';
+      const subject = split
+        ? 'A quick note about your deposit for ' + day
+        : 'Your deposit for ' + day;
+
+      const p = t => '<p style="font-size:15px;line-height:1.75;color:#3a3027;margin:0 0 16px">' + esc(t) + '</p>';
+      const html = '<div style="font-family:Helvetica,Arial,sans-serif;background:#faf7f4;padding:26px 14px">'
+        + '<div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #eee5d8">'
+        + '<div style="background:#0D0D0D;padding:26px 24px;text-align:center">'
+        + '<div style="font-family:Georgia,serif;font-size:20px;letter-spacing:6px;color:#F5EEE8">ZOLA</div>'
+        + '<div style="font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#8B6A3E;margin-top:6px">Nail Studio · Porterville</div>'
+        + '</div><div style="padding:28px 24px">'
+        + opening.map(p).join('')
+        + '<div style="border-top:1px solid #eee5d8;margin:6px 0 18px">'
+        + paidLines.map(l =>
+            '<div style="padding:9px 0;border-bottom:1px solid #eee5d8;font-size:14px;color:#8C7A5E">' + esc(l) + '</div>').join('')
+        + owingLines.map(l =>
+            '<div style="padding:9px 0;border-bottom:1px solid #eee5d8;font-size:14px;color:#3a3027">' + esc(l) + '</div>').join('')
+        + '</div>'
+        + p(closing)
+        + '<div style="text-align:center;margin:6px 0 22px"><a href="' + esc(link) + '" style="display:inline-block;'
+        + 'background:#0D0D0D;color:#F5EEE8;text-decoration:none;padding:15px 28px;font-size:14px;letter-spacing:2px;'
+        + 'text-transform:uppercase">' + esc(buttonLabel) + '</a></div>'
+        + '<p style="font-size:13px;line-height:1.7;color:#8C7A5E;margin:0">' + esc(signoff) + '</p>'
+        + '</div><div style="background:#faf7f4;padding:16px 24px;text-align:center;border-top:1px solid #eee5d8">'
+        + '<p style="font-size:12px;color:#8C7A5E;margin:0;line-height:1.7">ZOLA Nail Studio · Porterville, California<br>Just reply to this email to reach us.</p>'
+        + '</div></div></div>';
+
+      const preview = {
+        to, subject, due_cents: g.dueCents, paid_cents: g.paidCents, link,
+        opening, lines: paidLines.concat(owingLines), closing, button: buttonLabel, signoff,
+      };
+
+      if (body.confirm !== true) return res.json(Object.assign({ ok: true, sent: false, dry_run: true }, preview));
+
+      const r = await require('./_notify').sendEmail(to, subject, html, { kind: 'deposit_balance' });
+      if (r && r.sent) {
+        // Logged on each service still owing, so the automatic reminder does
+        // not land on top of this within the next few hours.
+        const at = Date.now();
+        for (const x of g.owing) {
+          try { await execute('INSERT INTO reminder_log (rkey, ts) VALUES (?,?)', ['dep:' + x.row.id + ':m:' + at, at]); } catch (_) {}
+        }
+      }
+      return res.json(Object.assign({ ok: true, sent: !!(r && r.sent), why: (r && r.why) || '' }, preview));
+    }
+
     if (method === 'GET' && action === 'deposit_chase_preview') {
       const chase = require('./_deposit-chase');
       const visit = require('./_visit');

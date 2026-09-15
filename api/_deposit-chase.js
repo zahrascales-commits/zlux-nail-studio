@@ -214,29 +214,47 @@ async function run({ force } = {}) {
     // it is a phone call, or her decision to let it go.
     if (hoursAway < S.stopHoursBefore) continue;
 
-    const key = String(item.email).toLowerCase();
+    /* One person, one day. The payment page asks for everything booked on
+       that day and nothing else, so the email has to ask for exactly the
+       same thing. Grouping across days is what let an email name one total
+       and link to a page that charged another. */
+    const key = String(item.email).toLowerCase() + '|' + String(item.row.date);
     if (!byPerson.has(key)) byPerson.set(key, []);
     byPerson.get(key).push({ ...item, apptTs });
   }
 
-  for (const [email, items] of byPerson) {
+  for (const [groupKey, items] of byPerson) {
+    const email = String(groupKey).split('|')[0];
     // Soonest first: that is the one at risk, and the one to name.
     items.sort((a, b) => a.apptTs - b.apptTs);
     const lead = items[0];
     const row = lead.row;
-    const owedTotal = items.reduce((s, x) => s + x.owed, 0);
+    /* The amount is the payment page's amount, from the same code, so the
+       number in the email and the number on the button cannot differ. */
+    const dayGroup = await require('./_deposit-group').groupFor(row);
+    const owedTotal = dayGroup.dueCents;
+    if (!(owedTotal > 0)) continue;
 
     /* Which number of reminder this is, counted from the log rather than
        stored on the row so it survives anything else touching the
        appointment. The furthest-along one sets the tone: somebody already
        on a final notice should not drop back to a gentle one. */
-    let n = 0;
+    let n = 0, lastTs = 0;
     for (const x of items) {
       try {
-        const seen = await query('SELECT rkey FROM reminder_log WHERE rkey LIKE ?', ['dep:' + x.row.id + ':%']);
-        if (seen.length > n) n = seen.length;
+        const seen = await query('SELECT rkey, ts FROM reminder_log WHERE rkey LIKE ?', ['dep:' + x.row.id + ':%']);
+        // A note sent by hand is not a step up the ladder.
+        const steps = seen.filter(s => String(s.rkey).indexOf(':m:') < 0).length;
+        if (steps > n) n = steps;
+        for (const s of seen) if (Number(s.ts) > lastTs) lastTs = Number(s.ts);
       } catch (_) {}
     }
+
+    /* Never within eight hours of the last one, whatever sent it. The two
+       daily runs are nine hours apart, so this never skips one of them — but
+       it does stop an automatic reminder landing on top of a note Zahra has
+       just sent by hand. */
+    if (lastTs && now - lastTs < 8 * 3600000) continue;
 
     const next = n + 1;
     const hour = new Date(now).toISOString().slice(0, 13);
@@ -270,10 +288,12 @@ async function run({ force } = {}) {
       dateStr, timeStr,
       owed: owedTotal,
       waiting: S.waiting,
-      also: items.slice(1).map(x => ({
-        service: x.row.service || 'your appointment',
-        dateStr: visit.pretty(x.row.date),
-      })),
+      also: dayGroup.owing
+        .filter(x => Number(x.row.id) !== Number(row.id))
+        .map(x => ({
+          service: x.row.service || 'your appointment',
+          dateStr: visit.pretty(x.row.date),
+        })),
     });
 
     const r = await notify.sendEmail(

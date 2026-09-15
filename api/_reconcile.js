@@ -35,9 +35,24 @@ async function depositCharges(sk, sinceSec) {
     for (const pi of (j.data || [])) {
       if (pi.status !== 'succeeded') continue;
       const md = pi.metadata || {};
-      const looksLikeDeposit = md.appt_token || md.client || md.service || md.services;
+      const looksLikeDeposit = md.appt_group || md.appt_token || md.client || md.service || md.services;
       if (!looksLikeDeposit) continue;
       if (!/deposit/i.test(String(pi.description || ''))) continue;
+
+      /* One payment covering several services on one day, checked against
+         each service by its own share. */
+      if (md.appt_group) {
+        const shares = require('./_deposit-group').parseShares(md.appt_group);
+        if (shares.length) {
+          for (const sh of shares) {
+            out.push({
+              id: pi.id, token: sh.token, client: md.client || '', service: md.service || '',
+              amount: sh.cents, created: pi.created, desc: pi.description || '',
+            });
+          }
+          continue;
+        }
+      }
 
       out.push({
         id: pi.id,

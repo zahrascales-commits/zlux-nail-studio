@@ -41,6 +41,16 @@
   .paid{display:inline-block;font-size:0.66rem;letter-spacing:0.16em;text-transform:uppercase;
     color:#3c8c50;border:1px solid #3c8c50;padding:0.35rem 0.8rem;border-radius:100px}
 
+  /* Every service that day, and the one number to pay across all of them. */
+  .lines{border-top:1px solid rgba(182,165,136,0.28);margin:0.8rem 0 0.6rem}
+  .line{display:flex;justify-content:space-between;gap:1rem;align-items:baseline;
+    padding:0.55rem 0;border-bottom:1px solid rgba(182,165,136,0.18);font-size:0.9rem}
+  .line .l-what i{display:block;font-style:normal;font-size:0.74rem;color:var(--latte)}
+  .line .l-amt{white-space:nowrap}
+  .line .l-paid{font-weight:400;font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;
+    color:#3c8c50;border:1px solid #3c8c50;padding:0.12rem 0.45rem;border-radius:100px;margin-left:0.3rem}
+  .line.sum{font-size:0.84rem;color:var(--latte)}
+  .line.due{font-family:'Cinzel',serif;font-size:1.25rem;color:var(--espresso);border-bottom:none}
   .btn{display:block;width:100%;background:var(--espresso);color:var(--champagne);border:none;
     font-family:'Josefin Sans',sans-serif;font-size:0.74rem;font-weight:600;letter-spacing:0.18em;
     text-transform:uppercase;padding:1rem;cursor:pointer;margin-top:1rem;min-height:50px}
@@ -169,32 +179,59 @@ async function load(attempt){
 }
 
 function render(){
-  const owes = V.deposit_cents > 0 && !V.deposit_paid;
+  /* The deposit is for everything booked that day, not just this service.
+     One amount, one payment — a second service with its own separate deposit
+     is how one of them got left unpaid. */
+  const due = Number(V.due_cents != null ? V.due_cents : (V.deposit_paid ? 0 : V.deposit_cents)) || 0;
+  const owes = due > 0;
+  const list = Array.isArray(V.services) && V.services.length ? V.services : null;
+  const many = !!(list && list.length > 1);
+
   $('body').innerHTML =
     '<div class="appt">'
       + '<div class="who">' + esc(V.client || 'Your appointment') + '</div>'
-      + '<div class="what">' + esc(V.service) + (V.artist ? ' · with ' + esc(V.artist) : '') + '</div>'
-      + '<div class="when"><b>' + esc(V.date_pretty) + '</b> at <b>' + esc(V.time_pretty) + '</b></div>'
+      + (many
+          ? '<div class="what">' + list.length + ' services' + (V.artist ? ' · with ' + esc(V.artist) : '') + '</div>'
+            + '<div class="when"><b>' + esc(V.date_pretty) + '</b></div>'
+          : '<div class="what">' + esc(V.service) + (V.artist ? ' · with ' + esc(V.artist) : '') + '</div>'
+            + '<div class="when"><b>' + esc(V.date_pretty) + '</b> at <b>' + esc(V.time_pretty) + '</b></div>')
     + '</div>'
 
     // Deposit first — it is the thing with a deadline attached.
     + '<div class="card" id="pay-card">'
-      + '<h2>' + (owes ? 'Your deposit' : 'Deposit') + '</h2>'
-      + (V.deposit_paid
-          ? '<p style="margin-bottom:0.6rem">Paid — nothing more to do.</p><span class="paid">Paid ✓</span>'
-          : (V.deposit_cents > 0
-              ? '<div class="amt">' + money(V.deposit_cents) + '</div>'
-                + '<p>This holds your spot and comes off the price of your service.</p>'
-                /* Said before they pay, not buried afterwards. Keeping
-                   somebody's card without telling them is not a feature. */
-                + '<p style="font-size:0.82rem;opacity:0.75;margin-top:0.5rem">'
-                  + 'We’ll keep this card on file so you can settle the rest at the studio '
-                  + 'without getting it out again. Nothing is ever charged to it without your '
-                  + 'signature at the desk.</p>'
-                + '<div id="card-el"></div>'
-                + '<button class="btn" id="pay-btn" onclick="pay()">Pay ' + money(V.deposit_cents) + '</button>'
-                + '<div class="msg" id="pay-msg"></div>'
-              : '<p>No deposit needed for this one.</p>'))
+      + '<h2>' + (owes ? (many ? 'Your deposit for the day' : 'Your deposit') : 'Deposit') + '</h2>'
+      /* Every service that day, with what is paid and what is not, so the
+         number to pay is something they can check rather than take on trust. */
+      + (many
+          ? '<div class="lines">' + list.map(function(x){
+              return '<div class="line">'
+                + '<span class="l-what">' + esc(x.service) + '<i>' + esc(x.time_pretty) + '</i></span>'
+                + '<span class="l-amt">' + (x.deposit_cents ? money(x.deposit_cents) : '—')
+                  + (x.paid ? ' <b class="l-paid">paid</b>' : '') + '</span>'
+                + '</div>';
+            }).join('')
+            + (Number(V.paid_cents) > 0
+                ? '<div class="line sum"><span>Already paid</span><span>' + money(V.paid_cents) + '</span></div>' : '')
+            + '<div class="line sum due"><span>' + (owes ? 'To pay now' : 'Left to pay') + '</span><span>' + money(due) + '</span></div>'
+            + '</div>'
+          : '')
+      + (!owes
+          ? (((list && list.some(function(x){ return x.paid; })) || V.deposit_paid)
+              ? '<p style="margin-bottom:0.6rem">Paid — nothing more to do.</p><span class="paid">Paid ✓</span>'
+              : '<p>No deposit needed for this one.</p>')
+          : (many ? '' : '<div class="amt">' + money(due) + '</div>')
+            + '<p>' + (many
+                ? 'One payment covers every service above, and it comes off what you pay on the day.'
+                : 'This holds your spot and comes off the price of your service.') + '</p>'
+            /* Said before they pay, not buried afterwards. Keeping
+               somebody's card without telling them is not a feature. */
+            + '<p style="font-size:0.82rem;opacity:0.75;margin-top:0.5rem">'
+              + 'We’ll keep this card on file so you can settle the rest at the studio '
+              + 'without getting it out again. Nothing is ever charged to it without your '
+              + 'signature at the desk.</p>'
+            + '<div id="card-el"></div>'
+            + '<button class="btn" id="pay-btn" onclick="pay()">Pay ' + money(due) + '</button>'
+            + '<div class="msg" id="pay-msg"></div>')
     + '</div>'
 
     + '<div class="card">'
@@ -257,10 +294,10 @@ async function pay(){
     })).json();
     if(done.error) throw new Error(done.error);
 
-    V.deposit_paid = true;
-    render();
+    // Back from the server, so what shows as paid is what was recorded.
+    await load(1);
   }catch(err){
-    btn.disabled = false; btn.textContent = 'Pay ' + money(V.deposit_cents);
+    btn.disabled = false; btn.textContent = 'Pay ' + money(V.due_cents != null ? V.due_cents : V.deposit_cents);
     msg.className = 'msg err';
     msg.textContent = err.message || 'That did not go through.';
   }

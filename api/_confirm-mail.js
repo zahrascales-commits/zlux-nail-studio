@@ -147,7 +147,17 @@ async function sendFor(appt, { force } = {}) {
     } catch (_) {}
   }
 
-  const depositCents = await visit.depositFor(appt);
+  /* Everything this person has booked that day, as one deposit. A second
+     service on the same day gets an updated email with the new total rather
+     than one of its own — per-service emails with per-service links are how
+     one deposit got paid and the other left. */
+  const grp = await require('./_deposit-group').groupFor(appt);
+  const depositCents = grp.dueCents;
+  const others = grp.rows.filter(r => Number(r.id) !== Number(appt.id));
+  const isUpdate = others.some(r => Number(r.confirm_sent_ts) > 0);
+  const serviceLine = grp.rows.length > 1
+    ? grp.rows.map(r => r.service || 'appointment').join(' + ')
+    : (appt.service || 'your appointment');
   const link = SITE + '/visit.html?t=' + encodeURIComponent(appt.chat_token);
 
   let subject = artist
@@ -156,14 +166,22 @@ async function sendFor(appt, { force } = {}) {
 
   let body = html({
     client: appt.client_name,
-    service: appt.service || 'your appointment',
+    service: serviceLine,
     artist,
     datePretty: visit.pretty(appt.date),
     timePretty: visit.time12(appt.time),
     link,
     depositCents,
-    depositPaid: !!Number(appt.deposit_paid),
+    // Paid means paid for the whole day, not just this one service.
+    depositPaid: depositCents === 0 && grp.paid.length > 0,
   });
+
+  /* Said plainly when this replaces an earlier email, so the new total is
+     read as the new total and not as a second, separate deposit. */
+  if (isUpdate && grp.rows.length > 1) {
+    subject = 'Updated — everything booked for ' + visit.pretty(appt.date)
+      + (depositCents > 0 ? ' · deposit $' + (depositCents / 100).toFixed(2).replace(/\.00$/, '') : '');
+  }
 
   /* If she has written her own version of this email in Email Setup, that
      is the one that goes. Only when she has switched one on — with nothing
@@ -175,6 +193,7 @@ async function sendFor(appt, { force } = {}) {
       {
         email: to,
         link,
+        service: serviceLine,
         amount: '$' + (Number(depositCents || 0) / 100).toFixed(2).replace(/\.00$/, ''),
         link_label: Number(appt.deposit_paid) ? 'Send my inspiration photo' : 'Pay my deposit & send a photo',
       });
@@ -185,9 +204,13 @@ async function sendFor(appt, { force } = {}) {
   const r = await sendEmail(to, subject, body);
   if (r && r.sent) {
     try {
-      await execute('UPDATE team_appointments SET confirm_sent_ts=? WHERE id=?', [Date.now(), appt.id]);
+      // Every service that day has now been told, so none of them sends its own.
+      const sentAt = Date.now();
+      for (const r of grp.rows) {
+        try { await execute('UPDATE team_appointments SET confirm_sent_ts=? WHERE id=?', [sentAt, r.id]); } catch (_) {}
+      }
     } catch (_) {}
-    return { sent: true, to, link };
+    return { sent: true, to, link, due_cents: depositCents, services: grp.rows.length, updated: isUpdate };
   }
   return { sent: false, why: (r && r.why) || 'send failed', to };
 }

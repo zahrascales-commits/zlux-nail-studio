@@ -170,6 +170,12 @@ module.exports = async function (req, res) {
     const deposit = await depositFor(appt);
     const paid = !!Number(appt.deposit_paid);
 
+    /* The deposit is for the whole day, not this one service. Two services
+       booked by the same person on the same day are one deposit and one
+       payment — a separate link for each is how Lorena paid $27.50 and still
+       owed $47.50. */
+    const group = await require('./_deposit-group').groupFor(appt);
+
     // ── What this appointment is ──
     if (req.method === 'GET') {
       let inspoCount = 0;
@@ -187,13 +193,32 @@ module.exports = async function (req, res) {
         deposit_paid: paid,
         inspo_count: inspoCount,
         cancelled: /cancel/i.test(String(appt.status || '')),
+        // Everything booked that day, and what is still to pay across all of it.
+        services: group.rows.map(r => ({
+          service: r.service || 'Appointment',
+          time_pretty: time12(r.time),
+          artist: r.artist_name || '',
+          deposit_cents: Number(r.deposit_paid)
+            ? (Number(r.deposit_cents) || 0)
+            : ((group.owing.find(x => Number(x.row.id) === Number(r.id)) || {}).owed || 0),
+          paid: !!Number(r.deposit_paid),
+          this_one: Number(r.id) === Number(appt.id),
+        })),
+        due_cents: group.dueCents,
+        paid_cents: group.paidCents,
+        all_paid: group.dueCents === 0,
       });
     }
 
     // ── Pay the deposit ──
     if (req.method === 'POST' && action === 'pay_intent') {
-      if (paid) return res.status(400).json({ error: 'This deposit is already paid — nothing more to do.' });
-      if (deposit < 50) return res.status(400).json({ error: 'There is no deposit on this appointment.' });
+      /* Asked for the whole day. Charging only this service is how a second
+         deposit got left behind. */
+      if (group.dueCents === 0) return res.status(400).json({ error: 'Everything booked for this day is already paid — nothing more to do.' });
+      if (group.dueCents < 50) return res.status(400).json({ error: 'There is no deposit on this appointment.' });
+      if (!group.tokenShares || group.tokenShares.length > 480) {
+        return res.status(400).json({ error: 'This booking needs the studio to take the deposit — message us and we will sort it.' });
+      }
       const pay = require('./_pay');
       const sk = await pay.getStripeSecret();
       if (!sk) return res.status(400).json({ error: 'Card payments are not set up yet — message the studio.' });
@@ -233,9 +258,14 @@ module.exports = async function (req, res) {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + sk, 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
-          amount: String(deposit), currency: 'usd', 'automatic_payment_methods[enabled]': 'true',
-          description: ('ZOLA deposit — ' + (appt.client_name || 'client') + ' · ' + (appt.service || '')).slice(0, 300),
+          amount: String(group.dueCents), currency: 'usd', 'automatic_payment_methods[enabled]': 'true',
+          description: ('ZOLA deposit — ' + (appt.client_name || 'client') + ' · '
+            + group.owing.map(x => x.row.service || 'appointment').join(' + ')).slice(0, 300),
           'metadata[appt_token]': token,
+          /* Which services this one payment covers, and each one's share. Read
+             back when it clears, so every service is marked paid with its own
+             deposit rather than one of them being handed the lot. */
+          'metadata[appt_group]': group.tokenShares,
           ...(customerId ? {
             customer: customerId,
             // Kept for the rest of this appointment, at the desk.
@@ -245,21 +275,63 @@ module.exports = async function (req, res) {
       });
       const pi = await r.json();
       if (!r.ok) return res.status(400).json({ error: (pi.error && pi.error.message) || 'Stripe error' });
-      return res.json({ client_secret: pi.client_secret, payment_intent_id: pi.id, amount_cents: deposit });
+      return res.json({ client_secret: pi.client_secret, payment_intent_id: pi.id, amount_cents: group.dueCents });
     }
 
     // ── Confirm it cleared ──
     if (req.method === 'POST' && action === 'paid') {
-      const v = await require('./_pay').verifyPaymentIntent((req.body || {}).payment_intent_id);
-      if (!v.paid) return res.status(402).json({ error: 'That payment did not go through — you have not been charged.' });
-      await execute('UPDATE team_appointments SET deposit_paid=1, deposit_cents=? WHERE chat_token=?',
-        [deposit, token]);
+      /* Read the payment back from Stripe itself — how much it took and which
+         services it was for — rather than trusting what the page says. Each
+         service is then marked paid with its own share. */
+      const piId = String((req.body || {}).payment_intent_id || '');
+      const sk = await require('./_pay').getStripeSecret();
+      let pi = null;
+      try {
+        const r = await fetch('https://api.stripe.com/v1/payment_intents/' + encodeURIComponent(piId), {
+          headers: { Authorization: 'Bearer ' + sk },
+        });
+        pi = await r.json();
+        if (!r.ok) pi = null;
+      } catch (_) { pi = null; }
+      if (!pi || pi.status !== 'succeeded') {
+        return res.status(402).json({ error: 'That payment did not go through — you have not been charged.' });
+      }
+
+      const md = pi.metadata || {};
+      const received = Number(pi.amount_received || pi.amount) || 0;
+      const grp = require('./_deposit-group');
+      const shares = grp.parseShares(md.appt_group);
+
+      // A payment for a different appointment cannot mark this one paid.
+      const coversThis = md.appt_token === token || shares.some(s => s.token === token);
+      if (!coversThis) {
+        return res.status(400).json({ error: 'That payment is not for this appointment — message the studio.' });
+      }
+
+      let out = null;
+      if (shares.length) out = await grp.recordShares(shares, received);
+
+      if (!out || !out.matched) {
+        // A payment made before deposits were grouped: this service, the amount taken.
+        await execute('UPDATE team_appointments SET deposit_paid=1, deposit_cents=? WHERE chat_token=? AND COALESCE(deposit_paid,0)=0',
+          [received, token]);
+        if (shares.length) {
+          try {
+            await require('./_notify').notifyInApp('owner', null,
+              '⚠️ Deposit did not add up — ' + (appt.client_name || 'a client'),
+              '$' + (received / 100).toFixed(2) + ' was paid and is recorded against '
+                + (appt.service || 'their appointment') + ' only. Check Reconcile.');
+          } catch (_) {}
+        }
+      }
+
       try {
         await require('./_notify').notifyInApp('owner', null,
           '💳 ' + (appt.client_name || 'A client') + ' paid their deposit',
-          '$' + (deposit / 100).toFixed(2) + ' · ' + (appt.service || '') + ' on ' + pretty(appt.date));
+          '$' + (received / 100).toFixed(2) + ' · '
+            + (shares.length > 1 ? shares.length + ' services' : (appt.service || '')) + ' on ' + pretty(appt.date));
       } catch (_) {}
-      return res.json({ ok: true });
+      return res.json({ ok: true, recorded_cents: received });
     }
 
     // ── Send an inspiration photo ──

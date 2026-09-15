@@ -51,8 +51,20 @@ module.exports = async (req, res) => {
         const team = require('./_team-db');
         let placed = false;
 
+        /* One payment covering several services booked for the same day.
+           Each is marked with its own share, read from the payment itself —
+           handing the whole amount to one of them is how the other ends up
+           looking unpaid when it is not. */
+        if (md.appt_group) {
+          try {
+            const grp = require('./_deposit-group');
+            const out = await grp.recordShares(grp.parseShares(md.appt_group), cents);
+            if (out.matched) placed = true;
+          } catch (_) {}
+        }
+
         // The appointment link stamps its token on the payment.
-        if (md.appt_token) {
+        if (!placed && md.appt_token) {
           try {
             await team.execute(
               'UPDATE team_appointments SET deposit_paid = 1, deposit_cents = ? WHERE chat_token = ? AND COALESCE(deposit_cents,0) < ?',
