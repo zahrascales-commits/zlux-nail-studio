@@ -482,6 +482,14 @@
         <div style="text-align:right;"><span class="option-price" id="price-9">$30</span><div id="tag-9"></div></div>
       </button>
 
+      <!-- A removal on its own, for somebody who just wants a set taken off.
+           The same thing is an add-on too, for when a new set goes straight
+           back on — which is why that add-on steps aside while this is picked. -->
+      <button class="option-btn" id="svc-btn-10" onclick="toggleService('Removal',35,'manicure',this)">
+        <div><span class="option-name">Removal</span><span class="option-sub">Gentle and healthy — never ripped off, never damaging your nail plates · 45 min</span></div>
+        <div style="text-align:right;"><span class="option-price" id="price-10">$35</span><div id="tag-10"></div></div>
+      </button>
+
       <button type="button" id="add-second-svc" onclick="showAllServices()"
         style="display:none;width:100%;background:none;border:1px dashed rgba(182,165,136,0.7);
                padding:0.9rem 1rem;margin-top:0.9rem;cursor:pointer;
@@ -963,7 +971,7 @@ const booking = {
 const SERVICE_MINUTES = {
   'Organic Structured Manicure': 60, 'Kids Manicure — Gel Polish': 40, 'Short Gel X': 60, 'Medium Gel X': 75, 'Long Gel X': 90,
   'Short Acrylic': 60, 'Medium Acrylic': 75, 'Long Acrylic': 90,
-  'Russian Dry Pedicure': 60, 'Russian Dry Pedicure — Full Correction': 90, 'Test Run': 15,
+  'Russian Dry Pedicure': 60, 'Russian Dry Pedicure — Full Correction': 90, 'Test Run': 15, 'Removal': 45,
 };
 function totalMinutes() {
   return booking.items.reduce((s, it) => s + (SERVICE_MINUTES[it.service] || 60) * it.qty, 0) || 60;
@@ -1480,6 +1488,11 @@ async function loadAddonOffer(){
   }catch(_){ ADDON_OFFER = null; }
 
   if(!ADDON_OFFER || !ADDON_OFFER.on){ box.style.display = 'none'; return; }
+  // Somebody already booking a removal is not offered another one.
+  if(/removal/i.test(String(ADDON_OFFER.name || ''))
+     && (booking.items || []).some(function(it){ return it.service === 'Removal'; })){
+    box.style.display = 'none'; return;
+  }
 
   /* Already ticked? Then it is not a suggestion any more. The basket is
      selectedAddons — booking.addons does not exist, so this never once
@@ -1819,6 +1832,8 @@ function applyDealMode(){
   syncLegacyMirror();
   renderDeals();
   updateStickyBar();
+  // Coming back to the services step must not bring the design question back for a removal.
+  if(typeof syncFixedLength === 'function') syncFixedLength();
   if(typeof renderBkCal === 'function' && document.getElementById('bk-cells')) renderBkCal();
   if(booking.date && typeof renderTimeslots === 'function') renderTimeslots(booking.date);
 }
@@ -1857,6 +1872,7 @@ function toggleService(name, price, category, btn) {
   collapseServices();
   // On once a service is chosen, off again if they unpick it.
   renderDeals();
+  syncFixedLength();
   updateStickyBar();
 }
 function changeQty(name, delta, el) {
@@ -1962,8 +1978,44 @@ function addonMinutes(){
 /* A deal day is a fixed appointment: one length, no tier, no add-ons.
    Its own number wins, and it has to match the server exactly or the
    page offers a time the booking is then refused for. */
+/* Services with a length of their own. Must match fixed_minutes on the
+   server, or the page offers a time the booking is then refused for. */
+const FIXED_LENGTH = { 'Removal': 45 };
+
+function onlyFixedLength(){
+  const items = booking.items || [];
+  return items.length > 0 && items.every(function(it){ return !!FIXED_LENGTH[it.service]; });
+}
+function fixedLengthMinutes(){
+  return Math.max.apply(null, (booking.items || []).map(function(it){ return FIXED_LENGTH[it.service] || 0; }));
+}
+
+/* A removal on its own has no design to choose and a length of its own, so
+   the design question comes off the page. The Removal add-on steps aside
+   while the Removal service is chosen — ticking both is paying for one
+   removal twice. */
+function syncFixedLength(){
+  const only = onlyFixedLength();
+  const tier = document.getElementById('tier-section');
+  if(tier && !ACTIVE_DEAL) tier.style.display = only ? 'none' : '';
+  if(only) booking.tier = null;
+
+  const hasRemoval = (booking.items || []).some(function(it){ return it.service === 'Removal'; });
+  const box = document.getElementById('addon-removal');
+  const row = box ? box.closest('.addon-row') : null;
+  if(row) row.style.display = hasRemoval ? 'none' : '';
+  if(box && hasRemoval && box.checked){
+    box.checked = false;
+    box.dispatchEvent(new Event('change'));
+  }
+}
+
+/* A deal day is a fixed appointment: one length, no tier, no add-ons.
+   A removal-only booking runs 45 minutes plus any add-on time, with no
+   design on top. Both must match the server exactly. */
 function apptMinutes(){
   if(ACTIVE_DEAL) return Number(ACTIVE_DEAL.minutes) || BASE_MINUTES;
+  if(onlyFixedLength()) return fixedLengthMinutes() + addonMinutes();
   return BASE_MINUTES + (TIER_MINUTES[booking.tier] || 0) + addonMinutes();
 }
 function blockMinutes(){ return apptMinutes() + GRACE_MINUTES; }
@@ -2184,7 +2236,18 @@ function loadSummary() {
          discount. The server prices it exactly this way, and this list
          has to match it or somebody agrees to one number and is charged
          another. */
-      if (rules && !ACTIVE_DEAL) {
+      /* A removal on its own is priced as the Removal add-on is for this
+         member, and never uses up an included service — the rule the server
+         charges by. Shown any other way, an Elite member would be told $35
+         for a removal that is free to them. */
+      if (rules && !ACTIVE_DEAL && it.service === 'Removal') {
+        if ((rules.freeAddonNames || []).indexOf('Soak Off Removal') >= 0) {
+          charge = 0; note = 'Removal included in ' + rules.label;
+        } else if (rules.addonDiscountPct) {
+          charge = Math.round(it.price * (1 - rules.addonDiscountPct / 100) * 100) / 100;
+          note = rules.addonDiscountPct + '% ' + rules.label + ' discount';
+        }
+      } else if (rules && !ACTIVE_DEAL) {
         if (freeAny > 0) { charge = 0; freeAny--; note = 'Included in ' + rules.label + ' (2 services/mo)'; }
         else if (it.category === 'manicure' && freeMani > 0) { charge = 0; freeMani--; note = 'Included in ' + rules.label; }
         else if (it.category === 'pedicure' && freePedi > 0) { charge = 0; freePedi--; note = 'Included in ' + rules.label; }
@@ -2472,7 +2535,7 @@ function goToDates(){
      and that question is hidden. Asking it anyway left the button doing
      nothing at all, because the warning it tried to point at was inside
      the hidden section. */
-  if(!ACTIVE_DEAL && !tierAnswered()){
+  if(!ACTIVE_DEAL && !onlyFixedLength() && !tierAnswered()){
     const warn = document.getElementById('tier-warn');
     if(warn){
       warn.style.borderColor = '#c0524a';
@@ -2571,7 +2634,7 @@ function renderTips(){
     row.innerHTML += '<div style="width:100%;display:flex;gap:0.45rem;align-items:center;margin-top:0.5rem">'
       + '<span style="font-family:Cinzel,serif;font-size:1.1rem;color:var(--espresso)">$</span>'
       + '<input id="tip-custom" type="number" min="0" step="1" inputmode="decimal" placeholder="0"'
-      + ' value="' + (tipCents ? (tipCents/100).toFixed(2).replace(/.00$/, '') : '') + '"'
+      + ' value="' + (tipCents ? (tipCents/100).toFixed(2).replace(/\.00$/, '') : '') + '"'
       + ' style="flex:1;max-width:130px;border:1px solid rgba(182,165,136,0.4);padding:0.5rem 0.7rem;'
       + 'font-family:Josefin Sans,sans-serif;font-size:0.95rem;color:var(--espresso);outline:none"'
       + ' oninput="setCustomTip(this.value)" />'

@@ -323,8 +323,11 @@ module.exports = async (req, res) => {
       created_at: new Date().toISOString(),
     });
 
-    // Increment monthly service usage for members
-    if (member_id && member_tier) {
+    /* A member's included-service count goes down only when this booking
+       actually used one. It used to go down on every member booking — so a
+       member paying full price for a pedicure, a $75 Tuesday or a removal
+       also lost an included visit they never got. */
+    if (member_id && member_tier && calc && calc.used_included) {
       const monthYear = new Date().toISOString().slice(0, 7);
       try {
         await execute(`INSERT INTO service_usage (member_id, month_year, services_used) VALUES (?,?,1)

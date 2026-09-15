@@ -3,6 +3,15 @@ const services = [
   { id: 1,  name: 'Organic Structured Manicure', description: 'A healthy nail enhancement using organic product for a clean, structured look. As we learn you, we tailor every visit precisely to you.', duration_min: 60, price_cents: 9500, starting_at: true },
   { id: 12, name: 'Regular Gel Manicure',        description: 'A clean, classic gel manicure — shaped, cuticles tidied, gel colour of your choice.', duration_min: 60, price_cents: 5500  },
   { id: 13, name: 'Kids Manicure — Gel Polish', description: 'A proper little manicure with gel polish, for ages 3 to 8. Nails shaped and tidied, then painted in whichever colour they pick.', duration_min: 40, price_cents: 3000 },
+  /* A removal on its own, for somebody who just wants a set taken off.
+     Priced for a member exactly as the Removal add-on is — nothing where the
+     membership includes removal, and it never spends an included service —
+     and a fixed 45 minutes, because there is no design to size it by.
+
+     The description is hers: a healthy technique that cares for the natural
+     nail, and never rips a set off or damages the nail plate the way so many
+     places do. Nothing in it names a method she has not described. */
+  { id: 14, name: 'Removal', description: 'A gentle, healthy removal that puts the care of your natural nails first. Your set is taken off carefully and properly — we never rip sets off or damage your nail plates like so many places do. You leave with natural nails that are healthy, protected and ready for whatever comes next, whether that is a fresh set or letting them breathe.', duration_min: 45, price_cents: 3500, fixed_minutes: 45, priced_as_addon: 'Removal' },
   { id: 2,  name: 'Medium Gel X',                description: 'Medium-length Gel X extensions for a sleek, polished finish.',                  duration_min: 75, price_cents: 10000 },
   { id: 3,  name: 'Short Gel X',                 description: 'Short Gel X extensions — low-maintenance, high-impact.',                         duration_min: 60, price_cents: 9500  },
   { id: 4,  name: 'Long Gel X',                  description: 'Long Gel X extensions for a dramatic, statement look.',                           duration_min: 90, price_cents: 11000 },

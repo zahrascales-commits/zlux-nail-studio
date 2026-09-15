@@ -186,6 +186,23 @@ function computeDeposit({ service_name, addon_names = [], member_tier, free_serv
     design_tier = null;
   }
 
+  /* A service that is really an add-on booked on its own — a removal. For a
+     member it costs what that add-on costs them: nothing where the membership
+     includes removal, a share off where it discounts add-ons, full price
+     otherwise. It never spends an included service: burning a $110 included
+     visit on a $35 removal loses the member money and gains nobody anything.
+     There is no design on it to charge for, and the same add-on cannot go on
+     top of it — that would be paying for one removal twice. */
+  const twin = (!deal && svc.priced_as_addon) ? findAddon(svc.priced_as_addon) : null;
+  if (twin) {
+    free_service = false;
+    design_tier = null;
+    addon_names = (addon_names || []).filter(n => {
+      const a = findAddon(n);
+      return !(a && norm(a.name) === norm(twin.name));
+    });
+  }
+
   /* An allowance only covers what the membership actually includes. Without
      this, a member booking a pedicure first had it taken off their included
      service — free to them, and the studio never sees the money. */
@@ -208,6 +225,13 @@ function computeDeposit({ service_name, addon_names = [], member_tier, free_serv
   let memberCents = null;
   if (!deal) {
     try { memberCents = require('./_plans').memberPriceFor(member_tier, svc.name || service_name); } catch (_) {}
+  }
+  // The add-on's own member price, for the service that stands in for it.
+  if (twin && member_tier) {
+    const includedFree = addonsIncludedFor(member_tier).includes(norm(twin.name));
+    memberCents = includedFree
+      ? 0
+      : Math.round(svc.price_cents * (1 - (ADDON_DISCOUNT[member_tier] || 0)));
   }
   const listCents = svc.price_cents;
   const chargeCents = (memberCents !== null && memberCents !== undefined) ? memberCents : listCents;
@@ -307,6 +331,11 @@ function computeDeposit({ service_name, addon_names = [], member_tier, free_serv
     tier_cents: tierCents,
     tier_list_cents: tierListCents,
     covered_cents: covered,
+    /* Whether this visit actually used one of the membership's included
+       services. Only then should the allowance go down — counting a paid
+       pedicure, a $75 Tuesday or a removal against it takes away a visit
+       the member never had. */
+    used_included: !!free_service,
   };
 }
 
@@ -384,9 +413,11 @@ module.exports = async function (req, res) {
       const lines = [];
       for (const it of items.slice(0, 10)) {
         const useFree = freeLeft > 0;
-        if (useFree) freeLeft--;
         const calc = computeDeposit({ service_name: it.service_name, addon_names: it.addon_names || [], member_tier: member_tier || null, free_service: useFree, design_tier: req.body.design_tier, percent_off: ownRate });
         if (!calc) return res.status(400).json({ error: 'Unknown service: ' + it.service_name });
+        /* Spent only by an item that actually used it. Spending it on a
+           removal first left a Gel X in the same basket charged in full. */
+        if (calc.used_included) freeLeft--;
         total += calc.total_cents;
         deposit += calc.deposit_cents;
         covered += calc.covered_cents || 0;

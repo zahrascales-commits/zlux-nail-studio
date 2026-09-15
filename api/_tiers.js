@@ -94,9 +94,30 @@ function dealMinutes(serviceName) {
 // other service keeps the timing it has always had: re-timing the whole
 // menu off a duration column nobody has been maintaining is how a day
 // starts running an hour late.
+/* A service that names its own length in the menu — a removal is 45
+   minutes. Opted into one service at a time rather than read from every
+   duration on the menu, for the same reason the deal days are: re-timing
+   the whole menu off a column nobody maintains is how a day runs late.
+
+   Unlike a deal day it still takes add-ons, so their time goes on top. A
+   design tier does not — there is no design on a removal. Matched on the
+   exact name, never loosely. */
+function ownLengthFor(serviceName) {
+  if (!serviceName) return null;
+  try {
+    const { services } = require('./_store');
+    const n = String(serviceName).toLowerCase().replace(/[^a-z]/g, '');
+    const s = (services || []).find(x => Number(x.fixed_minutes) > 0
+      && String(x.name || '').toLowerCase().replace(/[^a-z]/g, '') === n);
+    return s ? Number(s.fixed_minutes) : null;
+  } catch (_) { return null; }
+}
+
 function minutesFor(tierKey, addonNames, serviceName) {
   const fixed = dealMinutes(serviceName);
   if (fixed) return fixed;
+  const own = ownLengthFor(serviceName);
+  if (own) return own + addonMinutes(addonNames);
   const t = tierFor(tierKey);
   return BASE_MINUTES + (t ? t.minutes : 0) + addonMinutes(addonNames);
 }
@@ -126,5 +147,5 @@ function label(tierKey) {
 
 module.exports = {
   TIERS, BASE_MINUTES, GRACE_MINUTES, ADDON_MINUTES,
-  tierFor, addonMinutes, minutesFor, blockMinutes, priceFor, slotsFor, label, dealMinutes,
+  tierFor, addonMinutes, minutesFor, blockMinutes, priceFor, slotsFor, label, dealMinutes, ownLengthFor,
 };
