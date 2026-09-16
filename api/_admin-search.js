@@ -36,9 +36,9 @@ async function safe(fn) {
    Kept on the server with everything else so there is one search to
    maintain rather than two that answer differently. */
 const PLACES = [
-  { tab: 'site', title: "Someone's own rate", sub: 'Site → a standing discount for one client',
+  { tab: 'coupons', title: "Someone's own rate", sub: 'Marketing → Coupons → a standing discount for one client',
     words: 'rate rates personal discount one client standing percent off katelynn special price friends family comp' },
-  { tab: 'site', title: 'Discount codes', sub: 'Site → the codes you hand out',
+  { tab: 'coupons', title: 'Coupons & discount codes', sub: 'Marketing → Coupons → the codes you hand out',
     words: 'discount code codes promo coupon voucher percent off dollars off early bird trainee special' },
   { tab: 'site', title: 'Site photos', sub: 'Site → tap a slot to upload from your phone',
     words: 'photo photos picture pictures image images upload hero header banner what pictures go where change photo homepage image' },
@@ -46,9 +46,9 @@ const PLACES = [
     words: 'headline hero text wording announcement banner ticker edit website copy words change text address' },
   { tab: 'site', title: 'Shop my IG', sub: 'Site → the Instagram row on the homepage',
     words: 'instagram ig shop my ig social posts' },
-  { tab: 'site', title: 'Press-ons', sub: 'Site → products, orders and what they earn',
+  { tab: 'shop', title: 'Press-on shop', sub: 'Site & Shop → sets, categories, orders',
     words: 'press on press-ons pressons sets nails to go product products shop orders' },
-  { tab: 'site', title: 'Classes', sub: 'Site → classes and who has paid',
+  { tab: 'classes', title: 'Classes', sub: 'Site & Shop → classes and who has paid',
     words: 'class classes course teaching workshop students purchases' },
 
   { tab: 'schedule', title: 'Calendar', sub: 'Day, week and month, plus blocking time off',
@@ -71,7 +71,7 @@ const PLACES = [
     words: 'inbox enquiry enquiries inquiry contact form questions' },
   { tab: 'deposits', title: 'Deposits', sub: 'Who has paid and who has not',
     words: 'deposit deposits paid unpaid owing refund money taken' },
-  { tab: 'payouts2', title: 'Payouts', sub: 'Money out of Stripe into your bank',
+  { tab: 'payouts', title: 'Payouts', sub: 'Money out of Stripe into your bank',
     words: 'payout payouts bank stripe transfer money out paid out' },
   { tab: 'paymath', title: 'Pay math', sub: 'What each artist earned and is owed',
     words: 'pay math commission wages owed artist earnings split' },
@@ -109,8 +109,22 @@ const PLACES = [
     words: 'stripe dashboard my payments payouts balance bank money out see my payments open stripe account login' },
   { tab: 'settings', title: 'Settings', sub: 'Passwords, keys and everything else',
     words: 'settings password stripe key api notifications preferences colour setup config' },
-  { tab: 'overview', title: 'Overview', sub: 'Today, and what needs you',
-    words: 'overview home today dashboard needs you floor takings now' },
+  { tab: 'overview', title: 'Home', sub: 'Today vs yesterday, and what needs attention',
+    words: 'overview home today dashboard needs you floor takings now views visitors analytics trends up down alerts problems broken warning flagged' },
+  { tab: 'mkt', title: 'Marketing home', sub: 'Campaigns, coupons, referrals, Google and social ads',
+    words: 'marketing grow promote advertise advertising ads campaigns promotion' },
+  { tab: 'mkt', title: 'Facebook & Instagram ads', sub: 'Marketing home → Ads Manager, your card, Meta Pixel',
+    words: 'facebook instagram meta ads ad boost boosted post pixel ads manager billing card payment apple fee' },
+  { tab: 'mkt', title: 'Google Business Profile', sub: 'Marketing home → your Google listing and review link',
+    words: 'google business profile maps listing reviews review link gbp my business' },
+  { tab: 'mkt', title: 'Google Ads', sub: 'Marketing home → Google Ads and Analytics IDs',
+    words: 'google ads adwords analytics tag conversion search ads' },
+  { tab: 'referrals', title: 'Referral program', sub: 'Friends members have invited',
+    words: 'referral referrals refer friend invite link reward word of mouth' },
+  { tab: 'aiperf', title: 'AI performance', sub: 'AI bot visits, readiness and whether AI recommends you',
+    words: 'ai chatgpt claude perplexity gemini bots crawl crawlers visibility seo llms recommend artificial intelligence' },
+  { tab: 'devtools', title: 'Developer tools', sub: 'Is everything connected and running',
+    words: 'developer tools system status health check broken working domain renew database webhook cron reminders deploy version' },
 ];
 
 /* Words that carry no meaning in a question. "Where do pictures go" is

@@ -207,7 +207,8 @@ async function readiness() {
   const title = (h.match(/<title>([^<]*)<\/title>/i) || [])[1] || '';
   add('title', title.length >= 10, 'Your homepage has a clear title', '"' + title.trim() + '"', 'The homepage has no title.');
 
-  const desc = (h.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)/i) || [])[1] || '';
+  // Quoted either way, and an apostrophe inside (Porterville's) is part of it.
+  const desc = (h.match(/<meta[^>]+name=["']description["'][^>]+content=(["'])(.*?)\1/i) || [])[2] || '';
   add('description', desc.length >= 50, 'Your homepage describes the business', '"' + desc.slice(0, 160) + '"', 'No meta description — the one-sentence summary search engines and AI quote.');
 
   const ld = [...h.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).join(' ');

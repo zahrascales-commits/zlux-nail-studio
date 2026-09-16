@@ -44,14 +44,23 @@ async function overview() {
   const now = Date.now();
   const out = { email: {}, sms: {}, campaigns: [], coupons: {}, referrals: {}, audience: {}, settings: await settings() };
 
-  try {
-    const r = await queryOne('SELECT SUM(CASE WHEN sent = 1 THEN 1 ELSE 0 END) AS ok, SUM(CASE WHEN sent = 0 THEN 1 ELSE 0 END) AS bad FROM mail_log WHERE ts >= ?', [now - 30 * DAY]);
-    out.email = { sent_30d: Number(r && r.ok) || 0, failed_30d: Number(r && r.bad) || 0 };
-  } catch (_) { out.email = { sent_30d: 0, failed_30d: 0 }; }
+  // Every lookup starts at once; each is a separate trip to the database,
+  // and one after another they took the screen two seconds to fill.
+  const safe = p => p.catch(() => null);
+  const [mail, campaignRows, promoRows, referrals, members, clients] = await Promise.all([
+    safe(queryOne('SELECT SUM(CASE WHEN sent = 1 THEN 1 ELSE 0 END) AS ok, SUM(CASE WHEN sent = 0 THEN 1 ELSE 0 END) AS bad FROM mail_log WHERE ts >= ?', [now - 30 * DAY])),
+    safe(query(`SELECT id, subject, body, channel, sent_ts, sent_count, failed_count, total_count, status
+      FROM campaigns WHERE sent_ts IS NOT NULL ORDER BY sent_ts DESC LIMIT 50`)),
+    safe(query('SELECT code, active, used_count FROM promo_codes')),
+    referralStats(),
+    safe(queryOne("SELECT COUNT(*) AS n FROM members WHERE email IS NOT NULL AND email <> ''")),
+    safe(queryOne("SELECT COUNT(DISTINCT LOWER(client_email)) AS n FROM team_appointments WHERE client_email IS NOT NULL AND client_email <> ''")),
+  ]);
+
+  out.email = { sent_30d: Number(mail && mail.ok) || 0, failed_30d: Number(mail && mail.bad) || 0 };
 
   try {
-    const rows = await query(`SELECT id, subject, body, channel, sent_ts, sent_count, failed_count, total_count, status
-      FROM campaigns WHERE sent_ts IS NOT NULL ORDER BY sent_ts DESC LIMIT 50`);
+    const rows = campaignRows || [];
     let emailSent = 0, smsSent = 0, emailCampaigns = 0, smsCampaigns = 0;
     for (const c of rows) {
       if (Number(c.sent_ts) < now - 90 * DAY) continue;
@@ -69,7 +78,8 @@ async function overview() {
   } catch (_) {}
 
   try {
-    const rows = await query('SELECT code, active, used_count FROM promo_codes');
+    if (!promoRows) throw new Error('no promo table');
+    const rows = promoRows;
     out.coupons = {
       active: rows.filter(r => Number(r.active)).length,
       total: rows.length,
@@ -79,16 +89,9 @@ async function overview() {
     };
   } catch (_) { out.coupons = { active: 0, total: 0, uses: 0, top: [] }; }
 
-  out.referrals = await referralStats();
-
-  try {
-    const r = await queryOne("SELECT COUNT(*) AS n FROM members WHERE email IS NOT NULL AND email <> ''");
-    out.audience.members_with_email = Number(r && r.n) || 0;
-  } catch (_) {}
-  try {
-    const r = await queryOne("SELECT COUNT(DISTINCT LOWER(client_email)) AS n FROM team_appointments WHERE client_email IS NOT NULL AND client_email <> ''");
-    out.audience.clients_with_email = Number(r && r.n) || 0;
-  } catch (_) {}
+  out.referrals = referrals;
+  out.audience.members_with_email = Number(members && members.n) || 0;
+  out.audience.clients_with_email = Number(clients && clients.n) || 0;
 
   return out;
 }
