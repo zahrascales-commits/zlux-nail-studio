@@ -15,13 +15,22 @@ module.exports = async function (req, res) {
     // Public: read all settings (homepage applies them).
     // SECURITY: provider credentials (twilio_*, resend_*) are never
     // returned here — they are write-only via the owner's Settings tab.
+    //
+    // Matched anywhere in the name, not just at the start. The old rule only
+    // caught three prefixes, and stripe_secret, stripe_webhook_secret and
+    // vapid_private walked straight past it onto a public page.
     if (req.method === 'GET') {
+      const NEVER_SENT = /(secret|private|token|password|passcode|webhook|api_?key|_key$|_sid$|^twilio_|^resend_|^anthropic|^openai)/i;
+      const OWNER_ONLY = /(phone|email)/i;
+      const isOwner = req.headers['x-ceo-password'] === CEO_PASSWORD;
       const rows = await query('SELECT key, value FROM site_settings');
       const out = {};
       for (const r of rows) {
-        if (/^(twilio_|resend_|secret_)/i.test(r.key)) continue;
+        if (NEVER_SENT.test(r.key)) continue;
+        if (!isOwner && OWNER_ONLY.test(r.key)) continue;
         out[r.key] = r.value;
       }
+      res.setHeader('Cache-Control', 'no-store');
       return res.json({ settings: out });
     }
 

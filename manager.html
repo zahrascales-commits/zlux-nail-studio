@@ -2508,7 +2508,7 @@ async function login(){
     document.getElementById('app').style.display='block';
     // owner color + default view from saved settings
     try{
-      const sr=await fetch('/api/site-settings');const sd=await sr.json();const s=sd.settings||{};
+      const sr=await api('/api/site-settings');const sd=await sr.json();const s=sd.settings||{};
       if(s.owner_color)applyOwnerColor(s.owner_color);
       if(s.default_view&&['month','week','day','upcoming'].includes(s.default_view))calView=s.default_view;
     }catch{}
@@ -5379,7 +5379,7 @@ function mountOwnerPush(){
     const mode = document.getElementById('claim-mode');
     if(mode && d && d.unclaimed_action) mode.value = d.unclaimed_action;
   }).catch(function(){});
-  fetch('/api/site-settings').then(function(r){ return r.json(); }).then(function(d){
+  api('/api/site-settings').then(function(r){ return r.json(); }).then(function(d){
     const el = document.getElementById('owner-phone');
     const s = (d && d.settings) || {};
     if(el && s.owner_phone) el.value = s.owner_phone;
@@ -7278,7 +7278,7 @@ async function loadSite(){
   loadClassPurchases();
   loadPressons();
   try{
-    const r=await fetch('/api/site-settings');const d=await r.json();const s=d.settings||{};
+    const r=await api('/api/site-settings');const d=await r.json();const s=d.settings||{};
     document.getElementById('site-ticker').value=s.ticker_facts||'';
     document.getElementById('site-sig').value=s.spots_sig??'';
     document.getElementById('site-luxe').value=s.spots_luxe??'';
@@ -8252,7 +8252,7 @@ async function saveKeys(){
     resend_key:document.getElementById('k-resend').value.trim(),
     notify_from_email:document.getElementById('k-from-email').value.trim()};
   if(!body.twilio_sid&&!body.twilio_token&&!body.twilio_from&&!body.resend_key&&!body.notify_from_email){toast('Paste at least one value first');return;}
-  if(body.notify_from_email&&!/^[^@s]+@[^@s]+.[^@s]+$/.test(body.notify_from_email)){toast('That from-address does not look like an email');return;}
+  if(body.notify_from_email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.notify_from_email)){toast('That from-address does not look like an email');return;}
   const r=await api('/api/manager?action=save_keys',{method:'POST',body:JSON.stringify(body)});
   const d=await r.json();
   if(d.ok){PROVIDERS=d.providers||PROVIDERS;renderProviderStatus();
@@ -8278,7 +8278,7 @@ async function loadSettings(){
   const wrap=document.getElementById('owner-color-opts');
   wrap.innerHTML=COLOR_CHOICES.map(c=>`<span class="color-opt ${c===OWNER_COLOR?'sel':''}" style="background:${c}" onclick="pickOwnerColor('${c}')"></span>`).join('');
   try{
-    const r=await fetch('/api/site-settings');const d=await r.json();const s=d.settings||{};
+    const r=await api('/api/site-settings');const d=await r.json();const s=d.settings||{};
     document.getElementById('set-bizname').value=s.biz_name||'';
     document.getElementById('set-bizloc').value=s.biz_location||'';
     document.getElementById('set-bizhours').value=s.biz_hours||'';
