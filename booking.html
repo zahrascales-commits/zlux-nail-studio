@@ -860,7 +860,7 @@
 
 <script src="js/main.js"></script>
 <script src="js/search.js"></script>
-<script src="js/analytics.js"></script>
+<script src="js/analytics.js?v=2"></script>
 <script src="js/confetti.js"></script>
 <script>
 // ═══════════════════════════════════════════
@@ -3120,6 +3120,15 @@ async function submitBooking() {
   succ.style.display = 'block';
   succ.scrollIntoView({ behavior: 'smooth' });
   if (window.zolaConfetti) window.zolaConfetti();
+  // Tells a connected ad account a booking happened, so ads can be judged by
+  // the clients they bring. Does nothing when no ad account is connected.
+  try {
+    if (window.zolaTrack) window.zolaTrack('Schedule', {
+      value: Math.round(Number((_payTotals && _payTotals.total) || 0)) / 100,
+      currency: 'USD',
+      content_name: booking.items.map(i => i.service).join(' + '),
+    });
+  } catch (_) {}
 }
 
 window.addEventListener('scroll', () => {

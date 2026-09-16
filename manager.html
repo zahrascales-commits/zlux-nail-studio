@@ -9,12 +9,12 @@
 <link rel="icon" href="/img/zola-icon.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="ZOLA Manager" />
-<meta name="theme-color" content="#140d07" />
+<meta name="theme-color" content="#ffffff" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   :root{
@@ -22,7 +22,7 @@
     --border:rgba(182,165,136,0.14);--border-hi:rgba(182,165,136,0.32);
     --gold:#B6A588;--gold-light:#DDD0B8;--gold-faint:rgba(182,165,136,0.07);
     --cream:#F5EEE8;--latte:#8C7A5E;--muted:#8B7355;
-    --text:#F5EEE8;--danger:#d66;--success:#6ab07a;
+    --text:#F5EEE8;--danger:#D92D20;--success:#067647;
   }
   html{scroll-behavior:smooth}
   body{background:var(--bg);color:var(--text);font-family:'Josefin Sans',sans-serif;font-size:0.92rem;line-height:1.6;min-height:100vh}
@@ -184,7 +184,7 @@
   .btn-gold:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(182,165,136,0.22)}
   .btn-ghost{background:transparent;color:var(--gold);border:1px solid var(--border-hi)}
   .btn-ghost:hover{background:var(--gold-faint);border-color:var(--gold)}
-  .btn-danger{background:rgba(200,80,80,0.12);color:#e08a8a;border:1px solid rgba(200,80,80,0.25)}
+  .btn-danger{background:rgba(200,80,80,0.12);color:#B42318;border:1px solid rgba(200,80,80,0.25)}
   .btn-danger:hover{background:rgba(200,80,80,0.2)}
   .btn-sm{padding:0.4rem 0.7rem;font-size:0.6rem}
   /* A day with anything booked reads purple, so a full month is obvious at a
@@ -202,11 +202,11 @@
   .cov-row:last-child{border-bottom:none}
   .cov-pill{flex-shrink:0;font-size:0.56rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
     padding:0.22rem 0.5rem;border-radius:4px;min-width:66px;text-align:center}
-  .cov-pill.ok{background:rgba(106,176,122,0.16);color:#7ec98a}
-  .cov-pill.no{background:rgba(200,80,80,0.14);color:#e08a8a}
+  .cov-pill.ok{background:rgba(106,176,122,0.16);color:#067647}
+  .cov-pill.no{background:rgba(200,80,80,0.14);color:#B42318}
   .cov-name{flex:1;min-width:0;font-size:0.82rem;color:var(--cream)}
   .cov-why{font-size:0.68rem;color:var(--muted);margin-top:0.1rem}
-  .cov-fix{font-size:0.68rem;color:#e0a06a;margin-top:0.1rem}
+  .cov-fix{font-size:0.68rem;color:#B54708;margin-top:0.1rem}
 
   /* ── SCHEDULING ── */
   .sched-step{display:flex;align-items:center;gap:0.7rem;margin:1.6rem 0 0.8rem}
@@ -296,7 +296,7 @@
   .mc-actions{display:flex;gap:0.4rem;flex-wrap:wrap}
   .status-pill{display:inline-block;font-size:0.56rem;letter-spacing:0.14em;text-transform:uppercase;padding:0.2rem 0.6rem;margin-left:auto}
   .status-on{background:rgba(106,176,122,0.14);color:var(--success)}
-  .status-off{background:rgba(200,80,80,0.12);color:#e08a8a}
+  .status-off{background:rgba(200,80,80,0.12);color:#B42318}
 
   /* ── SCHEDULE ── */
   .date-bar{display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;flex-wrap:wrap}
@@ -319,7 +319,7 @@
   .status-tag{font-size:0.54rem;letter-spacing:0.12em;text-transform:uppercase;padding:0.15rem 0.5rem;align-self:flex-start}
   .st-scheduled{background:var(--gold-faint);color:var(--gold)}
   .st-completed{background:rgba(106,176,122,0.14);color:var(--success)}
-  .st-no_show{background:rgba(200,80,80,0.12);color:#e08a8a}
+  .st-no_show{background:rgba(200,80,80,0.12);color:#B42318}
 
   /* ── MESSAGES ── */
   .msg-layout{display:grid;grid-template-columns:320px 1fr;gap:1rem;min-height:480px}
@@ -505,7 +505,7 @@
   .bell-wrap{position:relative}
   .bell{background:none;border:1px solid var(--border);color:var(--muted);width:34px;height:34px;cursor:pointer;font-size:0.95rem;display:inline-flex;align-items:center;justify-content:center;transition:all 0.2s;position:relative}
   .bell:hover{border-color:var(--gold);color:var(--gold)}
-  .bell-badge{position:absolute;top:-6px;right:-6px;background:#d66;color:#fff;font-size:0.56rem;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+  .bell-badge{position:absolute;top:-6px;right:-6px;background:#D92D20;color:#fff;font-size:0.56rem;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px}
   .bell-drop{position:absolute;right:0;top:42px;width:330px;max-height:420px;overflow-y:auto;background:var(--surface);border:1px solid var(--border-hi);box-shadow:0 18px 50px rgba(0,0,0,0.5);display:none;z-index:90;animation:fadeUp 0.25s ease}
   .bell-drop.open{display:block}
   .notif{padding:0.8rem 1rem;border-bottom:1px solid var(--border)}
@@ -537,7 +537,7 @@
   .color-opt{width:30px;height:30px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all 0.2s}
   .color-opt.sel{border-color:#fff;transform:scale(1.15)}
   .key-status{display:flex;align-items:center;gap:0.5rem;font-size:0.74rem;margin:0.3rem 0}
-  .key-on{color:var(--success)}.key-off{color:#e08a8a}
+  .key-on{color:var(--success)}.key-off{color:#B42318}
 
   @media(max-width:760px){
     .inbox-layout,.site-grid,.set-grid{grid-template-columns:1fr}
@@ -629,7 +629,7 @@
   .pp-line .v{flex:1;color:var(--cream)}
   .pp-flag{display:inline-block;font-size:0.66rem;border:1px solid var(--border-hi);border-radius:100px;
     padding:0.2rem 0.55rem;margin:0.2rem 0.25rem 0 0;color:var(--cream)}
-  .pp-flag.hi{border-color:#d66;color:#ffb3b3}
+  .pp-flag.hi{border-color:#D92D20;color:#B42318}
   /* ── TODAY'S FLOOR ──
      Three states, told apart by colour before anybody reads a word: due in,
      in the chair, finished. */
@@ -637,7 +637,7 @@
     border-left:3px solid var(--st);border-radius:9px;padding:0.7rem 0.85rem;margin-bottom:0.5rem;flex-wrap:wrap}
   .fl-row.due{--st:#6b6355}
   .fl-row.in{--st:#C4A882;background:linear-gradient(100deg,rgba(196,168,130,0.1),var(--card))}
-  .fl-row.done{--st:#7ec98a;opacity:0.72}
+  .fl-row.done{--st:#067647;opacity:0.72}
   .fl-time{font-family:'Cinzel',serif;font-size:1rem;color:var(--cream);min-width:70px}
   .fl-who{flex:1;min-width:130px}
   .fl-who b{display:block;font-size:0.9rem;color:var(--cream);font-weight:400}
@@ -645,7 +645,7 @@
   .fl-state{font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--st);
     border:1px solid var(--st);border-radius:100px;padding:0.25rem 0.6rem;white-space:nowrap}
   .fl-money{font-size:0.8rem;color:var(--cream);text-align:right;min-width:88px}
-  .fl-money i{display:block;font-style:normal;font-size:0.62rem;color:#7ec98a}
+  .fl-money i{display:block;font-style:normal;font-size:0.62rem;color:#067647}
   .fl-acts{display:flex;gap:0.35rem}
   .fl-acts button{background:none;border:1px solid var(--border-hi);color:var(--cream);border-radius:6px;
     padding:0.35rem 0.6rem;font:inherit;font-size:0.66rem;cursor:pointer;white-space:nowrap}
@@ -673,7 +673,7 @@
   .jn-meta{font-size:0.7rem;color:var(--muted);margin-top:0.15rem}
   .jn-live{font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;border-radius:100px;
     padding:0.25rem 0.6rem;border:1px solid;white-space:nowrap}
-  .jn-live.on{color:#7ec98a;border-color:#7ec98a}
+  .jn-live.on{color:#067647;border-color:#067647}
   .jn-live.off{color:var(--muted);border-color:var(--border-hi)}
   .jn-shots{display:flex;gap:0.55rem;overflow-x:auto;padding-bottom:0.4rem;margin-bottom:0.8rem}
   .jn-shot{flex:0 0 108px;position:relative}
@@ -720,7 +720,7 @@
   .gap-row{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--st);
     border-radius:9px;padding:0.7rem 0.85rem;margin-bottom:0.45rem;display:flex;gap:0.7rem;
     align-items:center;flex-wrap:wrap}
-  .gap-row.both{--st:#d66}
+  .gap-row.both{--st:#D92D20}
   .gap-row.email{--st:#C4A882}
   .gap-row.phone{--st:#6b6355}
   .gap-name{font-size:0.88rem;color:var(--cream);min-width:130px}
@@ -816,16 +816,16 @@
   .cw-hist td.msg{color:var(--muted);line-height:1.6;max-width:520px}
   .cw-pill{font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;border-radius:100px;
     padding:0.22rem 0.55rem;white-space:nowrap;border:1px solid}
-  .cw-pill.sent{color:#7ec98a;border-color:#7ec98a}
-  .cw-pill.part{color:#d9a441;border-color:#d9a441}
+  .cw-pill.sent{color:#067647;border-color:#067647}
+  .cw-pill.part{color:#B54708;border-color:#B54708}
   /* ── EARLY BIRD ── */
   .eb-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.2rem;margin-bottom:1.5rem}
   .eb-top{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
   .eb-state{font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;border-radius:100px;
     padding:0.28rem 0.7rem;border:1px solid;white-space:nowrap}
-  .eb-state.on{color:#7ec98a;border-color:#7ec98a}
+  .eb-state.on{color:#067647;border-color:#067647}
   .eb-state.off{color:var(--muted);border-color:var(--border-hi)}
-  .eb-state.full{color:#d9a441;border-color:#d9a441}
+  .eb-state.full{color:#B54708;border-color:#B54708}
   .eb-bar{height:10px;background:var(--bg);border:1px solid var(--border);border-radius:100px;overflow:hidden;margin:0.9rem 0 0.5rem}
   .eb-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#DDD0B8);transition:width 0.4s}
   .eb-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0.7rem;margin-bottom:0.9rem}
@@ -841,12 +841,12 @@
   .ny.calm{border-color:rgba(126,201,138,0.4);background:rgba(126,201,138,0.06)}
   .ny-h{display:flex;align-items:baseline;gap:0.7rem;flex-wrap:wrap;margin-bottom:0.2rem}
   .ny-t{font-family:'Cinzel',serif;font-size:1.2rem;color:var(--cream)}
-  .ny-n{font-family:'Cinzel',serif;font-size:1.5rem;color:#ff9d9d}
+  .ny-n{font-family:'Cinzel',serif;font-size:1.5rem;color:#B42318}
   .ny-sub{font-size:0.78rem;color:var(--muted);line-height:1.6;margin-bottom:1rem}
   .ny-row{display:flex;gap:0.8rem;align-items:center;flex-wrap:wrap;background:var(--bg);
-    border:1px solid var(--border);border-left:3px solid #d66;border-radius:9px;
+    border:1px solid var(--border);border-left:3px solid #D92D20;border-radius:9px;
     padding:0.75rem 0.9rem;margin-bottom:0.5rem}
-  .ny-row.soon{border-left-color:#ff6b6b;background:rgba(214,102,102,0.08)}
+  .ny-row.soon{border-left-color:#D92D20;background:rgba(214,102,102,0.08)}
   .ny-when{font-family:'Cinzel',serif;font-size:0.95rem;color:var(--cream);min-width:104px}
   .ny-when i{display:block;font-style:normal;font-size:0.66rem;color:var(--muted);margin-top:0.1rem}
   .ny-who{flex:1;min-width:150px}
@@ -854,7 +854,7 @@
   .ny-who i{display:block;font-style:normal;font-size:0.7rem;color:var(--muted);margin-top:0.12rem}
   .ny-row select{background:var(--surface);border:1px solid var(--border-hi);color:var(--text);
     padding:0.5rem 0.6rem;font:inherit;font-size:0.82rem;border-radius:7px;min-width:150px}
-  .ny-done{font-size:0.84rem;color:#7ec98a}
+  .ny-done{font-size:0.84rem;color:#067647}
   .ny-feed{display:grid;gap:0.4rem;margin-top:1.1rem}
   .ny-item{display:flex;gap:0.7rem;align-items:center;flex-wrap:wrap;background:var(--card);
     border:1px solid var(--border);border-radius:8px;padding:0.6rem 0.8rem;font-size:0.83rem;color:var(--cream)}
@@ -862,6 +862,359 @@
   .ny-item i{font-style:normal;font-size:0.7rem;color:var(--muted)}
   .ny-item .sp{margin-left:auto;font-size:0.72rem;color:var(--muted)}
   .ny-sec{font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin:1.2rem 0 0.5rem}
+
+  /* ══════════════════════════════════════════════════════════════════════
+     THE LOOK — white, calm, and easy to find things in.
+
+     Laid over the original styles rather than replacing them, so every
+     screen keeps working exactly as it did while it changes clothes. Colours
+     come from the tokens below; the few screens that painted their own
+     colours inline are caught by the attribute rules further down.
+     ══════════════════════════════════════════════════════════════════════ */
+  :root{
+    --font:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --page:#F5F6F8;
+    --bg:#F8F9FB;--surface:#FFFFFF;--card:#FFFFFF;--card-hi:#F9FAFB;
+    --border:#E4E7EC;--border-hi:#D0D5DD;--line:#EAECF0;
+    --ink:#101828;--ink-2:#344054;
+    --cream:#101828;--text:#101828;--muted:#667085;--latte:#6B5B45;
+    --gold:#8A6A3F;--gold-light:#B39266;--gold-faint:rgba(138,106,63,0.08);
+    --accent-bg:#F6F1EA;--accent-ink:#6E5230;
+    --up:#067647;--up-bg:#ECFDF3;--down:#B42318;--down-bg:#FEF3F2;
+    --warn:#B54708;--warn-bg:#FFFAEB;--info:#175CD3;--info-bg:#EFF8FF;
+    --danger:#B42318;--success:#067647;
+    --radius:12px;--shadow:0 1px 2px rgba(16,24,40,0.05);--shadow-md:0 6px 16px rgba(16,24,40,0.08);
+    --side:252px;
+  }
+  html{background:var(--page)}
+  body{background:var(--page);color:var(--ink);font-family:var(--font);font-size:0.9rem;line-height:1.55;
+    -webkit-font-smoothing:antialiased}
+  body::before{display:none!important}
+  body *{font-family:var(--font)!important}
+  [style*="Cinzel"],[style*="Josefin"]{font-family:var(--font)!important;letter-spacing:-0.005em!important}
+  .brandmark,.brandmark *,.login-logo,.login-logo *{font-family:'Cinzel',serif!important}
+  ::selection{background:#E9DDCB}
+
+  input,select,textarea{background:#fff;color:var(--ink);border:1px solid var(--border-hi);border-radius:8px;color-scheme:light}
+  input:focus,select:focus,textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(138,106,63,0.14);outline:none}
+  input[type="checkbox"],input[type="radio"]{accent-color:var(--gold);box-shadow:none}
+  option{background:#fff;color:var(--ink)}
+  ::-webkit-scrollbar-thumb{background:#D0D5DD}
+
+  /* ── sign in ── */
+  #login{background:var(--page)}
+  .login-card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-md)}
+  .login-card::before{display:none}
+  .login-logo{color:var(--ink)}
+  .login-sub{color:var(--muted);letter-spacing:0.2em}
+  .login-input{background:#fff;border:1px solid var(--border-hi);border-radius:8px}
+  .login-btn{background:var(--ink);color:#fff;border-radius:8px;letter-spacing:0.02em;text-transform:none;font-size:0.9rem}
+  .login-btn:hover{box-shadow:var(--shadow-md)}
+
+  /* ── top bar ── */
+  .topbar{background:#fff;backdrop-filter:none;border-bottom:1px solid var(--line);padding:0.6rem 1.25rem;gap:0.75rem;min-height:60px}
+  .topbar .brand{font-size:1.2rem;color:var(--ink);display:none}
+  .brand small{color:var(--muted);letter-spacing:0.18em}
+  .crumb{font-weight:600;font-size:1rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  #gs-input{background:var(--page);border:1px solid var(--line);color:var(--ink);border-radius:10px}
+  #gs-input:focus{background:#fff}
+  #gs-drop{background:#fff;border:1px solid var(--line);box-shadow:var(--shadow-md)}
+  .gs-row:hover,.gs-row.on{background:#F2F4F7}
+  .gs-t b{color:var(--ink)}
+  .gs-h{color:var(--muted)}
+  .nav-btn{display:none;background:none;border:1px solid var(--border-hi);border-radius:8px;width:38px;height:38px;
+    align-items:center;justify-content:center;color:var(--ink);cursor:pointer;flex-shrink:0}
+  .nav-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+  .topbar{justify-content:flex-start}
+  .top-actions{margin-left:auto}
+  .bell{border:1px solid var(--border-hi);border-radius:8px;color:var(--ink-2);background:#fff}
+  .bell-badge{background:var(--down)}
+  .bell-drop{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-md)}
+  .notif.unread{background:#F9F5EF;border-left:2px solid var(--gold)}
+  .al-flag{display:none;align-items:center;gap:0.35rem;background:var(--down-bg);color:var(--down);border:1px solid #FECDCA;
+    border-radius:100px;padding:0.3rem 0.7rem;font-size:0.78rem;font-weight:600;cursor:pointer;white-space:nowrap}
+  .al-flag.on{display:inline-flex}
+
+  /* ── the sidebar ── */
+  nav.tabs{position:fixed;top:0;left:0;bottom:0;width:var(--side);display:flex;flex-direction:column;gap:0;
+    overflow-y:auto;padding:0 0 1.25rem;background:#fff;border-right:1px solid var(--line);border-bottom:none;
+    z-index:120;flex-wrap:nowrap;backdrop-filter:none}
+  nav.tabs::before{display:none;content:none}
+  .nav-brand{padding:1.05rem 1.25rem 0.95rem;border-bottom:1px solid var(--line);margin-bottom:0.6rem;
+    display:flex;align-items:center;gap:0.65rem;position:sticky;top:0;background:#fff;z-index:2}
+  .nav-brand .nb-mark{width:34px;height:34px;border-radius:9px;background:var(--ink);color:#fff;display:flex;
+    align-items:center;justify-content:center;font-size:0.95rem;letter-spacing:0.02em}
+  .nav-brand .nb-name{font-size:1.05rem;color:var(--ink);letter-spacing:0.14em;line-height:1.1}
+  .nav-brand .nb-sub{font-size:0.7rem;color:var(--muted);font-family:var(--font)!important;letter-spacing:0}
+  nav.tabs .tab,nav.tabs .nav-head{display:flex;align-items:center;gap:0.7rem;margin:1px 0.6rem;width:calc(100% - 1.2rem);
+    padding:0.52rem 0.75rem;border:none;border-radius:8px;background:none;color:var(--ink-2);font-size:0.875rem;
+    font-weight:500;letter-spacing:0;text-transform:none;text-align:left;cursor:pointer;position:static;top:auto;
+    white-space:nowrap;border-left:none;border-bottom:none;transition:background 0.12s,color 0.12s}
+  nav.tabs .tab:hover,nav.tabs .nav-head:hover{background:#F2F4F7;color:var(--ink)}
+  nav.tabs .tab.active{background:var(--accent-bg);color:var(--accent-ink);font-weight:600;border-left:none}
+  nav.tabs .nav-head.has-active{color:var(--ink);font-weight:600}
+  nav.tabs .nav-kids{display:none;padding:0.1rem 0 0.35rem}
+  nav.tabs .nav-group.open .nav-kids{display:block}
+  nav.tabs .nav-kids .tab{padding:0.42rem 0.75rem 0.42rem 2.55rem;font-size:0.845rem;font-weight:450}
+  nav.tabs .nav-kids .tab.active{font-weight:600}
+  .ni{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:#667085}
+  .tab.active .ni,.nav-head.has-active .ni{color:var(--accent-ink)}
+  .ni svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .chev{margin-left:auto;color:#98A2B3;transition:transform 0.18s;display:inline-flex}
+  .chev svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .nav-group.open .chev{transform:rotate(90deg)}
+  nav.tabs .dot{margin-left:auto;background:var(--down);color:#fff;border-radius:10px;font-size:0.66rem;font-weight:700;
+    min-width:19px;padding:0 5px;line-height:19px;height:19px;text-align:center}
+  .gdot{width:7px;height:7px;border-radius:50%;background:var(--down);display:none;margin-left:auto}
+  .nav-head.show-dot .gdot{display:inline-block}
+  .nav-head.show-dot .chev{margin-left:0.45rem}
+  .nav-sep{height:1px;background:var(--line);margin:0.55rem 1rem}
+  .nav-new{font-size:0.62rem;font-weight:700;color:var(--up);background:var(--up-bg);border-radius:100px;padding:0.05rem 0.4rem;margin-left:auto}
+  #nav-veil{display:none;position:fixed;inset:0;background:rgba(16,24,40,0.4);z-index:110}
+
+  @media (min-width:981px){
+    .topbar{padding-left:calc(var(--side) + 1.5rem)}
+    .wrap{margin-left:var(--side);max-width:none;padding:1.6rem clamp(1.25rem,3vw,2.5rem) 5rem}
+    .wrap>.panel{max-width:1240px;margin-left:auto;margin-right:auto}
+  }
+  @media (max-width:980px){
+    nav.tabs{transform:translateX(-105%);transition:transform 0.22s ease;width:min(86vw,300px);box-shadow:var(--shadow-md)}
+    body.nav-open nav.tabs{transform:none}
+    body.nav-open #nav-veil{display:block}
+    .nav-btn{display:inline-flex}
+    .topbar .brand{display:block}
+    .crumb{display:none}
+    .topbar{flex-wrap:wrap;row-gap:0.55rem;padding:0.55rem 0.8rem}
+    .topbar .brand{font-size:1.1rem}
+    .top-actions{flex-wrap:nowrap;gap:0.35rem}
+    .top-actions .btn{min-height:36px;padding:0.35rem 0.55rem}
+    #gs-wrap{order:3;flex-basis:100%;max-width:none;margin:0}
+    .al-flag{padding:0.3rem 0.55rem}
+    .al-row{flex-wrap:wrap}
+    .al-row .al-txt{flex:1 1 calc(100% - 40px)}
+    .al-row .btn{margin-left:2.4rem}
+    .hm-hello{font-size:1.4rem}
+    .hm-actions .btn{flex:1 1 auto;justify-content:center}
+    .card-h .sp{margin-left:0;width:100%}
+    .kpis{grid-template-columns:1fr 1fr}
+    .kpi-v{font-size:1.45rem}
+    .tiles{grid-template-columns:1fr}
+    .wrap{margin-left:0;padding:1.1rem 0.9rem 5rem}
+    nav.tabs .tab,nav.tabs .nav-head{font-size:0.95rem;padding:0.62rem 0.8rem}
+    nav.tabs .nav-kids .tab{font-size:0.92rem;padding:0.55rem 0.8rem 0.55rem 2.6rem}
+  }
+
+  /* ── headings and buttons ── */
+  .page-head{margin-bottom:1.35rem}
+  .page-title{font-size:1.55rem;font-weight:700;color:var(--ink);letter-spacing:-0.02em;line-height:1.25}
+  .page-desc{color:var(--muted);font-size:0.9rem;max-width:640px}
+  .btn{background:#fff;color:var(--ink);border:1px solid var(--border-hi);border-radius:8px;text-transform:none;
+    letter-spacing:0;font-size:0.84rem;font-weight:600;padding:0.55rem 1rem;box-shadow:var(--shadow)}
+  .btn:hover{background:#F9FAFB;transform:none}
+  .btn-sm{font-size:0.78rem;padding:0.36rem 0.7rem}
+  .btn-gold{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .btn-gold:hover{background:#1D2939;border-color:#1D2939;box-shadow:var(--shadow-md);transform:none}
+  .btn-ghost{background:#fff;color:var(--ink-2);border:1px solid var(--border-hi)}
+  .btn-ghost:hover{background:#F9FAFB;border-color:#98A2B3}
+  .btn-danger{background:#fff;color:var(--down);border:1px solid #FECDCA}
+  .btn-danger:hover{background:var(--down-bg)}
+  .btn:disabled{opacity:0.55;cursor:not-allowed}
+  .icon-btn{border-radius:8px;border-color:var(--border-hi);color:var(--ink-2);background:#fff}
+  .fld-label{letter-spacing:0;text-transform:none;font-size:0.8rem;color:var(--ink-2);font-weight:500}
+  .ai-tag{color:var(--accent-ink);letter-spacing:0.04em;font-weight:600}
+  #toast{background:var(--ink);color:#fff;border-radius:10px;box-shadow:var(--shadow-md);letter-spacing:0;font-weight:500}
+
+  /* ── surfaces ── */
+  .member-card,.site-card,.sched-card,.cov-panel,.tier-card,.stat-card,.appt,.thread-list,.chat-pane,.inq-detail,
+  .date-nav,.cal-month,.cal-week,.client-row,.ppl-col,.pp-cell,.fl-row,.dl-wrap,.jn-card,.mk-from,.mk-aud,.mk-row,
+  .gap-row,.cw-tile,.eb-wrap,.ny-item,.ny-row,.dl-card,.jn-form,.mk-pick{
+    background:#fff;border-color:var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .member-card:hover{transform:none;box-shadow:var(--shadow-md)}
+  .member-card::before{opacity:0.9}
+  .site-card h3{font-size:1rem;font-weight:650;color:var(--ink)}
+  /* The older cards spelled everything in spaced capitals. Readable case. */
+  .mc-name,.appt-client,.tier-name,.ppl-t,.jn-name,.ny-t,.drill-title,.cw-title,.notif-title,.client-name,.inq-name,.thread-name,.chat-head-name{
+    font-weight:600;letter-spacing:-0.01em;color:var(--ink)}
+  .mc-role,.appt-svc,.appt-time .d,.thread-meta,.inq-meta{text-transform:none;letter-spacing:0;font-size:0.8rem}
+  .status-pill,.status-tag,.fl-state,.gap-need,.jn-live,.eb-state,.cw-pill,.inq-badge{letter-spacing:0.02em;border-radius:100px;font-weight:600}
+  .up-group,.pp-sec,.ny-sec{letter-spacing:0.04em;color:var(--muted);font-weight:600}
+  .metric-value,.tier-count,.ppl-n,.ny-n,.pp-cell b{letter-spacing:-0.02em}
+  .site-card p{color:var(--muted);font-size:0.84rem}
+  .modal,.drill-box,.cw-box{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 48px rgba(16,24,40,0.18)}
+  .modal-title{color:var(--ink);font-weight:700}
+  .overlay,.drill-veil,.cw-veil{background:rgba(16,24,40,0.45);backdrop-filter:blur(2px)}
+  .drill-head{background:#fff}
+  .cw-side{background:var(--bg)}
+  .metric-card{background:#fff;border:1px solid var(--line);box-shadow:var(--shadow)}
+  .metric-card::after{display:none}
+  .metric-primary{background:#fff;border-color:var(--gold)}
+  .metric-value{background:none;-webkit-text-fill-color:var(--ink);color:var(--ink);font-weight:700}
+  .metric-label{letter-spacing:0.04em;font-weight:600}
+  .tier-card.blk{background:#fff}
+  .empty{color:var(--muted)}
+  .cal-dows{background:var(--bg)}
+  .cal-cell{border-color:var(--line)}
+  .cal-cell.today{background:#F9F5EF}
+  .cal-cell.has-appts{background:#F4F0FA;border-color:#E4D9F2}
+  .cal-cell.has-appts .cal-num{color:#6941C6}
+  .view-switch{border-radius:8px;border-color:var(--border-hi)}
+  .view-switch button{color:var(--ink-2);letter-spacing:0;text-transform:none;font-size:0.8rem}
+  .view-switch button.on{background:var(--ink);color:#fff}
+  .tab .dot{color:#fff}
+  .b-owner{color:#fff}
+  .sched-step-n,.sched-day.on,.cal-cell.today .cal-num,.bg-new{color:#fff}
+  .sched-day.on .hh{color:rgba(255,255,255,0.8)}
+  .ac-row:hover,.ac-row.sel{background:#F2F4F7;color:var(--ink)}
+  .ac-row:hover span,.ac-row.sel span{color:var(--muted)}
+  .color-opt.sel{border-color:var(--ink)}
+  .cw-phone{box-shadow:var(--shadow-md)}
+  .adot{box-shadow:none}
+  .status-on{background:var(--up-bg);color:var(--up)}
+  .status-off{background:var(--down-bg);color:var(--down)}
+  .ny{background:#fff;border:1px solid #FECDCA;box-shadow:var(--shadow)}
+  .ny.calm{background:#fff;border-color:#ABEFC6}
+  .ny-row.soon{background:var(--down-bg)}
+  .mix-blk{background:#C9B48F}
+  .eb-bar i{background:linear-gradient(90deg,var(--gold),#C9B48F)}
+  .jn-live.on,.cw-pill.sent,.eb-state.on{color:var(--up);border-color:#ABEFC6}
+  .cw-pill.part,.eb-state.full{color:var(--warn);border-color:#FEDF89}
+
+  /* Email Setup was black and white on purpose, for readability. Kept
+     plain and high-contrast, just the right way round. */
+  #panel-autoemail{background:transparent;color:var(--ink)}
+  #panel-autoemail .page-title,#panel-autoemail h3,#panel-autoemail label,
+  #panel-autoemail .page-desc,#panel-autoemail p,#panel-autoemail span,
+  #panel-autoemail div,#panel-autoemail small,#panel-autoemail li{color:var(--ink)}
+  #panel-autoemail .page-desc{color:var(--muted)}
+  #panel-autoemail input,#panel-autoemail textarea,#panel-autoemail select{background:#fff;color:var(--ink);
+    border:1px solid var(--border-hi);border-radius:8px}
+  #panel-autoemail input:focus,#panel-autoemail textarea:focus,#panel-autoemail select:focus{box-shadow:0 0 0 3px rgba(138,106,63,0.14);border-color:var(--gold)}
+  #panel-autoemail input::placeholder,#panel-autoemail textarea::placeholder{color:#98A2B3;opacity:1}
+  #panel-autoemail option{background:#fff;color:var(--ink)}
+  #panel-autoemail .ae-card{border:1px solid var(--line);background:#fff;border-radius:12px;box-shadow:var(--shadow)}
+  #panel-autoemail .ae-btn{background:var(--ink);color:#fff;border:1px solid var(--ink);border-radius:8px;
+    letter-spacing:0;text-transform:none;font-size:0.84rem;font-weight:600}
+  #panel-autoemail .ae-btn.ghost{background:#fff;color:var(--ink);border-color:var(--border-hi)}
+  #panel-autoemail .ae-tag{border:1px solid var(--border-hi);background:#fff;color:var(--ink);border-radius:6px}
+
+  @media(max-width:760px){
+    .site-card,.member-card,.panel .empty,.inq-detail,.thread-list,#blocks-list>div,#dayhours-list>div,#overrides-list>div,#classes-list>div{
+      background:#fff!important;border:1px solid var(--line)!important;box-shadow:var(--shadow)!important}
+    .stat-card{background:#fff;border-color:var(--line);box-shadow:var(--shadow)}
+    .page-head>button,.page-head>.btn{width:auto}
+  }
+
+  /* ══════════════ HOME ══════════════ */
+  .hm-head{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1.25rem}
+  .hm-hello{font-size:1.65rem;font-weight:700;letter-spacing:-0.02em;color:var(--ink)}
+  .hm-date{color:var(--muted);font-size:0.9rem;margin-top:0.1rem}
+  .hm-actions{display:flex;gap:0.5rem;flex-wrap:wrap}
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.15rem 1.2rem}
+  .card-h{display:flex;align-items:center;gap:0.6rem;margin-bottom:0.85rem;flex-wrap:wrap}
+  .card-t{font-weight:650;font-size:0.98rem;color:var(--ink)}
+  .card-s{color:var(--muted);font-size:0.8rem}
+  .card-h .sp{margin-left:auto;display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:0.85rem;margin-bottom:1rem}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:1rem 1.05rem;
+    cursor:pointer;text-align:left;font:inherit;color:inherit;transition:box-shadow 0.15s,border-color 0.15s;display:block;width:100%}
+  .kpi:hover{box-shadow:var(--shadow-md);border-color:var(--border-hi)}
+  .kpi-l{font-size:0.8rem;color:var(--muted);font-weight:500;display:flex;align-items:center;gap:0.4rem}
+  .kpi-v{font-size:1.75rem;font-weight:700;color:var(--ink);letter-spacing:-0.02em;margin:0.25rem 0 0.4rem;line-height:1.15}
+  .kpi-row{display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;font-size:0.76rem;color:var(--muted)}
+  .kpi-sub{font-size:0.76rem;color:var(--muted);margin-top:0.35rem}
+  .trend{display:inline-flex;align-items:center;gap:0.2rem;font-weight:600;font-size:0.74rem;border-radius:100px;padding:0.1rem 0.45rem}
+  .trend.up{color:var(--up);background:var(--up-bg)}
+  .trend.down{color:var(--down);background:var(--down-bg)}
+  .trend.flat{color:var(--muted);background:#F2F4F7}
+  .hm-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:0.85rem;margin-bottom:1rem}
+  @media(max-width:980px){ .hm-grid{grid-template-columns:1fr} }
+  .seg{display:inline-flex;border:1px solid var(--border-hi);border-radius:8px;overflow:hidden}
+  .seg button{background:#fff;border:none;padding:0.3rem 0.65rem;font:inherit;font-size:0.76rem;color:var(--ink-2);cursor:pointer}
+  .seg button+button{border-left:1px solid var(--border-hi)}
+  .seg button.on{background:var(--ink);color:#fff}
+  .chart{width:100%;height:210px;display:block}
+  .chart text{font-size:10px;fill:#98A2B3}
+  .bar-list{display:grid;gap:0.55rem}
+  .bar-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0.2rem 0.6rem;font-size:0.83rem;color:var(--ink-2)}
+  .bar-item .bt{height:6px;border-radius:100px;background:#F2F4F7;grid-column:1/-1;overflow:hidden}
+  .bar-item .bt i{display:block;height:100%;background:var(--gold);border-radius:100px}
+  .bar-item b{font-weight:600;color:var(--ink)}
+  .muted{color:var(--muted)}
+  .al-list{display:grid;gap:0.5rem}
+  .al-row{display:flex;gap:0.8rem;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:0.75rem 0.85rem;background:#fff}
+  .al-row.critical{border-color:#FECDCA;background:var(--down-bg)}
+  .al-row.warning{border-color:#FEDF89;background:var(--warn-bg)}
+  .al-row.info{background:#fff}
+  .al-ic{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-weight:700;font-size:0.8rem;color:#fff}
+  .al-row.critical .al-ic{background:var(--down)}
+  .al-row.warning .al-ic{background:#F79009}
+  .al-row.info .al-ic{background:#98A2B3}
+  .al-txt{flex:1;min-width:0}
+  .al-txt b{display:block;font-weight:600;color:var(--ink);font-size:0.88rem}
+  .al-txt p{margin-top:0.15rem;font-size:0.8rem;color:var(--ink-2);line-height:1.5}
+  .al-ok{display:flex;gap:0.7rem;align-items:center;border:1px solid #ABEFC6;background:var(--up-bg);border-radius:10px;
+    padding:0.8rem 0.9rem;color:var(--up);font-size:0.86rem;font-weight:500}
+  .al-ok .al-ic{background:var(--up)}
+  .pill{display:inline-flex;align-items:center;gap:0.25rem;font-size:0.72rem;font-weight:600;border-radius:100px;padding:0.12rem 0.5rem;white-space:nowrap}
+  .pill.crit{background:var(--down-bg);color:var(--down)}
+  .pill.warn{background:var(--warn-bg);color:var(--warn)}
+  .pill.ok{background:var(--up-bg);color:var(--up)}
+  .pill.grey{background:#F2F4F7;color:var(--ink-2)}
+  .pill.info{background:var(--info-bg);color:var(--info)}
+  .sec-t{font-size:1.05rem;font-weight:650;color:var(--ink);margin:1.6rem 0 0.75rem}
+  .skel{background:linear-gradient(90deg,#F2F4F7,#EAECF0,#F2F4F7);background-size:200% 100%;animation:shimmer 1.4s linear infinite;border-radius:8px}
+
+  /* ══════════════ MARKETING / AI / DEVELOPER ══════════════ */
+  .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:0.85rem}
+  .tile{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.05rem 1.1rem;
+    display:flex;flex-direction:column;gap:0.55rem}
+  .tile-top{display:flex;gap:0.75rem;align-items:flex-start}
+  .tile-ic{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.15rem;background:var(--accent-bg);color:var(--accent-ink)}
+  .tile-ic svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .tile-t{font-weight:650;color:var(--ink);font-size:0.95rem;display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap}
+  .tile-d{font-size:0.82rem;color:var(--muted);line-height:1.5;margin-top:0.1rem}
+  .tile-acts{display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:auto;padding-top:0.3rem}
+  .tile-note{font-size:0.78rem;color:var(--ink-2);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:0.55rem 0.65rem;line-height:1.5}
+  .form-row{display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap}
+  .form-row>div{flex:1;min-width:190px}
+  .form-row input{width:100%;padding:0.55rem 0.7rem;font-size:0.88rem}
+  .tbl-wrap{overflow-x:auto}
+  .tbl{width:100%;border-collapse:collapse;font-size:0.84rem}
+  .tbl th{text-align:left;font-weight:600;color:var(--muted);font-size:0.76rem;padding:0.55rem 0.6rem;border-bottom:1px solid var(--line);white-space:nowrap}
+  .tbl td{padding:0.6rem;border-bottom:1px solid var(--line);color:var(--ink-2);vertical-align:top}
+  .tbl tr:last-child td{border-bottom:none}
+  .chk{display:flex;gap:0.7rem;align-items:flex-start;padding:0.65rem 0;border-bottom:1px solid var(--line)}
+  .chk:last-child{border-bottom:none}
+  .chk .mk{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.75rem;font-weight:700;color:#fff}
+  .chk .mk.ok{background:var(--up)}
+  .chk .mk.no{background:#F79009}
+  .chk b{display:block;font-weight:600;color:var(--ink);font-size:0.87rem}
+  .chk p{font-size:0.8rem;color:var(--muted);margin-top:0.1rem;line-height:1.5}
+  .score{display:flex;align-items:center;gap:0.9rem}
+  .ring{width:64px;height:64px;flex-shrink:0}
+  .q-row{border:1px solid var(--line);border-radius:10px;padding:0.75rem 0.85rem;background:#fff;display:grid;gap:0.5rem}
+  .q-top{display:flex;gap:0.6rem;align-items:flex-start;flex-wrap:wrap}
+  .q-text{flex:1;min-width:200px;font-weight:550;color:var(--ink);font-size:0.88rem}
+  .q-links{display:flex;gap:0.35rem;flex-wrap:wrap;align-items:center}
+  .q-links a,.q-links button{font-size:0.74rem}
+  .res{display:inline-flex;align-items:center;gap:0.25rem;font-size:0.72rem;font-weight:600;border-radius:100px;padding:0.1rem 0.5rem;cursor:default}
+  .res.yes{background:var(--up-bg);color:var(--up)}
+  .res.no{background:var(--down-bg);color:var(--down)}
+  .res.clickable{cursor:pointer}
+  .stat-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0.85rem}
+  .st-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:0.75rem}
+  .st{border:1px solid var(--line);border-radius:10px;background:#fff;padding:0.8rem 0.9rem;box-shadow:var(--shadow)}
+  .st-h{display:flex;align-items:center;gap:0.5rem;margin-bottom:0.3rem}
+  .st-h b{font-weight:600;color:var(--ink);font-size:0.88rem}
+  .st-h .pill{margin-left:auto}
+  .st p{font-size:0.8rem;color:var(--muted);line-height:1.5}
+  .link-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:0.5rem}
+  .link-grid a{display:flex;align-items:center;justify-content:space-between;gap:0.5rem;border:1px solid var(--line);border-radius:9px;
+    padding:0.6rem 0.75rem;background:#fff;color:var(--ink-2);font-size:0.84rem;font-weight:500}
+  .link-grid a:hover{border-color:var(--border-hi);background:#F9FAFB}
+  .stack{display:grid;gap:0.85rem}
+
 </style>
 </head>
 <body>
@@ -881,7 +1234,9 @@
 <!-- APP -->
 <div id="app">
   <div class="topbar">
-    <div class="brand"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span><small>Studio Manager</small></div>
+    <button class="nav-btn" onclick="openNav()" aria-label="Open menu"><span data-i="menu" style="display:inline-flex"></span></button>
+    <div class="brand brandmark"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span></div>
+    <div class="crumb" id="crumb">Home</div>
     <!-- One box for the whole of Studio Manager. Thirty-one tabs is more
          than anybody can hold in their head. -->
     <div id="gs-wrap">
@@ -890,6 +1245,7 @@
       <div id="gs-drop"></div>
     </div>
     <div class="top-actions">
+      <button class="al-flag" id="al-flag" onclick="showTab('overview')" title="See what needs attention"></button>
       <div class="bell-wrap">
         <button class="bell" onclick="toggleBell()" title="Notifications">🔔<span class="bell-badge" id="bell-badge" style="display:none">0</span></button>
         <div class="bell-drop" id="bell-drop"></div>
@@ -900,39 +1256,111 @@
     </div>
   </div>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="overview" onclick="showTab('overview')">Overview</button>
-    <button class="tab" data-tab="schedule" onclick="showTab('schedule')">Calendar</button>
-    <button class="tab" data-tab="bookings" onclick="showTab('bookings')">All Bookings</button>
-    <button class="tab" data-tab="reports" onclick="showTab('reports')">Reports</button>
-    <button class="tab" data-tab="people" onclick="showTab('people')">Members</button>
-    <button class="tab" data-tab="journeys" onclick="showTab('journeys')">Journeys</button>
-    <button class="tab" data-tab="earlybird" onclick="showTab('earlybird')">Early Bird</button>
-    <button class="tab" data-tab="insights" onclick="showTab('insights')">Insights</button>
-    <button class="tab" data-tab="records" onclick="showTab('records')">Records</button>
-    <button class="tab" data-tab="payouts2" onclick="showTab('payouts2')">Payouts</button>
-    <button class="tab" data-tab="sales" onclick="showTab('sales')">Sales</button>
-    <button class="tab" data-tab="deposits" onclick="showTab('deposits')">Deposits <span class="dot" id="dep-dot" style="display:none">0</span></button>
-    <button class="tab" data-tab="inventory" onclick="showTab('inventory')">Inventory <span class="dot" id="inv-dot" style="display:none">0</span></button>
-    <button class="tab" data-tab="inbox" onclick="showTab('inbox')">Inbox <span class="dot" id="inq-dot" style="display:none">0</span></button>
-    <button class="tab" data-tab="messages" onclick="showTab('messages')">Messages <span class="dot" id="msg-dot" style="display:none">0</span></button>
-    <button class="tab" data-tab="scheduling" onclick="showTab('scheduling')">Scheduling <span class="dot" id="sched-dot" style="display:none">!</span></button>
-    <button class="tab" data-tab="marketing" onclick="showTab('marketing')">Emails</button>
-    <button class="tab" data-tab="team" onclick="showTab('team')">Team</button>
-    <button class="tab" data-tab="cards" onclick="showTab('cards')">Cards on File</button>
-    <button class="tab" data-tab="autoemail" onclick="showTab('autoemail')">Email Setup</button>
-    <button class="tab" data-tab="maillog" onclick="showTab('maillog')">Emails Sent</button>
-    <button class="tab" data-tab="paymath" onclick="showTab('paymath')">Pay Math</button>
-    <button class="tab" data-tab="clients" onclick="showTab('clients')">Clients</button>
-    <button class="tab" data-tab="site" onclick="showTab('site')">Site</button>
-    <button class="tab" data-tab="traffic" onclick="showTab('traffic')">Traffic</button>
-    <button class="tab" data-tab="services" onclick="showTab('services')">Services</button>
-    <button class="tab" data-tab="goals" onclick="showTab('goals')">Goals</button>
-    <button class="tab" data-tab="payouts" onclick="showTab('payouts')">Payouts</button>
-    <button class="tab" data-tab="giftcards" onclick="showTab('giftcards')">Gift Cards</button>
-    <button class="tab" data-tab="faq" onclick="showTab('faq')">Ask Zola</button>
-    <button class="tab" data-tab="settings" onclick="showTab('settings')">Settings</button>
-  </div>
+  <!-- The menu. Grouped the way a business owner thinks about the work —
+       inbox, bookings, clients, money, marketing, numbers, website, team —
+       instead of thirty-one tabs in a row. Every button is still a .tab with
+       its data-tab, so showTab() and everything that calls it is unchanged. -->
+  <nav class="tabs" id="side-nav" aria-label="Studio Manager menu">
+    <div class="nav-brand">
+      <div class="nb-mark brandmark">Z</div>
+      <div><div class="nb-name brandmark">ZOLA</div><div class="nb-sub">Studio Manager</div></div>
+    </div>
+
+    <button class="tab active" data-tab="overview" onclick="showTab('overview')"><span class="ni" data-i="home"></span><span class="nl">Home</span><span class="dot" id="home-dot" style="display:none">!</span></button>
+
+    <div class="nav-group" data-group="inbox">
+      <button class="nav-head" onclick="toggleNavGroup('inbox')"><span class="ni" data-i="inbox"></span><span class="nl">Inbox</span><span class="gdot"></span><span class="chev" data-i="chev"></span></button>
+      <div class="nav-kids">
+        <button class="tab" data-tab="inbox" onclick="showTab('inbox')"><span class="nl">Website messages</span><span class="dot" id="inq-dot" style="display:none">0</span></button>
+        <button class="tab" data-tab="messages" onclick="showTab('messages')"><span class="nl">Client chats</span><span class="dot" id="msg-dot" style="display:none">0</span></button>
+      </div>
+    </div>
+
+    <div class="nav-group" data-group="bookings">
+      <button class="nav-head" onclick="toggleNavGroup('bookings')"><span class="ni" data-i="calendar"></span><span class="nl">Booking Calendar</span><span class="gdot"></span><span class="chev" data-i="chev"></span></button>
+      <div class="nav-kids">
+        <button class="tab" data-tab="schedule" onclick="showTab('schedule')"><span class="nl">Calendar</span></button>
+        <button class="tab" data-tab="bookings" onclick="showTab('bookings')"><span class="nl">All bookings</span></button>
+        <button class="tab" data-tab="deposits" onclick="showTab('deposits')"><span class="nl">Deposits</span><span class="dot" id="dep-dot" style="display:none">0</span></button>
+        <button class="tab" data-tab="scheduling" onclick="showTab('scheduling')"><span class="nl">Artist schedules</span><span class="dot" id="sched-dot" style="display:none">!</span></button>
+      </div>
+    </div>
+
+    <div class="nav-group" data-group="clients">
+      <button class="nav-head" onclick="toggleNavGroup('clients')"><span class="ni" data-i="users"></span><span class="nl">Clients &amp; Members</span><span class="gdot"></span><span class="chev" data-i="chev"></span></button>
+      <div class="nav-kids">
+        <button class="tab" data-tab="clients" onclick="showTab('clients')"><span class="nl">Clients</span></button>
+        <button class="tab" data-tab="people" onclick="showTab('people')"><span class="nl">Members</span></button>
+        <button class="tab" data-tab="cards" onclick="showTab('cards')"><span class="nl">Cards on file</span></button>
+        <button class="tab" data-tab="giftcards" onclick="showTab('giftcards')"><span class="nl">Gift cards</span></button>
+        <button class="tab" data-tab="journeys" onclick="showTab('journeys')"><span class="nl">Nail journeys</span></button>
+      </div>
+    </div>
+
+    <div class="nav-group" data-group="sales">
+      <button class="nav-head" onclick="toggleNavGroup('sales')"><span class="ni" data-i="dollar"></span><span class="nl">Sales</span><span class="gdot"></span><span class="chev" data-i="chev"></span></button>
+      <div class="nav-kids">
+        <button class="tab" data-tab="sales" onclick="showTab('sales')"><span class="nl">Membership sales</span></button>
+        <button class="tab" data-tab="payouts" onclick="showTab('payouts')"><span class="nl">Payouts</span></button>
+        <button class="tab" data-tab="records" onclick="showTab('records')"><span class="nl">Records</span></button>
+        <button class="tab" data-tab="goals" onclick="showTab('goals')"><span class="nl">Goals</span></button>
+      </div>
+    </div>
+
+    <div class="nav-group" data-group="marketing">
+      <button class="nav-head" onclick="toggleNavGroup('marketing')"><span class="ni" data-i="megaphone"></span><span class="nl">Marketing</span><span class="gdot"></span><span class="chev" data-i="chev"></span></button>
+      <div class="nav-kids">
+        <button class="tab" data-tab="mkt" onclick="showTab('mkt')"><span class="nl">Marketing home</span></button>
+        <button class="tab" data-tab="marketing" onclick="showTab('marketing')"><span class="nl">Email &amp; text campaigns</span></button>
+        <button class="tab" data-tab="autoemail" onclick="showTab('autoemail')"><span class="nl">Automated emails</span></button>
+        <button class="tab" data-tab="maillog" onclick="showTab('maillog')"><span class="nl">Emails sent</span></button>
+        <button class="tab" data-tab="coupons" onclick="showTab('coupons')"><span class="nl">Coupons</span></button>
+        <button class="tab" data-tab="earlybird" onclick="showTab('earlybird')"><span class="nl">Early bird</span></button>
+        <button class="tab" data-tab="referrals" onclick="showTab('referrals')"><span class="nl">Referral program</span></button>
+      </div>
+    </div>
+
+    <div class="nav-group" data-group="analytics">
+      <button class="nav-head" onclick="toggleNavGroup('analytics')"><span class="ni" data-i="chart"></span><span class="nl">Analytics</span><span class="gdot"></span><span class="chev" data-i="chev"></span></button>
+      <div class="nav-kids">
+        <button class="tab" data-tab="traffic" onclick="showTab('traffic')"><span class="nl">Site traffic</span></button>
+        <button class="tab" data-tab="aiperf" onclick="showTab('aiperf')"><span class="nl">AI performance</span><span class="nav-new">New</span></button>
+        <button class="tab" data-tab="reports" onclick="showTab('reports')"><span class="nl">Reports</span></button>
+        <button class="tab" data-tab="insights" onclick="showTab('insights')"><span class="nl">Insights</span></button>
+        <button class="tab" data-tab="faq" onclick="showTab('faq')"><span class="nl">Chat questions</span></button>
+      </div>
+    </div>
+
+    <div class="nav-group" data-group="site">
+      <button class="nav-head" onclick="toggleNavGroup('site')"><span class="ni" data-i="globe"></span><span class="nl">Site &amp; Shop</span><span class="gdot"></span><span class="chev" data-i="chev"></span></button>
+      <div class="nav-kids">
+        <button class="tab" data-tab="site" onclick="showTab('site')"><span class="nl">Website content</span></button>
+        <button class="tab" data-tab="services" onclick="showTab('services')"><span class="nl">Services &amp; prices</span></button>
+        <button class="tab" data-tab="shop" onclick="showTab('shop')"><span class="nl">Press-on shop</span></button>
+        <button class="tab" data-tab="classes" onclick="showTab('classes')"><span class="nl">Classes</span></button>
+      </div>
+    </div>
+
+    <div class="nav-group" data-group="team">
+      <button class="nav-head" onclick="toggleNavGroup('team')"><span class="ni" data-i="briefcase"></span><span class="nl">Team &amp; Studio</span><span class="gdot"></span><span class="chev" data-i="chev"></span></button>
+      <div class="nav-kids">
+        <button class="tab" data-tab="team" onclick="showTab('team')"><span class="nl">Team</span></button>
+        <button class="tab" data-tab="paymath" onclick="showTab('paymath')"><span class="nl">Artist pay</span></button>
+        <button class="tab" data-tab="inventory" onclick="showTab('inventory')"><span class="nl">Inventory</span><span class="dot" id="inv-dot" style="display:none">0</span></button>
+      </div>
+    </div>
+
+    <div class="nav-sep"></div>
+
+    <div class="nav-group" data-group="settings">
+      <button class="nav-head" onclick="toggleNavGroup('settings')"><span class="ni" data-i="gear"></span><span class="nl">Settings</span><span class="gdot"></span><span class="chev" data-i="chev"></span></button>
+      <div class="nav-kids">
+        <button class="tab" data-tab="settings" onclick="showTab('settings')"><span class="nl">Settings</span></button>
+        <button class="tab" data-tab="devtools" onclick="showTab('devtools')"><span class="nl">Developer tools</span></button>
+      </div>
+    </div>
+  </nav>
+  <div id="nav-veil" onclick="closeNav()"></div>
 
   <div class="wrap">
 
@@ -1012,7 +1440,7 @@
         </div>
         <button class="btn btn-gold" onclick="openInvModal()">+ Add Item</button>
       </div>
-      <div id="inv-lowbar" style="display:none;background:linear-gradient(135deg,rgba(214,102,102,0.16),transparent);border:1px solid rgba(214,102,102,0.4);border-radius:12px;padding:0.85rem 1.1rem;margin-bottom:1rem;font-size:0.86rem;color:#f0b8b8;"></div>
+      <div id="inv-lowbar" style="display:none;background:linear-gradient(135deg,rgba(214,102,102,0.16),transparent);border:1px solid rgba(214,102,102,0.4);border-radius:12px;padding:0.85rem 1.1rem;margin-bottom:1rem;font-size:0.86rem;color:#B42318;"></div>
       <div id="inv-list" style="display:grid;gap:0.6rem;"></div>
     </section>
 
@@ -1068,12 +1496,7 @@
 
     <!-- OVERVIEW -->
     <section class="panel active" id="panel-overview">
-      <div class="page-head">
-        <div>
-          <div class="page-title">Overview</div>
-          <div class="page-desc">Where the studio stands right now.</div>
-        </div>
-      </div>
+      <div id="home-top"></div>
       <div id="money-now"></div>
       <div id="needs-you"></div>
       <div id="missing-confirms"></div>
@@ -1177,18 +1600,6 @@
       <div id="ins-body"><div class="empty">Loading…</div></div>
     </section>
 
-    <!-- PAYOUTS (Stripe) -->
-    <section class="panel" id="panel-payouts2">
-      <div class="page-head">
-        <div>
-          <div class="page-title">Payouts</div>
-          <div class="page-desc">Money on its way to your bank, straight from Stripe.</div>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="loadPayoutsStripe()">↻ Refresh</button>
-      </div>
-      <div id="po-body"><div class="empty">Loading…</div></div>
-    </section>
-
     <!-- RECORDS -->
     <section class="panel" id="panel-records">
       <div class="page-head">
@@ -1243,6 +1654,7 @@
           <div class="page-desc">Money coming in, and what reaches your bank.</div>
         </div>
       </div>
+      <div id="po-body" style="margin-bottom:1.25rem"><div class="empty">Loading…</div></div>
       <div id="po-health"></div>
       <div class="cards" id="po-stats" style="margin-top:1.25rem;"></div>
       <div class="sched-card" style="margin-top:1.5rem;">
@@ -1792,6 +2204,72 @@
           <label class="fld-label">Banner Text</label>
           <textarea id="site-banner-text" rows="3" placeholder="The founding rate locks in at $299/mo for a full year…"></textarea>
         </div>
+        <div class="site-card">
+          <h3>Studio Address 📍</h3>
+          <p>Sent in every confirmation text and email so clients know exactly where to come.</p>
+          <label class="fld-label">Address</label>
+          <input id="site-address" placeholder="123 Main St, Porterville, CA 93257" />
+        </div>
+        <div class="site-card">
+          <h3>Homepage Quote ✦</h3>
+          <p>The big words over your hero photo. Use <strong>&lt;br&gt;</strong> to break a line and wrap words in <strong>&lt;span class="gold-text"&gt;…&lt;/span&gt;</strong> to make them gold.</p>
+          <label class="fld-label">Small line above</label>
+          <input id="site-hero-kicker" placeholder="Porterville, California" style="margin-bottom:0.7rem" />
+          <label class="fld-label">The quote</label>
+          <textarea id="site-hero-quote" rows="3" placeholder="Nails That Speak&lt;br&gt;&lt;span class=&quot;gold-text&quot;&gt;Before You Do&lt;/span&gt;" style="margin-bottom:0.7rem"></textarea>
+          <label class="fld-label">Line underneath</label>
+          <textarea id="site-hero-sub" rows="2" placeholder="A private membership studio where your dream nails come true…"></textarea>
+        </div>
+        <div class="site-card" style="grid-column:1/-1;">
+          <h3>Shop My IG 📱</h3>
+          <p>Upload a photo you posted, tick what's in it, and clients can tap it on your homepage and go straight to booking that exact service — or buy that press-on set. Photos with nothing ticked still work; they just link to booking.</p>
+          <button class="btn btn-gold" onclick="igPick()">+ Add a Photo</button>
+          <div id="ig-admin" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:0.9rem;margin-top:1rem;"></div>
+        </div>
+        <div class="site-card" style="grid-column:1/-1;">
+          <h3>Site Photos 📸</h3>
+          <p>Tap any slot to upload a photo from your phone — it appears on the live website in seconds. Photos are auto-compressed for you. </p>
+          <div id="photo-slots" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.8rem;"></div>
+        </div>
+        <div class="site-card">
+          <h3>Announcement (optional)</h3>
+          <p>A one-line notice pinned at the top of the homepage — sales, closures, holidays. Leave empty for none.</p>
+          <input id="site-announcement" placeholder="e.g. Closed July 24–26 · Booking reopens Monday ✦" />
+          <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--border)">
+            <div class="ai-tag">Bigger changes</div>
+            <p style="margin:0.5rem 0 0">New pages, sections, prices, photos, or redesigns — open Claude Code and describe what you want. It edits the code and publishes for you.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- MARKETING HOME -->
+    <section class="panel" id="panel-mkt">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Marketing</div>
+          <div class="page-desc">Everything that brings clients in — campaigns, coupons, referrals, Google and your Facebook &amp; Instagram ads — in one place.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadMktHome()">↻ Refresh</button>
+      </div>
+      <div class="stat-tiles" id="mkt-stats" style="margin-bottom:1rem"></div>
+      <div class="sec-t">Grow your business</div>
+      <div class="tiles" id="mkt-tiles"><div class="empty">Loading…</div></div>
+      <div class="sec-t">Recent campaigns</div>
+      <div class="card" id="mkt-recent"><div class="empty">Loading…</div></div>
+    </section>
+
+    <!-- COUPONS -->
+    <section class="panel" id="panel-coupons">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Coupons</div>
+          <div class="page-desc">Codes you hand out, the automatic Early Bird discount, and standing rates for individual clients.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadCoupons()">↻ Refresh</button>
+      </div>
+      <div class="site-grid">
         <div class="site-card" style="grid-column:1/-1;">
           <h3>Discount Codes 🎟️</h3>
           <p>Two kinds of discount live here. The <strong>Early Bird</strong> below comes off automatically for the first few people — nobody types anything. Under it are the <strong>codes</strong> you hand out.</p>
@@ -1824,47 +2302,134 @@
           </div>
           <div id="cr-list" style="display:grid;gap:0.5rem"></div>
         </div>
-        <div class="site-card">
-          <h3>Studio Address 📍</h3>
-          <p>Sent in every confirmation text and email so clients know exactly where to come.</p>
-          <label class="fld-label">Address</label>
-          <input id="site-address" placeholder="123 Main St, Porterville, CA 93257" />
+</div>
+    </section>
+
+    <!-- REFERRAL PROGRAM -->
+    <section class="panel" id="panel-referrals">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Referral Program</div>
+          <div class="page-desc">Every member has a personal invite link in their client portal. When a friend joins through it, it shows up here.</div>
         </div>
-        <div class="site-card">
-          <h3>Homepage Quote ✦</h3>
-          <p>The big words over your hero photo. Use <strong>&lt;br&gt;</strong> to break a line and wrap words in <strong>&lt;span class="gold-text"&gt;…&lt;/span&gt;</strong> to make them gold.</p>
-          <label class="fld-label">Small line above</label>
-          <input id="site-hero-kicker" placeholder="Porterville, California" style="margin-bottom:0.7rem" />
-          <label class="fld-label">The quote</label>
-          <textarea id="site-hero-quote" rows="3" placeholder="Nails That Speak&lt;br&gt;&lt;span class=&quot;gold-text&quot;&gt;Before You Do&lt;/span&gt;" style="margin-bottom:0.7rem"></textarea>
-          <label class="fld-label">Line underneath</label>
-          <textarea id="site-hero-sub" rows="2" placeholder="A private membership studio where your dream nails come true…"></textarea>
+        <button class="btn btn-ghost btn-sm" onclick="loadReferrals()">↻ Refresh</button>
+      </div>
+      <div class="stat-tiles" id="ref-stats" style="margin-bottom:1rem"></div>
+      <div class="hm-grid">
+        <div class="card">
+          <div class="card-h"><div class="card-t">Recent referrals</div></div>
+          <div id="ref-recent"><div class="empty">Loading…</div></div>
         </div>
-        <div class="site-card" style="grid-column:1/-1;">
-          <h3>Shop My IG 📱</h3>
-          <p>Upload a photo you posted, tick what's in it, and clients can tap it on your homepage and go straight to booking that exact service — or buy that press-on set. Photos with nothing ticked still work; they just link to booking.</p>
-          <button class="btn btn-gold" onclick="igPick()">+ Add a Photo</button>
-          <div id="ig-admin" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:0.9rem;margin-top:1rem;"></div>
-        </div>
-        <div class="site-card" style="grid-column:1/-1;">
-          <h3>Site Photos 📸</h3>
-          <p>Tap any slot to upload a photo from your phone — it appears on the live website in seconds. Photos are auto-compressed for you. </p>
-          <div id="photo-slots" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.8rem;"></div>
-        </div>
-        <div class="site-card" style="grid-column:1/-1;">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
-            <div>
-              <h3>Classes 🎓</h3>
-              <p>Set the price and description for each class — clients pay online at classes.html and you get notified the moment someone enrolls.</p>
-            </div>
-            <button class="btn btn-gold" onclick="openClassModal()">+ Add Class</button>
+        <div class="stack">
+          <div class="card">
+            <div class="card-h"><div class="card-t">What friends and members get</div></div>
+            <p class="muted" style="font-size:0.82rem;margin-bottom:0.6rem">Write the reward in a sentence, so you have it in one place when you tell clients about it.</p>
+            <textarea id="ref-reward" rows="3" style="width:100%;padding:0.6rem 0.7rem" placeholder="e.g. Your friend gets $10 off their first visit, and you get $10 off your next fill."></textarea>
+            <div style="margin-top:0.6rem"><button class="btn btn-gold btn-sm" onclick="saveReferralReward()">Save</button></div>
           </div>
-          <div id="classes-list" style="display:grid;gap:0.6rem;margin-top:0.8rem;"></div>
-          <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--border)">
-            <div class="ai-tag">Who's purchased</div>
-            <div id="class-purchases-list" style="display:grid;gap:0.4rem;margin-top:0.6rem;"></div>
+          <div class="card">
+            <div class="card-h"><div class="card-t">Top referrers</div></div>
+            <div id="ref-top"><div class="empty">Loading…</div></div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- AI PERFORMANCE -->
+    <section class="panel" id="panel-aiperf">
+      <div class="page-head">
+        <div>
+          <div class="page-title">AI Performance</div>
+          <div class="page-desc">How ChatGPT, Claude, Perplexity and Google's AI see ZOLA — how often their bots read your site, whether they can understand it, and whether they recommend you.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadAiPerf(true)">↻ Refresh</button>
+      </div>
+      <div class="kpis" id="ai-kpis"></div>
+      <div class="hm-grid">
+        <div class="card">
+          <div class="card-h"><div class="card-t">AI bot visits</div><div class="card-s" id="ai-since"></div>
+            <div class="sp"><div class="seg" id="ai-seg"><button class="on" onclick="aiSeries('ai',this)">AI assistants</button><button onclick="aiSeries('search',this)">Search engines</button></div></div></div>
+          <div id="ai-chart"></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><div class="card-t">Who is reading</div></div>
+          <div id="ai-bots"><div class="empty">Loading…</div></div>
+        </div>
+      </div>
+      <div class="hm-grid">
+        <div class="card">
+          <div class="card-h"><div class="card-t">AI visibility test</div>
+            <div class="card-s">The questions a client would ask. Does the answer recommend ZOLA?</div>
+            <div class="sp"><button class="btn btn-gold btn-sm" id="ai-run-all" onclick="runAllAiTests()">Test all with AI</button></div></div>
+          <div id="ai-key-box"></div>
+          <div id="ai-questions" class="stack" style="gap:0.55rem"><div class="empty">Loading…</div></div>
+          <div class="form-row" style="margin-top:0.85rem">
+            <div><label class="fld-label">Add your own question</label><input id="ai-newq" placeholder="e.g. Where can I get chrome nails in Porterville?" onkeydown="if(event.key==='Enter')addAiQuestion()" /></div>
+            <button class="btn btn-ghost" onclick="addAiQuestion()">Add</button>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="card">
+            <div class="card-h"><div class="card-t">AI readiness</div><div class="sp"><button class="btn btn-ghost btn-sm" onclick="loadAiReadiness()">Check again</button></div></div>
+            <div id="ai-ready"><div class="empty">Checking your site the way an AI bot reads it…</div></div>
+          </div>
+          <div class="card">
+            <div class="card-h"><div class="card-t">Also mentioned instead of you</div></div>
+            <div id="ai-competitors"><div class="muted" style="font-size:0.82rem">Run a few tests to see which businesses AI recommends.</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DEVELOPER TOOLS -->
+    <section class="panel" id="panel-devtools">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Developer Tools</div>
+          <div class="page-desc">The machinery behind your website — is everything connected, running and answering. Nothing on this screen changes anything unless you press a button that says so.</div>
+        </div>
+        <button class="btn btn-gold btn-sm" onclick="loadDevTools()">Run all checks</button>
+      </div>
+      <div class="sec-t" style="margin-top:0">System status</div>
+      <div class="st-grid" id="dev-status"><div class="empty">Checking…</div></div>
+      <div class="hm-grid" style="margin-top:1rem">
+        <div class="card">
+          <div class="card-h"><div class="card-t">Pages &amp; data check</div><div class="card-s">Every public page and the data behind it</div>
+            <div class="sp"><button class="btn btn-ghost btn-sm" onclick="runSiteCheck()">Run check</button></div></div>
+          <div id="dev-sitecheck"><div class="muted" style="font-size:0.84rem">Press Run check to open every page the way a visitor would.</div></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><div class="card-t">Payment records</div><div class="card-s">Stripe compared with your bookings</div>
+            <div class="sp"><button class="btn btn-ghost btn-sm" onclick="runPaymentCheck()">Compare</button></div></div>
+          <div id="dev-reconcile"><div class="muted" style="font-size:0.84rem">Press Compare to check that every deposit Stripe took is marked paid on its booking.</div></div>
+        </div>
+      </div>
+      <div class="sec-t">Your accounts</div>
+      <div class="link-grid">
+        <a href="https://dashboard.stripe.com/acct_1TwDT8GjkczLFv0w/payments" target="_blank" rel="noopener">Stripe payments <span>↗</span></a>
+        <a href="https://dashboard.stripe.com/acct_1TwDT8GjkczLFv0w/apikeys" target="_blank" rel="noopener">Stripe API keys <span>↗</span></a>
+        <a href="https://dashboard.stripe.com/acct_1TwDT8GjkczLFv0w/webhooks" target="_blank" rel="noopener">Stripe webhooks <span>↗</span></a>
+        <a href="https://vercel.com/dashboard" target="_blank" rel="noopener">Vercel (hosting) <span>↗</span></a>
+        <a href="https://github.com/zahrascales-commits/zlux-nail-studio" target="_blank" rel="noopener">GitHub (code) <span>↗</span></a>
+        <a href="https://app.turso.tech/" target="_blank" rel="noopener">Turso (database) <span>↗</span></a>
+        <a href="https://resend.com/emails" target="_blank" rel="noopener">Resend (emails) <span>↗</span></a>
+        <a href="https://console.twilio.com/" target="_blank" rel="noopener">Twilio (texts) <span>↗</span></a>
+        <a href="https://ap.www.namecheap.com/domains/list/" target="_blank" rel="noopener">Namecheap (domain) <span>↗</span></a>
+        <a href="https://search.google.com/search-console" target="_blank" rel="noopener">Google Search Console <span>↗</span></a>
+        <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Anthropic (AI key) <span>↗</span></a>
+        <a href="/llms.txt" target="_blank" rel="noopener">Your llms.txt <span>↗</span></a>
+      </div>
+    </section>
+
+    <!-- PRESS-ON SHOP -->
+    <section class="panel" id="panel-shop">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Press-On Shop</div>
+          <div class="page-desc">Your sets, categories, photos, prices and orders — everything on the press-ons page.</div>
+        </div>
+      </div>
+      <div class="site-grid">
         <div class="site-card" style="grid-column:1/-1;">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
             <div>
@@ -1905,16 +2470,33 @@
             <div id="po-admin-orders" style="display:grid;gap:0.4rem;margin-top:0.6rem;"></div>
           </div>
         </div>
-        <div class="site-card">
-          <h3>Announcement (optional)</h3>
-          <p>A one-line notice pinned at the top of the homepage — sales, closures, holidays. Leave empty for none.</p>
-          <input id="site-announcement" placeholder="e.g. Closed July 24–26 · Booking reopens Monday ✦" />
-          <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--border)">
-            <div class="ai-tag">Bigger changes</div>
-            <p style="margin:0.5rem 0 0">New pages, sections, prices, photos, or redesigns — open Claude Code and describe what you want. It edits the code and publishes for you.</p>
-          </div>
+</div>
+    </section>
+
+    <!-- CLASSES -->
+    <section class="panel" id="panel-classes">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Classes</div>
+          <div class="page-desc">What you teach, what it costs, and who has paid.</div>
         </div>
       </div>
+      <div class="site-grid">
+        <div class="site-card" style="grid-column:1/-1;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+            <div>
+              <h3>Classes 🎓</h3>
+              <p>Set the price and description for each class — clients pay online at classes.html and you get notified the moment someone enrolls.</p>
+            </div>
+            <button class="btn btn-gold" onclick="openClassModal()">+ Add Class</button>
+          </div>
+          <div id="classes-list" style="display:grid;gap:0.6rem;margin-top:0.8rem;"></div>
+          <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--border)">
+            <div class="ai-tag">Who's purchased</div>
+            <div id="class-purchases-list" style="display:grid;gap:0.4rem;margin-top:0.6rem;"></div>
+          </div>
+        </div>
+</div>
     </section>
 
     <!-- TRAFFIC / ANALYTICS -->
@@ -1926,9 +2508,9 @@
         </div>
         <div style="display:flex;gap:0.6rem;align-items:center;">
           <select id="traffic-days" onchange="loadTraffic()" style="max-width:160px;background:var(--card);color:var(--cream);border:1px solid var(--border);padding:0.45rem 0.6rem;outline:none;cursor:pointer;">
-            <option value="7" style="background:#1C1815;color:#F5EEE8;">Last 7 days</option>
-            <option value="30" selected style="background:#1C1815;color:#F5EEE8;">Last 30 days</option>
-            <option value="90" style="background:#1C1815;color:#F5EEE8;">Last 90 days</option>
+            <option value="7" >Last 7 days</option>
+            <option value="30" selected >Last 30 days</option>
+            <option value="90" >Last 90 days</option>
           </select>
           <button class="btn btn-ghost btn-sm" onclick="resetTraffic()">Reset Data</button>
         </div>
@@ -2500,7 +3082,7 @@ async function login(){
     members=d.members||[];appts=d.appointments||[];
     PROVIDERS=d.providers||{email:false,sms:false};
     startAutoRefresh();
-    showTab('overview');
+    showTab((location.hash || '').replace('#', '') || 'overview');
     fillTime12Selects();
     loadServiceCatalog();
     sessionStorage.setItem('zm_pwd',pwd);
@@ -2525,7 +3107,14 @@ function logout(){sessionStorage.removeItem('zm_pwd');location.reload();}
 // Initialised after login instead — at parse time PWD is still empty,
 
 const TAB_LOADERS = {
-  overview:   () => { loadMoneyNow(); loadNeedsYou(); loadMissingConfirms(); loadOverview(); loadDispatch(); loadFloor(); },
+  overview:   () => { loadHomeTop(); loadMoneyNow(); loadNeedsYou(); loadMissingConfirms(); loadOverview(); loadDispatch(); loadFloor(); },
+  mkt:        () => loadMktHome(),
+  coupons:    () => loadCoupons(),
+  referrals:  () => loadReferrals(),
+  aiperf:     () => loadAiPerf(),
+  devtools:   () => loadDevTools(),
+  shop:       () => { loadPressons(); if(typeof loadPoApplyPrice === 'function') loadPoApplyPrice(); },
+  classes:    () => { loadClasses(); loadClassPurchases(); },
   records:    () => loadRecords(),
   insights:   () => loadInsights(),
   people:     () => loadPeople(),
@@ -2536,7 +3125,7 @@ const TAB_LOADERS = {
   reports:    () => { renderDownloads(); loadReports(); },
   services:   () => loadServicesTab(),
   goals:      () => loadGoals(),
-  payouts:    () => loadPayouts(),
+  payouts:    () => { loadPayouts(); loadPayoutsStripe(); },
   giftcards:  () => loadGiftCards(),
   faq:        () => loadFaq(),
   schedule:   () => { renderCal(); loadBlocks(); loadDayHours(); },
@@ -2595,12 +3184,21 @@ async function refreshCurrent(manual){
    list and can never wipe something being edited.                    */
 function startAutoRefresh(){ /* deliberately does nothing */ }
 
+// Old names still work, so nothing that jumps to a screen can land nowhere.
+const TAB_ALIAS = { payouts2: 'payouts' };
 function showTab(name){
+  name = TAB_ALIAS[name] || name;
+  if(!document.getElementById('panel-'+name)) name = 'overview';
   fillTime12Selects();
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
   if(name==='sales') startSalesLive(); else stopSalesLive();
+  if(typeof syncNav === 'function') syncNav(name);
+  if(typeof closeNav === 'function') closeNav();
+  // The screen is in the address, so a refresh comes back to it.
+  try{ if(location.hash !== '#'+name) history.replaceState(null, '', '#'+name); }catch(_){}
+  window.scrollTo(0, 0);
   const fn = TAB_LOADERS[name];
   if(fn) fn();
 }
@@ -2657,7 +3255,7 @@ async function loadCoverage(){
 
     // Before any shift exists the booking page stays wide open on purpose.
     if(rows.every(x => !x.configured)){
-      el.innerHTML = '<div style="font-size:0.8rem;color:#7ec98a;line-height:1.6">'
+      el.innerHTML = '<div style="font-size:0.8rem;color:#067647;line-height:1.6">'
         + 'Nothing scheduled yet, so <strong>every service is bookable on every day</strong>. '
         + 'That changes the moment you save your first day below.</div>';
       return;
@@ -2684,7 +3282,7 @@ async function loadCoverage(){
         + '</span></div>';
     }).join('');
   }catch(_){
-    el.innerHTML = '<div style="font-size:0.8rem;color:#e08a8a">Could not check coverage.</div>';
+    el.innerHTML = '<div style="font-size:0.8rem;color:#B42318">Could not check coverage.</div>';
   }
 }
 
@@ -2740,7 +3338,7 @@ function renderSchedPeople(){
     const c=schedCoverage[m.id];
     const noDays=!c||!c.last_date||c.last_date<today;
     const sub=noDays
-      ? '<span style="color:#e0a06a">no days set</span>'
+      ? '<span style="color:#B54708">no days set</span>'
       : 'through '+esc(fmtDs(c.last_date));
     return `<button class="sched-person${schedMember===m.id?' on':''}" onclick="pickSchedMember(${m.id})">
       <span class="av" style="background:${m.color}">${initials(m.name)}</span>
@@ -2780,7 +3378,7 @@ function schedAllSvc(on){
   schedDirty=true;renderSchedServices();markSchedDirty();
 }
 function markSchedDirty(){
-  document.getElementById('sched-status').innerHTML='<span style="color:#e0a06a">Unsaved changes</span>';
+  document.getElementById('sched-status').innerHTML='<span style="color:#B54708">Unsaved changes</span>';
 }
 
 async function loadSchedMonth(){
@@ -2908,10 +3506,10 @@ async function schedSave(){
   const btn=document.getElementById('sched-save');
   const status=document.getElementById('sched-status');
   const h=schedHours();
-  if(h.end<=h.start){status.innerHTML='<span style="color:#e08a8a">End time must be after start time.</span>';return;}
+  if(h.end<=h.start){status.innerHTML='<span style="color:#B42318">End time must be after start time.</span>';return;}
   if(h.lunchStart&&h.lunchEnd){
-    if(h.lunchEnd<=h.lunchStart){status.innerHTML='<span style="color:#e08a8a">Lunch end must be after lunch start.</span>';return;}
-    if(h.lunchStart<h.start||h.lunchEnd>h.end){status.innerHTML='<span style="color:#e08a8a">Lunch has to fall inside the working hours.</span>';return;}
+    if(h.lunchEnd<=h.lunchStart){status.innerHTML='<span style="color:#B42318">Lunch end must be after lunch start.</span>';return;}
+    if(h.lunchStart<h.start||h.lunchEnd>h.end){status.innerHTML='<span style="color:#B42318">Lunch has to fall inside the working hours.</span>';return;}
   }
   btn.disabled=true;status.textContent='Saving…';
   try{
@@ -2940,11 +3538,11 @@ async function schedSave(){
     const m=members.find(x=>Number(x.id)===Number(schedMember));
     if(m){m.skills=Array.from(schedSkills);m.restricted=all?0:1;}
     schedDirty=false;
-    status.innerHTML='<span style="color:#7ec98a">Saved ✓ '+dates.length+' day'+(dates.length===1?'':'s')+' this month</span>';
+    status.innerHTML='<span style="color:#067647">Saved ✓ '+dates.length+' day'+(dates.length===1?'':'s')+' this month</span>';
     loadCoverage();
     await loadSchedMonth();
   }catch(e){
-    status.innerHTML='<span style="color:#e08a8a">'+esc(e.message||'Save failed')+'</span>';
+    status.innerHTML='<span style="color:#B42318">'+esc(e.message||'Save failed')+'</span>';
   }finally{ btn.disabled=false; }
 }
 
@@ -3111,7 +3709,7 @@ async function loadDeposits(){
 }
 function depCard(a,unpaid){
   const dep='$'+Math.round(a.deposit_cents/100), tot='$'+Math.round(a.total_cents/100);
-  return `<div class="member-card" style="--mc:${unpaid?'#d66':'#6ab07a'};">
+  return `<div class="member-card" style="--mc:${unpaid?'#D92D20':'#067647'};">
     <div class="mc-top">
       <div style="flex:1">
         <div class="mc-name">${esc(a.name)}</div>
@@ -3162,15 +3760,15 @@ function renderInventory(lowCount){
   if(!invItems.length){ g.innerHTML='<div class="empty" style="padding:1.5rem"><div class="big">📦</div>No items yet.<br>Tap “Add Item” to start your inventory list.</div>'; return; }
   g.innerHTML=invItems.map(it=>{
     const low=Number(it.qty)<=Number(it.low_threshold);
-    return `<div class="member-card" style="--mc:${low?'#d66':'#B6A588'};">
+    return `<div class="member-card" style="--mc:${low?'#D92D20':'#B6A588'};">
       <div class="mc-top">
         <div style="flex:1">
-          <div class="mc-name">${esc(it.name)} ${low?'<span style="color:#e88;font-size:0.72rem;">· LOW</span>':''}</div>
+          <div class="mc-name">${esc(it.name)} ${low?'<span style="color:#B42318;font-size:0.72rem;">· LOW</span>':''}</div>
           <div class="mc-role">Alert at ${it.low_threshold}${it.unit?' '+esc(it.unit):''} or lower${it.updated_by?' · last by '+esc(it.updated_by):''}</div>
         </div>
         <div style="display:flex;align-items:center;gap:0.5rem;">
           <button class="btn btn-ghost btn-sm" onclick="adjustInv(${it.id},-1)" style="min-width:38px;">−</button>
-          <span style="font-family:'Cinzel',serif;font-size:1.5rem;color:${low?'#e88':'var(--gold)'};min-width:2ch;text-align:center;">${it.qty}</span>
+          <span style="font-family:'Cinzel',serif;font-size:1.5rem;color:${low?'#B42318':'var(--gold)'};min-width:2ch;text-align:center;">${it.qty}</span>
           <button class="btn btn-ghost btn-sm" onclick="adjustInv(${it.id},1)" style="min-width:38px;">+</button>
         </div>
       </div>
@@ -3494,8 +4092,8 @@ let PROVIDERS={email:false,sms:false};
 const COLOR_CHOICES=['#E8A0BF','#B6A588','#B5838D','#9E6B8E','#6B8E9E','#8E9E6B','#DDD0B8','#FFFFFF'];
 function applyOwnerColor(c){
   OWNER_COLOR=c||'#B6A588';
-  document.documentElement.style.setProperty('--gold',OWNER_COLOR);
-  document.documentElement.style.setProperty('--gold-faint',OWNER_COLOR+'12');
+  // Her colour still marks her own appointments on the calendar. It used to
+  // repaint the whole interface too, and pale gold on white cannot be read.
 }
 
 /* ── NOTIFICATION BELL ── */
@@ -3655,7 +4253,7 @@ function renderMembers(){
         <div class="avatar" style="background:${m.color}">${initials(m.name)}</div>
         <div style="flex:1">
           <div class="mc-name">${esc(m.name)}</div>
-          <div class="mc-role">${esc(m.role||'Nail Artist')}${Number(m.show_on_site)?' · <span style="color:var(--gold)">On website ✓</span>':''}${Number(m.trainee)?' · <span style="color:#e0a06a">In training</span>':''}</div>
+          <div class="mc-role">${esc(m.role||'Nail Artist')}${Number(m.show_on_site)?' · <span style="color:var(--gold)">On website ✓</span>':''}${Number(m.trainee)?' · <span style="color:#B54708">In training</span>':''}</div>
         </div>
         <span class="status-pill ${Number(m.active)?'status-on':'status-off'}">${Number(m.active)?'Active':'Paused'}</span>
       </div>
@@ -4201,7 +4799,7 @@ function fillTimeSelect(input, selected){
     if(!el) return;
     const t = parseTimeInput(input.value);
     el.textContent = t ? fmtTime(t) : (input.value.trim() ? 'Not a time I recognise' : '');
-    el.style.color = t || !input.value.trim() ? 'var(--muted)' : '#d68a8a';
+    el.style.color = t || !input.value.trim() ? 'var(--muted)' : '#B42318';
   }
 }
 
@@ -4438,7 +5036,7 @@ function renderPhotoSlots(){
     return '<div style="margin-bottom:1.6rem">'
       +'<div style="display:flex;align-items:baseline;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.15rem">'
         +'<div style="font-family:\'Cinzel\',serif;font-size:0.98rem;color:var(--cream)">'+esc(g.title)+'</div>'
-        +'<div style="font-size:0.65rem;color:'+(done===g.slots.length?'#7ec98a':'var(--muted)')+'">'+done+' of '+g.slots.length+'</div>'
+        +'<div style="font-size:0.65rem;color:'+(done===g.slots.length?'#067647':'var(--muted)')+'">'+done+' of '+g.slots.length+'</div>'
       +'</div>'
       +'<div style="font-size:0.72rem;color:var(--muted);margin-bottom:0.7rem;line-height:1.5">'+esc(g.hint)+'</div>'
       +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.8rem">'
@@ -5038,14 +5636,14 @@ function renderMkHistory(){
         + list.map(function(c){
             const when=c.sent_ts?new Date(Number(c.sent_ts)).toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'numeric'}):'—';
             const done=String(c.status||'')!=='sending';
-            const preview=(c.subject?esc(c.subject)+' — ':'')+esc(String(c.body||'').replace(/s+/g,' ').slice(0,160))
+            const preview=(c.subject?esc(c.subject)+' — ':'')+esc(String(c.body||'').replace(/\s+/g,' ').slice(0,160))
               +(String(c.body||'').length>160?'…':'');
             return '<tr>'
               + '<td style="white-space:nowrap">'+when+'</td>'
               + '<td style="white-space:nowrap">'+(isText(c)?'💬 Text':'✉️ Email')+'</td>'
               + '<td class="msg">'+preview+'</td>'
               + '<td><span class="cw-pill '+(done?'sent':'part')+'">'+(done?'Sent':'Did not finish')+'</span></td>'
-              + '<td>'+(c.sent_count||0)+(Number(c.failed_count)?' <span style="color:#d68a8a">('+c.failed_count+' failed)</span>':'')+'</td>'
+              + '<td>'+(c.sent_count||0)+(Number(c.failed_count)?' <span style="color:#B42318">('+c.failed_count+' failed)</span>':'')+'</td>'
               + '<td><button class="btn btn-ghost btn-sm" onclick="mkReuse('+c.id+')">Use again</button></td>'
               + '</tr>';
           }).join('')
@@ -5101,7 +5699,7 @@ async function loadWorkerGoals(id){
           + '<div style="font-size:0.7rem;color:var(--muted)">Level ' + g.level + ' · '
             + (auto ? 'counts itself' : 'she logs it') + ' · per ' + esc(g.period) + '</div>'
         + '</div>'
-        + '<div style="font-size:0.8rem;color:' + (g.complete?'#7ec98a':'var(--gold)') + '">'
+        + '<div style="font-size:0.8rem;color:' + (g.complete?'#067647':'var(--gold)') + '">'
           + (g.metric==='revenue'?'$':'') + Math.round(g.count) + ' / ' + (g.metric==='revenue'?'$':'') + g.target
           + ' · ' + g.pct_per_unit + '% each → ' + g.full_value + '%'
         + '</div>'
@@ -5234,8 +5832,8 @@ let CLAIMS = null;
 
 function dispatchPill(r){
   if(r.status === 'open')     return '<span class="status-pill" style="background:rgba(182,165,136,0.18);color:var(--gold)">Waiting on artists</span>';
-  if(r.status === 'leftover') return '<span class="status-pill" style="background:rgba(214,102,102,0.2);color:#ffb3b3">Needs you</span>';
-  if(r.status === 'none')     return '<span class="status-pill" style="background:rgba(214,102,102,0.2);color:#ffb3b3">Nobody free</span>';
+  if(r.status === 'leftover') return '<span class="status-pill" style="background:rgba(214,102,102,0.2);color:#B42318">Needs you</span>';
+  if(r.status === 'none')     return '<span class="status-pill" style="background:rgba(214,102,102,0.2);color:#B42318">Nobody free</span>';
   if(r.how === 'auto')        return '<span class="status-pill status-on">Auto-assigned</span>';
   if(r.how === 'manual')      return '<span class="status-pill status-on">You assigned</span>';
   return '<span class="status-pill status-on">' + esc(r.claimed_name || 'Confirmed') + '</span>';
@@ -5270,13 +5868,13 @@ function claimCard(r, urgent){
   const amount = Number(r.deposit_cents) || 0;
   const owed = Number(r.owed_cents) || 0;
   const deposit = '<div style="margin-top:0.35rem;font-size:0.8rem;'
-    + (paid ? 'color:#7ec98a' : 'color:#e0a06a') + '">'
+    + (paid ? 'color:#067647' : 'color:#B54708') + '">'
     + (paid
         ? '✓ Deposit paid — ' + cmoney(amount)
         : ('No deposit yet' + (owed ? ' — ' + cmoney(owed) + ' to pay' : '')))
     + '</div>';
 
-  return '<div class="member-card" style="--mc:' + (urgent ? '#d66' : '#B6A588') + '">'
+  return '<div class="member-card" style="--mc:' + (urgent ? '#D92D20' : '#B6A588') + '">'
     + '<div class="mc-top"><div style="flex:1">'
       + '<div class="mc-name">' + (r.client_name ? clientLink(r.client_name) : 'Client') + ' · ' + esc(r.service || '') + '</div>'
       + '<div class="mc-role">' + esc(r.when) + ' · ' + who + '</div>'
@@ -5304,7 +5902,7 @@ async function loadDispatch(){
   // Leftovers first and in red, because a client is waiting behind each one.
   if(mine.length){
     html += '<div class="page-head" style="margin-top:2rem;"><div>'
-      + '<div class="page-title" style="font-size:1.15rem;color:#ffb3b3;">Leftover Appointments ✦ ' + mine.length + '</div>'
+      + '<div class="page-title" style="font-size:1.15rem;color:#B42318;">Leftover Appointments ✦ ' + mine.length + '</div>'
       + '<div class="page-desc">Nobody confirmed these. The client has been told their artist is being assigned — give each one to whoever it needs to go to.</div>'
       + '</div></div>'
       + mine.map(function(r){ return claimCard(r, true); }).join('');
@@ -5537,7 +6135,7 @@ async function loadMoneyNow(){
 
     + ((d.outstanding && d.outstanding.cents)
         ? '<div style="border-top:1px solid var(--border);margin-top:0.9rem;padding-top:0.7rem;font-size:0.8rem;color:var(--muted)">'
-          + '<strong style="color:#d9a441">' + mny(d.outstanding.cents) + '</strong> booked and not paid for, across '
+          + '<strong style="color:#B54708">' + mny(d.outstanding.cents) + '</strong> booked and not paid for, across '
           + d.outstanding.appointments + ' appointment' + (d.outstanding.appointments === 1 ? '' : 's')
           + ' — deliberately not counted above.</div>'
         : '')
@@ -5546,7 +6144,7 @@ async function loadMoneyNow(){
           + mny(d.refunded_cents) + ' refunded this year, already taken back out.</div>'
         : '')
     + (d.card_error
-        ? '<div style="font-size:0.78rem;color:#e08a8a;margin-top:0.35rem">Card takings unavailable: ' + esc(d.card_error) + '</div>'
+        ? '<div style="font-size:0.78rem;color:#B42318;margin-top:0.35rem">Card takings unavailable: ' + esc(d.card_error) + '</div>'
         : '')
 
     + ((d.months || []).length > 1
@@ -5572,11 +6170,8 @@ async function loadNeedsYou(){
   const team = NEEDS.team || [];
 
   // The tab itself carries the number, so it is visible from any screen.
-  const tabBtn = document.querySelector('.tab[data-tab="overview"]');
-  if(tabBtn){
-    const badge = n.needs_you ? ' <span class="dot">' + n.needs_you + '</span>' : '';
-    tabBtn.innerHTML = 'Overview' + badge;
-  }
+  // The Home button's red badge comes from the alerts check, which already
+  // counts unassigned appointments, so the two cannot disagree.
 
   let html = '';
 
@@ -5591,7 +6186,7 @@ async function loadNeedsYou(){
     html += '<div class="ny" style="border-color:rgba(224,138,138,0.5);'
         + 'background:linear-gradient(150deg,rgba(224,138,138,0.12),rgba(224,138,138,0.02))">'
       + '<div class="ny-h"><div class="ny-t">' + (dry ? 'Nobody can book anything' : 'Your calendar runs out') + '</div>'
-        + '<div class="ny-n" style="color:#e08a8a">' + (dry ? '!' : cal.days_left + 'd') + '</div></div>'
+        + '<div class="ny-n" style="color:#B42318">' + (dry ? '!' : cal.days_left + 'd') + '</div></div>'
       + '<div class="ny-sub">'
         + (dry
             ? 'There are no working days scheduled at all, so every date on the booking page is closed.'
@@ -5601,7 +6196,7 @@ async function loadNeedsYou(){
       + '</div>'
       + (cal.artists || []).map(function(a){
           const none = !a.last_date;
-          return '<div class="ny-row" style="border-left-color:' + (none ? '#e08a8a' : 'var(--gold)') + '">'
+          return '<div class="ny-row" style="border-left-color:' + (none ? '#B42318' : 'var(--gold)') + '">'
             + '<div class="ny-who" style="flex:1"><b>' + esc(a.name) + '</b><i>'
               + (none ? 'no days scheduled' : 'scheduled through ' + esc(niceDay(a.last_date)) + ' · ' + a.upcoming + ' days')
             + '</i></div></div>';
@@ -6121,7 +6716,7 @@ async function loadPeople(){
                       ? ' <span style="color:var(--gold)">(was ' + pplMoney(r.list_cents) + (r.promo_code ? ' · ' + esc(r.promo_code) : '') + ')</span>'
                       : '')
                   + (r.price_estimated ? ' <span title="Signed up before we recorded what was charged — this is the list price" style="color:var(--muted)">≈</span>' : '')
-                  + (r.billing_live === false ? ' <span style="color:#d9a441">· not billing</span>' : '')
+                  + (r.billing_live === false ? ' <span style="color:#B54708">· not billing</span>' : '')
                   + ' · '
                   + r.months_paid + ' month' + (r.months_paid === 1 ? '' : 's') + ' paid'
                 + '</div></button>';
@@ -6176,7 +6771,7 @@ function renderDropins(){
     // Somebody who has not been in for three months is the most useful row
     // on this screen, so it says so rather than making her work it out.
     const lapsed = d.days_since != null && d.days_since > 90;
-    return '<div class="member-card" style="--mc:' + (lapsed ? '#d66' : '#B6A588') + '">'
+    return '<div class="member-card" style="--mc:' + (lapsed ? '#D92D20' : '#B6A588') + '">'
       + '<div class="mc-top"><div style="flex:1">'
         + '<div class="mc-name"><a href="#" onclick="event.preventDefault();openPerson(\'DROPIN\',' + idx + ')" '
           + 'style="color:inherit;text-decoration:none;border-bottom:1px dotted var(--gold)">' + esc(d.name) + '</a></div>'
@@ -6191,7 +6786,7 @@ function renderDropins(){
       + '</div><div style="text-align:right">'
         + '<div class="status-pill" style="background:rgba(182,165,136,0.16);color:var(--cream)">'
           + pplMoney(d.deposits_cents || d.spent_cents) + '</div>'
-        + (lapsed ? '<div style="font-size:0.62rem;color:#d68a8a;margin-top:0.3rem">gone quiet</div>' : '')
+        + (lapsed ? '<div style="font-size:0.62rem;color:#B42318;margin-top:0.3rem">gone quiet</div>' : '')
       + '</div></div></div>';
   }).join('') : emptyBox('👥','Nobody matches that.');
 }
@@ -6307,7 +6902,7 @@ function setInsightPeriod(p){
 function insChange(v){
   if(v == null) return '<div style="font-size:0.66rem;color:var(--muted);margin-top:0.3rem">no comparison yet</div>';
   const up = v >= 0;
-  return '<div style="font-size:0.68rem;margin-top:0.3rem;color:' + (up ? '#7ec98a' : '#d68a8a') + '">'
+  return '<div style="font-size:0.68rem;margin-top:0.3rem;color:' + (up ? '#067647' : '#B42318') + '">'
     + (up ? '▲' : '▼') + ' ' + Math.abs(v) + '% vs the period before</div>';
 }
 
@@ -6422,7 +7017,7 @@ async function loadPayoutsStripe(){
             + '</div>'
           : '')
       + (!d.payouts_enabled
-          ? '<div style="margin-top:1.2rem;background:rgba(214,102,102,0.12);border:1px solid rgba(214,102,102,0.4);padding:1rem 1.15rem;border-radius:10px;font-size:0.85rem;line-height:1.7;color:#ffb3b3">'
+          ? '<div style="margin-top:1.2rem;background:rgba(214,102,102,0.12);border:1px solid rgba(214,102,102,0.4);padding:1rem 1.15rem;border-radius:10px;font-size:0.85rem;line-height:1.7;color:#B42318">'
             + '<strong>Payouts are switched off.</strong> Money can still come in, but none of it reaches your bank until Stripe has what it needs'
             + ((d.currently_due || []).length ? ': ' + esc(d.currently_due.join(', ')) : '.')
             + '</div>'
@@ -6431,7 +7026,7 @@ async function loadPayoutsStripe(){
       + ((d.payouts || []).length
           ? d.payouts.map(function(p){
               const failed = /fail|cancel/i.test(p.status);
-              return '<div class="member-card" style="--mc:' + (failed ? '#d66' : '#7ec98a') + '">'
+              return '<div class="member-card" style="--mc:' + (failed ? '#D92D20' : '#067647') + '">'
                 + '<div class="mc-top"><div style="flex:1">'
                   + '<div class="mc-name">$' + Number(p.amount).toFixed(2) + '</div>'
                   + '<div class="mc-role">' + esc(p.date) + (p.failure ? ' · ' + esc(p.failure) : '') + '</div>'
@@ -6549,7 +7144,7 @@ async function loadRecords(){
       statCard(d.inventory_items||0, 'Inventory items'),
     ].join('')
       + ((d.unconfirmed && d.unconfirmed.count)
-          ? '<div class="stat-card" style="cursor:pointer;border-color:#d66" onclick="showDrill(\'Never paid a deposit\', RECORDS.unconfirmed.bookings, RECORDS.unconfirmed.cents)">'
+          ? '<div class="stat-card" style="cursor:pointer;border-color:#D92D20" onclick="showDrill(\'Never paid a deposit\', RECORDS.unconfirmed.bookings, RECORDS.unconfirmed.cents)">'
             + '<div class="stat-num">' + d.unconfirmed.count + '</div>'
             + '<div class="stat-label">Never paid</div>'
             + '<div style="font-size:0.64rem;color:var(--muted);margin-top:0.3rem">not counted anywhere</div></div>'
@@ -6619,7 +7214,7 @@ const cmoney = c => '$' + Math.round(Number(c||0)/100).toLocaleString('en-US');
 // 24-hour times are what the database holds; nobody reads a schedule that way.
 function time12(t){
   const s = String(t||'');
-  const p = s.match(/^(d{1,2}):(d{2})/);
+  const p = s.match(/^(\d{1,2}):(\d{2})/);
   if(!p) return s;
   let h = Number(p[1]);
   const ampm = h >= 12 ? 'pm' : 'am';
@@ -6792,7 +7387,7 @@ function closeDrill(){ document.getElementById('drill-veil').classList.remove('o
 function bookingRow(b){
   const paid = b.deposit_paid;
   const state = {
-    earned:'#7ec98a', upcoming:'#B6A588', unconfirmed:'#d66', cancelled:'#888', no_show:'#d66',
+    earned:'#067647', upcoming:'#B6A588', unconfirmed:'#D92D20', cancelled:'#888', no_show:'#D92D20',
   }[b.state] || '#B6A588';
   return '<div class="member-card" style="--mc:' + state + '">'
     + '<div class="mc-top"><div style="flex:1">'
@@ -6807,7 +7402,7 @@ function bookingRow(b){
     + '</div>'
     + '<div style="text-align:right">'
       + '<div class="status-pill" style="background:rgba(182,165,136,0.16);color:var(--cream)">' + cmoney(b.total_cents) + '</div>'
-      + '<div style="font-size:0.62rem;color:' + (paid ? '#7ec98a' : '#d68a8a') + ';margin-top:0.3rem">'
+      + '<div style="font-size:0.62rem;color:' + (paid ? '#067647' : '#B42318') + ';margin-top:0.3rem">'
         + (paid ? cmoney(b.deposit_cents) + ' deposit paid' : 'no deposit') + '</div>'
     + '</div></div></div>';
 }
@@ -6985,7 +7580,7 @@ async function renderEbSummary(){
       + '<div style="display:flex;gap:0.7rem;align-items:baseline;flex-wrap:wrap;margin-bottom:0.35rem">'
         + '<strong style="font-size:0.95rem;color:var(--cream)">' + esc(s.label) + '</strong>'
         + '<span style="font-size:0.6rem;letter-spacing:0.13em;text-transform:uppercase;border-radius:100px;'
-          + 'padding:0.2rem 0.55rem;border:1px solid ' + (live?'#7ec98a;color:#7ec98a':'var(--border-hi);color:var(--muted)') + '">'
+          + 'padding:0.2rem 0.55rem;border:1px solid ' + (live?'#067647;color:#067647':'var(--border-hi);color:var(--muted)') + '">'
           + (live ? 'Live now' : ('Not running' + (s.why ? ' — ' + esc(s.why) : ''))) + '</span>'
         + '<a href="#" onclick="event.preventDefault();showTab(\'earlybird\')" '
           + 'style="margin-left:auto;font-size:0.74rem;color:var(--gold);border-bottom:1px dotted var(--gold)">Edit</a>'
@@ -7095,13 +7690,13 @@ async function loadPromos(){
             '<div style="font-family:Cinzel,serif;font-size:1rem;color:var(--gold);letter-spacing:0.08em">'+esc(x.code)+'</div>',
             '<div style="font-size:0.68rem;color:var(--muted);line-height:1.6">'+worth+' on '+scope
               +(x.label?' · '+esc(x.label):'')+'<br>used '+used+'×'
-              +(cap ? ' · '+left+' of '+cap+' left' : ' · <span style="color:#d9a441">no limit on uses</span>')+'</div>',
+              +(cap ? ' · '+left+' of '+cap+' left' : ' · <span style="color:#B54708">no limit on uses</span>')+'</div>',
           '</div>',
           // The answer to the question she actually asked, on every row.
           '<span title="'+(repeats?'This discount comes off every single month, for as long as they stay':'They get this once, then pay full price')
             +'" style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;border-radius:100px;'
             +'padding:0.25rem 0.6rem;white-space:nowrap;border:1px solid '
-            +(repeats?'#d9a441;color:#d9a441':'#7ec98a;color:#7ec98a')+'">'
+            +(repeats?'#B54708;color:#B54708':'#067647;color:#067647')+'">'
             +(repeats?'Every month':'First time only')+'</span>',
           '<button class="btn btn-ghost btn-sm" onclick="setPromoDuration(&quot;'+code+'&quot;,'+(repeats?1:0)+')">'
             +(repeats?'Make it once':'Make it repeat')+'</button>',
@@ -7411,7 +8006,7 @@ async function loadPayMath(){
               + a.appointments + ' appointment' + (a.appointments === 1 ? '' : 's')
               + ' · <strong style="color:var(--cream)">' + mny(a.collected_cents) + '</strong> collected'
               + (a.tips_cents ? ' · ' + mny(a.tips_cents) + ' tips' : '')
-              + (a.unpaid_cents ? ' · <span style="color:#d9a441">' + mny(a.unpaid_cents) + ' not paid yet</span>' : '')
+              + (a.unpaid_cents ? ' · <span style="color:#B54708">' + mny(a.unpaid_cents) + ' not paid yet</span>' : '')
             + '</div>'
           + '</div>'
           + (a.rows.length
@@ -7427,7 +8022,7 @@ async function loadPayMath(){
                       + '<td style="padding:0.45rem 0.6rem;color:var(--muted)">' + esc(r.service) + '</td>'
                       + '<td style="padding:0.45rem 0.6rem;text-align:right;color:var(--muted)">' + mny(r.worth_cents) + '</td>'
                       + '<td style="padding:0.45rem 0.6rem;text-align:right;'
-                        + (r.collected_cents ? 'color:var(--cream)' : 'color:#d9a441') + '">'
+                        + (r.collected_cents ? 'color:var(--cream)' : 'color:#B54708') + '">'
                         + (r.collected_cents ? mny(r.collected_cents) : 'not paid') + '</td>'
                       + '<td style="padding:0.45rem 0 0.45rem 0.6rem;text-align:right;color:var(--muted)">'
                         + (r.tip_cents ? mny(r.tip_cents) : '—') + '</td>'
@@ -7503,7 +8098,7 @@ function renderCards(){
       + '<div class="page-title" style="font-size:1.05rem">Card on file</div>'
     + '</div></div>'
     + (has.length ? has.map(function(c){
-        return '<div class="member-card" style="--mc:#6ab07a">'
+        return '<div class="member-card" style="--mc:#067647">'
           + '<div class="mc-top"><div style="flex:1">'
             + '<div class="mc-name">' + (c.name ? clientLink(c.name, { id: c.id }) : '(no name)') + '</div>'
             + '<div style="font-size:0.78rem;color:var(--muted);margin-top:0.15rem">' + esc(c.card)
@@ -7799,13 +8394,13 @@ function renderMailLog(){
 
   el.innerHTML = rows.map(function(r){
     const when = new Date(Number(r.ts));
-    return '<div class="member-card" style="--mc:' + (Number(r.sent) ? '#B6A588' : '#e08a8a') + '">'
+    return '<div class="member-card" style="--mc:' + (Number(r.sent) ? '#B6A588' : '#B42318') + '">'
       + '<div class="mc-top"><div style="flex:1;min-width:0">'
         + '<div class="mc-name">' + esc(r.subject || '(no subject)') + '</div>'
         + '<div style="font-size:0.78rem;color:var(--muted);margin-top:0.15rem">'
           + esc(r.recipient || '') + ' · ' + esc(when.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))
           + (r.kind ? ' · ' + esc(r.kind) : '')
-          + (Number(r.sent) ? '' : ' · <span style="color:#e08a8a">did not send: ' + esc(r.detail || '') + '</span>')
+          + (Number(r.sent) ? '' : ' · <span style="color:#B42318">did not send: ' + esc(r.detail || '') + '</span>')
         + '</div></div>'
         + '<button class="btn btn-ghost btn-sm" onclick="openMail(' + r.id + ')">Read</button>'
       + '</div></div>';
@@ -8084,7 +8679,7 @@ async function loadClientHistory(id){
             + '</div>'
             + '<div style="text-align:right;min-width:82px">'
               + '<div style="font-size:0.85rem;color:var(--cream)">'+(x.total_cents==null?'—':cmoney(x.total_cents))+'</div>'
-              + (x.deposit_paid?'<div style="font-size:0.65rem;color:#7ec98a">'+cmoney(x.deposit_cents)+' deposit paid</div>':'')
+              + (x.deposit_paid?'<div style="font-size:0.65rem;color:#067647">'+cmoney(x.deposit_cents)+' deposit paid</div>':'')
             + '</div></div>';
         }).join('');
   }catch(_){ el.innerHTML='<div class="empty" style="padding:1rem">Could not load her visits.</div>'; }
@@ -8133,8 +8728,8 @@ function renderProviderStatus(){
   if(noteEl){
     noteEl.innerHTML=PROVIDERS.from_email
       ? (sandbox
-          ? '<span style="color:#e0a06a">Sending as <strong>'+esc(PROVIDERS.from_email)+'</strong> — Resend\'s test address. Set yours above so clients receive mail.</span>'
-          : '<span style="color:#7ec98a">Sending as <strong>'+esc(PROVIDERS.from_email)+'</strong> ✓</span>')
+          ? '<span style="color:#B54708">Sending as <strong>'+esc(PROVIDERS.from_email)+'</strong> — Resend\'s test address. Set yours above so clients receive mail.</span>'
+          : '<span style="color:#067647">Sending as <strong>'+esc(PROVIDERS.from_email)+'</strong> ✓</span>')
       : '';
   }
   document.getElementById('key-sms').innerHTML='📱 Text delivery: '+(PROVIDERS.sms?'<span class="key-on">ON — sending live ✦</span>':'<span class="key-off">OFF — paste your Twilio values below</span>');
@@ -8173,7 +8768,7 @@ async function loadApplePayStatus(){
   try{ d = await (await api('/api/manager?action=apple_pay_status')).json(); }
   catch(_){ box.innerHTML = '<span style="color:var(--muted)">Could not check Apple Pay just now.</span>'; return; }
 
-  const tick = ok => ok ? '<span style="color:#7ec98a">✓</span>' : '<span style="color:#e08a8a">✗</span>';
+  const tick = ok => ok ? '<span style="color:#067647">✓</span>' : '<span style="color:#B42318">✗</span>';
   box.innerHTML =
     '<div style="font-size:0.92rem;color:var(--cream);margin-bottom:0.4rem">'
       + (d.ready ? '🍎 Apple Pay is on ✦' : '🍎 Apple Pay is not on yet') + '</div>'
@@ -8519,6 +9114,769 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 async function copy(text,msg){try{await navigator.clipboard.writeText(text);toast(msg||'Copied');}catch{toast('Copy failed');}}
 
 /* ── INIT ── */
+
+/* ══════════════════════════════════════════════════════════════════════
+   THE MENU
+   ══════════════════════════════════════════════════════════════════════ */
+const ICONS = {
+  home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/>',
+  inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  dollar: '<path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  megaphone: '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
+  chart: '<path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>',
+  globe: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+  briefcase: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  chev: '<path d="m9 18 6-6-6-6"/>',
+  menu: '<path d="M3 6h18M3 12h18M3 18h18"/>',
+  mail: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>',
+  message: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  zap: '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>',
+  tag: '<path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.5"/>',
+  gift: '<path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>',
+  pin: '<path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+  target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98"/>',
+  sparkle: '<path d="M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z"/>',
+  instagram: '<rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/>',
+};
+function paintIcons(root){
+  (root || document).querySelectorAll('[data-i]').forEach(function(el){
+    if(el.dataset.painted || !ICONS[el.dataset.i]) return;
+    el.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[el.dataset.i] + '</svg>';
+    el.dataset.painted = '1';
+  });
+}
+function icon(name){ return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[name] || '') + '</svg>'; }
+
+function toggleNavGroup(g, force){
+  const el = document.querySelector('.nav-group[data-group="' + g + '"]');
+  if(!el) return;
+  const open = (force === undefined) ? !el.classList.contains('open') : !!force;
+  el.classList.toggle('open', open);
+  try{
+    const s = JSON.parse(localStorage.getItem('zm_nav_open') || '{}');
+    s[g] = open;
+    localStorage.setItem('zm_nav_open', JSON.stringify(s));
+  }catch(_){}
+  syncNavDots();
+}
+function openNav(){ document.body.classList.add('nav-open'); }
+function closeNav(){ document.body.classList.remove('nav-open'); }
+
+// The group holding the open screen opens with it, and the top bar says
+// where she is.
+function syncNav(name){
+  document.querySelectorAll('nav.tabs .nav-group').forEach(function(g){
+    const has = !!g.querySelector('.tab[data-tab="' + name + '"]');
+    g.querySelector('.nav-head').classList.toggle('has-active', has);
+    if(has) g.classList.add('open');
+  });
+  const label = document.querySelector('.tab[data-tab="' + name + '"] .nl');
+  const crumb = document.getElementById('crumb');
+  if(crumb) crumb.textContent = label ? label.textContent : '';
+  syncNavDots();
+}
+// A closed group still shows a red dot when something inside it wants her.
+function syncNavDots(){
+  document.querySelectorAll('nav.tabs .nav-group').forEach(function(g){
+    const any = Array.prototype.some.call(g.querySelectorAll('.nav-kids .dot'), function(d){
+      return d.style.display && d.style.display !== 'none';
+    });
+    g.querySelector('.nav-head').classList.toggle('show-dot', any && !g.classList.contains('open'));
+  });
+}
+(function(){
+  paintIcons();
+  try{
+    const s = JSON.parse(localStorage.getItem('zm_nav_open') || '{}');
+    Object.keys(s).forEach(function(g){ if(s[g]) { const el = document.querySelector('.nav-group[data-group="' + g + '"]'); if(el) el.classList.add('open'); } });
+  }catch(_){}
+  setInterval(syncNavDots, 2500);
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeNav(); });
+})();
+
+/* ── small shared pieces ── */
+const hmMoney = c => '$' + ((Number(c) || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: (Number(c) % 100 ? 2 : 0), maximumFractionDigits: 2 });
+const num = n => (Number(n) || 0).toLocaleString('en-US');
+function ago(ts){
+  ts = Number(ts) || 0;
+  if(!ts) return 'never';
+  const s = Math.round((Date.now() - ts) / 1000);
+  if(s < 60) return 'just now';
+  if(s < 3600) return Math.round(s / 60) + ' min ago';
+  if(s < 86400) return Math.round(s / 3600) + ' hr ago';
+  const d = Math.round(s / 86400);
+  return d === 1 ? 'yesterday' : d + ' days ago';
+}
+function shortDay(ds){
+  const d = new Date(ds + 'T12:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+function trend(cur, prev, higherIsBetter){
+  cur = Number(cur) || 0; prev = Number(prev) || 0;
+  const good = higherIsBetter !== false;
+  if(!cur && !prev) return '<span class="trend flat">No change</span>';
+  if(!prev) return '<span class="trend ' + (good ? 'up' : 'down') + '">▲ New</span>';
+  const p = Math.round((cur - prev) / prev * 100);
+  if(p === 0) return '<span class="trend flat">No change</span>';
+  const up = p > 0;
+  return '<span class="trend ' + ((up === good) ? 'up' : 'down') + '">' + (up ? '▲ ' : '▼ ') + Math.abs(p) + '%</span>';
+}
+function loadingCard(h){ return '<div class="skel" style="height:' + (h || 90) + 'px"></div>'; }
+function errLine(msg){ return '<div class="al-row warning"><span class="al-ic">!</span><div class="al-txt"><b>Could not load this</b><p>' + esc(msg) + ' — press Refresh to try again.</p></div></div>'; }
+
+/* A simple line chart. Hover a point to see the day. */
+function lineChart(series, key, fmt){
+  fmt = fmt || num;
+  const W = 640, H = 220, pl = 44, pr = 12, pt = 14, pb = 28;
+  const vals = series.map(s => Number(s[key]) || 0);
+  const max = Math.max(1, ...vals);
+  const n = Math.max(1, vals.length - 1);
+  const x = i => pl + (W - pl - pr) * i / n;
+  const y = v => pt + (H - pt - pb) * (1 - v / max);
+  const pts = vals.map((v, i) => x(i).toFixed(1) + ',' + y(v).toFixed(1));
+  let g = '';
+  [0, 0.5, 1].forEach(function(f){
+    const yy = y(max * f).toFixed(1);
+    g += '<line x1="' + pl + '" x2="' + (W - pr) + '" y1="' + yy + '" y2="' + yy + '" stroke="#EAECF0"/>'
+      + '<text x="' + (pl - 8) + '" y="' + (Number(yy) + 3) + '" text-anchor="end">' + esc(fmt(Math.round(max * f))) + '</text>';
+  });
+  [0, Math.floor(vals.length / 2), vals.length - 1].forEach(function(i){
+    if(!series[i]) return;
+    g += '<text x="' + x(i).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="' + (i === 0 ? 'start' : i === vals.length - 1 ? 'end' : 'middle') + '">' + esc(shortDay(series[i].day)) + '</text>';
+  });
+  const area = 'M' + x(0).toFixed(1) + ',' + (H - pb) + ' L' + pts.join(' L') + ' L' + x(vals.length - 1).toFixed(1) + ',' + (H - pb) + ' Z';
+  const dotsSvg = vals.map((v, i) => '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(v).toFixed(1) + '" r="' + (i === vals.length - 1 ? 3.5 : 2.2) + '" fill="#8A6A3F"><title>' + esc(shortDay(series[i].day) + ': ' + fmt(v)) + '</title></circle>').join('');
+  return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" style="height:auto">'
+    + '<defs><linearGradient id="lg-' + key + '" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#8A6A3F" stop-opacity="0.22"/><stop offset="1" stop-color="#8A6A3F" stop-opacity="0"/></linearGradient></defs>'
+    + g + '<path d="' + area + '" fill="url(#lg-' + key + ')"/>'
+    + '<polyline points="' + pts.join(' ') + '" fill="none" stroke="#8A6A3F" stroke-width="2" stroke-linejoin="round"/>' + dotsSvg + '</svg>';
+}
+function barChart(series, key){
+  const W = 640, H = 200, pl = 36, pr = 8, pt = 12, pb = 26;
+  const vals = series.map(s => Number(s[key]) || 0);
+  const max = Math.max(1, ...vals);
+  const bw = (W - pl - pr) / vals.length;
+  let g = '';
+  [0, 0.5, 1].forEach(function(f){
+    const yy = (pt + (H - pt - pb) * (1 - f)).toFixed(1);
+    g += '<line x1="' + pl + '" x2="' + (W - pr) + '" y1="' + yy + '" y2="' + yy + '" stroke="#EAECF0"/><text x="' + (pl - 6) + '" y="' + (Number(yy) + 3) + '" text-anchor="end">' + Math.round(max * f) + '</text>';
+  });
+  vals.forEach(function(v, i){
+    const h = (H - pt - pb) * v / max;
+    g += '<rect x="' + (pl + i * bw + bw * 0.18).toFixed(1) + '" y="' + (H - pb - h).toFixed(1) + '" width="' + (bw * 0.64).toFixed(1) + '" height="' + Math.max(v ? 2 : 0, h).toFixed(1) + '" rx="2" fill="#8A6A3F"><title>' + esc(shortDay(series[i].day) + ': ' + v) + '</title></rect>';
+  });
+  [0, vals.length - 1].forEach(function(i){
+    g += '<text x="' + (pl + i * bw + bw / 2).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="' + (i ? 'end' : 'start') + '">' + esc(shortDay(series[i].day)) + '</text>';
+  });
+  return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" style="height:auto">' + g + '</svg>';
+}
+function ring(pct, color){
+  const r = 26, c = 2 * Math.PI * r, p = Math.max(0, Math.min(100, Number(pct) || 0));
+  return '<svg class="ring" viewBox="0 0 64 64"><circle cx="32" cy="32" r="' + r + '" fill="none" stroke="#EAECF0" stroke-width="7"/>'
+    + '<circle cx="32" cy="32" r="' + r + '" fill="none" stroke="' + (color || '#067647') + '" stroke-width="7" stroke-linecap="round" stroke-dasharray="' + (c * p / 100).toFixed(1) + ' ' + c.toFixed(1) + '" transform="rotate(-90 32 32)"/>'
+    + '<text x="32" y="37" text-anchor="middle" font-size="15" font-weight="700" fill="#101828">' + Math.round(p) + '</text></svg>';
+}
+function openViewer(title, sub, html){
+  document.getElementById('drill-box').innerHTML =
+    '<div class="drill-head"><div><div class="drill-title">' + esc(title) + '</div>'
+    + (sub ? '<div class="drill-sub">' + esc(sub) + '</div>' : '') + '</div>'
+    + '<button class="drill-x" onclick="closeDrill()" aria-label="Close">×</button></div>'
+    + '<div class="drill-body">' + html + '</div>';
+  document.getElementById('drill-veil').classList.add('open');
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   HOME
+   ══════════════════════════════════════════════════════════════════════ */
+let HOME = null, ALERTS = null, HOME_METRIC = 'visitors';
+
+async function loadHomeTop(){
+  const el = document.getElementById('home-top');
+  if(!el) return;
+  renderHomeFrame();
+  loadAlerts().then(renderAlerts);
+  try{
+    const d = await (await api('/api/dashboard?action=home')).json();
+    if(d.error) throw new Error(d.error);
+    HOME = d;
+    renderHomeNumbers();
+  }catch(err){
+    const k = document.getElementById('hm-kpis');
+    if(k) k.innerHTML = errLine(err.message);
+  }
+}
+
+function renderHomeFrame(){
+  const el = document.getElementById('home-top');
+  if(el.dataset.framed) return;
+  el.dataset.framed = '1';
+  const h = new Date().getHours();
+  const hello = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  el.innerHTML =
+    '<div class="hm-head"><div><div class="hm-hello">' + hello + ', Zahra</div>'
+      + '<div class="hm-date">' + new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) + ' · here is how the studio is doing</div></div>'
+      + '<div class="hm-actions">'
+        + '<button class="btn btn-gold" onclick="homeNewBooking()">+ New booking</button>'
+        + '<button class="btn btn-ghost" onclick="showTab(\'marketing\')">Send a campaign</button>'
+        + '<button class="btn btn-ghost" onclick="showTab(\'coupons\')">Create a coupon</button>'
+        + '<a class="btn btn-ghost" href="index.html" target="_blank" rel="noopener">View site ↗</a>'
+      + '</div></div>'
+    + '<div class="card" style="margin-bottom:1rem"><div class="card-h"><div class="card-t">Needs attention</div><div id="al-pills"></div>'
+      + '<div class="sp"><span class="card-s" id="al-when"></span><button class="btn btn-ghost btn-sm" onclick="loadAlerts(true).then(renderAlerts)">Check now</button></div></div>'
+      + '<div id="al-body">' + loadingCard(56) + '</div></div>'
+    + '<div class="kpis" id="hm-kpis">' + [1,2,3,4,5,6].map(() => '<div class="kpi">' + loadingCard(70) + '</div>').join('') + '</div>'
+    + '<div class="hm-grid">'
+      + '<div class="card"><div class="card-h"><div class="card-t" id="hm-chart-t">Site visitors · last 30 days</div>'
+        + '<div class="sp"><div class="seg" id="hm-seg">'
+          + '<button class="on" data-m="visitors" onclick="homeMetric(\'visitors\')">Visitors</button>'
+          + '<button data-m="bookings" onclick="homeMetric(\'bookings\')">Bookings</button>'
+          + '<button data-m="cents" onclick="homeMetric(\'cents\')">Money in</button>'
+        + '</div></div></div><div id="hm-chart">' + loadingCard(200) + '</div></div>'
+      + '<div class="card"><div class="card-h"><div class="card-t">Where visitors come from</div><div class="card-s">last 7 days</div></div><div id="hm-sources">' + loadingCard(160) + '</div></div>'
+    + '</div>'
+    + '<div class="sec-t">Studio today</div>';
+}
+
+function renderHomeNumbers(){
+  const d = HOME; if(!d) return;
+  const k = document.getElementById('hm-kpis');
+  const card = (tab, label, value, today, yesterday, l7, p7, extra) =>
+    '<button class="kpi" onclick="showTab(\'' + tab + '\')">'
+      + '<div class="kpi-l">' + label + '</div>'
+      + '<div class="kpi-v">' + value + '</div>'
+      + '<div class="kpi-row">' + trend(today, yesterday) + '<span>vs yesterday (' + extra(yesterday) + ')</span></div>'
+      + '<div class="kpi-sub">Last 7 days: <b style="color:var(--ink)">' + extra(l7) + '</b> ' + trend(l7, p7) + '</div>'
+    + '</button>';
+  const V = d.visitors, P = d.pageviews, B = d.bookings, C = d.collected;
+  k.innerHTML =
+      card('traffic', 'Site visitors today', num(V.today), V.today, V.yesterday, V.last7, V.prev7, num)
+    + card('traffic', 'Page views today', num(P.today), P.today, P.yesterday, P.last7, P.prev7, num)
+    + card('bookings', 'New bookings today', num(B.today), B.today, B.yesterday, B.last7, B.prev7, num)
+    + card('payouts', 'Money in today', hmMoney(C.today), C.today, C.yesterday, C.last7, C.prev7, hmMoney)
+    + '<button class="kpi" onclick="showTab(\'aiperf\')"><div class="kpi-l">AI bot visits · 7 days</div>'
+      + '<div class="kpi-v">' + num(d.ai_crawls.last7) + '</div>'
+      + '<div class="kpi-row">' + trend(d.ai_crawls.last7, d.ai_crawls.prev7) + '<span>vs the 7 days before</span></div>'
+      + '<div class="kpi-sub">Last 30 days: <b style="color:var(--ink)">' + num(d.ai_crawls.last30) + '</b></div></button>'
+    + '<button class="kpi" onclick="showTab(\'deposits\')"><div class="kpi-l">Deposits still to come in</div>'
+      + '<div class="kpi-v">' + hmMoney(d.deposits_waiting.cents) + '</div>'
+      + '<div class="kpi-row"><span class="trend ' + (d.deposits_waiting.count ? 'flat' : 'up') + '">' + (d.deposits_waiting.count ? d.deposits_waiting.count + ' appointment' + (d.deposits_waiting.count === 1 ? '' : 's') : '✓ All paid') + '</span></div>'
+      + '<div class="kpi-sub">On upcoming appointments</div></button>';
+  if(d.money_error) k.insertAdjacentHTML('beforeend', '<div class="muted" style="font-size:0.76rem;grid-column:1/-1">Card takings could not be read: ' + esc(d.money_error) + '</div>');
+  homeMetric(HOME_METRIC);
+
+  const src = document.getElementById('hm-sources');
+  const bars = (list, total) => '<div class="bar-list">' + list.map(s =>
+    '<div class="bar-item"><span>' + esc(s.name) + '</span><b>' + num(s.count) + '</b><div class="bt"><i style="width:' + Math.round(s.count / total * 100) + '%"></i></div></div>').join('') + '</div>';
+  if(!d.sources.length && !d.top_pages.length){
+    src.innerHTML = '<div class="muted" style="font-size:0.84rem;line-height:1.6">No visits counted in the last 7 days yet. '
+      + (d.last_view_ts ? 'The last one was ' + ago(d.last_view_ts) + '.' : 'Counting starts with the next visit.') + '</div>';
+  } else {
+    const tot = Math.max(1, d.sources.reduce((s, x) => s + x.count, 0));
+    const ptot = Math.max(1, d.top_pages.reduce((s, x) => s + x.count, 0));
+    src.innerHTML = bars(d.sources, tot)
+      + '<div class="card-t" style="font-size:0.88rem;margin:1rem 0 0.6rem">Most viewed pages</div>'
+      + bars(d.top_pages.map(p => ({ name: String(p.name).replace(/\.html$/, '').replace(/^index$/, 'Homepage'), count: p.count })), ptot);
+  }
+}
+
+function homeMetric(m){
+  HOME_METRIC = m;
+  document.querySelectorAll('#hm-seg button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+  const t = document.getElementById('hm-chart-t');
+  if(t) t.textContent = ({ visitors: 'Site visitors', bookings: 'New bookings', cents: 'Money in' })[m] + ' · last 30 days';
+  const el = document.getElementById('hm-chart');
+  if(!el || !HOME) return;
+  el.innerHTML = lineChart(HOME.series, m, m === 'cents' ? (v => hmMoney(v)) : num);
+}
+
+function homeNewBooking(){
+  showTab('schedule');
+  setTimeout(function(){ if(typeof openApptModal === 'function') openApptModal(); }, 60);
+}
+
+async function loadAlerts(){
+  try{
+    const d = await (await api('/api/dashboard?action=alerts')).json();
+    if(d.error) throw new Error(d.error);
+    ALERTS = d;
+  }catch(err){
+    ALERTS = { error: String(err.message || err), alerts: [], counts: {} };
+  }
+  paintAlertFlag();
+  return ALERTS;
+}
+function paintAlertFlag(){
+  const c = (ALERTS && ALERTS.counts) || {};
+  const urgent = (c.critical || 0) + (c.warning || 0);
+  const flag = document.getElementById('al-flag');
+  if(flag){
+    flag.classList.toggle('on', urgent > 0);
+    flag.innerHTML = '⚠ ' + urgent + (window.innerWidth < 600 ? '' : ' need' + (urgent === 1 ? 's' : '') + ' attention');
+    flag.style.background = c.critical ? '' : 'var(--warn-bg)';
+    flag.style.color = c.critical ? '' : 'var(--warn)';
+    flag.style.borderColor = c.critical ? '' : '#FEDF89';
+  }
+  const dot = document.getElementById('home-dot');
+  if(dot){ dot.style.display = urgent ? 'inline-block' : 'none'; dot.textContent = urgent; }
+}
+function renderAlerts(){
+  const body = document.getElementById('al-body');
+  if(!body || !ALERTS) return;
+  const pills = document.getElementById('al-pills');
+  const when = document.getElementById('al-when');
+  if(when) when.textContent = 'Checked ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  if(ALERTS.error){ body.innerHTML = errLine(ALERTS.error); return; }
+  const c = ALERTS.counts || {};
+  if(pills) pills.innerHTML = (c.critical ? '<span class="pill crit">' + c.critical + ' urgent</span> ' : '')
+    + (c.warning ? '<span class="pill warn">' + c.warning + ' to look at</span> ' : '')
+    + (c.info ? '<span class="pill grey">' + c.info + ' for your info</span>' : '');
+  const list = ALERTS.alerts || [];
+  if(!list.some(a => a.level !== 'info')){
+    body.innerHTML = '<div class="al-ok"><span class="al-ic">✓</span><div>Everything important is working — payments, emails, the booking calendar and your website were all checked just now.</div></div>'
+      + (list.length ? '<div class="al-list" style="margin-top:0.5rem">' + list.map(alertRow).join('') + '</div>' : '');
+    return;
+  }
+  body.innerHTML = '<div class="al-list">' + list.map(alertRow).join('') + '</div>';
+}
+function alertRow(a){
+  return '<div class="al-row ' + esc(a.level) + '"><span class="al-ic">' + (a.level === 'info' ? 'i' : '!') + '</span>'
+    + '<div class="al-txt"><b>' + esc(a.title) + '</b><p>' + esc(a.detail) + '</p></div>'
+    + (a.tab ? '<button class="btn btn-ghost btn-sm" onclick="showTab(\'' + esc(a.tab) + '\')">' + esc(a.cta || 'Open') + '</button>' : '')
+    + '</div>';
+}
+setInterval(function(){ if(PWD) loadAlerts().then(function(){ if(currentTab() === 'overview') renderAlerts(); }); }, 10 * 60000);
+
+/* ══════════════════════════════════════════════════════════════════════
+   MARKETING
+   ══════════════════════════════════════════════════════════════════════ */
+let MKT = null;
+async function loadMktHome(){
+  const tiles = document.getElementById('mkt-tiles');
+  try{
+    const d = await (await api('/api/growth?action=overview')).json();
+    if(d.error) throw new Error(d.error);
+    MKT = d;
+  }catch(err){ tiles.innerHTML = errLine(err.message); return; }
+  const d = MKT, s = d.settings || {};
+
+  document.getElementById('mkt-stats').innerHTML = [
+    ['Emails sent', num(d.email.sent_30d), 'last 30 days' + (d.email.failed_30d ? ' · ' + d.email.failed_30d + ' failed' : ''), 'maillog'],
+    ['Campaign emails', num(d.email.campaign_recipients_90d || 0), (d.email.campaigns_90d || 0) + ' campaigns · 90 days', 'marketing'],
+    ['Campaign texts', num(d.sms.sent_90d || 0), (d.sms.campaigns_90d || 0) + ' campaigns · 90 days', 'marketing'],
+    ['Coupon uses', num(d.coupons.uses), d.coupons.active + ' active code' + (d.coupons.active === 1 ? '' : 's'), 'coupons'],
+    ['Friends referred', num(d.referrals.total), d.referrals.completed + ' joined', 'referrals'],
+  ].map(x => '<button class="kpi" onclick="showTab(\'' + x[3] + '\')"><div class="kpi-l">' + x[0] + '</div><div class="kpi-v">' + x[1] + '</div><div class="kpi-sub">' + esc(x[2]) + '</div></button>').join('');
+
+  const T = o => '<div class="tile"><div class="tile-top"><div class="tile-ic">' + icon(o.icon) + '</div><div style="flex:1;min-width:0">'
+      + '<div class="tile-t">' + esc(o.title) + (o.status ? ' <span class="pill ' + o.status[0] + '">' + esc(o.status[1]) + '</span>' : '') + '</div>'
+      + '<div class="tile-d">' + o.desc + '</div></div></div>'
+      + (o.note ? '<div class="tile-note">' + o.note + '</div>' : '')
+      + (o.form || '')
+      + '<div class="tile-acts">' + (o.acts || []).map(a => a.href
+          ? '<a class="btn ' + (a.primary ? 'btn-gold' : 'btn-ghost') + ' btn-sm" href="' + a.href + '" target="_blank" rel="noopener">' + esc(a.label) + ' ↗</a>'
+          : '<button class="btn ' + (a.primary ? 'btn-gold' : 'btn-ghost') + ' btn-sm" onclick="' + a.on + '">' + esc(a.label) + '</button>').join('') + '</div>'
+    + '</div>';
+  const field = (key, label, ph) => '<div><label class="fld-label">' + label + '</label><input id="mk-' + key + '" value="' + esc(s[key] || '') + '" placeholder="' + esc(ph) + '" /></div>';
+  const smsOn = !!(PROVIDERS && PROVIDERS.sms);
+
+  tiles.innerHTML = [
+    T({ icon: 'mail', title: 'Email marketing', status: ['ok', 'Connected'],
+        desc: 'Send an offer, an update or a newsletter to all your clients or just the ones you pick.',
+        acts: [{ label: 'Create email campaign', on: "showTab('marketing')", primary: true }, { label: 'Emails sent', on: "showTab('maillog')" }] }),
+    T({ icon: 'message', title: 'Text message campaigns', status: smsOn ? ['ok', 'Connected'] : ['warn', 'Not connected'],
+        desc: 'Short texts for last-minute openings, $75 Tuesdays reminders and offers. Clients read texts within minutes.',
+        acts: smsOn ? [{ label: 'Create text campaign', on: "showTab('marketing')", primary: true }] : [{ label: 'Connect texting', on: "showTab('settings')", primary: true }] }),
+    T({ icon: 'zap', title: 'Automated emails', status: ['ok', 'On'],
+        desc: 'Booking confirmations, deposit reminders and follow-ups that send themselves. Edit the wording any time.',
+        acts: [{ label: 'Manage automations', on: "showTab('autoemail')", primary: true }] }),
+    T({ icon: 'tag', title: 'Coupons', status: d.coupons.active ? ['ok', d.coupons.active + ' active'] : ['grey', 'None active'],
+        desc: 'Codes for trainees, friends and promotions, plus the automatic Early Bird discount.',
+        acts: [{ label: 'Create a coupon', on: "showTab('coupons')", primary: true }] }),
+    T({ icon: 'gift', title: 'Referral program', status: ['grey', d.referrals.total + ' referral' + (d.referrals.total === 1 ? '' : 's')],
+        desc: 'Members share a personal invite link from their portal. Friends who join through it are tracked here.',
+        acts: [{ label: 'View referrals', on: "showTab('referrals')", primary: true }] }),
+    T({ icon: 'pin', title: 'Google Business Profile', status: s.mkt_gbp_url ? ['ok', 'Linked'] : ['warn', 'Not linked'],
+        desc: 'What shows on Google Maps and in Google search — hours, photos and reviews. Reviews are the single biggest thing Google\'s AI looks at.',
+        form: '<div class="form-row">' + field('mkt_gbp_url', 'Your profile link', 'https://g.page/…') + field('mkt_review_url', 'Your "leave a review" link', 'https://g.page/r/…/review') + '</div>',
+        acts: [{ label: 'Save', on: "saveMkt(['mkt_gbp_url','mkt_review_url'])", primary: true },
+               { label: 'Open Business Profile', href: 'https://business.google.com/' }]
+               .concat(s.mkt_review_url ? [{ label: 'Copy review link', on: 'copyText(' + JSON.stringify(s.mkt_review_url).replace(/"/g, '&quot;') + ')' }] : []) }),
+    T({ icon: 'target', title: 'Facebook & Instagram ads', status: s.mkt_meta_pixel_id ? ['ok', 'Tracking bookings'] : ['grey', 'Not connected'],
+        desc: 'Create and pay for ads in Meta Ads Manager. Add your Pixel ID below and the website tells Meta every time someone books, so you can see which ads bring clients in.',
+        note: '<b>No Apple fee:</b> boosting a post inside the Instagram or Facebook iPhone app is billed through Apple, which adds its fee. Make and pay for ads in <b>Ads Manager in a web browser</b> instead (Safari or Chrome, phone or computer) — same ads, no Apple fee. Add your card once under <b>Billing &amp; payments</b> and every ad charges it.',
+        form: '<div class="form-row">' + field('mkt_meta_pixel_id', 'Meta Pixel ID', '1234567890123456') + '</div>',
+        acts: [{ label: 'Save', on: "saveMkt(['mkt_meta_pixel_id'])", primary: true },
+               { label: 'Open Ads Manager', href: 'https://adsmanager.facebook.com/adsmanager/manage/campaigns' },
+               { label: 'Add or change card', href: 'https://business.facebook.com/billing_hub/payment_settings' },
+               { label: 'Find my Pixel ID', href: 'https://business.facebook.com/events_manager2/list/pixel' }] }),
+    T({ icon: 'chart', title: 'Google Ads', status: s.mkt_google_ads_id ? ['ok', 'Tracking bookings'] : ['grey', 'Not connected'],
+        desc: 'Show up at the top of Google when people search for nails near Porterville. Add your Google Ads ID and bookings are reported back as conversions.',
+        form: '<div class="form-row">' + field('mkt_google_ads_id', 'Google Ads ID', 'AW-123456789') + field('mkt_google_tag_id', 'Google Analytics ID (optional)', 'G-AB12CD34EF') + '</div>',
+        acts: [{ label: 'Save', on: "saveMkt(['mkt_google_ads_id','mkt_google_tag_id'])", primary: true },
+               { label: 'Open Google Ads', href: 'https://ads.google.com/' }] }),
+    T({ icon: 'instagram', title: 'Social media', status: ['ok', 'Linked'],
+        desc: 'Your profiles, and a free way to plan Instagram and Facebook posts ahead of time.',
+        form: '<div class="form-row">' + field('mkt_instagram', 'Instagram', 'https://www.instagram.com/…') + field('mkt_tiktok', 'TikTok', 'https://www.tiktok.com/@…') + field('mkt_facebook', 'Facebook page', 'https://www.facebook.com/…') + '</div>',
+        acts: [{ label: 'Save', on: "saveMkt(['mkt_instagram','mkt_tiktok','mkt_facebook'])", primary: true },
+               { label: 'Plan posts (Meta Business Suite)', href: 'https://business.facebook.com/latest/content_calendar' }] }),
+    T({ icon: 'sparkle', title: 'SEO & AI visibility', status: ['info', 'New'],
+        desc: 'How often ChatGPT, Claude and Google\'s AI read your site, and whether they recommend ZOLA when someone asks.',
+        acts: [{ label: 'Open AI performance', on: "showTab('aiperf')", primary: true }] }),
+  ].join('');
+
+  const rec = document.getElementById('mkt-recent');
+  rec.innerHTML = (d.campaigns || []).length
+    ? '<div class="tbl-wrap"><table class="tbl"><tr><th>Sent</th><th>Type</th><th>Campaign</th><th>Delivered</th></tr>'
+      + d.campaigns.map(c => '<tr><td>' + (c.sent_ts ? new Date(c.sent_ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—') + '</td>'
+        + '<td>' + (c.channel === 'sms' ? 'Text' : 'Email') + '</td><td>' + esc(c.title || '(no subject)') + '</td>'
+        + '<td>' + num(c.sent) + (c.failed ? ' <span class="pill crit">' + c.failed + ' failed</span>' : '') + '</td></tr>').join('')
+      + '</table></div>'
+    : '<div class="muted" style="font-size:0.85rem">No campaigns sent yet. <a href="#" onclick="event.preventDefault();showTab(\'marketing\')" style="color:var(--accent-ink);font-weight:600">Create your first one →</a></div>';
+}
+
+async function saveMkt(keys){
+  const settings = {};
+  keys.forEach(k => { const el = document.getElementById('mk-' + k); if(el) settings[k] = el.value.trim(); });
+  try{
+    const r = await api('/api/growth?action=save', { method: 'POST', body: JSON.stringify({ action: 'save', settings }) });
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.error || 'Could not save');
+    toast('Saved ✓');
+    loadMktHome();
+  }catch(err){ toast(err.message); }
+}
+function copyText(t){
+  try{ navigator.clipboard.writeText(t).then(() => toast('Copied ✓'), () => prompt('Copy this:', t)); }
+  catch(_){ prompt('Copy this:', t); }
+}
+
+function loadCoupons(){
+  if(typeof loadPromos === 'function') loadPromos();
+  if(typeof loadClientRates === 'function') loadClientRates();
+}
+
+async function loadReferrals(){
+  let d;
+  try{
+    d = await (await api('/api/growth?action=overview')).json();
+    if(d.error) throw new Error(d.error);
+  }catch(err){ document.getElementById('ref-recent').innerHTML = errLine(err.message); return; }
+  const R = d.referrals || {};
+  document.getElementById('ref-stats').innerHTML = [
+    ['Members with an invite link', num(R.members_with_code)],
+    ['Friends referred', num(R.total)],
+    ['Joined', num(R.completed)],
+    ['Still deciding', num(R.pending)],
+  ].map(x => '<div class="kpi" style="cursor:default"><div class="kpi-l">' + x[0] + '</div><div class="kpi-v">' + x[1] + '</div></div>').join('');
+  document.getElementById('ref-reward').value = (d.settings || {}).mkt_referral_reward || '';
+  document.getElementById('ref-recent').innerHTML = (R.recent || []).length
+    ? '<div class="tbl-wrap"><table class="tbl"><tr><th>Member</th><th>Friend</th><th>Status</th><th>When</th></tr>'
+      + R.recent.map(r => '<tr><td>' + esc(r.referrer) + '</td><td>' + esc(r.friend || '—') + '</td><td>'
+        + (String(r.status).toUpperCase() === 'COMPLETED' ? '<span class="pill ok">Joined</span>' : '<span class="pill grey">Invited</span>')
+        + '</td><td>' + esc(String(r.when || '').slice(0, 10)) + '</td></tr>').join('') + '</table></div>'
+    : '<div class="muted" style="font-size:0.85rem;line-height:1.6">No referrals yet. Remind members their invite link is in their client portal — a quick campaign to members is the easiest way.</div>';
+  document.getElementById('ref-top').innerHTML = (R.top || []).length
+    ? '<div class="bar-list">' + R.top.map(t => '<div class="bar-item"><span>' + esc(t.name) + '</span><b>' + t.count + '</b><div class="bt"><i style="width:' + Math.round(t.count / Math.max(1, R.top[0].count) * 100) + '%"></i></div></div>').join('') + '</div>'
+    : '<div class="muted" style="font-size:0.84rem">Nobody yet.</div>';
+}
+async function saveReferralReward(){
+  try{
+    const r = await api('/api/growth?action=save', { method: 'POST', body: JSON.stringify({ action: 'save', settings: { mkt_referral_reward: document.getElementById('ref-reward').value.trim() } }) });
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.error || 'Could not save');
+    toast('Saved ✓');
+  }catch(err){ toast(err.message); }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   AI PERFORMANCE
+   ══════════════════════════════════════════════════════════════════════ */
+let AIP = null, AI_READY = null, AI_SERIES = 'ai', AI_PENDING = {};
+const AI_ENGINES = [
+  ['chatgpt', 'ChatGPT', q => 'https://chatgpt.com/?hints=search&q=' + encodeURIComponent(q)],
+  ['perplexity', 'Perplexity', q => 'https://www.perplexity.ai/search?q=' + encodeURIComponent(q)],
+  ['google', 'Google AI', q => 'https://www.google.com/search?udm=50&q=' + encodeURIComponent(q)],
+  ['claude', 'Claude', q => 'https://claude.ai/new?q=' + encodeURIComponent(q)],
+];
+const ENGINE_NAME = { chatgpt: 'ChatGPT', perplexity: 'Perplexity', google: 'Google AI', gemini: 'Gemini', copilot: 'Copilot', claude: 'Claude' };
+
+async function loadAiPerf(force){
+  try{
+    const d = await (await api('/api/ai-visibility?action=summary')).json();
+    if(d.error) throw new Error(d.error);
+    AIP = d;
+  }catch(err){ document.getElementById('ai-kpis').innerHTML = errLine(err.message); return; }
+  renderAiPerf();
+  if(force || !AI_READY) loadAiReadiness();
+}
+function renderAiPerf(){
+  const d = AIP; if(!d) return;
+  const C = d.crawls, V = d.visibility;
+  document.getElementById('ai-kpis').innerHTML =
+      '<div class="kpi" style="cursor:default"><div class="kpi-l">AI bot visits · 30 days</div><div class="kpi-v">' + num(C.totals.ai) + '</div>'
+      + '<div class="kpi-row">' + trend(C.totals.ai_last7, C.totals.ai_prev7) + '<span>last 7 days vs the 7 before</span></div></div>'
+    + '<div class="kpi" style="cursor:default"><div class="kpi-l">Search engine visits · 30 days</div><div class="kpi-v">' + num(C.totals.search) + '</div>'
+      + '<div class="kpi-sub">Google, Bing and Apple reading your pages</div></div>'
+    + '<div class="kpi" style="cursor:default"><div class="kpi-l">AI recommends ZOLA</div><div class="kpi-v">' + (V.score === null ? '—' : V.score + '%') + '</div>'
+      + '<div class="kpi-sub">' + (V.tested ? V.mentioned + ' of ' + V.tested + ' answers mention you' : 'Run the visibility test below') + '</div></div>'
+    + '<div class="kpi" style="cursor:default" id="ai-ready-kpi"><div class="kpi-l">AI readiness</div><div class="kpi-v">' + (AI_READY ? AI_READY.score + '%' : '…') + '</div>'
+      + '<div class="kpi-sub">' + (AI_READY ? AI_READY.checks.filter(c => c.ok).length + ' of ' + AI_READY.checks.length + ' checks passed' : 'Checking…') + '</div></div>';
+
+  document.getElementById('ai-since').textContent = C.counting_since ? 'Counting since ' + new Date(C.counting_since).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+  aiSeries(AI_SERIES);
+
+  const bots = C.bots.filter(b => b.kind === AI_SERIES);
+  document.getElementById('ai-bots').innerHTML = C.bots.length
+    ? '<div class="tbl-wrap"><table class="tbl"><tr><th>Who</th><th>Visits</th><th>Last visit</th></tr>'
+      + C.bots.map(b => '<tr><td>' + esc(b.bot) + ' <span class="pill ' + (b.kind === 'ai' ? 'info' : 'grey') + '">' + (b.kind === 'ai' ? 'AI' : 'Search') + '</span></td><td>' + num(b.count) + '</td><td>' + ago(b.last_ts) + '</td></tr>').join('')
+      + '</table></div>'
+      + (C.top_pages.length ? '<div class="card-t" style="font-size:0.86rem;margin:0.9rem 0 0.5rem">Pages AI reads most</div><div class="bar-list">'
+        + C.top_pages.map(p => '<div class="bar-item"><span>' + esc(p.path) + '</span><b>' + p.count + '</b><div class="bt"><i style="width:' + Math.round(p.count / C.top_pages[0].count * 100) + '%"></i></div></div>').join('') + '</div>' : '')
+    : '<div class="muted" style="font-size:0.84rem;line-height:1.6">No bots counted yet. AI assistants and search engines visit on their own schedule — usually within days. Everything that arrives from now on is counted here.</div>';
+  void bots;
+
+  const box = document.getElementById('ai-key-box');
+  box.innerHTML = d.ai_key_saved
+    ? '<div class="al-ok" style="margin-bottom:0.75rem"><span class="al-ic">✓</span><div>Automatic testing is connected. Each test asks Claude with live web search, like a client would. A test costs a few cents.</div></div>'
+    : '<div class="tile-note" style="margin-bottom:0.75rem"><b>Two ways to test.</b> Tap ChatGPT, Perplexity, Google AI or Claude on any question to ask it yourself, then mark whether ZOLA came up. '
+      + 'Or paste an Anthropic API key to test all of them automatically (a few cents each) — get one at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:var(--accent-ink);font-weight:600">console.anthropic.com</a>.'
+      + '<div class="form-row" style="margin-top:0.6rem"><div><input id="ai-key" type="password" placeholder="sk-ant-…" autocomplete="off" /></div><button class="btn btn-gold btn-sm" onclick="saveAiKey()">Save key</button></div></div>';
+  const runAll = document.getElementById('ai-run-all');
+  if(runAll) runAll.style.display = d.ai_key_saved ? '' : 'none';
+
+  const latestFor = q => V.latest.filter(r => r.question === q);
+  document.getElementById('ai-questions').innerHTML = d.questions.map(function(item, i){
+    const results = latestFor(item.q);
+    const chips = results.map(r => '<span class="res ' + (r.mentioned ? 'yes' : 'no') + (r.manual ? '' : ' clickable') + '"'
+      + (r.manual ? '' : ' onclick="showAiAnswer(' + r.id + ')" title="See the answer"')
+      + '>' + (r.mentioned ? '✓ ' : '✗ ') + esc(ENGINE_NAME[r.engine] || r.engine) + (r.mentioned && r.position ? ' #' + r.position : '') + '</span>').join(' ');
+    const pending = AI_PENDING[i];
+    return '<div class="q-row" id="aiq-' + i + '"><div class="q-top"><div class="q-text">' + esc(item.q) + '</div>'
+        + '<button class="icon-btn" title="Remove this question" onclick="removeAiQuestion(' + i + ')">×</button></div>'
+      + (chips ? '<div class="q-links">' + chips + '</div>' : '')
+      + '<div class="q-links">'
+        + (d.ai_key_saved ? '<button class="btn btn-gold btn-sm" onclick="runAiTest(' + i + ')">Test with AI</button>' : '')
+        + '<span class="muted" style="font-size:0.74rem">Ask it yourself:</span>'
+        + AI_ENGINES.map(e => '<a class="btn btn-ghost btn-sm" href="' + e[2](item.q) + '" target="_blank" rel="noopener" onclick="aiAsked(' + i + ',\'' + e[0] + '\')">' + e[1] + ' ↗</a>').join('')
+      + '</div>'
+      + (pending ? '<div class="q-links" style="background:var(--bg);border-radius:8px;padding:0.45rem 0.55rem"><span style="font-size:0.8rem;color:var(--ink)">Did ' + esc(ENGINE_NAME[pending]) + ' mention ZOLA?</span>'
+          + '<button class="btn btn-sm" onclick="recordAi(' + i + ',true)">Yes</button><button class="btn btn-sm" onclick="recordAi(' + i + ',false)">No</button>'
+          + '<button class="btn btn-ghost btn-sm" onclick="aiAsked(' + i + ',null)">Not now</button></div>' : '')
+      + '</div>';
+  }).join('');
+
+  document.getElementById('ai-competitors').innerHTML = V.competitors.length
+    ? '<div class="bar-list">' + V.competitors.map(c => '<div class="bar-item"><span>' + esc(c.name) + '</span><b>' + c.count + '</b><div class="bt"><i style="width:' + Math.round(c.count / V.competitors[0].count * 100) + '%;background:#98A2B3"></i></div></div>').join('') + '</div>'
+    : '<div class="muted" style="font-size:0.82rem">Run a few automatic tests to see which businesses AI recommends.</div>';
+}
+function aiSeries(kind, btn){
+  AI_SERIES = kind;
+  if(btn) document.querySelectorAll('#ai-seg button').forEach(b => b.classList.toggle('on', b === btn));
+  if(AIP) document.getElementById('ai-chart').innerHTML = barChart(AIP.crawls.series, kind);
+}
+async function loadAiReadiness(){
+  const el = document.getElementById('ai-ready');
+  el.innerHTML = loadingCard(180);
+  try{
+    const d = await (await api('/api/ai-visibility?action=readiness')).json();
+    if(d.error) throw new Error(d.error);
+    AI_READY = d;
+  }catch(err){ el.innerHTML = errLine(err.message); return; }
+  el.innerHTML = '<div class="score" style="margin-bottom:0.4rem">' + ring(AI_READY.score, AI_READY.score >= 80 ? '#067647' : AI_READY.score >= 50 ? '#F79009' : '#D92D20')
+      + '<div><b style="font-size:0.95rem">' + (AI_READY.score >= 80 ? 'AI bots can understand your site well' : AI_READY.score >= 50 ? 'A few things would help AI understand you' : 'AI bots struggle to understand your site') + '</b>'
+      + '<div class="muted" style="font-size:0.8rem">Checked the way ChatGPT\'s bot reads it — no JavaScript.</div></div></div>'
+    + AI_READY.checks.map(c => '<div class="chk"><span class="mk ' + (c.ok ? 'ok' : 'no') + '">' + (c.ok ? '✓' : '!') + '</span><div><b>' + esc(c.title) + '</b><p>' + esc(c.detail) + '</p></div></div>').join('');
+  if(AIP) renderAiPerf();
+}
+async function saveAiKey(){
+  const key = (document.getElementById('ai-key').value || '').trim();
+  if(!key){ toast('Paste the key first'); return; }
+  try{
+    const r = await api('/api/ai-visibility?action=save_key', { method: 'POST', body: JSON.stringify({ action: 'save_key', key }) });
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.error || 'Could not save');
+    toast('AI key saved ✓');
+    loadAiPerf();
+  }catch(err){ toast(err.message); }
+}
+function aiAsked(i, engine){
+  if(engine) AI_PENDING[i] = engine; else delete AI_PENDING[i];
+  // Drawn after the new tab opens, so the question is waiting when she comes back.
+  setTimeout(renderAiPerf, 150);
+}
+async function recordAi(i, yes){
+  const q = AIP.questions[i] && AIP.questions[i].q;
+  const engine = AI_PENDING[i];
+  if(!q || !engine) return;
+  try{
+    const r = await api('/api/ai-visibility?action=record', { method: 'POST', body: JSON.stringify({ action: 'record', question: q, engine, mentioned: !!yes }) });
+    if(!r.ok) throw new Error((await r.json()).error || 'Could not save');
+    delete AI_PENDING[i];
+    toast(yes ? 'Recorded — ZOLA was mentioned ✓' : 'Recorded');
+    loadAiPerf();
+  }catch(err){ toast(err.message); }
+}
+async function runAiTest(i, quiet){
+  const q = AIP.questions[i] && AIP.questions[i].q;
+  if(!q) return false;
+  const row = document.getElementById('aiq-' + i);
+  const btn = row && row.querySelector('.btn-gold');
+  if(btn){ btn.disabled = true; btn.textContent = 'Asking AI…'; }
+  try{
+    const r = await api('/api/ai-visibility?action=run_test', { method: 'POST', body: JSON.stringify({ action: 'run_test', question: q }) });
+    const d = await r.json();
+    if(d.needs_key){ toast('Save an AI key first'); return false; }
+    if(!r.ok) throw new Error(d.error || 'The test did not finish');
+    if(!quiet) toast(d.mentioned ? 'ZOLA was recommended ✓' : 'ZOLA was not mentioned in that answer');
+    if(!quiet) await loadAiPerf();
+    return true;
+  }catch(err){
+    toast(err.message);
+    if(btn){ btn.disabled = false; btn.textContent = 'Test with AI'; }
+    return false;
+  }
+}
+async function runAllAiTests(){
+  if(!AIP || !AIP.questions.length) return;
+  const b = document.getElementById('ai-run-all');
+  const n = AIP.questions.length;
+  if(!confirm('Test all ' + n + ' questions with AI? It takes a minute or two and costs a few cents per question.')) return;
+  b.disabled = true;
+  let done = 0;
+  for(let i = 0; i < n; i++){
+    b.textContent = 'Testing ' + (i + 1) + ' of ' + n + '…';
+    const ok = await runAiTest(i, true);
+    if(!ok) break;
+    done++;
+  }
+  b.disabled = false; b.textContent = 'Test all with AI';
+  toast(done + ' question' + (done === 1 ? '' : 's') + ' tested');
+  loadAiPerf();
+}
+async function showAiAnswer(id){
+  try{
+    const d = await (await api('/api/ai-visibility?action=answer&id=' + id)).json();
+    if(d.error) throw new Error(d.error);
+    const text = esc(d.answer || '').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+    openViewer(d.question, (ENGINE_NAME[d.engine] || d.engine) + ' · ' + new Date(d.ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+      + (d.live_search ? ' · with live web search' : ' · without web search'),
+      '<div style="margin-bottom:0.8rem">' + (d.mentioned ? '<span class="pill ok">✓ ZOLA was mentioned</span>' : '<span class="pill crit">ZOLA was not mentioned</span>') + '</div>'
+      + '<div style="font-size:0.88rem;line-height:1.7;color:var(--ink-2)">' + text + '</div>'
+      + ((d.sources || []).length ? '<div class="card-t" style="font-size:0.86rem;margin:1rem 0 0.4rem">Sources it used</div>'
+        + d.sources.map(s => '<div style="font-size:0.8rem;margin:0.2rem 0"><a href="' + esc(s.url) + '" target="_blank" rel="noopener" style="color:var(--accent-ink)">' + esc(s.title || s.url) + '</a></div>').join('') : ''));
+  }catch(err){ toast(err.message); }
+}
+async function addAiQuestion(){
+  const el = document.getElementById('ai-newq');
+  const q = (el.value || '').trim();
+  if(!q) return;
+  try{
+    const r = await api('/api/ai-visibility?action=questions', { method: 'POST', body: JSON.stringify({ action: 'questions', add: q }) });
+    if(!r.ok) throw new Error((await r.json()).error || 'Could not add');
+    el.value = '';
+    toast('Question added');
+    loadAiPerf();
+  }catch(err){ toast(err.message); }
+}
+async function removeAiQuestion(i){
+  const q = AIP.questions[i] && AIP.questions[i].q;
+  if(!q || !confirm('Remove this question from the list?\n\n' + q)) return;
+  try{
+    const r = await api('/api/ai-visibility?action=questions', { method: 'POST', body: JSON.stringify({ action: 'questions', remove: q }) });
+    if(!r.ok) throw new Error((await r.json()).error || 'Could not remove');
+    AI_PENDING = {};
+    loadAiPerf();
+  }catch(err){ toast(err.message); }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DEVELOPER TOOLS
+   ══════════════════════════════════════════════════════════════════════ */
+async function loadDevTools(){
+  const el = document.getElementById('dev-status');
+  el.innerHTML = [1,2,3,4,5,6].map(() => '<div class="st">' + loadingCard(60) + '</div>').join('');
+  let h;
+  try{
+    h = await (await api('/api/dashboard?action=health')).json();
+    if(h.error) throw new Error(h.error);
+  }catch(err){ el.innerHTML = errLine(err.message); return; }
+  const st = (title, state, text) => '<div class="st"><div class="st-h"><b>' + esc(title) + '</b><span class="pill ' + state[0] + '">' + esc(state[1]) + '</span></div><p>' + text + '</p></div>';
+  const OK = ['ok', 'Working'], BAD = ['crit', 'Problem'], WARN = ['warn', 'Check'], OFF = ['grey', 'Not set up'];
+  const S = h.stripe || {}, E = h.email || {}, T = h.sms || {}, D = h.domain || {}, AP = h.apple_pay || {};
+  const cronAge = h.crons.reminders_last_run ? Date.now() - h.crons.reminders_last_run : 0;
+  el.innerHTML = [
+    st('Website', h.website && h.website.ok ? OK : BAD, h.website && h.website.ok ? 'Homepage answered in ' + h.website.ms + ' ms.' : 'Homepage did not load: ' + esc((h.website && (h.website.status || h.website.why)) || 'no answer')),
+    st('Database', h.database && h.database.ok ? OK : BAD, h.database && h.database.ok ? 'Answered in ' + h.database.ms + ' ms.' : esc((h.database && h.database.why) || 'No answer')),
+    st('Stripe payments', S.ok ? (S.charges_enabled && S.payouts_enabled ? OK : BAD) : BAD,
+      S.ok ? (S.live ? 'Live' : 'TEST MODE') + ' · payments ' + (S.charges_enabled ? 'on' : 'OFF') + ' · payouts ' + (S.payouts_enabled ? 'on' : 'OFF')
+        + (S.currently_due ? ' · ' + S.currently_due + ' item(s) Stripe is asking for' : '') + (S.restricted ? ' · restricted key' : '')
+        : esc(S.why || 'Not connected')),
+    st('Stripe webhook', h.webhook_secret_saved ? OK : WARN, h.webhook_secret_saved ? 'Stripe tells the site the moment a payment clears.' : 'No webhook secret saved — payments are still checked when clients return from paying.'),
+    st('Apple Pay', AP.file_ok && AP.registered ? OK : WARN, AP.file_ok && AP.registered ? 'Offered on iPhones for ' + esc(AP.domain || 'your domain') + '.' : esc(AP.why || AP.file_why || 'Not fully set up')),
+    st('Email sending', E.provider && E.provider.email && !E.provider.from_is_sandbox ? OK : BAD,
+      E.provider && E.provider.email ? 'Sending as ' + esc(E.provider.from_email || '') + (E.domain && E.domain.ok && E.domain.domains ? ' · domain ' + esc(E.domain.status) : '') : 'No email provider connected.'),
+    st('Texting', T.account && T.account.ok ? OK : (T.provider && T.provider.connected ? WARN : OFF),
+      T.account && T.account.ok ? 'Twilio active · texts from ' + esc((T.provider && T.provider.from) || '') : esc((T.account && T.account.why) || 'Not connected')),
+    st('Domain', D.days_left !== undefined ? (D.days_left <= 30 ? BAD : D.days_left <= 60 ? WARN : OK) : WARN,
+      D.days_left !== undefined ? esc(D.name) + ' renews by ' + new Date(D.expires).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + ' (' + D.days_left + ' days).' : 'Could not read the expiry date: ' + esc(D.error || '')),
+    st('Automatic reminders', !h.crons.reminders_last_run ? WARN : cronAge > 16 * 3600000 ? BAD : OK,
+      (h.crons.reminders_last_run ? 'Last ran ' + ago(h.crons.reminders_last_run) + '. ' : 'No run recorded yet. ') + esc(h.crons.schedule[0]) + '.'),
+    st('Visitor tracking', h.tracking.last_visit_ts && Date.now() - h.tracking.last_visit_ts < 2 * 86400000 ? OK : WARN,
+      h.tracking.last_visit_ts ? 'Last visit counted ' + ago(h.tracking.last_visit_ts) + '.' : 'No visits counted yet.'),
+    st('AI bot counter', h.tracking.last_ai_crawl_ts ? OK : WARN, h.tracking.last_ai_crawl_ts ? 'Last bot seen ' + ago(h.tracking.last_ai_crawl_ts) + '.' : 'Running — no bot seen yet.'),
+    st('AI key', h.ai_key_saved ? OK : OFF, h.ai_key_saved ? 'Saved. Used for AI tests, the website chat and reply drafts.' : 'Optional. Add one in AI performance to test automatically.'),
+    st('Live version', ['grey', h.deploy.env || '—'], (h.deploy.commit ? '<code>' + esc(h.deploy.commit) + '</code> ' : '') + esc(h.deploy.message || '') + (h.deploy.region ? ' · ' + esc(h.deploy.region) : '')),
+  ].join('');
+}
+async function runSiteCheck(){
+  const el = document.getElementById('dev-sitecheck');
+  el.innerHTML = loadingCard(160);
+  try{
+    const d = await (await api('/api/dashboard?action=site_check')).json();
+    if(d.error) throw new Error(d.error);
+    const bad = d.results.filter(r => !r.ok);
+    el.innerHTML = (bad.length ? '<div class="al-row critical" style="margin-bottom:0.6rem"><span class="al-ic">!</span><div class="al-txt"><b>' + bad.length + ' not working</b><p>' + bad.map(b => esc(b.path)).join(', ') + '</p></div></div>'
+        : '<div class="al-ok" style="margin-bottom:0.6rem"><span class="al-ic">✓</span><div>All ' + d.results.length + ' pages and data feeds answered.</div></div>')
+      + '<div class="tbl-wrap"><table class="tbl"><tr><th>Page</th><th>Result</th><th>Speed</th></tr>'
+      + d.results.map(r => '<tr><td>' + esc(r.path) + '</td><td>' + (r.ok ? '<span class="pill ok">OK</span>' : '<span class="pill crit">' + esc(r.why || r.status || 'Failed') + '</span>') + '</td><td>' + r.ms + ' ms</td></tr>').join('')
+      + '</table></div>';
+  }catch(err){ el.innerHTML = errLine(err.message); }
+}
+async function runPaymentCheck(){
+  const el = document.getElementById('dev-reconcile');
+  el.innerHTML = loadingCard(120);
+  try{
+    const d = await (await api('/api/reconcile?days=90')).json();
+    if(d.error) throw new Error(d.error);
+    const gaps = d.gaps || [];
+    const lines = [
+      ['Payments compared', num(d.checked || 0), 'grey'],
+      ['Paid but not marked paid', gaps.length, gaps.length ? 'crit' : 'ok'],
+      ['Charged at the desk after paying online', (d.overcharged || []).length, (d.overcharged || []).length ? 'crit' : 'ok'],
+      ['Bookings with no status', (d.statusless || []).length, (d.statusless || []).length ? 'warn' : 'ok'],
+      ['Priced differently in the two books', (d.disagreements || []).length, (d.disagreements || []).length ? 'warn' : 'ok'],
+      ['Front desk can see website bookings', d.till_sees_website_bookings && d.till_sees_website_bookings.ok ? 'Yes' : 'No', d.till_sees_website_bookings && d.till_sees_website_bookings.ok ? 'ok' : 'crit'],
+    ];
+    el.innerHTML = '<div class="tbl-wrap"><table class="tbl">' + lines.map(l => '<tr><td>' + l[0] + '</td><td style="text-align:right"><span class="pill ' + l[2] + '">' + l[1] + '</span></td></tr>').join('') + '</table></div>'
+      + (gaps.length ? '<div style="margin-top:0.7rem;font-size:0.82rem;color:var(--ink-2)">' + gaps.map(g => esc(g.name) + ' — ' + hmMoney(g.stripe_took_cents)).join('<br>') + '</div>'
+        + '<button class="btn btn-gold btn-sm" style="margin-top:0.6rem" onclick="fixPaymentGaps(' + gaps.length + ')">Mark ' + (gaps.length === 1 ? 'it' : 'these') + ' as paid</button>' : '');
+  }catch(err){ el.innerHTML = errLine(err.message); }
+}
+async function fixPaymentGaps(n){
+  if(!confirm('Mark ' + n + ' booking' + (n === 1 ? '' : 's') + ' as deposit paid? Stripe shows the money arrived for ' + (n === 1 ? 'it' : 'each one') + '.')) return;
+  try{
+    const r = await api('/api/reconcile?days=90', { method: 'POST', body: JSON.stringify({ fix: true }) });
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.error || 'Could not update');
+    toast(d.fixed + ' marked paid ✓');
+    runPaymentCheck();
+  }catch(err){ toast(err.message); }
+}
+
 (function(){const saved=sessionStorage.getItem('zm_pwd');if(saved){document.getElementById('pwd').value=saved;login();}})();
 </script>
 <script src="js/client-profile.js?v=3"></script>

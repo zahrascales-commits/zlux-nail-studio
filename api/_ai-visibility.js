@@ -52,8 +52,16 @@ const SEARCH_BOTS = [
   ['Baidu', /Baiduspider/i],
 ];
 
+// Our own checks, and the test visits made while building this. Not bots.
+const OURS = /ZOLA-readiness-check|ZOLA-test/i;
+const TEST_UAS = [
+  'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)',
+  'Mozilla/5.0 (compatible; ClaudeBot/1.0; +claudebot@anthropic.com)',
+];
+
 function classify(ua) {
   const s = String(ua || '');
+  if (OURS.test(s) || TEST_UAS.includes(s)) return null;
   for (const [name, re] of AI_BOTS) if (re.test(s)) return { kind: 'ai', bot: name };
   for (const [name, re] of SEARCH_BOTS) if (re.test(s)) return { kind: 'search', bot: name };
   return null;
@@ -382,7 +390,8 @@ async function llmsTxt(req, res) {
   const real = services.filter(s => !/test/i.test(s.name) && Number(s.price_cents) > 100);
   const deals = real.filter(s => s.deal);
   const regular = real.filter(s => !s.deal);
-  const address = clean(S.studio_address);
+  // Typed in lower case in settings; written properly for anyone reading it.
+  const address = clean(S.studio_address).replace(/\b([a-z])/g, c => c.toUpperCase());
   const lines = [
     '# ZOLA Nail Studio',
     '',
@@ -453,6 +462,14 @@ module.exports = async function (req, res) {
       return res.json({ crawls, visibility: vis, ai_key_saved: !!key, questions: qs, city: await city(), model: MODEL });
     }
     if (action === 'readiness') return res.json(await readiness());
+
+    // Clears visits that were our own checks or tests, never a real bot's.
+    if (action === 'purge_tests' && req.method === 'POST') {
+      const r = await execute(
+        "DELETE FROM ai_crawls WHERE ua LIKE '%ZOLA-readiness-check%' OR ua LIKE '%ZOLA-test%' OR ua IN (" + TEST_UAS.map(() => '?').join(',') + ')',
+        TEST_UAS);
+      return res.json({ ok: true, removed: r.rowsAffected });
+    }
 
     if (action === 'run_test' && req.method === 'POST') {
       const q = String((req.body || {}).question || '').trim().slice(0, 300);
