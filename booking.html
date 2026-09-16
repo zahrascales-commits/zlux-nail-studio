@@ -2667,10 +2667,22 @@ function setTip(c){ tipCents = c; tipCustom = false; renderTips(); renderPayTota
 
 // The amount changed, so the payment has to be rebuilt against the new one.
 // Charging an amount the client never saw is the one thing this must not do.
-let _repriceTimer = null;
+//
+// Pay is held from the moment the amount changes until the card form matches
+// it. Several quick taps share one wait, and only the last one counts.
+let _repriceTimer = null, _payBuild = null, _payBuildDone = null, _payBuildSeq = 0;
 function repriceIntent(){
   clearTimeout(_repriceTimer);
-  _repriceTimer = setTimeout(function(){ setupPayment(); }, 250);
+  const mine = ++_payBuildSeq;
+  if (!_payBuild) _payBuild = new Promise(function(r){ _payBuildDone = r; });
+  _repriceTimer = setTimeout(async function(){
+    try { await initPayment(mine); } catch (_) {}
+    if (mine === _payBuildSeq && _payBuildDone) {
+      const done = _payBuildDone;
+      _payBuild = null; _payBuildDone = null;
+      done();
+    }
+  }, 250);
 }
 
 /* ══════════════ HOW FAR AHEAD YOU MAY BOOK ══════════════
@@ -2787,9 +2799,11 @@ window.addEventListener('beforeunload', () => {
 // ═══════════════════════════════════════════
 // CARD PAYMENT (Stripe) — deposit charged automatically at confirm
 // ═══════════════════════════════════════════
-let _stripe = null, _elements = null, _payEnabled = false, _paymentIntentId = null;
+let _stripe = null, _elements = null, _payEnabled = false, _paymentIntentId = null, _payElement = null;
 
-async function initPayment() {
+// seq: which rebuild this is. One that finishes after a newer one started is
+// answering a question nobody is asking any more, so it changes nothing.
+async function initPayment(seq) {
   try {
     const cfg = await (await fetch('/api/pay?action=config')).json();
     if (!cfg.enabled || typeof Stripe === 'undefined') return; // graceful: no card section
@@ -2821,16 +2835,26 @@ async function initPayment() {
         customer_email: document.getElementById('client-email').value.trim(),
       })
     })).json();
+    if (seq && seq !== _payBuildSeq) return;
     showCoveredNote(intent);
     _payTotals = { total: intent.total_cents || 0, deposit: intent.deposit_cents || 0 };
     renderPayChoice();
-    if (!intent.client_secret) return;
+    // The old form was built for the old amount. It goes before anything
+    // else can be charged through it.
+    if (_payElement) { try { _payElement.destroy(); } catch (_) {} _payElement = null; }
+    if (!intent.client_secret) {
+      _payEnabled = false; _elements = null; _paymentIntentId = null;
+      const cs = document.getElementById('card-section');
+      if (cs) cs.style.display = 'none';
+      return;
+    }
     _paymentIntentId = intent.payment_intent_id;
     _stripe = Stripe(cfg.publishable_key);
     _elements = _stripe.elements({ clientSecret: intent.client_secret, appearance: { theme: 'flat', variables: { colorPrimary: '#B6A588', fontFamily: 'Josefin Sans, sans-serif' } } });
     // wallets:auto = Apple Pay appears automatically on iPhone Safari —
     // the "double-tap to pay" experience, no typing card numbers
-    _elements.create('payment', { wallets: { applePay: 'auto', googlePay: 'auto' }, layout: 'tabs' }).mount('#payment-element');
+    _payElement = _elements.create('payment', { wallets: { applePay: 'auto', googlePay: 'auto' }, layout: 'tabs' });
+    _payElement.mount('#payment-element');
     document.getElementById('card-section').style.display = 'block';
     // Show the Apple Pay hint on Apple devices
     if (/iPhone|iPad|Macintosh/.test(navigator.userAgent) && window.ApplePaySession) {
@@ -2960,7 +2984,14 @@ async function submitBooking() {
 
   const btn = document.querySelector('#step-4 .btn-gold');
   if (btn) { btn.disabled = true; btn.textContent = 'Confirming…'; }
-  const restore = () => { if (btn) { btn.disabled = false; btn.textContent = 'Pay Deposit & Confirm'; } };
+  const restore = () => { if (btn) { btn.disabled = false; btn.textContent = 'Pay Deposit & Confirm'; renderPayTotal(); } };
+
+  // A tip or "pay in full" chosen a moment ago may still be rebuilding the
+  // card form. Charging before it lands charges the amount they un-chose.
+  while (_payBuild) {
+    if (btn) btn.textContent = 'Updating your total…';
+    await _payBuild;
+  }
 
   // 1) Charge the deposit if card payments are on
   let paymentIntentId = null;
