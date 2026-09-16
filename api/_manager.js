@@ -58,6 +58,42 @@ async function previewFields() {
   };
 }
 
+/* Whether a phone will really offer Apple Pay: Apple must be able to read
+   the verification file from the site, and the domain must be registered
+   through Stripe. Both, or neither counts.
+
+   Remembered for a few minutes so an email is not held up by two network
+   calls every time one is sent. */
+let _apCache = { at: 0, ready: false };
+async function applePayReady() {
+  if (Date.now() - _apCache.at < 5 * 60000) return _apCache.ready;
+  let ready = false;
+  try {
+    const site = process.env.PUBLIC_BASE_URL || 'https://zolanailstudio.com';
+    const domain = site.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+
+    const f = await fetch(site + '/.well-known/apple-developer-merchantid-domain-association');
+    const body = f.ok ? await f.text() : '';
+    const fileOk = f.ok && body.trim().length > 100;
+
+    let registered = false;
+    if (fileOk) {
+      const srows = await query("SELECT value FROM site_settings WHERE key = 'stripe_secret'");
+      const secret = (srows[0] && srows[0].value) || process.env.STRIPE_SECRET_KEY || '';
+      if (secret) {
+        const r = await fetch('https://api.stripe.com/v1/apple_pay/domains?limit=100', {
+          headers: { Authorization: 'Bearer ' + secret },
+        });
+        const d = await r.json();
+        if (r.ok) registered = (d.data || []).some(x => x.domain_name === domain);
+      }
+    }
+    ready = fileOk && registered;
+  } catch (_) { ready = false; }
+  _apCache = { at: Date.now(), ready };
+  return ready;
+}
+
 module.exports = async function (req, res) {
   const method = req.method.toUpperCase();
   const action = req.query.action || (req.body && req.body.action);
@@ -1123,9 +1159,20 @@ module.exports = async function (req, res) {
           ]
         : [
             'Hi ' + first + ',',
-            'You’re booked in for ' + g.rows.length + ' services on ' + day
-              + ' — here’s everything for that day in one place:',
+            /* One service gets named. "Booked in for 1 services" is the kind
+               of thing that makes an email read as machinery. */
+            g.rows.length === 1
+              ? 'You’re booked in for your ' + (g.rows[0].service || 'appointment')
+                + ' on ' + day + ' at ' + visit.time12(g.rows[0].time) + ' — here is the deposit for it:'
+              : 'You’re booked in for ' + g.rows.length + ' services on ' + day
+                + ' — here’s everything for that day in one place:',
           ];
+
+      /* Said only when it is true. It is the difference between a deposit
+         somebody keeps meaning to pay and one they pay on the spot. */
+      const wallet = (await applePayReady())
+        ? 'And it just got easier — you can now pay with Apple Pay. On an iPhone that is a double-tap and you are done, no card to dig out.'
+        : '';
 
       const closing = split
         ? 'Whenever it suits you before your visit, the remaining ' + due
@@ -1153,6 +1200,7 @@ module.exports = async function (req, res) {
         + owingLines.map(l =>
             '<div style="padding:9px 0;border-bottom:1px solid #eee5d8;font-size:14px;color:#3a3027">' + esc(l) + '</div>').join('')
         + '</div>'
+        + (wallet ? p(wallet) : '')
         + p(closing)
         + '<div style="text-align:center;margin:6px 0 22px"><a href="' + esc(link) + '" style="display:inline-block;'
         + 'background:#0D0D0D;color:#F5EEE8;text-decoration:none;padding:15px 28px;font-size:14px;letter-spacing:2px;'
@@ -1164,7 +1212,7 @@ module.exports = async function (req, res) {
 
       const preview = {
         to, subject, due_cents: g.dueCents, paid_cents: g.paidCents, link,
-        opening, lines: paidLines.concat(owingLines), closing, button: buttonLabel, signoff,
+        opening, lines: paidLines.concat(owingLines), wallet, closing, button: buttonLabel, signoff,
       };
 
       if (body.confirm !== true) return res.json(Object.assign({ ok: true, sent: false, dry_run: true }, preview));
