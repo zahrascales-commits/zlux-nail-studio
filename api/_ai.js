@@ -34,8 +34,23 @@ PRINCESS PARTIES: kids' nail parties, $20/child (regularly $35), 6-child minimum
 CONTACT: Instagram @zola_officials_ · TikTok @zolaofficial · email zolastudioempire@gmail.com · book at booking.html · join at memberships.html.
 `;
 
+/* The key can live in Vercel or be pasted into Studio Manager. Looked up
+   once a minute, not on every message. */
+let _keyAt = 0, _key = '';
+async function aiKey() {
+  if (process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_API_KEY;
+  if (Date.now() - _keyAt < 60000) return _key;
+  try {
+    const { queryOne } = require('./_team-db');
+    const r = await queryOne("SELECT value FROM site_settings WHERE key = 'anthropic_key'");
+    _key = (r && r.value) || '';
+  } catch (_) {}
+  _keyAt = Date.now();
+  return _key;
+}
+
 async function callClaude(system, messages, maxTokens) {
-  const key = process.env.ANTHROPIC_API_KEY;
+  const key = await aiKey();
   if (!key) return null;
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -88,7 +103,7 @@ module.exports = async function (req, res) {
         const first = (name || 'there').split(' ')[0];
         draft = `Hi ${first},\n\nThank you so much for reaching out to ZOLA — I saw your message and I'd love to take care of you.\n\n${message && /party|kid|princess/i.test(message) ? 'Our Princess Parties are $35 per child with a 6-child minimum — mini manicures, custom nail art, and safe products for little hands. I’d love to hold a date for you.' : message && /price|cost|much/i.test(message) ? 'You can see our full menu at our services page — and if you visit regularly, a membership saves you up to 45% every month.' : 'The fastest way to get on my calendar is the booking page, and if you want priority access every month, take a look at our memberships — spots are limited.'}\n\nReply here or book anytime — I can't wait to meet you.\n\nZahra ✦ ZOLA Nail Studio`;
       }
-      return res.json({ draft, ai: !!process.env.ANTHROPIC_API_KEY });
+      return res.json({ draft, ai: !!(await aiKey()) });
     }
 
     return res.status(400).json({ error: 'Unknown action' });

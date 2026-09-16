@@ -121,6 +121,13 @@ app.all('/api/careers',          require('./_careers'));
 app.all('/api/marketing',        require('./_marketing'));
 app.all('/api/classes',          require('./_classes'));
 app.all('/api/analytics',        require('./_analytics'));
+app.all('/api/dashboard',        require('./_dashboard'));
+app.all('/api/ai-visibility',    require('./_ai-visibility'));
+app.all('/api/growth',           require('./_growth'));
+
+// A plain-text summary of the studio for AI assistants, built from the live
+// menu on every request so it never quotes an old price.
+app.get('/llms.txt', (req, res) => require('./_ai-visibility').llmsTxt(req, res));
 
 // Reminders (24h + 2h before appointment — call daily via cron)
 app.all('/api/reminders',        require('./_reminders'));

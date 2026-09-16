@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/llms.txt",
+      "destination": "/api/index.js"
+    },
+    {
       "source": "/.well-known/apple-developer-merchantid-domain-association",
       "destination": "/api/index.js"
     },
@@ -21,7 +25,8 @@
   ],
   "functions": {
     "api/index.js": {
-      "includeFiles": "data/**"
+      "includeFiles": "data/**",
+      "maxDuration": 60
     }
   }
 }

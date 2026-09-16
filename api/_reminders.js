@@ -39,6 +39,10 @@ module.exports = async (req, res) => {
   if (key !== (process.env.REMINDER_KEY || 'ZOLA-REMIND-2026')) return res.status(401).json({ error: 'Unauthorized' });
 
   await ensureTables();
+  // So the dashboard can tell when reminders have quietly stopped running.
+  try {
+    await execute("INSERT INTO site_settings (key, value) VALUES ('cron_reminders_last', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", [String(Date.now())]);
+  } catch (_) {}
   const S = await getSettings();
   const now = Date.now();
   let sent = 0;
@@ -155,5 +159,11 @@ module.exports = async (req, res) => {
     }
   }
 
-  return res.json({ ok: true, sent, deposit_chase: depositChase, at: new Date().toISOString() });
+  // ── ANYTHING BROKEN ──
+  // The same list as the dashboard's "Needs attention", but only the things
+  // worth a text, and each at most once every three days.
+  let alerts = [];
+  try { alerts = await require('./_dashboard').notifyOwner(toOwner, fresh); } catch (_) {}
+
+  return res.json({ ok: true, sent, deposit_chase: depositChase, alerts, at: new Date().toISOString() });
 };

@@ -124,6 +124,16 @@ module.exports = async function (req, res) {
       // back to Resend's onboarding@resend.dev sandbox, which only ever
       // reaches the account owner — so client mail silently goes nowhere.
       const pairs = { twilio_sid, twilio_token, twilio_from, resend_key, stripe_secret, stripe_publishable, notify_from_email };
+      // A different Stripe key than the one that was exposed means it has
+      // been replaced, so the dashboard stops asking her to.
+      if (stripe_secret && String(stripe_secret).trim()) {
+        try {
+          const cur = await query("SELECT value FROM site_settings WHERE key = 'stripe_secret'");
+          if (!cur[0] || cur[0].value !== String(stripe_secret).trim()) {
+            await execute("DELETE FROM site_settings WHERE key = 'stripe_secret_exposed'");
+          }
+        } catch (_) {}
+      }
       for (const [k, v] of Object.entries(pairs)) {
         if (v !== undefined && v !== null && String(v).trim() !== '') {
           await execute(
