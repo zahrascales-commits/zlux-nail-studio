@@ -304,6 +304,11 @@ module.exports = async function (req, res) {
         livemode: !!A.charges_enabled && /_live_/.test(secret),
         mode: /_live_/.test(secret) ? 'live' : 'test',
         account_id: A.id,
+        // The address the Stripe login belongs to. She cannot be told her
+        // password by anybody — Stripe does not hold one in readable form —
+        // but knowing which email it is under is most of the way back in.
+        email: A.email || '',
+        display_name: ((A.settings || {}).dashboard || {}).display_name || '',
         country: A.country,
         currency: A.default_currency,
         business_name: (A.business_profile || {}).name || '',
