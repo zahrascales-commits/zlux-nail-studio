@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/.well-known/apple-developer-merchantid-domain-association",
+      "destination": "/api/index.js"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/index.js"
     }

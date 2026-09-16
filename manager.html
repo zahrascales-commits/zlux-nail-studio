@@ -1681,6 +1681,11 @@
                empty page and look broken. -->
           <div id="stripe-links" style="display:none;margin:0.8rem 0 1rem"></div>
 
+          <!-- Whether a phone will actually offer Apple Pay. Invisible
+               otherwise: no button, and no error saying why. -->
+          <div id="applepay-box" style="display:none;margin:0 0 1rem;padding:0.85rem 1rem;
+            border:1px solid var(--border);border-radius:8px;font-size:0.82rem;line-height:1.7"></div>
+
           <p>Paste your Stripe keys (Stripe Dashboard → Developers → API keys). Use your <b>live</b> keys to take real money. Payments turn on the moment you save — no redeploy.</p>
           <label class="fld-label">Publishable key (pk_live_… or pk_test_…)</label>
           <input id="k-stripe-pub" placeholder="pk_live_xxxxxxxx" style="margin-bottom:0.7rem" autocomplete="off" />
@@ -5258,10 +5263,24 @@ function claimCard(r, urgent){
       + '<button class="btn ' + (urgent ? 'btn-gold' : 'btn-ghost') + ' btn-sm" onclick="assignClaim(\'' + esc(r.confirmation) + '\')">Assign</button>'
       + '</div>';
   }
+  /* Whether the money is in, next to the name. She is deciding who to give
+     this to; handing over a paid booking and handing over a maybe are not
+     the same decision, and she was making it blind. */
+  const paid = !!r.deposit_paid;
+  const amount = Number(r.deposit_cents) || 0;
+  const owed = Number(r.owed_cents) || 0;
+  const deposit = '<div style="margin-top:0.35rem;font-size:0.8rem;'
+    + (paid ? 'color:#7ec98a' : 'color:#e0a06a') + '">'
+    + (paid
+        ? '✓ Deposit paid — ' + cmoney(amount)
+        : ('No deposit yet' + (owed ? ' — ' + cmoney(owed) + ' to pay' : '')))
+    + '</div>';
+
   return '<div class="member-card" style="--mc:' + (urgent ? '#d66' : '#B6A588') + '">'
     + '<div class="mc-top"><div style="flex:1">'
       + '<div class="mc-name">' + (r.client_name ? clientLink(r.client_name) : 'Client') + ' · ' + esc(r.service || '') + '</div>'
       + '<div class="mc-role">' + esc(r.when) + ' · ' + who + '</div>'
+      + deposit
     + '</div>' + dispatchPill(r) + '</div>' + assign + '</div>';
 }
 
@@ -8110,6 +8129,7 @@ async function loadStripeStatus(){
     else if(d.mode==='live')el.innerHTML='💳 Payments: <span class="key-on">LIVE — taking real payments ✦</span>';
     else el.innerHTML='💳 Payments: <span class="key-off">TEST mode — paste your LIVE keys to take real money</span>';
     renderStripeLinks(d);
+    loadApplePayStatus();
   }catch{el.innerHTML='💳 Payments: —';}
 }
 
@@ -8121,6 +8141,44 @@ async function loadStripeStatus(){
    Stripe will ask her to sign in the first time. It holds the money, so it
    decides who looks at it; nobody can link around that. "Remember me"
    there makes every visit after this one a single click. */
+/* Apple Pay is either on or it is not, and there is nothing on a phone to
+   tell you which. Two things have to be true: Apple can read the
+   verification file from the site, and the domain is registered through
+   Stripe. Both are checked, and the missing one can be fixed here. */
+async function loadApplePayStatus(){
+  const box = document.getElementById('applepay-box');
+  if(!box) return;
+  box.style.display = '';
+  box.innerHTML = '<span style="color:var(--muted)">Checking Apple Pay…</span>';
+  let d;
+  try{ d = await (await api('/api/manager?action=apple_pay_status')).json(); }
+  catch(_){ box.innerHTML = '<span style="color:var(--muted)">Could not check Apple Pay just now.</span>'; return; }
+
+  const tick = ok => ok ? '<span style="color:#7ec98a">✓</span>' : '<span style="color:#e08a8a">✗</span>';
+  box.innerHTML =
+    '<div style="font-size:0.92rem;color:var(--cream);margin-bottom:0.4rem">'
+      + (d.ready ? '🍎 Apple Pay is on ✦' : '🍎 Apple Pay is not on yet') + '</div>'
+    + '<div>' + tick(d.file_ok) + ' Apple can read the verification file'
+      + (d.file_ok ? '' : ' <span style="color:var(--muted)">' + esc(d.file_why || '') + '</span>') + '</div>'
+    + '<div>' + tick(d.registered) + ' ' + esc(d.domain || '') + ' is registered with Apple'
+      + (d.why ? ' <span style="color:var(--muted)">' + esc(d.why) + '</span>' : '') + '</div>'
+    + (d.ready
+        ? '<div style="color:var(--muted);margin-top:0.4rem">Clients see Apple Pay on an iPhone — on the deposit link, the booking page and at the desk. On a laptop they see a card box instead, which is Apple, not the site.</div>'
+        : '<button class="btn btn-gold btn-sm" style="margin-top:0.6rem" onclick="registerApplePay(this)">Switch Apple Pay on</button>');
+}
+
+async function registerApplePay(btn){
+  if(btn){ btn.disabled = true; btn.textContent = 'Switching on…'; }
+  try{
+    const d = await (await api('/api/manager?action=apple_pay_register', {
+      method: 'POST', body: JSON.stringify({ action: 'apple_pay_register' }) })).json();
+    if(d.error) throw new Error(d.error);
+    toast('Apple Pay is on ✦');
+  }catch(err){ toast(err.message || 'Could not switch it on'); }
+  if(btn){ btn.disabled = false; btn.textContent = 'Switch Apple Pay on'; }
+  loadApplePayStatus();
+}
+
 function renderStripeLinks(d){
   const box=document.getElementById('stripe-links');
   if(!box) return;

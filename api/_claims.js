@@ -441,10 +441,32 @@ async function claimsOverview() {
   try {
     for (const m of await query('SELECT id, name FROM team_members')) names[Number(m.id)] = m.name;
   } catch (_) {}
-  return {
-    hold_minutes: await holdMinutes(),
-    unclaimed_action: await unclaimedAction(),
-    rows: rows.map(r => ({
+  /* What has actually been paid on each one. She is being asked to hand
+     these to an artist, and whether the deposit is in is the first thing
+     she wants to know — it was the one thing the card never said.
+
+     Matched on the appointment the claim already points at, and by name and
+     time for older rows that never recorded one. */
+  const byId = {}, byKey = {};
+  const firstName = s => String(s || '').trim().toLowerCase().split(/\s+/)[0] || '';
+  try {
+    const dates = [...new Set(rows.map(r => r.date).filter(Boolean))];
+    if (dates.length) {
+      const appts = await query(
+        'SELECT id, client_name, date, time, deposit_cents, deposit_paid, price_cents, service '
+        + 'FROM team_appointments WHERE date IN (' + dates.map(() => '?').join(',') + ')', dates);
+      for (const a of appts) {
+        byId[Number(a.id)] = a;
+        byKey[firstName(a.client_name) + '|' + a.date + '|' + String(a.time || '').slice(0, 5)] = a;
+      }
+    }
+  } catch (_) {}
+
+  const out = rows.map(r => {
+    const appt = byId[Number(r.team_appointment_id)]
+      || byKey[firstName(r.client_name) + '|' + r.date + '|' + String(r.time || '').slice(0, 5)]
+      || null;
+    return {
       confirmation: r.confirmation,
       service: r.service,
       when: `${r.date_label || r.date} at ${r.time_label || r.time}`,
@@ -455,7 +477,35 @@ async function claimsOverview() {
       offered_names: JSON.parse(r.offered || '[]').map(id => names[Number(id)] || ('#' + id)),
       claimed_name: r.claimed_by ? (names[Number(r.claimed_by)] || ('#' + r.claimed_by)) : '',
       expires_ts: Number(r.expires_ts) || 0,
-    })),
+      appointment_id: appt ? Number(appt.id) : (Number(r.team_appointment_id) || 0),
+      deposit_paid: !!(appt && Number(appt.deposit_paid)),
+      deposit_cents: appt ? Math.round(Number(appt.deposit_cents) || 0) : 0,
+      owed_cents: 0,
+    };
+  });
+
+  /* For the ones still waiting to be given to somebody, what they would owe
+     if they have not paid — worked out by the same code the deposit page
+     charges by, so the two cannot disagree. Only these rows, because it is
+     a lookup each and the rest are already settled. */
+  try {
+    const visit = require('./_visit');
+    let budget = 20;
+    for (const row of out) {
+      if (budget <= 0) break;
+      if (row.deposit_paid) continue;
+      if (row.status !== 'open' && row.status !== 'leftover' && row.status !== 'none') continue;
+      const appt = byId[Number(row.appointment_id)];
+      if (!appt) continue;
+      budget--;
+      try { row.owed_cents = Math.round(Number(await visit.depositFor(appt)) || 0); } catch (_) {}
+    }
+  } catch (_) {}
+
+  return {
+    hold_minutes: await holdMinutes(),
+    unclaimed_action: await unclaimedAction(),
+    rows: out,
   };
 }
 

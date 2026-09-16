@@ -175,6 +175,21 @@ async function load(attempt){
   }
 
   V = body;
+
+  /* Back from a payment method that had to leave the page. The address is
+     tidied first, so recording it cannot send this round again. */
+  const back = new URLSearchParams(location.search).get('payment_intent');
+  if(back){
+    history.replaceState({}, '', '/visit.html?t=' + encodeURIComponent(TOKEN));
+    try{
+      await fetch('/api/visit?action=paid', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ t: TOKEN, payment_intent_id: back }),
+      });
+      return load(1);
+    }catch(_){ /* the webhook records it either way */ }
+  }
+
   render();
 }
 
@@ -229,6 +244,8 @@ function render(){
               + 'We’ll keep this card on file so you can settle the rest at the studio '
               + 'without getting it out again. Nothing is ever charged to it without your '
               + 'signature at the desk.</p>'
+            + '<div id="ap-hint" style="display:none;font-size:0.82rem;color:var(--latte);margin-top:0.7rem">'
+              + '&#63743;&nbsp; Apple Pay is ready — double-tap the side button to pay.</div>'
             + '<div id="card-el"></div>'
             + '<button class="btn" id="pay-btn" onclick="pay()">Pay ' + money(due) + '</button>'
             + '<div class="msg" id="pay-msg"></div>')
@@ -263,44 +280,78 @@ async function setupCard(){
     // undefined and Stripe failed silently at mount time.
     const pk = cfg && (cfg.publishable_key || cfg.publishableKey);
     if(!pk) { $('pay-msg').textContent = 'Card payments are not switched on yet — message the studio.'; return; }
+
+    const due = Number(V.due_cents != null ? V.due_cents : V.deposit_cents) || 0;
+    if(due < 50) return;
+
     stripe = Stripe(pk);
-    elements = stripe.elements();
-    cardEl = elements.create('card', { style: { base: { fontSize: '16px', color: '#0D0D0D' } } });
+    /* The amount is known, so the element can be built without creating a
+       payment on Stripe yet. That is what keeps her Stripe clean: opening
+       the link to read it does not leave an abandoned payment behind. */
+    elements = stripe.elements({
+      mode: 'payment',
+      amount: due,
+      currency: 'usd',
+      appearance: { theme: 'flat', variables: { colorPrimary: '#C4A882', fontFamily: 'Josefin Sans, sans-serif' } },
+    });
+    // wallets auto = Apple Pay and Google Pay appear by themselves where the
+    // phone supports them, with the typed card underneath for everyone else.
+    cardEl = elements.create('payment', { wallets: { applePay: 'auto', googlePay: 'auto' }, layout: 'tabs' });
     cardEl.mount('#card-el');
-  }catch(_){ $('pay-msg').textContent = 'Could not load the card form — refresh and try again.'; }
+
+    if(/iPhone|iPad|Macintosh/.test(navigator.userAgent) && window.ApplePaySession){
+      const hint = $('ap-hint');
+      if(hint) hint.style.display = 'block';
+    }
+  }catch(_){ $('pay-msg').textContent = 'Could not load the payment form — refresh and try again.'; }
 }
 
 async function pay(){
   const btn = $('pay-btn'), msg = $('pay-msg');
-  if(!stripe || !cardEl){ msg.textContent = 'Card form is still loading.'; return; }
+  if(!stripe || !elements){ msg.textContent = 'Payment form is still loading.'; return; }
   btn.disabled = true; btn.textContent = 'Charging…';
   msg.className = 'msg'; msg.textContent = '';
   try{
+    /* Checks what they entered before anything is created on Stripe, so a
+       mistyped card leaves nothing behind. With Apple Pay this is where the
+       sheet opens. */
+    const ready = await elements.submit();
+    if(ready.error) throw new Error(ready.error.message);
+
     const intent = await (await fetch('/api/visit?action=pay_intent', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ t: TOKEN })
     })).json();
     if(intent.error) throw new Error(intent.error);
 
-    const { error, paymentIntent } = await stripe.confirmCardPayment(intent.client_secret, {
-      payment_method: { card: cardEl }
+    const { error, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      clientSecret: intent.client_secret,
+      redirect: 'if_required',
+      // Only used by a method that has to leave the page. Apple Pay does not.
+      confirmParams: { return_url: location.origin + '/visit.html?t=' + encodeURIComponent(TOKEN) },
     });
     if(error) throw new Error(error.message);
     if(!paymentIntent || paymentIntent.status !== 'succeeded') throw new Error('That did not complete — you have not been charged.');
 
-    const done = await (await fetch('/api/visit?action=paid', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ t: TOKEN, payment_intent_id: paymentIntent.id })
-    })).json();
-    if(done.error) throw new Error(done.error);
-
-    // Back from the server, so what shows as paid is what was recorded.
-    await load(1);
+    await recordPaid(paymentIntent.id);
   }catch(err){
     btn.disabled = false; btn.textContent = 'Pay ' + money(V.due_cents != null ? V.due_cents : V.deposit_cents);
     msg.className = 'msg err';
     msg.textContent = err.message || 'That did not go through.';
   }
+}
+
+/* Tell the studio it cleared. Stripe also reports it through the webhook, so
+   somebody who closes the page the instant it succeeds is still recorded —
+   this is the quick path, not the only one. */
+async function recordPaid(id){
+  const done = await (await fetch('/api/visit?action=paid', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ t: TOKEN, payment_intent_id: id })
+  })).json();
+  if(done.error) throw new Error(done.error);
+  await load(1);
 }
 
 function wireFile(){

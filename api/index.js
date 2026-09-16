@@ -11,6 +11,22 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), requi
 // parser has to allow at least that much to reach them.
 app.use(express.json({ limit: '6mb' }));
 
+/* Apple Pay checks for this file on the domain before it will show a wallet
+   button anywhere on the site. Read from data/ rather than served as a
+   static file: it has no extension and lives in a dot-directory, which is
+   the sort of thing a build drops without saying so. */
+app.get('/.well-known/apple-developer-merchantid-domain-association', (req, res) => {
+  try {
+    const path = require('path');
+    const body = require('fs').readFileSync(
+      path.join(__dirname, '..', 'data', 'apple-pay-domain-association.txt'), 'utf8');
+    res.setHeader('Content-Type', 'text/plain');
+    return res.status(200).send(body.trim());
+  } catch (err) {
+    return res.status(500).send('');
+  }
+});
+
 // Original site API routes
 app.all('/api/services',         require('./_services'));
 app.all('/api/deals',            require('./_deals-api'));

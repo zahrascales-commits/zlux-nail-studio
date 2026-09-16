@@ -102,6 +102,66 @@ module.exports = async function (req, res) {
     }
 
     // Is Stripe connected? (pasted keys first, then env) — for the Settings card
+    /* ── IS APPLE PAY ACTUALLY ON ──
+       Two things have to be true and both are invisible from the studio:
+       the domain has to be registered with Apple through Stripe, and Apple
+       has to be able to read its verification file from the site. If either
+       is missing no wallet button appears anywhere, with no error to see. */
+    if (method === 'GET' && action === 'apple_pay_status') {
+      const srows = await query("SELECT value FROM site_settings WHERE key = 'stripe_secret'");
+      const secret = (srows[0] && srows[0].value) || process.env.STRIPE_SECRET_KEY || '';
+      const site = process.env.PUBLIC_BASE_URL || 'https://zolanailstudio.com';
+      const domain = site.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+
+      let fileOk = false, fileWhy = '';
+      try {
+        const r = await fetch(site + '/.well-known/apple-developer-merchantid-domain-association');
+        const body = await r.text();
+        fileOk = r.ok && body.trim().length > 100;
+        if (!fileOk) fileWhy = 'returned ' + r.status;
+      } catch (err) { fileWhy = String(err.message || err); }
+
+      if (!secret) return res.json({ domain, file_ok: fileOk, file_why: fileWhy, registered: false, why: 'no Stripe key saved' });
+
+      let registered = false, domains = [], why = '';
+      try {
+        const r = await fetch('https://api.stripe.com/v1/apple_pay/domains?limit=100', {
+          headers: { Authorization: 'Bearer ' + secret },
+        });
+        const d = await r.json();
+        if (r.ok) {
+          domains = (d.data || []).map(x => x.domain_name);
+          registered = domains.includes(domain);
+        } else { why = (d.error && d.error.message) || 'Stripe would not answer'; }
+      } catch (err) { why = String(err.message || err); }
+
+      return res.json({ domain, file_ok: fileOk, file_why: fileWhy, registered, domains, why,
+        ready: !!(fileOk && registered) });
+    }
+
+    /* Register the domain with Apple, through Stripe. Apple reads the file
+       during this call, so it only succeeds once the file is live. */
+    if (method === 'POST' && action === 'apple_pay_register') {
+      const srows = await query("SELECT value FROM site_settings WHERE key = 'stripe_secret'");
+      const secret = (srows[0] && srows[0].value) || process.env.STRIPE_SECRET_KEY || '';
+      if (!secret) return res.status(400).json({ error: 'No Stripe key saved.' });
+      const site = process.env.PUBLIC_BASE_URL || 'https://zolanailstudio.com';
+      const domain = site.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+
+      try {
+        const r = await fetch('https://api.stripe.com/v1/apple_pay/domains', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + secret, 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ domain_name: domain }).toString(),
+        });
+        const d = await r.json();
+        if (!r.ok) return res.status(400).json({ error: (d.error && d.error.message) || 'Stripe refused', domain });
+        return res.json({ ok: true, domain, id: d.id });
+      } catch (err) {
+        return res.status(500).json({ error: String(err.message || err) });
+      }
+    }
+
     if (method === 'GET' && action === 'stripe_status') {
       const rows = await query("SELECT key, value FROM site_settings WHERE key IN ('stripe_secret','stripe_publishable')");
       const db = {}; for (const r of rows) db[r.key] = r.value;
