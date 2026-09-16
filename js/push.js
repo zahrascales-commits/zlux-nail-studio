@@ -143,9 +143,13 @@
       }
       el.innerHTML = '<div style="' + S.card + '">' + inner + '</div>';
 
-      var b;
-      if ((b = el.querySelector('[data-a="on"]'))) b.onclick = async function () {
-        b.disabled = true; b.textContent = 'Asking…';
+      // One variable per button. They used to share one, which by the time
+      // anything was pressed pointed at a button that was not there.
+      var onBtn = el.querySelector('[data-a="on"]');
+      var offBtn = el.querySelector('[data-a="off"]');
+      var testBtn = el.querySelector('[data-a="test"]');
+      if (onBtn) onBtn.onclick = async function () {
+        onBtn.disabled = true; onBtn.textContent = 'Asking…';
         try { await enable(auth); render('Notifications are on for this phone.'); }
         catch (err) {
           render(err.message === 'denied'
@@ -153,13 +157,13 @@
             : 'Could not turn them on: ' + err.message);
         }
       };
-      if ((b = el.querySelector('[data-a="off"]'))) b.onclick = async function () {
-        b.disabled = true;
+      if (offBtn) offBtn.onclick = async function () {
+        offBtn.disabled = true;
         try { await disable(auth); } catch (e) {}
         render('Turned off for this phone. You will still get texts.');
       };
-      if ((b = el.querySelector('[data-a="test"]'))) b.onclick = async function () {
-        b.disabled = true; b.textContent = 'Sending…';
+      if (testBtn) testBtn.onclick = async function () {
+        testBtn.disabled = true; testBtn.textContent = 'Sending…';
         try {
           var r = await test(auth);
           render(r.sent ? 'Sent — it should appear in a second.' : 'Nothing went out: ' + (r.why || 'no devices signed up'));

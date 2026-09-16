@@ -1072,6 +1072,7 @@
   .status-on{background:var(--up-bg);color:var(--up)}
   .status-off{background:var(--down-bg);color:var(--down)}
   .ny{background:#fff;border:1px solid #FECDCA;box-shadow:var(--shadow)}
+  .ny-item i{margin-left:0.45rem}
   .ny.calm{background:#fff;border-color:#ABEFC6}
   .ny-row.soon{background:var(--down-bg)}
   .mix-blk{background:#C9B48F}
@@ -5675,6 +5676,17 @@ async function mkResub(email){
   loadMarketing();
 }
 
+// Which artist's goals are open. Declared here, next to the only code that
+// uses it — its declaration went missing once and the button died silently.
+let openGoalsFor = null;
+// What a goal can count. Deleted alongside openGoalsFor in the same unrelated
+// edit, which is why + Add a goal stopped working too.
+const METRICS = [
+  { v:'memberships',  t:'Memberships sold',        auto:true,  unit:'memberships' },
+  { v:'appointments', t:'Appointments completed',  auto:true,  unit:'appointments' },
+  { v:'revenue',      t:'Money brought in',        auto:true,  unit:'dollars' },
+  { v:'manual',       t:'Anything else (she logs it)', auto:false, unit:'times' },
+];
 function toggleGoals(id){
   openGoalsFor = openGoalsFor === id ? null : id;
   document.querySelectorAll('[id^="goals-"]').forEach(function(e){ e.innerHTML=''; });
@@ -9881,7 +9893,7 @@ async function fixPaymentGaps(n){
 </script>
 <script src="js/client-profile.js?v=3"></script>
 <script src="js/service-groups.js?v=2"></script>
-<script src="js/push.js"></script>
+<script src="js/push.js?v=2"></script>
 <script src="js/pwa.js"></script>
 <div class="drill-veil" id="drill-veil" onclick="if(event.target===this)closeDrill()">
   <div class="drill-box" id="drill-box"></div>
