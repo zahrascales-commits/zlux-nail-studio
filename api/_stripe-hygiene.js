@@ -131,12 +131,16 @@ async function cancelIds(ids) {
 /* Money in with nowhere to go: a finished payment from the booking page or
    a deposit link that no appointment knows about. Should never happen; if it
    does, she hears about it the same day instead of finding it in a month. */
+/* Only payments made after bookings began storing their payment id can be
+   checked this way; older ones have no id to match and would all look lost. */
+const LINKED_SINCE = Number(process.env.ORPHAN_CHECK_SINCE || 0) || Date.parse('2099-01-01T00:00:00Z');
+
 async function orphans(hours = 48) {
   const sk = await secret();
   if (!sk) return [];
   const all = (await listIntents(sk, Math.ceil(hours / 24) + 1))
     .filter(pi => ours(pi) && pi.status === 'succeeded' && (Date.now() - pi.created * 1000) <= hours * HOUR
-      && (Date.now() - pi.created * 1000) >= 20 * 60000);
+      && (Date.now() - pi.created * 1000) >= 20 * 60000 && pi.created * 1000 >= LINKED_SINCE);
   const out = [];
   for (const pi of all) {
     const md = pi.metadata || {};
