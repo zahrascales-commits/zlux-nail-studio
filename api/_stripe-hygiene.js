@@ -133,7 +133,8 @@ async function cancelIds(ids) {
    does, she hears about it the same day instead of finding it in a month. */
 /* Only payments made after bookings began storing their payment id can be
    checked this way; older ones have no id to match and would all look lost. */
-const LINKED_SINCE = Number(process.env.ORPHAN_CHECK_SINCE || 0) || Date.parse('2099-01-01T00:00:00Z');
+// Bookings began storing their payment id at 17:05 UTC on 17 September 2026.
+const LINKED_SINCE = Number(process.env.ORPHAN_CHECK_SINCE || 0) || Date.parse('2026-09-17T17:15:00Z');
 
 async function orphans(hours = 48) {
   const sk = await secret();
@@ -144,7 +145,9 @@ async function orphans(hours = 48) {
   const out = [];
   for (const pi of all) {
     const md = pi.metadata || {};
-    if (/checkout/i.test(pi.description || '')) continue; // the desk records its own
+    // Appointment money only: deposits, bookings paid in full, and balances.
+    // Press-on orders and classes are not appointments and record themselves.
+    if (!/^ZOLA (deposit|balance|—)/.test(pi.description || '')) continue;
     let known = false;
     try {
       if (md.appt_token) {

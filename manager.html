@@ -2408,6 +2408,12 @@
           <div id="dev-reconcile"><div class="muted" style="font-size:0.84rem">Press Compare to check that every deposit Stripe took is marked paid on its booking.</div></div>
         </div>
       </div>
+      <div class="card" style="margin-top:1rem">
+        <div class="card-h"><div class="card-t">Stripe payments</div><div class="card-s">Last 30 days · cleaned up automatically twice a day</div>
+          <div class="sp"><button class="btn btn-ghost btn-sm" onclick="loadStripeHealth()">Refresh</button>
+          <button class="btn btn-gold btn-sm" onclick="cleanStripe()">Clean up abandoned payments</button></div></div>
+        <div id="dev-stripe"><div class="muted" style="font-size:0.84rem">Loading…</div></div>
+      </div>
       <div class="sec-t">Your accounts</div>
       <div class="link-grid">
         <a href="https://dashboard.stripe.com/acct_1TwDT8GjkczLFv0w/payments" target="_blank" rel="noopener">Stripe payments <span>↗</span></a>
@@ -3117,7 +3123,7 @@ const TAB_LOADERS = {
   coupons:    () => loadCoupons(),
   referrals:  () => loadReferrals(),
   aiperf:     () => loadAiPerf(),
-  devtools:   () => loadDevTools(),
+  devtools:   () => { loadDevTools(); loadStripeHealth(); },
   shop:       () => { loadPressons(); if(typeof loadPoApplyPrice === 'function') loadPoApplyPrice(); },
   classes:    () => { loadClasses(); loadClassPurchases(); },
   records:    () => loadRecords(),
@@ -9924,6 +9930,46 @@ async function runSiteCheck(){
       + '</table></div>';
   }catch(err){ el.innerHTML = errLine(err.message); }
 }
+/* ── Stripe payments: what came in, what is incomplete, and cleaning up ── */
+async function loadStripeHealth(){
+  const el = document.getElementById('dev-stripe');
+  if(!el) return;
+  el.innerHTML = loadingCard(90);
+  try{
+    const [rep, orph] = await Promise.all([
+      api('/api/dashboard?action=stripe_report&days=30').then(r => r.json()),
+      api('/api/dashboard?action=stripe_orphans&hours=72').then(r => r.json()),
+    ]);
+    if(rep.error) throw new Error(rep.error);
+    const inc = rep.incomplete || [];
+    const fresh = inc.filter(x => Date.now() - x.created < 60 * 60000);
+    const lost = (orph && orph.orphans) || [];
+    el.innerHTML = '<div class="stat-tiles" style="margin-bottom:0.8rem">'
+        + '<div class="kpi" style="cursor:default"><div class="kpi-l">Payments completed</div><div class="kpi-v">' + rep.succeeded + '</div><div class="kpi-sub">' + hmMoney(rep.succeeded_cents) + ' taken</div></div>'
+        + '<div class="kpi" style="cursor:default"><div class="kpi-l">Incomplete</div><div class="kpi-v">' + inc.length + '</div><div class="kpi-sub">'
+          + (inc.length ? (fresh.length ? fresh.length + ' started in the last hour — someone may still be paying' : 'all abandoned — no money in any of them') : 'nothing waiting') + '</div></div>'
+        + '<div class="kpi" style="cursor:default"><div class="kpi-l">Paid with no booking</div><div class="kpi-v">' + lost.length + '</div><div class="kpi-sub">' + (lost.length ? 'needs a look' : 'every payment has its booking') + '</div></div>'
+      + '</div>'
+      + (lost.length ? '<div class="al-list" style="margin-bottom:0.7rem">' + lost.map(o => '<div class="al-row critical"><span class="al-ic">!</span><div class="al-txt"><b>' + esc(o.client || 'Someone') + ' paid ' + hmMoney(o.received) + '</b><p>' + esc(o.description) + ' · ' + new Date(o.created).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' — no appointment is linked to it.</p></div></div>').join('') + '</div>' : '')
+      + (inc.length ? '<div class="tbl-wrap"><table class="tbl"><tr><th>Started</th><th>Amount</th><th>For</th><th>Why it stopped</th></tr>'
+          + inc.slice(0, 12).map(x => '<tr><td>' + new Date(x.created).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '</td><td>' + hmMoney(x.amount) + '</td><td>' + esc(x.description.replace(/^ZOLA (deposit|balance|checkout)?\s*—\s*/, '')) + '</td><td>' + esc(x.last_error || 'never paid') + '</td></tr>').join('')
+          + '</table></div>' : '');
+  }catch(err){ el.innerHTML = errLine(err.message); }
+}
+async function cleanStripe(){
+  try{
+    const dry = await (await api('/api/dashboard?action=stripe_sweep', { method: 'POST', body: JSON.stringify({ action: 'stripe_sweep', dry_run: true }) })).json();
+    if(dry.error) throw new Error(dry.error);
+    const n = (dry.found || []).length;
+    if(!n){ toast('Nothing to clean up — no abandoned payments over an hour old'); return; }
+    if(!confirm('Cancel ' + n + ' abandoned payment' + (n === 1 ? '' : 's') + ' in Stripe?\n\nNone of them has any money in it — they were started and never paid. Anything less than an hour old is left alone in case someone is still paying.')) return;
+    const done = await (await api('/api/dashboard?action=stripe_sweep', { method: 'POST', body: JSON.stringify({ action: 'stripe_sweep', dry_run: false }) })).json();
+    if(done.error) throw new Error(done.error);
+    toast(done.cancelled + ' cleaned up ✓');
+    loadStripeHealth();
+  }catch(err){ toast(err.message); }
+}
+
 async function runPaymentCheck(){
   const el = document.getElementById('dev-reconcile');
   el.innerHTML = loadingCard(120);
