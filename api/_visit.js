@@ -207,11 +207,36 @@ module.exports = async function (req, res) {
         due_cents: group.dueCents,
         paid_cents: group.paidCents,
         all_paid: group.dueCents === 0,
+        // Whether the payment keeps the card for the rest of the visit. The
+        // page's payment form has to be built with the same answer, or
+        // Stripe refuses to take the money.
+        save_card: !!String(appt.client_email || '').trim(),
       });
     }
 
     // ── Pay the deposit ──
+    /* ── A payment that did not go through ──
+       Written down with Stripe's own words and put in front of the owner, so
+       "it would not let me pay" is never the first she hears of it. */
+    if (req.method === 'POST' && action === 'pay_error') {
+      const b = req.body || {};
+      const detail = [b.code, b.decline_code, b.type, b.message].filter(Boolean).join(' · ').slice(0, 280);
+      try {
+        await execute('INSERT INTO kiosk_log (type, name, detail, ts) VALUES (?,?,?,?)',
+          ['pay_error', String(appt.client_name || '').slice(0, 80), ('Deposit link: ' + detail + (b.wallet ? ' [' + b.wallet + ']' : '')).slice(0, 300), Date.now()]);
+      } catch (_) {}
+      try {
+        await require('./_notify').notifyInApp('owner', null,
+          '⚠ ' + (appt.client_name || 'A client') + ' could not pay their deposit',
+          (b.message || 'Payment did not go through').slice(0, 300));
+      } catch (_) {}
+      return res.json({ ok: true });
+    }
+
     if (req.method === 'POST' && action === 'pay_intent') {
+      // Asked for when the card form and the payment disagreed about keeping
+      // the card: take the deposit without keeping it rather than not at all.
+      const noSave = (req.body || {}).no_save === true;
       /* Asked for the whole day. Charging only this service is how a second
          deposit got left behind. */
       if (group.dueCents === 0) return res.status(400).json({ error: 'Everything booked for this day is already paid — nothing more to do.' });
@@ -266,11 +291,11 @@ module.exports = async function (req, res) {
              back when it clears, so every service is marked paid with its own
              deposit rather than one of them being handed the lot. */
           'metadata[appt_group]': group.tokenShares,
-          ...(customerId ? {
-            customer: customerId,
-            // Kept for the rest of this appointment, at the desk.
-            setup_future_usage: 'off_session',
-          } : {}),
+          // Kept for the rest of this appointment, at the desk — exactly when
+          // the page was told so (an email on the booking), whether or not
+          // the customer record could be made, so the two always agree.
+          ...(!noSave && String(appt.client_email || '').trim() ? { setup_future_usage: 'off_session' } : {}),
+          ...(!noSave && customerId ? { customer: customerId } : {}),
         }).toString(),
       });
       const pi = await r.json();
