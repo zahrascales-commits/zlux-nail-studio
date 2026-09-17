@@ -673,6 +673,38 @@ async function correctDeposit(body) {
 
 module.exports = async function (req, res) {
   if (req.headers['x-ceo-password'] !== CEO_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
+  /* Everything a phone needs to show Apple Pay / Google Pay and take a card,
+     read straight from Stripe. Read-only. */
+  if ((req.query.action || '') === 'pay_check') {
+    try {
+      const sk = await stripeKey();
+      const get = async path => {
+        const r = await fetch('https://api.stripe.com/v1/' + path, { headers: { Authorization: 'Bearer ' + sk } });
+        const j = await r.json().catch(() => ({}));
+        return r.ok ? j : { error: (j.error && j.error.message) || ('HTTP ' + r.status) };
+      };
+      const [account, domains, configs, legacy] = await Promise.all([
+        get('account'), get('payment_method_domains?limit=20'), get('payment_method_configurations?limit=10'), get('apple_pay/domains?limit=20'),
+      ]);
+      const pick = x => x && typeof x === 'object' ? { available: x.available, preference: x.display_preference && x.display_preference.value } : x;
+      return res.json({
+        account: account.error ? account : {
+          charges_enabled: account.charges_enabled, card_payments: (account.capabilities || {}).card_payments,
+          country: account.country,
+        },
+        payment_method_domains: domains.error ? domains : (domains.data || []).map(d => ({
+          domain: d.domain_name, enabled: d.enabled,
+          apple_pay: d.apple_pay && d.apple_pay.status, google_pay: d.google_pay && d.google_pay.status,
+          link: d.link && d.link.status, apple_pay_error: d.apple_pay && d.apple_pay.status_details,
+        })),
+        legacy_apple_pay_domains: legacy.error ? legacy : (legacy.data || []).map(d => d.domain_name),
+        configurations: configs.error ? configs : (configs.data || []).map(c => ({
+          id: c.id, name: c.name, is_default: c.is_default, active: c.active,
+          card: pick(c.card), apple_pay: pick(c.apple_pay), google_pay: pick(c.google_pay), link: pick(c.link), cashapp: pick(c.cashapp),
+        })),
+      });
+    } catch (err) { return res.status(500).json({ error: String(err.message || err) }); }
+  }
   if ((req.query.action || '') === 'deposit_states') {
     const from = String(req.query.from || '').slice(0, 10), to = String(req.query.to || '').slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) return res.status(400).json({ error: 'from and to required' });
