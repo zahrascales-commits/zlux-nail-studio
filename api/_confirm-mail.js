@@ -202,7 +202,12 @@ async function sendFor(appt, { force } = {}) {
      is the one that goes. Only when she has switched one on — with nothing
      written, the built-in above is sent exactly as before, so taking this
      email over is her decision rather than a change that happened to her. */
-  try {
+  /* Her own wording is about paying a deposit ("Pay your {{amount}} deposit…
+     not confirmed until it is paid"). Sent to someone who has already paid on
+     the website, it told them to pay a $0 deposit. So hers goes out while a
+     deposit is owed, and the built-in one — which thanks them for the deposit
+     and offers paying the rest — goes out once it is paid. */
+  if (depositCents > 0) try {
     const data = await require('./_email-fields').forAppointment(
       Object.assign({}, appt, { artist_name: artist }),
       {
