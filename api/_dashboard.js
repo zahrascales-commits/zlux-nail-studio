@@ -558,8 +558,62 @@ async function notifyOwner(sendToOwner, fresh) {
   return sent;
 }
 
+/* ═══════════════════════ WHO PAID WHAT ═══════════════════════
+   Every card payment in a window with the person Stripe has on it — the
+   name and email typed at the card, the receipt address, and whatever the
+   site attached — beside every booking in both books. A deposit paid on the
+   booking page can carry no name at all (the intent is made before the name
+   is typed), so the card holder is often the only way to say whose it is. */
+async function paymentsLedger(days) {
+  await ensureTables();
+  const sk = await stripeKey();
+  const since = Math.floor((Date.now() - days * DAY) / 1000);
+  const charges = [];
+  if (sk) {
+    let after = null;
+    for (let page = 0; page < 10; page++) {
+      const p = new URLSearchParams({ limit: '100', 'created[gte]': String(since) });
+      p.append('expand[]', 'data.payment_intent');
+      if (after) p.set('starting_after', after);
+      const r = await fetch('https://api.stripe.com/v1/charges?' + p, { headers: { Authorization: 'Bearer ' + sk } });
+      const j = await r.json();
+      if (!r.ok) throw new Error((j.error && j.error.message) || 'Stripe refused');
+      for (const ch of j.data || []) {
+        const pi = ch.payment_intent && typeof ch.payment_intent === 'object' ? ch.payment_intent : null;
+        const bd = ch.billing_details || {};
+        charges.push({
+          id: ch.id, created: ch.created * 1000, status: ch.status, amount: ch.amount, refunded: ch.amount_refunded,
+          description: ch.description || '',
+          card_name: bd.name || '', card_email: bd.email || '', card_phone: bd.phone || '',
+          receipt_email: ch.receipt_email || '',
+          wallet: ((ch.payment_method_details || {}).card || {}).wallet ? ((ch.payment_method_details.card.wallet || {}).type || '') : '',
+          payment_intent: pi ? pi.id : (ch.payment_intent || ''),
+          meta: Object.assign({}, pi ? pi.metadata : {}, ch.metadata || {}),
+        });
+      }
+      if (!j.has_more || !(j.data || []).length) break;
+      after = j.data[j.data.length - 1].id;
+    }
+  }
+  const sinceDay = new Date(Date.now() - days * DAY).toISOString().slice(0, 10);
+  let team = [], site = [];
+  try {
+    team = await query(`SELECT id, client_name, client_email, client_phone, service, date, time, status, price_cents,
+      deposit_cents, deposit_paid, paid_cents, checked_out_ts, chat_token, created_at, team_member_id
+      FROM team_appointments WHERE date >= ? ORDER BY date, time`, [sinceDay]);
+  } catch (_) {}
+  try {
+    site = await require('./_db').query(`SELECT * FROM appointments WHERE appointment_date >= ? ORDER BY appointment_date, appointment_time`, [sinceDay]);
+  } catch (e) { site = [{ error: String(e.message || e) }]; }
+  return { charges, team, site };
+}
+
 module.exports = async function (req, res) {
   if (req.headers['x-ceo-password'] !== CEO_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
+  if ((req.query.action || '') === 'payments') {
+    try { return res.json(await paymentsLedger(Math.min(120, Math.max(1, Number(req.query.days) || 45)))); }
+    catch (err) { return res.status(500).json({ error: String(err.message || err) }); }
+  }
   const action = req.query.action || (req.body && req.body.action) || '';
   try {
     if (action === 'home') return res.json(await homeData());
