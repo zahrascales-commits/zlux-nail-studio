@@ -191,11 +191,25 @@ module.exports = async function (req, res) {
       // A photo sent through an appointment link already knows whose it is —
       // it was tagged with the artist when it arrived. That is the most
       // reliable signal there is, so it counts before any of the above.
+      /* Kept through the appointment and the day after it, then it leaves
+         the artist's feed — Tuesday's photo is there until the end of
+         Wednesday. A photo with no appointment date stays three days from
+         when it arrived. Nothing is deleted; Studio Manager still has all. */
+      const studioDay = ms => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles',
+        year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
+      const today = studioDay(Date.now());
+      const yesterday = studioDay(Date.now() - 86400000);
+      const stillUseful = r => {
+        const d = String(r.appt_date || '').slice(0, 10);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d >= yesterday;
+        return Number(r.ts) >= Date.now() - 3 * 86400000;
+      };
       const visible = rows
         .filter(r => Number(r.team_member_id) === memberId
           || mine.has(r.confirmation) || deciding.has(r.confirmation))
+        .filter(stillUseful)
         .map(r => ({ ...r, mine: Number(r.team_member_id) === memberId || mine.has(r.confirmation) }));
-      return res.json({ inspo: visible });
+      return res.json({ inspo: visible, today });
     }
 
     /* ── OWNER: give the older photos an owner ──

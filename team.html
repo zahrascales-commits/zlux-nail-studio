@@ -435,6 +435,16 @@
   /* Labels written at 9-10px for a desktop screen, raised to something an
      iPhone can read at arm's length. */
   .panel [style*="font-size:0.5"],.panel [style*="font-size:0.6"]{font-size:0.8rem!important;letter-spacing:0.01em!important}
+  #photo-view{position:fixed;inset:0;z-index:300;background:#000;display:none;align-items:center;justify-content:center;
+    padding:calc(var(--safe-t) + 3.4rem) 0 calc(var(--safe-b) + 6rem)}
+  #photo-view.open{display:flex;animation:fadeIn 0.15s ease}
+  #pv-img{max-width:100vw;max-height:100%;width:auto;height:auto;object-fit:contain;display:block;
+    -webkit-touch-callout:default;user-select:auto}
+  .pv-x{position:absolute;top:calc(var(--safe-t) + 0.6rem);right:0.8rem;width:44px;height:44px;border-radius:50%;
+    border:none;background:rgba(255,255,255,0.16);color:#fff;font-size:1.6rem;line-height:1;cursor:pointer}
+  .pv-cap{position:absolute;left:0;right:0;bottom:calc(var(--safe-b) + 0.7rem);text-align:center;color:#fff;padding:0 1rem}
+  #pv-cap{font-size:0.95rem;font-weight:600}
+  .pv-hint{font-size:0.75rem;opacity:0.65;margin-top:0.2rem}
   @media (max-width:380px){
     .logout{padding:0 0.6rem;font-size:0.8rem}
     nav.tabs .tab{font-size:0.6rem}
@@ -555,6 +565,14 @@
 </div>
 
 <div id="toast"></div>
+
+<!-- One tap on an inspiration photo opens it here, as big as the screen
+     allows. Tap anywhere to close. Press and hold the photo to save it. -->
+<div id="photo-view" onclick="closePhoto()" role="dialog" aria-label="Inspiration photo">
+  <button class="pv-x" onclick="event.stopPropagation();closePhoto()" aria-label="Close">×</button>
+  <img id="pv-img" alt="" onclick="event.stopPropagation()" />
+  <div class="pv-cap"><div id="pv-cap"></div><div class="pv-hint">Tap outside the photo to close · press and hold to save</div></div>
+</div>
 
 <script>
 /* Section icons, drawn once. */
@@ -867,7 +885,7 @@ async function loadJobs(){
     + '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.76rem;color:var(--muted);line-height:1.7;margin-bottom:0.9rem;">First to confirm takes it. These are already matched to your services and your rostered hours.</p>'
     + JOBS.map(function(j){
         return '<div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:0.9rem;margin-bottom:0.7rem;">'
-          + (j.inspo ? '<img src="' + j.inspo + '" alt="" style="width:100%;height:150px;object-fit:cover;border-radius:6px;display:block;margin-bottom:0.6rem">'
+          + (j.inspo ? '<img src="' + j.inspo + '" alt="" style="width:100%;height:150px;object-fit:cover;border-radius:6px;display:block;margin-bottom:0.6rem;cursor:zoom-in" onclick="openPhoto(this.src, ' + esc(JSON.stringify(j.service || 'Inspiration')).replace(/"/g,'&quot;') + ')">'
               + '<div style="font-size:0.66rem;color:var(--muted);margin-bottom:0.5rem">What she wants — check you are happy with it before you confirm.</div>' : '')
           + '<div style="font-family:Cinzel,serif;font-size:0.98rem;color:var(--cream);letter-spacing:0.03em;">' + esc(j.service||'Appointment') + '</div>'
           + '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;color:var(--gold);margin-top:0.25rem;">' + esc(j.date_label||j.date) + ' · ' + esc(j.time_label||j.time) + '</div>'
@@ -944,6 +962,20 @@ async function loadTeamInv(){
     const d=await r.json(); _teamInv=d.items||[]; renderTeamInv(d.low_count||0);
   }catch{ el.innerHTML='<div class="loading">Could not load inventory.</div>'; }
 }
+/* ── Full-screen photo ── */
+function openPhoto(src, caption){
+  const v = document.getElementById('photo-view');
+  document.getElementById('pv-img').src = src;
+  document.getElementById('pv-cap').textContent = caption || '';
+  v.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closePhoto(){
+  document.getElementById('photo-view').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closePhoto(); });
+
 function tesc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function renderTeamInv(lowCount){
   const el=document.getElementById('team-inv');
@@ -1032,7 +1064,7 @@ async function loadTeamInspo(){
     if(!rows.length){el.innerHTML='<div class="empty"><div class="big">💅</div>No inspo photos yet.<br><span style="font-size:0.72rem">When clients attach inspo at booking, it lands here with their name.</span></div>';return;}
     el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0.8rem">'
       +rows.map(p=>'<div style="border:1px solid var(--line);background:#fff;padding:0.5rem;border-radius:12px;box-shadow:var(--shadow)">'
-        +'<img src="'+p.data_url+'" style="width:100%;height:140px;object-fit:cover;display:block;border-radius:8px" alt="">'
+        +'<img src="'+p.data_url+'" style="width:100%;height:140px;object-fit:cover;display:block;border-radius:8px;cursor:zoom-in" alt="" onclick="openPhoto(this.src, '+esc(JSON.stringify((p.client_name||'Client')+(p.service?' · '+p.service:'')+(p.appt_date?' · '+p.appt_date:''))).replace(/"/g,'&quot;')+')">'
         +'<div style="font-family:\'Cinzel\',serif;font-size:0.85rem;color:var(--cream);margin-top:0.4rem">'+clientLink(p.client_name||'Client')+'</div>'
         +'<div style="font-size:0.62rem;color:var(--muted)">'+esc(p.service||'')+(p.appt_date?' · '+p.appt_date:'')+'</div>'
         +(p.mine?'<div style="font-size:0.6rem;color:#067647;margin-top:0.2rem">Yours</div>':'<div style="font-size:0.6rem;color:var(--gold);margin-top:0.2rem">Still open — confirm to keep it</div>')
