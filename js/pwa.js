@@ -10,9 +10,11 @@
     var standalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
     if (isiOS && !standalone && !localStorage.getItem('zola_a2hs_dismissed')) {
       var bar = document.createElement('div');
-      bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#140d07;color:#F2ECE1;border-top:1px solid rgba(182,165,136,0.4);padding:0.9rem 1rem;font-family:"Josefin Sans",sans-serif;font-size:0.85rem;display:flex;align-items:center;gap:0.7rem;box-shadow:0 -6px 24px rgba(0,0,0,0.4);';
+      // Sits above a page's own bottom bar when it has one (--a2hs-bottom), and
+      // clear of the iPhone home bar.
+      bar.style.cssText = 'position:fixed;left:0.6rem;right:0.6rem;bottom:calc(var(--a2hs-bottom,0px) + env(safe-area-inset-bottom,0px) + 0.6rem);z-index:99999;background:#fff;color:#101828;border:1px solid #EAECF0;border-radius:14px;padding:0.85rem 0.9rem;font-family:Inter,system-ui,-apple-system,sans-serif;font-size:0.9rem;display:flex;align-items:center;gap:0.7rem;box-shadow:0 10px 30px rgba(16,24,40,0.16);';
       bar.innerHTML = '<span style="flex:1;line-height:1.4;">Add ZOLA to your Home Screen — tap the <strong>Share</strong> icon, then <strong>Add to Home Screen</strong>.</span>' +
-        '<button style="background:#B6A588;color:#0B0B0B;border:none;padding:0.55rem 0.95rem;font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;border-radius:8px;flex-shrink:0;">Got it</button>';
+        '<button style="background:#101828;color:#fff;border:none;padding:0.55rem 0.95rem;min-height:40px;font-size:0.9rem;font-weight:600;cursor:pointer;border-radius:10px;flex-shrink:0;">Got it</button>';
       bar.querySelector('button').onclick = function () { try { localStorage.setItem('zola_a2hs_dismissed', '1'); } catch (e) {} bar.remove(); };
       document.body.appendChild(bar);
     }

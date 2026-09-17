@@ -2,19 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>ZOLA — Team Portal</title>
 <link rel="manifest" href="/manifest-team.json" />
 <link rel="apple-touch-icon" href="/img/zola-icon.png" />
 <link rel="icon" href="/img/zola-icon.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="ZOLA Team" />
-<meta name="theme-color" content="#140d07" />
+<meta name="theme-color" content="#ffffff" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800&family=Josefin+Sans:wght@300;400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   :root{
@@ -213,6 +213,233 @@
   .mini-cell .mdot.none{background:transparent}
 
   @media(max-width:600px){.wrap{padding:1.1rem}}
+
+  /* ══════════════════════════════════════════════════════════════════════
+     THE LOOK — the same white, calm Studio Manager style, built for iPhone.
+
+     Laid over the original styles, so every screen keeps working exactly as
+     before. On a phone the six sections sit in a bar along the bottom, where
+     a thumb reaches them; on a computer they move to a menu on the left, the
+     same as Studio Manager. Space is left for the iPhone notch and home bar.
+     ══════════════════════════════════════════════════════════════════════ */
+  :root{
+    --font:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --page:#F5F6F8;
+    --bg:#F8F9FB;--surface:#FFFFFF;--card:#FFFFFF;--card-hi:#F9FAFB;
+    --border:#E4E7EC;--border-hi:#D0D5DD;--line:#EAECF0;
+    --ink:#101828;--ink-2:#344054;
+    --cream:#101828;--text:#101828;--muted:#667085;--latte:#6B5B45;
+    --gold:#8A6A3F;--gold-faint:rgba(138,106,63,0.08);
+    --accent-bg:#F6F1EA;--accent-ink:#6E5230;
+    --up:#067647;--up-bg:#ECFDF3;--down:#B42318;--down-bg:#FEF3F2;
+    --success:#067647;--danger:#B42318;
+    --member:#B6A588;
+    --radius:14px;--shadow:0 1px 2px rgba(16,24,40,0.05);--shadow-md:0 8px 24px rgba(16,24,40,0.10);
+    --side:240px;--bar:60px;
+    --safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px);
+    --btn-bg:#101828;--btn-ink:#FFFFFF;
+    --a2hs-bottom:calc(var(--bar) + var(--safe-b));
+  }
+  html{background:var(--page);-webkit-text-size-adjust:100%}
+  body{background:var(--page);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+  body *{font-family:var(--font)!important}
+  [style*="Cinzel"],[style*="Josefin"]{letter-spacing:-0.005em!important}
+  .brandmark,.brandmark *,.login-logo,.login-logo *{font-family:'Cinzel',serif!important}
+  button,a,.wc-cell,.appt{touch-action:manipulation}
+  input,textarea,select{font-size:16px!important;color:var(--ink);background:#fff;border-radius:10px}
+  input::placeholder,textarea::placeholder{color:#98A2B3}
+  ::-webkit-scrollbar-thumb{background:#D0D5DD}
+
+  /* ── sign in ── */
+  #login{background:var(--page);padding:calc(1.5rem + var(--safe-t)) 1.25rem calc(1.5rem + var(--safe-b))}
+  .login-card{background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow-md);padding:2.4rem 1.6rem}
+  .login-card::before{display:none}
+  .login-logo{color:var(--ink)}
+  .login-sub{color:var(--muted);letter-spacing:0.22em}
+  .login-label{color:var(--ink-2);letter-spacing:0;text-transform:none;font-size:0.9rem;font-weight:500;text-align:center}
+  .login-input{background:#fff;border:1px solid var(--border-hi);color:var(--ink);border-radius:12px;min-height:56px;font-size:1.5rem!important}
+  .login-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(138,106,63,0.15)}
+  .login-btn{background:var(--ink);color:#fff;border-radius:12px;letter-spacing:0;text-transform:none;font-size:1rem;font-weight:600;min-height:52px}
+  .login-btn:hover{transform:none;box-shadow:var(--shadow-md)}
+  .login-err{color:var(--down)}
+
+  /* ── top bar ── */
+  .topbar{background:rgba(255,255,255,0.92);backdrop-filter:saturate(180%) blur(16px);-webkit-backdrop-filter:saturate(180%) blur(16px);
+    border-bottom:1px solid var(--line);padding:calc(0.55rem + var(--safe-t)) 1rem 0.55rem;gap:0.7rem;min-height:60px}
+  .tp-left{display:flex;align-items:center;gap:0.65rem;min-width:0;flex:1}
+  .tp-av{width:36px;height:36px;border-radius:50%;background:var(--member);color:#101828;display:flex;align-items:center;
+    justify-content:center;font-weight:700;font-size:0.95rem;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(16,24,40,0.08)}
+  .tp-title{min-width:0}
+  .tp-title b{display:block;font-size:1.05rem;font-weight:700;color:var(--ink);letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25}
+  .who-name{font-size:0.78rem;letter-spacing:0;text-transform:none;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tp-right{display:flex;align-items:center;gap:0.45rem;flex-shrink:0}
+  .bell{width:40px;height:40px;border:1px solid var(--border-hi);border-radius:10px;background:#fff;color:var(--ink-2);font-size:1rem}
+  .bell-badge{background:var(--down)}
+  .bell-drop{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-md)}
+  .notif{border-bottom:1px solid var(--line)}
+  .notif.unread{background:#F9F5EF;border-left:3px solid var(--gold)}
+  .notif-title{color:var(--ink);font-weight:600;font-size:0.9rem}
+  .notif-body{font-size:0.82rem}
+  .notif-ts{font-size:0.72rem}
+  .logout{min-height:40px;border:1px solid var(--border-hi);border-radius:10px;background:#fff;color:var(--ink-2);
+    font-size:0.85rem;letter-spacing:0;text-transform:none;font-weight:600;padding:0 0.8rem}
+  .logout:hover{border-color:#98A2B3;color:var(--ink)}
+
+  /* ── the sections ── */
+  nav.tabs{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:60;display:flex;justify-content:space-around;align-items:stretch;
+    background:rgba(255,255,255,0.94);backdrop-filter:saturate(180%) blur(16px);-webkit-backdrop-filter:saturate(180%) blur(16px);
+    border-top:1px solid var(--line);border-bottom:none;padding:0 0 var(--safe-b);overflow:visible;height:auto}
+  nav.tabs .nav-brand{display:none}
+  nav.tabs .tab{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    height:var(--bar);padding:0.35rem 0.1rem 0.3rem;border:none;background:none;color:#667085;font-size:0.66rem;font-weight:600;
+    letter-spacing:0;text-transform:none;border-bottom:none;position:relative;white-space:nowrap}
+  nav.tabs .tab .nl{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  nav.tabs .tab .nl-long{display:none}
+  nav.tabs .tab.active{color:var(--ink);border-bottom-color:transparent}
+  nav.tabs .tab.active::before{content:'';position:absolute;top:0;left:22%;right:22%;height:3px;border-radius:0 0 3px 3px;background:var(--member)}
+  .ni{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center}
+  .ni svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  nav.tabs .tab.active .ni svg{stroke-width:2.2}
+
+  .wrap{max-width:760px;margin:0 auto;padding:1.1rem 1rem calc(var(--bar) + var(--safe-b) + 2rem)}
+  .panel{animation:fadeIn 0.25s ease}
+
+  @media (min-width:900px){
+    nav.tabs{top:0;right:auto;bottom:0;width:var(--side);flex-direction:column;justify-content:flex-start;
+      border-top:none;border-right:1px solid var(--line);background:#fff;padding:0 0 1rem;backdrop-filter:none}
+    nav.tabs .nav-brand{display:flex;align-items:center;gap:0.65rem;padding:1.05rem 1.2rem 0.95rem;border-bottom:1px solid var(--line);margin-bottom:0.6rem}
+    .nb-mark{width:34px;height:34px;border-radius:9px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.95rem}
+    .nb-name{font-size:1.05rem;color:var(--ink);letter-spacing:0.14em;line-height:1.1}
+    .nb-sub{font-size:0.72rem;color:var(--muted);letter-spacing:0}
+    nav.tabs .tab{flex:0 0 auto;flex-direction:row;justify-content:flex-start;gap:0.7rem;height:auto;margin:1px 0.6rem;
+      width:calc(100% - 1.2rem);padding:0.6rem 0.75rem;border-radius:9px;font-size:0.9rem;font-weight:500;color:var(--ink-2)}
+    nav.tabs .tab .nl-short{display:none}
+    nav.tabs .tab .nl-long{display:inline}
+    nav.tabs .tab:hover{background:#F2F4F7;color:var(--ink)}
+    nav.tabs .tab.active{background:var(--accent-bg);color:var(--accent-ink);font-weight:600}
+    nav.tabs .tab.active::before{top:8px;bottom:8px;left:0;right:auto;width:3px;height:auto;border-radius:0 3px 3px 0}
+    .ni svg{width:19px;height:19px}
+    .topbar{padding-left:calc(var(--side) + 1.25rem)}
+    .wrap{margin-left:var(--side);max-width:none;padding:1.6rem clamp(1.25rem,3vw,2.5rem) 4rem}
+    .wrap>.panel{max-width:760px;margin:0 auto}
+    :root{--a2hs-bottom:0px}
+  }
+
+  /* ── headings and buttons ── */
+  .label-sm{font-size:1.05rem;font-weight:700;letter-spacing:-0.01em;text-transform:none;color:var(--ink);margin-bottom:0.75rem}
+  .mini{min-height:40px;padding:0.5rem 0.95rem;border-radius:10px;font-size:0.88rem;font-weight:600;letter-spacing:0;text-transform:none;
+    display:inline-flex;align-items:center;justify-content:center;gap:0.35rem;border:1px solid var(--border-hi);background:#fff;color:var(--ink)}
+  .mini-gold{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .mini-ok{background:var(--up-bg);color:var(--up);border:1px solid #ABEFC6}
+  .mini-no{background:var(--down-bg);color:var(--down);border:1px solid #FECDCA}
+  .mini:disabled{opacity:0.55}
+  .row-btns{gap:0.5rem;margin-top:0.8rem}
+  .row-btns .mini{flex:1 1 auto}
+  #toast{background:var(--ink);color:#fff;border-radius:12px;letter-spacing:0;font-weight:500;font-size:0.9rem;
+    bottom:calc(var(--bar) + var(--safe-b) + 0.8rem);box-shadow:var(--shadow-md);max-width:calc(100% - 2rem);text-align:center}
+  /* Hidden means hidden: it used to sit just below the screen edge, which is
+     now right where the section bar is. */
+  #toast{opacity:0;visibility:hidden;transform:translateX(-50%) translateY(12px);transition:opacity 0.2s,transform 0.2s,visibility 0.2s}
+  #toast.show{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+  @media (min-width:900px){ #toast{bottom:1.4rem} }
+  .empty{color:var(--muted);font-size:0.95rem;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:2.4rem 1rem}
+  .loading{color:var(--muted)}
+
+  /* ── appointments and cards ── */
+  .appt{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:0.95rem;gap:0.85rem;margin-bottom:0.65rem}
+  .appt:hover{border-color:var(--border-hi)}
+  .appt-t{background:var(--bg);border-left:3px solid var(--member);border-radius:10px;min-width:74px;padding:0.55rem 0.35rem}
+  .appt-t .d{letter-spacing:0;text-transform:none;font-size:0.72rem;color:var(--muted)}
+  .appt-t .h{font-size:1rem;font-weight:700;color:var(--ink)}
+  .badge-today{background:var(--ink);color:#fff;border-radius:100px;letter-spacing:0;text-transform:none;font-size:0.66rem;padding:0.1rem 0.5rem}
+  .appt-c{font-size:1.02rem;font-weight:650;color:var(--ink)}
+  .appt-s{font-size:0.86rem;color:var(--muted)}
+  .appt-p{font-size:0.86rem;color:var(--accent-ink)}
+  .appt-note{font-size:0.84rem}
+  .st{border-radius:100px;letter-spacing:0;text-transform:capitalize;font-size:0.72rem;font-weight:600;padding:0.15rem 0.55rem}
+  .st-completed{background:var(--up-bg);color:var(--up)}
+  .st-no_show{background:var(--down-bg);color:var(--down)}
+
+  /* ── today ── */
+  .today-card{background:linear-gradient(160deg,#EFF8FF 0%,#FFFFFF 55%,#F9F5EF 100%);border:1px solid var(--line);border-radius:18px;
+    box-shadow:var(--shadow);padding:1.15rem 1.1rem 1rem}
+  .today-when{letter-spacing:0;text-transform:none;font-size:0.85rem;font-weight:600;color:var(--muted)}
+  .today-hours{font-size:1.6rem;font-weight:700;letter-spacing:-0.02em;color:var(--ink)}
+  .today-sub{font-size:0.9rem;color:var(--ink-2)}
+  .today-row{border-top:1px solid var(--line);padding:0.7rem 0}
+  .today-time{color:#6941C6;font-size:0.92rem}
+  .today-who{font-size:0.98rem;font-weight:600;color:var(--ink)}
+  .today-what{font-size:0.84rem}
+  .today-next{border-top:1px solid var(--line);font-size:0.86rem;color:var(--ink-2)}
+
+  /* ── my month ── */
+  .wc-head .mini{background:#fff;border:1px solid var(--border-hi);color:var(--ink);min-width:44px;min-height:44px;font-size:1.25rem;border-radius:12px}
+  .wc-label{font-size:1.05rem;font-weight:700;color:var(--ink)}
+  .wc-dows span{font-size:0.72rem;font-weight:600;letter-spacing:0;color:var(--muted)}
+  .wc-cells{gap:0.3rem}
+  .wc-cell{min-height:44px;border:1px solid var(--line);background:#fff;color:var(--ink-2);border-radius:10px;font-size:0.92rem;font-weight:500}
+  .wc-cell.today{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+  .wc-cell.work{background:#EFF8FF;border-color:#B2DDFF;color:#175CD3;font-weight:700}
+  .wc-cell.dot::after{background:#7F56D9;box-shadow:none;width:6px;height:6px}
+  .wc-cell.sel{outline:2px solid var(--gold);outline-offset:1px}
+  .wc-key{font-size:0.8rem;color:var(--muted)}
+  .wc-sw{border-radius:3px;border-color:var(--border-hi)}
+  .wc-sw.work{background:#D1E9FF;border-color:#84CAFF}
+  .wc-sw.dot{background:#7F56D9;border-color:#7F56D9}
+
+  /* ── goals ── */
+  .rate-card{background:linear-gradient(160deg,#F9F5EF,#F4F3FF);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+  .rate-num{font-size:2.6rem;font-weight:700;letter-spacing:-0.03em;color:var(--ink)}
+  .rate-lbl{letter-spacing:0;text-transform:none;font-size:0.9rem;font-weight:600;color:var(--accent-ink)}
+  .rate-sub{font-size:0.88rem;color:var(--ink-2)}
+  .rate-wait{color:#6941C6}
+  .lvl-name{font-size:1.05rem;font-weight:700;color:var(--ink)}
+  .lvl-pill{letter-spacing:0;text-transform:none;font-size:0.76rem;font-weight:600;border-color:var(--border-hi);color:var(--muted)}
+  .lvl-pill.open{color:var(--accent-ink);border-color:#D6BF9C;background:var(--accent-bg)}
+  .lvl-pill.done{color:var(--up);border-color:#ABEFC6;background:var(--up-bg)}
+  .jar-grid{grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:0.7rem}
+  .jar-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .jar-card.full{border-color:#ABEFC6;box-shadow:0 0 0 1px #ABEFC6}
+  .jar-title{font-size:0.92rem;font-weight:600;color:var(--ink)}
+  .jar-count{color:var(--accent-ink);font-size:0.86rem;font-weight:600}
+  .jar-worth{font-size:0.8rem}
+  .jar-won{color:var(--up);letter-spacing:0;text-transform:none;font-size:0.82rem;font-weight:600}
+  .jar-auto{letter-spacing:0;text-transform:none;font-size:0.76rem}
+  .jar-btn{background:var(--ink);color:#fff;border-radius:10px;min-height:40px;letter-spacing:0;text-transform:none;font-size:0.86rem;font-weight:600}
+
+  /* ── chat, as a sheet from the bottom ── */
+  .overlay{background:rgba(16,24,40,0.45);backdrop-filter:blur(2px)}
+  .sheet{background:#fff;border:none;border-radius:20px 20px 0 0;max-height:88vh;max-height:88dvh;box-shadow:0 -12px 40px rgba(16,24,40,0.18);
+    animation:fadeUp 0.25s ease}
+  .sheet-head{border-bottom:1px solid var(--line);padding:0.9rem 1rem 0.8rem;position:relative}
+  .sheet-head::before{content:'';position:absolute;top:6px;left:50%;transform:translateX(-50%);width:38px;height:5px;border-radius:3px;background:#D0D5DD}
+  .sheet-head .n{font-size:1.05rem;font-weight:700;color:var(--ink);margin-top:0.25rem}
+  .sheet-head .s{font-size:0.8rem}
+  .close-x{width:40px;height:40px;border-radius:50%;background:#F2F4F7;color:var(--ink-2);font-size:1.4rem;display:flex;align-items:center;justify-content:center}
+  .sheet-body{background:var(--bg);gap:0.45rem}
+  .bubble{border-radius:18px;font-size:0.95rem;padding:0.55rem 0.85rem;max-width:82%}
+  .bubble .who{letter-spacing:0;text-transform:none;font-size:0.7rem;font-weight:600;opacity:0.75}
+  .b-mine{background:var(--ink);color:#fff;border-bottom-right-radius:6px}
+  .b-owner{background:#fff;border:1px solid var(--line);color:var(--ink);border-bottom-left-radius:6px}
+  .b-client{background:#EAECF0;border:none;color:var(--ink);border-bottom-left-radius:6px}
+  .sheet-input{border-top:1px solid var(--line);padding:0.6rem 0.75rem calc(0.6rem + var(--safe-b));background:#fff}
+  .sheet-input input{background:#F2F4F7;border:1px solid transparent;color:var(--ink);border-radius:100px;padding:0.65rem 1rem;min-height:44px}
+  .sheet-input input:focus{background:#fff;border-color:var(--border-hi)}
+  .sheet-input .mini{border-radius:100px;min-width:72px}
+  @media (min-width:700px){ .overlay{align-items:center} .sheet{border-radius:20px} .sheet-head::before{display:none} }
+
+  @media (max-width:899px){
+    .bell-drop{position:fixed;left:0.75rem;right:0.75rem;top:calc(64px + var(--safe-t));width:auto;max-height:70vh}
+  }
+  /* Labels written at 9-10px for a desktop screen, raised to something an
+     iPhone can read at arm's length. */
+  .panel [style*="font-size:0.5"],.panel [style*="font-size:0.6"]{font-size:0.8rem!important;letter-spacing:0.01em!important}
+  @media (max-width:380px){
+    .logout{padding:0 0.6rem;font-size:0.8rem}
+    nav.tabs .tab{font-size:0.6rem}
+  }
+
 </style>
 </head>
 <body>
@@ -232,9 +459,11 @@
 <!-- APP -->
 <div id="app">
   <div class="topbar">
-    <div class="brand"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span></div>
-    <div style="display:flex;align-items:center;gap:0.7rem">
-      <div class="who-name" id="who">—</div>
+    <div class="tp-left">
+      <div class="tp-av" id="tp-av" aria-hidden="true"></div>
+      <div class="tp-title"><b id="tp-title">My Schedule</b><div class="who-name" id="who">—</div></div>
+    </div>
+    <div class="tp-right">
       <div class="bell-wrap">
         <button class="bell" onclick="toggleBell()" title="Notifications">🔔<span class="bell-badge" id="bell-badge" style="display:none">0</span></button>
         <div class="bell-drop" id="bell-drop"></div>
@@ -242,14 +471,20 @@
       <button class="logout" onclick="logout()">Log Out</button>
     </div>
   </div>
-  <div class="tabs">
-    <button class="tab active" data-t="schedule" onclick="showTab('schedule')">My Schedule</button>
-    <button class="tab" data-t="goals" onclick="showTab('goals')">My Goals</button>
-    <button class="tab" data-t="chats" onclick="showTab('chats')">Client Chats</button>
-    <button class="tab" data-t="clients" onclick="showTab('clients')">Clients</button>
-    <button class="tab" data-t="inspo" onclick="showTab('inspo')">Inspo</button>
-    <button class="tab" data-t="inventory" onclick="showTab('inventory')">Inventory</button>
-  </div>
+  <!-- The six sections. Along the bottom on a phone, down the left on a
+       computer. Same buttons, same showTab(), same order as before. -->
+  <nav class="tabs" aria-label="Sections">
+    <div class="nav-brand">
+      <div class="nb-mark brandmark">Z</div>
+      <div><div class="nb-name brandmark">ZOLA</div><div class="nb-sub">Team Portal</div></div>
+    </div>
+    <button class="tab active" data-t="schedule" onclick="showTab('schedule')"><span class="ni" data-i="calendar"></span><span class="nl nl-long">My Schedule</span><span class="nl nl-short">Schedule</span></button>
+    <button class="tab" data-t="goals" onclick="showTab('goals')"><span class="ni" data-i="trophy"></span><span class="nl nl-long">My Goals</span><span class="nl nl-short">Goals</span></button>
+    <button class="tab" data-t="chats" onclick="showTab('chats')"><span class="ni" data-i="message"></span><span class="nl nl-long">Client Chats</span><span class="nl nl-short">Chats</span></button>
+    <button class="tab" data-t="clients" onclick="showTab('clients')"><span class="ni" data-i="users"></span><span class="nl nl-long">Clients</span><span class="nl nl-short">Clients</span></button>
+    <button class="tab" data-t="inspo" onclick="showTab('inspo')"><span class="ni" data-i="image"></span><span class="nl nl-long">Inspo</span><span class="nl nl-short">Inspo</span></button>
+    <button class="tab" data-t="inventory" onclick="showTab('inventory')"><span class="ni" data-i="box"></span><span class="nl nl-long">Inventory</span><span class="nl nl-short">Inventory</span></button>
+  </nav>
   <div class="wrap">
     <section class="panel active" id="panel-schedule">
       <div id="today-card"></div>
@@ -293,7 +528,7 @@
     <section class="panel" id="panel-clients">
       <div class="label-sm">Every Client — Full Context</div>
       <p style="font-family:'Josefin Sans',sans-serif;font-size:0.76rem;color:var(--muted);margin-bottom:1rem;line-height:1.7;">You can see every client's history and preferences — not just your own — so any artist can step in with full context.</p>
-      <input class="login-input" id="tc-search" placeholder="Search name or phone…" oninput="renderTeamClients()" style="font-size:0.9rem;letter-spacing:normal;text-align:left;margin-bottom:1rem;padding:0.7rem 0.9rem;" />
+      <input class="login-input" id="tc-search" placeholder="Search name or phone…" oninput="renderTeamClients()" style="font-size:16px;letter-spacing:normal;text-align:left;margin-bottom:1rem;padding:0.7rem 0.9rem;min-height:48px;" />
       <div id="tclients"><div class="loading">Loading…</div></div>
     </section>
     <section class="panel" id="panel-inspo">
@@ -322,6 +557,21 @@
 <div id="toast"></div>
 
 <script>
+/* Section icons, drawn once. */
+(function(){
+  const I={
+    calendar:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+    trophy:'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
+    message:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+    users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+    image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
+    box:'<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12"/>',
+  };
+  document.querySelectorAll('[data-i]').forEach(function(el){
+    if(I[el.dataset.i]) el.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+I[el.dataset.i]+'</svg>';
+  });
+})();
+
 let MID=null,PIN=null,NAME=null,COLOR='#B6A588';
 let schedule=[];
 let activeAppt=null;
@@ -345,9 +595,12 @@ function enter(){
   document.getElementById('login').style.display='none';
   document.getElementById('app').style.display='block';
   document.getElementById('who').textContent=NAME;
-  // your personal color — consistent everywhere, set by the studio owner
-  document.documentElement.style.setProperty('--gold',COLOR);
-  document.documentElement.style.setProperty('--gold-faint',COLOR+'14');
+  // Your personal colour, set by the studio owner: your initial, the section
+  // you are on, the stripe beside your appointment times. It no longer
+  // repaints the text — a pale colour on a white page cannot be read.
+  document.documentElement.style.setProperty('--member',COLOR);
+  const av=document.getElementById('tp-av');
+  if(av) av.textContent=String(NAME||'?').trim().charAt(0).toUpperCase();
   loadSchedule();loadMyHours();loadBell();
   startJobPolling();mountPush();
   // Artists get the same client profile Zahra sees — someone about to do a
@@ -423,6 +676,10 @@ function pickDay(ds){
 }
 function showTab(t){
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.t===t));
+  const lbl=document.querySelector('.tab[data-t="'+t+'"] .nl-long');
+  const ttl=document.getElementById('tp-title');
+  if(lbl&&ttl) ttl.textContent=lbl.textContent;
+  window.scrollTo(0,0);
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+t).classList.add('active');
   if(t==='schedule'){loadSchedule();loadMyHours();loadCheckins();}
@@ -495,12 +752,12 @@ function jarSvg(pct, full){
   const top = 20, bot = 74, span = bot - top;
   const h = span * p;
   const y = bot - h;
-  const fill = full ? '#8fc79c' : (p > 0 ? '#9a6fc4' : 'transparent');
+  const fill = full ? '#12B76A' : (p > 0 ? '#9E77ED' : 'transparent');
   return '<svg class="jar-svg" viewBox="0 0 56 82" aria-hidden="true">'
     + '<defs><clipPath id="jc"><path d="M10 20 h36 v48 a8 8 0 0 1 -8 8 h-20 a8 8 0 0 1 -8 -8 z"/></clipPath></defs>'
     + '<rect x="16" y="6" width="24" height="8" rx="3" fill="none" stroke="var(--border-hi)" stroke-width="2"/>'
     + '<rect class="jar-liquid" x="8" y="' + y.toFixed(1) + '" width="40" height="' + h.toFixed(1) + '" fill="' + fill + '" opacity="0.85" clip-path="url(#jc)"/>'
-    + '<path d="M10 20 h36 v48 a8 8 0 0 1 -8 8 h-20 a8 8 0 0 1 -8 -8 z" fill="none" stroke="' + (full ? '#8fc79c' : 'var(--border-hi)') + '" stroke-width="2"/>'
+    + '<path d="M10 20 h36 v48 a8 8 0 0 1 -8 8 h-20 a8 8 0 0 1 -8 -8 z" fill="none" stroke="' + (full ? '#12B76A' : 'var(--border-hi)') + '" stroke-width="2"/>'
     + '<text x="28" y="52" text-anchor="middle" font-family="Cinzel,serif" font-size="13" fill="var(--cream)">' + Math.round(p*100) + '%</text>'
     + '</svg>';
 }
@@ -605,11 +862,11 @@ async function loadJobs(){
   if(!JOBS.length){ el.innerHTML=''; return; }
 
   el.innerHTML =
-    '<div style="border:1px solid var(--gold);background:var(--gold-faint);padding:1.1rem 1.15rem;border-radius:10px;margin-bottom:1.75rem;">'
+    '<div style="border:1px solid #D6BF9C;background:#FFFCF7;padding:1.1rem 1rem;border-radius:16px;box-shadow:var(--shadow);margin-bottom:1.75rem;">'
     + '<div class="label-sm" style="margin:0 0 0.3rem;">Open Appointments ✦ ' + JOBS.length + '</div>'
     + '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.76rem;color:var(--muted);line-height:1.7;margin-bottom:0.9rem;">First to confirm takes it. These are already matched to your services and your rostered hours.</p>'
     + JOBS.map(function(j){
-        return '<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:0.9rem 1rem;margin-bottom:0.7rem;">'
+        return '<div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:0.9rem;margin-bottom:0.7rem;">'
           + (j.inspo ? '<img src="' + j.inspo + '" alt="" style="width:100%;height:150px;object-fit:cover;border-radius:6px;display:block;margin-bottom:0.6rem">'
               + '<div style="font-size:0.66rem;color:var(--muted);margin-bottom:0.5rem">What she wants — check you are happy with it before you confirm.</div>' : '')
           + '<div style="font-family:Cinzel,serif;font-size:0.98rem;color:var(--cream);letter-spacing:0.03em;">' + esc(j.service||'Appointment') + '</div>'
@@ -618,7 +875,7 @@ async function loadJobs(){
             + clientLink(j.client_name||'Client')
             + ' · offered to ' + j.offered_to + ' · ' + jobCountdown(j.expires_ts)
           + '</div>'
-          + '<button class="mini mini-gold" style="margin-top:0.75rem;width:100%;" onclick="takeJob(\'' + esc(j.confirmation) + '\',this)">Confirm — take this one</button>'
+          + '<button class="mini mini-gold" style="margin-top:0.75rem;width:100%;min-height:48px;font-size:0.95rem;" onclick="takeJob(\'' + esc(j.confirmation) + '\',this)">Confirm — take this one</button>'
         + '</div>';
       }).join('')
     + '</div>';
@@ -663,12 +920,12 @@ async function loadCheckins(){
     const r=await fetch('/api/team?action=checkins&member_id='+MID+'&pin='+PIN);
     const d=await r.json();const cks=d.checkins||[];
     if(!cks.length){el.innerHTML='';return;}
-    el.innerHTML='<div class="label-sm" style="color:#e0b060;">How did these go? ✦</div>'+cks.map(c=>`
-      <div style="background:linear-gradient(135deg,rgba(182,165,136,0.12),transparent);border:1px solid rgba(182,165,136,0.35);border-radius:12px;padding:1rem;margin-bottom:0.7rem;">
-        <div style="font-family:'Cinzel',serif;font-size:1rem;color:#F5EEE8;">${tesc(c.client_name||'Client')} — ${tesc(c.service||'')}</div>
+    el.innerHTML='<div class="label-sm" style="color:#B54708;">How did these go? ✦</div>'+cks.map(c=>`
+      <div style="background:#fff;border:1px solid #FEDF89;box-shadow:var(--shadow);border-radius:12px;padding:1rem;margin-bottom:0.7rem;">
+        <div style="font-family:'Cinzel',serif;font-size:1rem;color:var(--ink);">${tesc(c.client_name||'Client')} — ${tesc(c.service||'')}</div>
         <div style="font-size:0.72rem;color:var(--muted,#8B7355);margin-bottom:0.6rem;">${tesc(c.date)} · ${tesc(c.time)}</div>
-        <textarea id="ck-note-${c.id}" placeholder="How did it go? Anything to remember for next time…" style="width:100%;background:var(--bg,#0e0b09);border:1px solid rgba(182,165,136,0.25);color:#F5EEE8;border-radius:8px;padding:0.6rem 0.75rem;font-family:'Josefin Sans',sans-serif;font-size:0.85rem;resize:vertical;min-height:56px;"></textarea>
-        <button onclick="respondCheckin(${c.id})" style="margin-top:0.5rem;background:#B6A588;color:#0B0B0B;border:none;padding:0.55rem 1.1rem;font-size:0.7rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;border-radius:8px;">Save Note</button>
+        <textarea id="ck-note-${c.id}" placeholder="How did it go? Anything to remember for next time…" style="width:100%;background:#fff;border:1px solid rgba(182,165,136,0.25);color:var(--ink);border-radius:8px;padding:0.6rem 0.75rem;font-family:'Josefin Sans',sans-serif;font-size:0.85rem;resize:vertical;min-height:56px;"></textarea>
+        <button onclick="respondCheckin(${c.id})" style="margin-top:0.5rem;background:var(--ink);color:#fff;border:none;padding:0.6rem 1.1rem;min-height:42px;font-size:0.9rem;font-weight:600;cursor:pointer;border-radius:10px;">Save Note</button>
       </div>`).join('');
   }catch{ el.innerHTML=''; }
 }
@@ -691,18 +948,18 @@ function tesc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,
 function renderTeamInv(lowCount){
   const el=document.getElementById('team-inv');
   if(!_teamInv.length){ el.innerHTML='<div class="loading">No items yet. Zahra adds items from Studio Manager.</div>'; return; }
-  const head = lowCount>0 ? '<div style="background:rgba(214,102,102,0.14);border:1px solid rgba(214,102,102,0.4);padding:0.7rem 0.9rem;border-radius:10px;margin-bottom:0.9rem;font-size:0.82rem;color:#f0b8b8;">⚠️ '+lowCount+' item'+(lowCount>1?'s':'')+' running low — keep counts accurate so we reorder in time.</div>' : '';
+  const head = lowCount>0 ? '<div style="background:var(--down-bg);border:1px solid #FECDCA;padding:0.75rem 0.9rem;border-radius:12px;margin-bottom:0.9rem;font-size:0.9rem;color:var(--down);">⚠️ '+lowCount+' item'+(lowCount>1?'s':'')+' running low — keep counts accurate so we reorder in time.</div>' : '';
   el.innerHTML = head + _teamInv.map(it=>{
     const low=Number(it.qty)<=Number(it.low_threshold);
-    return `<div style="background:var(--card,#1a1512);border:1px solid ${low?'rgba(214,102,102,0.4)':'rgba(182,165,136,0.18)'};border-radius:12px;padding:0.9rem 1rem;margin-bottom:0.6rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;">
+    return `<div style="background:#fff;box-shadow:var(--shadow);border:1px solid ${low?'#FECDCA':'var(--line)'};border-radius:12px;padding:0.9rem 1rem;margin-bottom:0.6rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;">
       <div style="min-width:0;">
-        <div style="font-family:'Cinzel',serif;font-size:1rem;color:#F5EEE8;">${tesc(it.name)} ${low?'<span style="color:#e88;font-size:0.7rem;">· LOW</span>':''}</div>
+        <div style="font-family:'Cinzel',serif;font-size:1rem;color:var(--ink);">${tesc(it.name)} ${low?'<span style="color:var(--down);font-size:0.75rem;font-weight:700;">· LOW</span>':''}</div>
         <div style="font-size:0.72rem;color:var(--muted,#8B7355);">${it.unit?tesc(it.unit)+' · ':''}alert at ${it.low_threshold}</div>
       </div>
       <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0;">
-        <button onclick="adjTeamInv(${it.id},-1)" style="width:40px;height:40px;border:1px solid rgba(182,165,136,0.3);background:none;color:#B6A588;font-size:1.2rem;cursor:pointer;border-radius:8px;">−</button>
-        <span style="font-family:'Cinzel',serif;font-size:1.5rem;color:${low?'#e88':'#B6A588'};min-width:2ch;text-align:center;">${it.qty}</span>
-        <button onclick="adjTeamInv(${it.id},1)" style="width:40px;height:40px;border:1px solid rgba(182,165,136,0.3);background:none;color:#B6A588;font-size:1.2rem;cursor:pointer;border-radius:8px;">+</button>
+        <button onclick="adjTeamInv(${it.id},-1)" style="width:44px;height:44px;border:1px solid var(--border-hi);background:#fff;color:var(--ink);font-size:1.35rem;cursor:pointer;border-radius:12px;">−</button>
+        <span style="font-family:'Cinzel',serif;font-size:1.5rem;color:${low?'var(--down)':'var(--ink)'};font-weight:700;min-width:2ch;text-align:center;">${it.qty}</span>
+        <button onclick="adjTeamInv(${it.id},1)" style="width:44px;height:44px;border:1px solid var(--border-hi);background:#fff;color:var(--ink);font-size:1.35rem;cursor:pointer;border-radius:12px;">+</button>
       </div>
     </div>`;
   }).join('');
@@ -748,7 +1005,7 @@ function renderTeamClients(){
         +(c.notes?'<div style="font-size:0.76rem;color:var(--muted);margin-top:0.3rem">'+esc(c.notes)+'</div>':'');
       if(prof){
         const rows=BC_QS.map((qq,i)=>{const a=prof.answers['q'+(i+1)];return a?'<div style="padding:0.35rem 0"><div style="font-size:0.56rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">'+qq+'</div><div style="font-size:0.8rem;color:var(--cream)">'+esc(a)+'</div></div>':'';}).join('');
-        extra+='<div style="margin-top:0.7rem;border:1px solid var(--border-hi);padding:0.8rem;background:var(--gold-faint)">'
+        extra+='<div style="margin-top:0.7rem;border:1px solid #D6BF9C;padding:0.8rem;background:#FFFCF7;border-radius:12px">'
           +'<div style="font-size:0.6rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--gold);margin-bottom:0.3rem">✦ Black Card Profile</div>'
           +(rows||'<div style="font-size:0.76rem;color:var(--muted)">No answers yet.</div>')
           +(prof.note?'<div style="padding:0.35rem 0"><div style="font-size:0.56rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Anything else</div><div style="font-size:0.8rem;color:var(--cream)">'+esc(prof.note)+'</div></div>':'')
@@ -774,11 +1031,11 @@ async function loadTeamInspo(){
     const rows=d.inspo||[];
     if(!rows.length){el.innerHTML='<div class="empty"><div class="big">💅</div>No inspo photos yet.<br><span style="font-size:0.72rem">When clients attach inspo at booking, it lands here with their name.</span></div>';return;}
     el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0.8rem">'
-      +rows.map(p=>'<div style="border:1px solid var(--border);background:var(--card);padding:0.5rem">'
-        +'<img src="'+p.data_url+'" style="width:100%;height:140px;object-fit:cover;display:block" alt="">'
+      +rows.map(p=>'<div style="border:1px solid var(--line);background:#fff;padding:0.5rem;border-radius:12px;box-shadow:var(--shadow)">'
+        +'<img src="'+p.data_url+'" style="width:100%;height:140px;object-fit:cover;display:block;border-radius:8px" alt="">'
         +'<div style="font-family:\'Cinzel\',serif;font-size:0.85rem;color:var(--cream);margin-top:0.4rem">'+clientLink(p.client_name||'Client')+'</div>'
         +'<div style="font-size:0.62rem;color:var(--muted)">'+esc(p.service||'')+(p.appt_date?' · '+p.appt_date:'')+'</div>'
-        +(p.mine?'<div style="font-size:0.6rem;color:#8fc79c;margin-top:0.2rem">Yours</div>':'<div style="font-size:0.6rem;color:var(--gold);margin-top:0.2rem">Still open — confirm to keep it</div>')
+        +(p.mine?'<div style="font-size:0.6rem;color:#067647;margin-top:0.2rem">Yours</div>':'<div style="font-size:0.6rem;color:var(--gold);margin-top:0.2rem">Still open — confirm to keep it</div>')
         +'</div>').join('')+'</div>';
   }catch{el.innerHTML='<div class="empty">Could not load inspo.</div>';}
 }
@@ -830,25 +1087,25 @@ function wcRenderDay(){
   const sh = wcShifts[wcSel];
   const list = (wcAppts[wcSel]||[]).slice().sort((a,b)=>String(a.time).localeCompare(String(b.time)));
 
-  let html = '<div style="border:1px solid var(--border-hi);background:var(--card);padding:1rem 1.1rem;border-radius:10px">'
+  let html = '<div style="border:1px solid var(--line);background:#fff;padding:1rem;border-radius:14px;box-shadow:var(--shadow)">'
     + '<div style="font-family:\'Cinzel\',serif;font-size:1.05rem;color:var(--cream);margin-bottom:0.55rem">'+fmtDate(wcSel)+'</div>';
 
   // The hours she is expected in come first — that is the question she opens
   // the day to answer, whether or not anyone is booked.
   html += sh
-    ? '<div style="display:inline-block;background:rgba(96,142,196,0.2);border:1px solid rgba(96,142,196,0.45);'
-      + 'color:#dbe8f7;padding:0.4rem 0.7rem;border-radius:7px;font-size:0.78rem;margin-bottom:0.8rem">'
+    ? '<div style="display:inline-block;background:#EFF8FF;border:1px solid #B2DDFF;'
+      + 'color:#175CD3;font-weight:600;padding:0.4rem 0.7rem;border-radius:7px;font-size:0.78rem;margin-bottom:0.8rem">'
       + 'Working ' + fmtTime(sh.start_time) + ' – ' + fmtTime(sh.end_time)
       + (sh.lunch_start&&sh.lunch_end ? ' · lunch ' + fmtTime(sh.lunch_start) + '–' + fmtTime(sh.lunch_end) : '')
       + '</div>'
     : '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.8rem">You are not working this day.</div>';
 
   html += list.length
-    ? '<div style="font-size:0.62rem;letter-spacing:0.16em;text-transform:uppercase;color:#c9a9e0;margin-bottom:0.4rem">'
+    ? '<div style="font-size:0.62rem;letter-spacing:0.16em;text-transform:uppercase;color:#6941C6;margin-bottom:0.4rem">'
         + list.length + ' client' + (list.length===1?'':'s') + '</div>'
       + list.map(a =>
         '<div style="display:flex;gap:0.7rem;align-items:flex-start;border-top:1px solid var(--border);padding:0.6rem 0">'
-        + '<div style="min-width:74px;font-size:0.82rem;color:#c9a9e0;font-weight:600">'+fmtTime(a.time)+'</div>'
+        + '<div style="min-width:74px;font-size:0.82rem;color:#6941C6;font-weight:600">'+fmtTime(a.time)+'</div>'
         + '<div style="flex:1">'
           + '<div style="font-size:0.88rem;color:var(--cream)">'+clientLink(a.client_name||'Client',{phone:a.client_phone||''})+'</div>'
           + '<div style="font-size:0.73rem;color:var(--muted)">'+esc(a.service||'—')+'</div>'
@@ -875,7 +1132,7 @@ async function loadMyHours(){
       const lunch = s.lunch_start && s.lunch_end
         ? '<span style="color:var(--muted)"> · lunch ' + fmtTime(s.lunch_start) + '–' + fmtTime(s.lunch_end) + '</span>'
         : '';
-      return '<div style="display:flex;align-items:center;gap:0.8rem;padding:0.65rem 0.85rem;border:1px solid var(--border);margin-bottom:0.45rem;background:var(--card);">'
+      return '<div style="display:flex;align-items:center;gap:0.8rem;padding:0.75rem 0.9rem;border:1px solid var(--line);border-radius:12px;margin-bottom:0.45rem;background:#fff;">'
         + '<div style="flex:1;min-width:0">'
           + '<div style="font-family:\'Cinzel\',serif;font-size:0.95rem;color:var(--cream)">' + fmtDate(s.date) + '</div>'
           + '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.76rem;color:var(--muted)">'
@@ -1038,8 +1295,8 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
   if(s){try{const o=JSON.parse(s);MID=o.MID;PIN=o.PIN;NAME=o.NAME;COLOR=o.COLOR||'#B6A588';enter();}catch{}}
 })();
 </script>
-<script src="js/client-profile.js?v=3"></script>
-<script src="js/push.js?v=2"></script>
-<script src="js/pwa.js"></script>
+<script src="js/client-profile.js?v=4"></script>
+<script src="js/push.js?v=3"></script>
+<script src="js/pwa.js?v=2"></script>
 </body>
 </html>

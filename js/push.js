@@ -103,11 +103,11 @@
   function mount(el, auth) {
     if (!el) return;
     var S = {
-      card: 'background:var(--card,#1C1815);border:1px solid var(--border,rgba(182,165,136,0.14));padding:1.1rem 1.15rem;border-radius:10px;',
-      h: "font-family:'Josefin Sans',sans-serif;font-size:0.7rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold,#B6A588);margin-bottom:0.5rem;",
-      p: "font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--muted,#8B7355);line-height:1.7;margin-bottom:0.85rem;",
-      btn: "background:var(--gold,#B6A588);color:#0B0B0B;border:none;padding:0.65rem 1.1rem;font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;border-radius:8px;font-family:'Josefin Sans',sans-serif;",
-      ghost: "background:transparent;color:var(--gold,#B6A588);border:1px solid var(--border-hi,rgba(182,165,136,0.32));padding:0.65rem 1.1rem;font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;border-radius:8px;font-family:'Josefin Sans',sans-serif;margin-left:0.5rem;",
+      card: 'background:var(--card,#1C1815);border:1px solid var(--line,var(--border,rgba(182,165,136,0.14)));padding:1.1rem 1.15rem;border-radius:14px;box-shadow:var(--shadow,none);',
+      h: "font-size:1rem;font-weight:700;color:var(--ink,var(--gold,#B6A588));margin-bottom:0.35rem;",
+      p: "font-size:0.9rem;color:var(--muted,#8B7355);line-height:1.6;margin-bottom:0.85rem;",
+      btn: "background:var(--btn-bg,var(--gold,#B6A588));color:var(--btn-ink,#0B0B0B);border:none;padding:0.6rem 1.1rem;min-height:42px;font-size:0.9rem;font-weight:600;cursor:pointer;border-radius:10px;",
+      ghost: "background:var(--card,#fff);color:var(--ink,var(--gold,#B6A588));border:1px solid var(--border-hi,rgba(182,165,136,0.32));padding:0.6rem 1.1rem;min-height:42px;font-size:0.9rem;font-weight:600;cursor:pointer;border-radius:10px;margin-left:0.5rem;",
     };
 
     async function render(msg) {
