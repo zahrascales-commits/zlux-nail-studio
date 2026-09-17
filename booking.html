@@ -2801,6 +2801,19 @@ window.addEventListener('beforeunload', () => {
 // ═══════════════════════════════════════════
 let _stripe = null, _elements = null, _payEnabled = false, _paymentIntentId = null, _payElement = null;
 
+/* Who is paying changes what they pay: a personal rate is found by email.
+   The card was set up the moment this step opened — usually before the
+   email was typed — so a client with her own rate was charged the full
+   deposit while her booking was saved at her rate. When the email changes,
+   the card amount is worked out again. */
+let _intentEmail = '';
+document.addEventListener('change', function(e){
+  if (!e.target || e.target.id !== 'client-email') return;
+  const em = String(e.target.value || '').trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em) || em === _intentEmail) return;
+  if (_payEnabled || _elements) repriceIntent();
+});
+
 // seq: which rebuild this is. One that finishes after a newer one started is
 // answering a question nobody is asking any more, so it changes nothing.
 async function initPayment(seq) {
@@ -2836,6 +2849,7 @@ async function initPayment(seq) {
       })
     })).json();
     if (seq && seq !== _payBuildSeq) return;
+    _intentEmail = document.getElementById('client-email').value.trim().toLowerCase();
     showCoveredNote(intent);
     _payTotals = { total: intent.total_cents || 0, deposit: intent.deposit_cents || 0 };
     renderPayChoice();

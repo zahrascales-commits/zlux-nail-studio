@@ -1074,6 +1074,8 @@
   .status-off{background:var(--down-bg);color:var(--down)}
   .ny{background:#fff;border:1px solid #FECDCA;box-shadow:var(--shadow)}
   .ny-item i{margin-left:0.45rem}
+  .dep-line{display:inline-block;margin-top:0.35rem;font-size:0.84rem;font-weight:600;border-radius:8px;padding:0.22rem 0.6rem}
+  .wk-chip{font-weight:600}
   .ny.calm{background:#fff;border-color:#ABEFC6}
   .ny-row.soon{background:var(--down-bg)}
   .mix-blk{background:#C9B48F}
@@ -2766,6 +2768,7 @@
 <div class="overlay" id="modal-appt">
   <div class="modal">
     <div class="modal-title" id="appt-modal-title">New Appointment</div>
+    <div id="a-deposit" style="display:none;margin:-0.4rem 0 0.9rem"></div>
     <input type="hidden" id="a-id" />
     <div class="field"><label class="fld-label">Assign To</label><select id="a-member"></select></div>
     <div class="field two">
@@ -3167,6 +3170,8 @@ async function refreshCurrent(manual){
       const d = await r.json();
       if(d.members) members = d.members;
       if(d.appointments) appts = d.appointments;
+      // Deposits can have come in since; ask again rather than show the old answer.
+      if(typeof _depRange!=='undefined') _depRange = '';
       if(d.providers) PROVIDERS = d.providers;
     }
   }catch(_){ /* a failed poll should never blank the screen */ }
@@ -4147,6 +4152,7 @@ function filteredAppts(){
   return f?appts.filter(a=>String(a.team_member_id)===f):appts;
 }
 function renderCal(){
+  if (typeof loadDepositStates === 'function') loadDepositStates();
   document.getElementById('cal-month-wrap').style.display=calView==='month'?'block':'none';
   document.getElementById('cal-week-wrap').style.display=calView==='week'?'block':'none';
   document.getElementById('schedule-list').style.display=calView==='day'?'block':'none';
@@ -4168,6 +4174,49 @@ function renderLegend(){
   sel.innerHTML='<option value="">All artists</option>'+members.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
   sel.value=cur;
 }
+/* ── DEPOSITS ON THE CALENDAR ──
+   Tap anybody on the calendar and the first thing under their name is
+   whether their deposit is in, and how much. Worked out on the server by
+   the same code the deposit page and the checkout use. */
+let DEP_STATES = {}, _depRange = '', _depLoading = false;
+async function loadDepositStates(force){
+  const d = new Date(curDate + 'T12:00:00');
+  const from = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+  const to = new Date(d.getFullYear(), d.getMonth() + 2, 0);
+  const ds = x => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
+  const key = ds(from) + '|' + ds(to);
+  if (_depLoading || (!force && key === _depRange)) return;
+  _depLoading = true;
+  try{
+    const r = await api('/api/dashboard?action=deposit_states&from=' + ds(from) + '&to=' + ds(to));
+    const j = await r.json();
+    if (j.states) { DEP_STATES = Object.assign({}, DEP_STATES, j.states); _depRange = key; }
+  }catch(_){}
+  _depLoading = false;
+  if (currentTab() === 'schedule') renderCal();
+}
+function depInfo(a){
+  const s = DEP_STATES[String(a.id)];
+  if (s) return s;
+  if (Number(a.deposit_paid) === 1) return { state: 'paid', deposit_cents: Number(a.deposit_cents) || 0 };
+  return { state: 'loading' };
+}
+function depMoney(c){ return '$' + ((Number(c) || 0) / 100).toFixed(2); }
+function depLine(a){
+  const s = depInfo(a);
+  const wrap = (color, bg, text) => '<div class="dep-line" style="color:' + color + ';background:' + bg + '">' + text + '</div>';
+  if (s.state === 'paid') return wrap('#067647', '#ECFDF3', '✓ Deposit paid — ' + depMoney(s.deposit_cents));
+  if (s.state === 'unpaid') return wrap('#B42318', '#FEF3F2', '✗ Deposit not paid — ' + depMoney(s.due_cents) + ' due');
+  if (s.state === 'none_due') return wrap('#344054', '#F2F4F7', 'No deposit needed — covered by membership');
+  if (s.state === 'done') return wrap('#344054', '#F2F4F7', 'Checked out' + (s.deposit_paid && s.deposit_cents ? ' · deposit ' + depMoney(s.deposit_cents) : '') + (s.paid_cents ? ' · paid ' + depMoney(s.paid_cents) + ' at the desk' : ''));
+  if (s.state === 'loading') return wrap('#667085', '#F9FAFB', 'Checking deposit…');
+  return '';
+}
+function depMark(a){
+  const s = depInfo(a).state;
+  return s === 'paid' || s === 'none_due' || s === 'done' ? '✓ ' : s === 'unpaid' ? '✗ ' : '';
+}
+
 function renderMonth(){
   const d=new Date(curDate+'T12:00:00');
   const y=d.getFullYear(),mo=d.getMonth();
@@ -4207,6 +4256,7 @@ function renderUpcoming(){
       <div class="appt-main">
         <div class="appt-client">${a.client_name?clientLink(a.client_name,{phone:a.client_phone||'',email:a.client_email||''}):'Open'}</div>
         <div class="appt-svc">${esc(a.service||'—')}${a.client_phone?' · '+esc(a.client_phone):''}</div>
+        ${depLine(a)}
       </div>
       <div class="appt-actions"><button class="btn btn-ghost btn-sm" onclick="editAppt(${a.id})">Edit</button></div>
     </div>`;
@@ -4231,7 +4281,7 @@ function renderWeek(){
     html+=`<div class="wk-hour">${fmtTime(slot).replace(':00','')}</div>`;
     for(const ds of days){
       const cell=list.filter(a=>a.date===ds&&a.time===slot);
-      const chips=cell.map(a=>`<span class="wk-chip" style="background:${a.member_color||'#8B7355'}" onclick="event.stopPropagation();editAppt(${a.id})" title="${esc(a.client_name||'Open')}">${esc((a.client_name||'Open').split(' ')[0])}</span>`).join('');
+      const chips=cell.map(a=>`<span class="wk-chip" style="background:${a.member_color||'#8B7355'}" onclick="event.stopPropagation();editAppt(${a.id})" title="${esc((a.client_name||'Open') + ' — ' + ({paid:'deposit paid',unpaid:'deposit NOT paid',none_due:'no deposit needed',done:'checked out'}[depInfo(a).state]||'checking deposit'))}">${depMark(a)}${esc((a.client_name||'Open').split(' ')[0])}</span>`).join('');
       html+=`<div class="wk-cell" onclick="quickAdd('${ds}','${slot}')">${chips}</div>`;
     }
   }
@@ -4750,6 +4800,7 @@ function renderSchedule(){
       <div class="appt-main">
         <div class="appt-client">${a.client_name?clientLink(a.client_name,{phone:a.client_phone||'',email:a.client_email||''}):'Walk-in / Open'}</div>
         <div class="appt-svc">${esc(a.service||'—')}${a.client_phone?' · '+esc(a.client_phone):''}</div>
+        ${depLine(a)}
         ${a.notes?`<div style="font-size:0.74rem;color:var(--muted);font-style:italic;margin-top:0.2rem">${esc(a.notes)}</div>`:''}
         <div class="appt-assign">
           <span style="color:var(--muted)">Artist:</span>
@@ -4827,6 +4878,7 @@ function parseTimeInput(raw){
   return String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0');
 }
 function openApptModal(){
+  { const depBox=document.getElementById('a-deposit'); if(depBox){ depBox.innerHTML=''; depBox.style.display='none'; } }
   document.getElementById('appt-modal-title').textContent='New Appointment';
   document.getElementById('a-id').value='';
   document.getElementById('a-client').value='';
@@ -4864,6 +4916,8 @@ function editAppt(id){
   }
   fillTimeSelect(document.getElementById('a-time'),a.time);
   document.getElementById('a-delete').style.display='inline-flex';
+  const depBox=document.getElementById('a-deposit');
+  if(depBox){ depBox.innerHTML=depLine(a); depBox.style.display='block'; }
   openModal('modal-appt');
 }
 async function saveAppt(){

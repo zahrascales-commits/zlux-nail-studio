@@ -169,8 +169,10 @@ module.exports = async (req, res) => {
 
     // If a card payment was made, verify it with Stripe before confirming
     let depositPaid = false;
+    let paidIntent = null;
     if (payment_intent_id) {
       const v = await require('./_pay').verifyPaymentIntent(payment_intent_id);
+      paidIntent = v;
       // The place is taken only once the money has cleared. An abandoned
       // checkout must not burn one of the ten.
       try {
@@ -293,6 +295,30 @@ module.exports = async (req, res) => {
         }
       }
     } catch (_) { /* a broken promo must never block a booking */ }
+
+    /* ── WHAT THE CARD WAS ACTUALLY CHARGED ──
+       The deposit worked out above is what it *should* be. What Stripe took
+       is what it *is*, and the checkout asks for the difference between the
+       price and this figure — so this figure has to be the real one. They
+       differ when the card was set up on other terms: before a client's own
+       rate was known, or with an Early Bird taken off the total.
+
+       One booking to one payment only. A payment covering several services
+       is split service by service by the booking page, and cannot be divided
+       honestly from here; those are left as worked out and show up in the
+       payment check instead. */
+    if (depositPaid && paidIntent && Number(paidIntent.amount) > 0) {
+      const md = paidIntent.metadata || {};
+      const units = String(md.services || '').split(' | ').filter(Boolean).length || 1;
+      if (units === 1) {
+        const tip = Math.max(0, Math.round(Number(md.tip_cents) || 0));
+        const early = Math.max(0, Math.round(Number(md.early_bird_cents) || 0));
+        const charged = Math.max(0, Math.round(Number(paidIntent.amount)) - tip);
+        if (early > 0) total_cents = Math.max(0, total_cents - early);
+        if (md.paid_in_full === 'yes') total_cents = charged;
+        deposit_cents = charged;
+      }
+    }
 
     // Now that the price is known, refuse anything unpaid that should not be.
     if (!depositPaid && !staffBooked && deposit_cents > 0) {

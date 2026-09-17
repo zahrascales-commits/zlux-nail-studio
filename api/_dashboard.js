@@ -608,8 +608,78 @@ async function paymentsLedger(days) {
   return { charges, team, site };
 }
 
+/* Where each appointment's deposit stands, for the calendar. The same
+   answer the deposit page and the checkout work from: a deposit recorded
+   as taken is a fact; one not taken is worked out by the code that charges
+   it, which knows about memberships and personal rates. */
+async function depositStates(from, to) {
+  await ensureTables();
+  const rows = await query(
+    `SELECT id, client_name, client_email, client_phone, service, date, time, status, price_cents,
+            deposit_cents, deposit_paid, paid_cents, checked_out_ts, team_member_id
+       FROM team_appointments WHERE date >= ? AND date <= ?`, [from, to]);
+  const visit = require('./_visit');
+  const out = {};
+  const live = rows.filter(a => !/cancel/i.test(String(a.status || '')));
+  for (let i = 0; i < live.length; i += 8) {
+    await Promise.all(live.slice(i, i + 8).map(async a => {
+      const id = String(a.id);
+      if (Number(a.checked_out_ts) > 0 || /complete/i.test(String(a.status || ''))) {
+        out[id] = { state: 'done', deposit_cents: Math.round(Number(a.deposit_cents) || 0), paid_cents: Math.round(Number(a.paid_cents) || 0), deposit_paid: Number(a.deposit_paid) === 1 };
+        return;
+      }
+      if (Number(a.deposit_paid) === 1) {
+        out[id] = { state: 'paid', deposit_cents: Math.round(Number(a.deposit_cents) || 0) };
+        return;
+      }
+      let due = null;
+      try { due = Math.round(Number(await visit.depositFor(a)) || 0); } catch (_) {}
+      out[id] = due === null ? { state: 'unknown' } : due > 0 ? { state: 'unpaid', due_cents: due } : { state: 'none_due' };
+    }));
+  }
+  return out;
+}
+
+/* Setting a deposit to what Stripe shows. Written to the studio book and,
+   when given, the website book, and logged — a changed money figure with no
+   trail is how the next disagreement starts. */
+async function correctDeposit(body) {
+  await ensureTables();
+  const dep = Math.round(Number(body.deposit_cents));
+  if (!(dep >= 0)) throw new Error('deposit_cents required');
+  const total = body.total_cents === undefined || body.total_cents === null ? null : Math.round(Number(body.total_cents));
+  const done = [];
+  if (body.team_id) {
+    const r = await execute('UPDATE team_appointments SET deposit_cents = ?, deposit_paid = ?' + (total !== null ? ', price_cents = ?' : '') + ' WHERE id = ?',
+      total !== null ? [dep, dep > 0 ? 1 : 0, total, Number(body.team_id)] : [dep, dep > 0 ? 1 : 0, Number(body.team_id)]);
+    done.push('studio #' + body.team_id + ': ' + r.rowsAffected);
+  }
+  if (body.site_id) {
+    const main = require('./_db');
+    const r = await main.execute('UPDATE appointments SET deposit_cents = ?, deposit_paid = ?' + (total !== null ? ', total_cents = ?' : '') + ' WHERE id = ?',
+      total !== null ? [dep, dep > 0 ? 1 : 0, total, Number(body.site_id)] : [dep, dep > 0 ? 1 : 0, Number(body.site_id)]);
+    done.push('website #' + body.site_id + ': ' + r.rowsAffected);
+  }
+  try {
+    await execute('INSERT INTO kiosk_log (type, name, detail, ts) VALUES (?,?,?,?)',
+      ['deposit_correction', String(body.name || '').slice(0, 80),
+       ('Deposit set to $' + (dep / 100).toFixed(2) + (total !== null ? ', total $' + (total / 100).toFixed(2) : '') + ' — ' + String(body.reason || '')).slice(0, 300), Date.now()]);
+  } catch (_) {}
+  return done;
+}
+
 module.exports = async function (req, res) {
   if (req.headers['x-ceo-password'] !== CEO_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
+  if ((req.query.action || '') === 'deposit_states') {
+    const from = String(req.query.from || '').slice(0, 10), to = String(req.query.to || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) return res.status(400).json({ error: 'from and to required' });
+    try { return res.json({ states: await depositStates(from, to) }); }
+    catch (err) { return res.status(500).json({ error: String(err.message || err) }); }
+  }
+  if ((req.query.action || (req.body || {}).action) === 'correct_deposit' && req.method === 'POST') {
+    try { return res.json({ ok: true, updated: await correctDeposit(req.body || {}) }); }
+    catch (err) { return res.status(400).json({ error: String(err.message || err) }); }
+  }
   if ((req.query.action || '') === 'payments') {
     try { return res.json(await paymentsLedger(Math.min(120, Math.max(1, Number(req.query.days) || 45)))); }
     catch (err) { return res.status(500).json({ error: String(err.message || err) }); }
