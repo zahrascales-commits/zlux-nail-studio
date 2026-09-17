@@ -4193,7 +4193,17 @@ async function loadDepositStates(force){
     if (j.states) { DEP_STATES = Object.assign({}, DEP_STATES, j.states); _depRange = key; }
   }catch(_){}
   _depLoading = false;
-  if (currentTab() === 'schedule') renderCal();
+  if (currentTab() !== 'schedule') return;
+  // Only the deposit lines change, so only they are redrawn — redrawing the
+  // whole day replays every card's fade-in and reads as a flicker.
+  if (calView === 'week') { renderCal(); return; }
+  document.querySelectorAll('.dep-line[data-dep]').forEach(function(el){
+    const a = appts.find(function(x){ return String(x.id) === el.dataset.dep; });
+    if (a) el.outerHTML = depLine(a);
+  });
+  const box = document.getElementById('a-deposit');
+  const id = (document.getElementById('a-id') || {}).value;
+  if (box && id && box.style.display !== 'none') { const a = appts.find(function(x){ return String(x.id) === String(id); }); if (a) box.innerHTML = depLine(a); }
 }
 function depInfo(a){
   const s = DEP_STATES[String(a.id)];
@@ -4204,7 +4214,7 @@ function depInfo(a){
 function depMoney(c){ return '$' + ((Number(c) || 0) / 100).toFixed(2); }
 function depLine(a){
   const s = depInfo(a);
-  const wrap = (color, bg, text) => '<div class="dep-line" style="color:' + color + ';background:' + bg + '">' + text + '</div>';
+  const wrap = (color, bg, text) => '<div class="dep-line" data-dep="' + esc(String(a.id)) + '" style="color:' + color + ';background:' + bg + '">' + text + '</div>';
   if (s.state === 'paid') return wrap('#067647', '#ECFDF3', '✓ Deposit paid — ' + depMoney(s.deposit_cents));
   if (s.state === 'unpaid') return wrap('#B42318', '#FEF3F2', '✗ Deposit not paid — ' + depMoney(s.due_cents) + ' due');
   if (s.state === 'none_due') return wrap('#344054', '#F2F4F7', 'No deposit needed — covered by membership');
