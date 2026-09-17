@@ -4210,6 +4210,7 @@ function depLine(a){
   if (s.state === 'none_due') return wrap('#344054', '#F2F4F7', 'No deposit needed — covered by membership');
   if (s.state === 'done') return wrap('#344054', '#F2F4F7', 'Checked out' + (s.deposit_paid && s.deposit_cents ? ' · deposit ' + depMoney(s.deposit_cents) : '') + (s.paid_cents ? ' · paid ' + depMoney(s.paid_cents) + ' at the desk' : ''));
   if (s.state === 'loading') return wrap('#667085', '#F9FAFB', 'Checking deposit…');
+  if (s.state === 'past') return wrap('#667085', '#F9FAFB', 'Past visit — no deposit recorded');
   return '';
 }
 function depMark(a){

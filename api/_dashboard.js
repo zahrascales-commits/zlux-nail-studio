@@ -621,8 +621,9 @@ async function depositStates(from, to) {
   const visit = require('./_visit');
   const out = {};
   const live = rows.filter(a => !/cancel/i.test(String(a.status || '')));
-  for (let i = 0; i < live.length; i += 8) {
-    await Promise.all(live.slice(i, i + 8).map(async a => {
+  const todayKey = dayOf(Date.now());
+  for (let i = 0; i < live.length; i += 16) {
+    await Promise.all(live.slice(i, i + 16).map(async a => {
       const id = String(a.id);
       if (Number(a.checked_out_ts) > 0 || /complete/i.test(String(a.status || ''))) {
         out[id] = { state: 'done', deposit_cents: Math.round(Number(a.deposit_cents) || 0), paid_cents: Math.round(Number(a.paid_cents) || 0), deposit_paid: Number(a.deposit_paid) === 1 };
@@ -632,6 +633,8 @@ async function depositStates(from, to) {
         out[id] = { state: 'paid', deposit_cents: Math.round(Number(a.deposit_cents) || 0) };
         return;
       }
+      // A day already gone needs no working out — nobody is paying a deposit for it now.
+      if (String(a.date) < todayKey) { out[id] = { state: 'past' }; return; }
       let due = null;
       try { due = Math.round(Number(await visit.depositFor(a)) || 0); } catch (_) {}
       out[id] = due === null ? { state: 'unknown' } : due > 0 ? { state: 'unpaid', due_cents: due } : { state: 'none_due' };
