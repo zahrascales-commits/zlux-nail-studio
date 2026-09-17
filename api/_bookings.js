@@ -379,6 +379,9 @@ module.exports = async (req, res) => {
       // from a service name that may since have been renamed.
       try { await execute('ALTER TABLE appointments ADD COLUMN design_tier TEXT DEFAULT \'\''); } catch (_) {}
       try { await execute('ALTER TABLE appointments ADD COLUMN block_minutes INTEGER DEFAULT 0'); } catch (_) {}
+      // Which Stripe payment paid for this booking — the exact match the
+      // payment webhook and the payment check look for.
+      try { await execute("ALTER TABLE appointments ADD COLUMN payment_intent_id TEXT DEFAULT ''"); } catch (_) {}
       let blockMins = 0, chosenTier = '';
       try {
         const tiers = require('./_tiers');
@@ -387,8 +390,8 @@ module.exports = async (req, res) => {
         blockMins = tiers.blockMinutes(chosenTier, dealAddons, bookedService);
       } catch (_) {}
       await execute(
-        `INSERT INTO appointments (member_id, guest_name, guest_email, staff_id, service, addons, appointment_date, appointment_time, status, total_cents, deposit_cents, deposit_paid, design_tier, block_minutes)
-         VALUES (?,?,?,?,?,?,?,?,'SCHEDULED',?,?,?,?,?)`,
+        `INSERT INTO appointments (member_id, guest_name, guest_email, staff_id, service, addons, appointment_date, appointment_time, status, total_cents, deposit_cents, deposit_paid, design_tier, block_minutes, payment_intent_id)
+         VALUES (?,?,?,?,?,?,?,?,'SCHEDULED',?,?,?,?,?,?)`,
         [
           isMember ? member_id : null,
           isMember ? null : customer_name,
@@ -403,6 +406,7 @@ module.exports = async (req, res) => {
           depositPaid ? 1 : 0,
           chosenTier,
           blockMins,
+          depositPaid ? String(payment_intent_id || '') : '',
         ]
       );
     } catch (_) {}
@@ -438,18 +442,19 @@ module.exports = async (req, res) => {
         'ALTER TABLE team_appointments ADD COLUMN deposit_cents INTEGER DEFAULT 0',
         'ALTER TABLE team_appointments ADD COLUMN deposit_paid INTEGER DEFAULT 0',
         "ALTER TABLE team_appointments ADD COLUMN client_email TEXT DEFAULT ''",
+        "ALTER TABLE team_appointments ADD COLUMN payment_intent_id TEXT DEFAULT ''",
       ]) { try { await teamDb.execute(sql); } catch (_) {} }
 
       const teamRow = await teamDb.execute(
         `INSERT INTO team_appointments (team_member_id, client_name, client_phone, client_email, service,
-           date, time, notes, status, chat_token, price_cents, deposit_cents, deposit_paid)
-         VALUES (?,?,?,?,?,?,?,?, 'scheduled', ?,?,?,?)`,
+           date, time, notes, status, chat_token, price_cents, deposit_cents, deposit_paid, payment_intent_id)
+         VALUES (?,?,?,?,?,?,?,?, 'scheduled', ?,?,?,?,?)`,
         [m ? m.id : null, (for_name && for_name.trim()) || customer_name, customer_phone || '',
          customer_email || '', bookedService, date, time_slot,
          'Booked online · ' + confirmation
            + (for_name && for_name.trim() && for_name.trim() !== customer_name ? ' · for ' + for_name.trim() + ' (booked by ' + customer_name + ')' : '')
            + (dealAddons.length ? ' · +' + dealAddons.join(', ') : ''), visitToken,
-         total_cents, deposit_cents, depositPaid ? 1 : 0]
+         total_cents, deposit_cents, depositPaid ? 1 : 0, depositPaid ? String(payment_intent_id || '') : '']
       );
       // Skip duplicate client email/SMS if the legacy SendGrid path is active
       const legacyActive = !!process.env.SENDGRID_API_KEY;

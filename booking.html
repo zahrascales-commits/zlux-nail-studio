@@ -2800,6 +2800,36 @@ window.addEventListener('beforeunload', () => {
 // CARD PAYMENT (Stripe) — deposit charged automatically at confirm
 // ═══════════════════════════════════════════
 let _stripe = null, _elements = null, _payEnabled = false, _paymentIntentId = null, _payElement = null;
+let _chargeCents = 0, _elementsSfu = null, _stripePk = '';
+
+/* What gets sent to the server for this checkout, for the quote and for the
+   payment alike — so the two can never be worked out from different facts. */
+function paymentRequest(extra){
+  const items = [];
+  booking.items.forEach((it, i) => {
+    for (let u = 0; u < it.qty; u++) {
+      items.push({
+        service_name: it.service,
+        // add-ons apply to the primary (first) service only
+        addon_names: (i === 0 && u === 0) ? booking.selectedAddons.map(a => a.name) : [],
+      });
+    }
+  });
+  return Object.assign({
+    action: 'multi_deposit_intent',
+    items,
+    member_tier: booking.memberTier || null,
+    // Without this the server cannot read her usage counter, so the
+    // included services she is paying a membership for never apply.
+    member_id: (booking.memberId || localStorage.getItem('zola_member_id') || '').trim().toUpperCase() || null,
+    design_tier: booking.tier || null,
+    pay_full: payFull,
+    tip_cents: payFull ? tipCents : 0,
+    customer_name: document.getElementById('client-name').value.trim(),
+    customer_email: document.getElementById('client-email').value.trim(),
+    customer_phone: (document.getElementById('client-phone') || {}).value ? document.getElementById('client-phone').value.trim() : '',
+  }, extra || {});
+}
 
 /* Who is paying changes what they pay: a personal rate is found by email.
    The card was set up the moment this step opened — usually before the
@@ -2820,55 +2850,48 @@ async function initPayment(seq) {
   try {
     const cfg = await (await fetch('/api/pay?action=config')).json();
     if (!cfg.enabled || typeof Stripe === 'undefined') return; // graceful: no card section
-    // One PaymentIntent covering EVERY selected service's deposit
-    const items = [];
-    booking.items.forEach((it, i) => {
-      for (let u = 0; u < it.qty; u++) {
-        items.push({
-          service_name: it.service,
-          // add-ons apply to the primary (first) service only
-          addon_names: (i === 0 && u === 0) ? booking.selectedAddons.map(a => a.name) : [],
-        });
-      }
-    });
-    const intent = await (await fetch('/api/pay?action=multi_deposit_intent', {
+    _stripePk = cfg.publishable_key;
+    // A quote, not a payment: the payment is made when they press Pay.
+    const quote = await (await fetch('/api/pay?action=multi_deposit_intent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'multi_deposit_intent',
-        items,
-        member_tier: booking.memberTier || null,
-        // Without this the server cannot read her usage counter, so the
-        // included services she is paying a membership for never apply.
-        member_id: (booking.memberId || localStorage.getItem('zola_member_id') || '').trim().toUpperCase() || null,
-        design_tier: booking.tier || null,
-        pay_full: payFull,
-        tip_cents: payFull ? tipCents : 0,
-        customer_name: document.getElementById('client-name').value.trim(),
-        customer_email: document.getElementById('client-email').value.trim(),
-      })
+      body: JSON.stringify(paymentRequest({ preview: true })),
     })).json();
     if (seq && seq !== _payBuildSeq) return;
+    if (quote.error) return;
     _intentEmail = document.getElementById('client-email').value.trim().toLowerCase();
-    showCoveredNote(intent);
-    _payTotals = { total: intent.total_cents || 0, deposit: intent.deposit_cents || 0 };
+    showCoveredNote(quote);
+    _payTotals = { total: quote.total_cents || 0, deposit: quote.deposit_cents || 0 };
     renderPayChoice();
-    // The old form was built for the old amount. It goes before anything
-    // else can be charged through it.
-    if (_payElement) { try { _payElement.destroy(); } catch (_) {} _payElement = null; }
-    if (!intent.client_secret) {
-      _payEnabled = false; _elements = null; _paymentIntentId = null;
+    const charge = Math.round(Number(quote.charged_cents) || 0);
+    const sfu = quote.setup_future_usage || null;
+    if (charge < 50) {
+      if (_payElement) { try { _payElement.destroy(); } catch (_) {} _payElement = null; }
+      _payEnabled = false; _elements = null; _chargeCents = 0;
       const cs = document.getElementById('card-section');
       if (cs) cs.style.display = 'none';
       return;
     }
-    _paymentIntentId = intent.payment_intent_id;
-    _stripe = Stripe(cfg.publishable_key);
-    _elements = _stripe.elements({ clientSecret: intent.client_secret, appearance: { theme: 'flat', variables: { colorPrimary: '#B6A588', fontFamily: 'Josefin Sans, sans-serif' } } });
-    // wallets:auto = Apple Pay appears automatically on iPhone Safari —
-    // the "double-tap to pay" experience, no typing card numbers
-    _payElement = _elements.create('payment', { wallets: { applePay: 'auto', googlePay: 'auto' }, layout: 'tabs' });
-    _payElement.mount('#payment-element');
+    if (_elements && _elementsSfu === sfu) {
+      // Same form, new amount — whatever card they have typed stays typed.
+      _elements.update({ amount: charge });
+    } else {
+      if (_payElement) { try { _payElement.destroy(); } catch (_) {} _payElement = null; }
+      _stripe = _stripe || Stripe(cfg.publishable_key);
+      const opts = {
+        mode: 'payment', amount: charge, currency: 'usd',
+        paymentMethodTypes: ['card', 'link'],
+        appearance: { theme: 'flat', variables: { colorPrimary: '#B6A588', fontFamily: 'Josefin Sans, sans-serif' } },
+      };
+      if (sfu) opts.setupFutureUsage = sfu;
+      _elements = _stripe.elements(opts);
+      _elementsSfu = sfu;
+      // wallets:auto = Apple Pay appears automatically on iPhone Safari —
+      // the "double-tap to pay" experience, no typing card numbers
+      _payElement = _elements.create('payment', { wallets: { applePay: 'auto', googlePay: 'auto' }, layout: 'tabs' });
+      _payElement.mount('#payment-element');
+    }
+    _chargeCents = charge;
     document.getElementById('card-section').style.display = 'block';
     // Show the Apple Pay hint on Apple devices
     if (/iPhone|iPad|Macintosh/.test(navigator.userAgent) && window.ApplePaySession) {
@@ -3010,18 +3033,63 @@ async function submitBooking() {
   // 1) Charge the deposit if card payments are on
   let paymentIntentId = null;
   if (_payEnabled && _stripe && _elements) {
-    if (btn) btn.textContent = 'Charging deposit…';
-    const { error, paymentIntent } = await _stripe.confirmPayment({
-      elements: _elements,
-      redirect: 'if_required',
-      confirmParams: { payment_method_data: { billing_details: { name, email, phone } } },
-    });
-    if (error) {
+    if (btn) btn.textContent = 'Charging…';
+    /* Check the card (or open Apple Pay) before anything is made on Stripe,
+       so a half-typed card leaves nothing behind. */
+    const checked = await _elements.submit();
+    if (checked.error) {
       restore();
-      showSubmitError(error.message || 'Your card was declined. Please check the details and try again — you have not been charged.');
+      showSubmitError((checked.error.message || 'Please check your card details.') + ' You have not been charged.');
       return;
     }
-    paymentIntentId = (paymentIntent && paymentIntent.id) || _paymentIntentId;
+    // The payment itself, made now, for the amount the server works out now.
+    let made;
+    try {
+      made = await (await fetch('/api/pay?action=multi_deposit_intent', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(paymentRequest({ previous_payment_intent_id: _paymentIntentId || '' })),
+      })).json();
+    } catch (_) { made = { error: 'Connection hiccup — please tap Pay again.' }; }
+    if (!made || made.error) {
+      restore();
+      showSubmitError(((made && made.error) || 'That did not go through.') + ' You have not been charged.');
+      return;
+    }
+    if (made.client_secret) {
+      _paymentIntentId = made.payment_intent_id;
+      /* If the total moved between showing it and paying it — a price or a
+         membership changed underneath — show the true figure and ask again
+         rather than charge something they did not see. */
+      if (Math.round(Number(made.charged_cents) || 0) !== _chargeCents || (made.setup_future_usage || null) !== _elementsSfu) {
+        await initPayment();
+        restore();
+        showSubmitError('Your total is ' + bkMoney(made.charged_cents) + ' — it was just updated. Please check it and tap Pay again. You have not been charged.');
+        return;
+      }
+      const { error, paymentIntent } = await _stripe.confirmPayment({
+        elements: _elements,
+        clientSecret: made.client_secret,
+        redirect: 'if_required',
+        confirmParams: {
+          payment_method_data: { billing_details: { name, email, phone } },
+          return_url: location.origin + location.pathname,
+        },
+      });
+      if (error) {
+        restore();
+        const human = (error.type === 'card_error' || error.type === 'validation_error')
+          ? error.message
+          : 'That payment did not go through. Please try again, or try a different card.';
+        showSubmitError((human || 'Your card was declined.') + ' You have not been charged.');
+        return;
+      }
+      if (!paymentIntent || !['succeeded', 'processing'].includes(paymentIntent.status)) {
+        restore();
+        showSubmitError('That payment did not finish. Please tap Pay again — you have not been charged.');
+        return;
+      }
+      paymentIntentId = paymentIntent.id;
+    }
   }
 
   // 2) Confirm every booking (multi-service / multi-person) — with retry

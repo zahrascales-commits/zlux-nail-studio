@@ -399,6 +399,10 @@ module.exports = async function (req, res) {
     if (req.method === 'POST' && action === 'multi_deposit_intent') {
       if (!stripeKey()) return res.status(400).json({ error: 'Payments not configured' });
       const { items, customer_name, customer_email, member_tier, member_id, pay_full, tip_cents } = req.body || {};
+      // preview: work out the amount only. The payment is made when they press
+      // Pay, so leaving the page never leaves an unfinished payment in Stripe.
+      const preview = (req.body || {}).preview === true;
+      const saveCard = !!(customer_email && /@/.test(String(customer_email)));
       if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: 'items required' });
       let total = 0, deposit = 0, covered = 0;
       // The allowance is spent one service at a time across the cart — a
@@ -453,16 +457,47 @@ module.exports = async function (req, res) {
       // Asking Stripe for a zero charge is an error, not a free visit.
       if (charge <= 0) {
         return res.json({
+          charged_cents: 0, setup_future_usage: null,
           client_secret: null, payment_intent_id: null,
           deposit_cents: 0, total_cents: total, covered_cents: covered,
           tip_cents: 0, charged_cents: 0, paid_in_full: wantsFull, fully_covered: true,
           early_bird_cents: 0, early_bird_label: '',
         });
       }
+      if (preview) {
+        return res.json({
+          charged_cents: charge,
+          // The card form has to be built with the same answer as the payment.
+          setup_future_usage: saveCard ? 'off_session' : null,
+          payment_method_types: ['card', 'link'],
+          deposit_cents: deposit, total_cents: total, covered_cents: covered,
+          tip_cents: tip, paid_in_full: wantsFull,
+          early_bird_cents: ebOff, early_bird_label: ebLabel,
+        });
+      }
+
+      /* A payment made for an earlier try at this same checkout — a card
+         that was declined, a total that changed — is cancelled, so Stripe
+         does not keep it as incomplete. Only ever one of this site's own,
+         and only while nothing has been paid on it. */
+      try {
+        const prev = String((req.body || {}).previous_payment_intent_id || '');
+        if (/^pi_[A-Za-z0-9]+$/.test(prev)) {
+          const old = await fetch('https://api.stripe.com/v1/payment_intents/' + prev, { headers: { Authorization: 'Bearer ' + stripeKey() } }).then(r => r.json());
+          if (old && /^ZOLA\b/.test(old.description || '') && ['requires_payment_method', 'requires_confirmation'].includes(old.status)) {
+            await fetch('https://api.stripe.com/v1/payment_intents/' + prev + '/cancel', {
+              method: 'POST', headers: { Authorization: 'Bearer ' + stripeKey(), 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: 'cancellation_reason=abandoned' });
+          }
+        }
+      } catch (_) {}
+
       const params = {
         amount: String(charge),
         currency: 'usd',
-        'automatic_payment_methods[enabled]': 'true',
+        // Card covers Apple Pay and Google Pay. Nothing that leaves the page.
+        'payment_method_types[0]': 'card',
+        'payment_method_types[1]': 'link',
         description: ((wantsFull ? 'ZOLA — ' : 'ZOLA deposit — ') + lines.join(' + ')
           + (tip ? ' (incl. tip)' : '')).slice(0, 300),
         'metadata[services]': lines.join(' | ').slice(0, 480),
@@ -470,20 +505,25 @@ module.exports = async function (req, res) {
         'metadata[paid_in_full]': wantsFull ? 'yes' : 'no',
         'metadata[tip_cents]': String(tip),
         'metadata[early_bird_cents]': String(ebOff),
+        'metadata[email]': String(customer_email || '').slice(0, 200),
+        'metadata[phone]': String((req.body || {}).customer_phone || '').slice(0, 40),
       };
       if (customer_email && /@/.test(customer_email)) params.receipt_email = customer_email;
 
       /* Keep the card, so the rest of this visit — and the next one — can be
-         settled at the desk without them getting it out again. */
+         settled at the desk without them getting it out again. Set whenever
+         there is an email, exactly as the quote said, so the card form and
+         the payment always agree; the customer record is attached when it
+         can be made. */
       const keepOn = await keepCardFor(customer_email, customer_name, req.body && req.body.customer_phone);
-      if (keepOn) {
-        params.customer = keepOn;
-        params.setup_future_usage = 'off_session';
-      }
+      if (keepOn) params.customer = keepOn;
+      if (saveCard) params.setup_future_usage = 'off_session';
+      else params.save_card = false;
 
       const pi = await stripeApi('payment_intents', params);
       return res.json({
         client_secret: pi.client_secret, payment_intent_id: pi.id,
+        setup_future_usage: pi.setup_future_usage || null,
         deposit_cents: deposit, total_cents: total, covered_cents: covered,
         tip_cents: tip, charged_cents: charge, paid_in_full: wantsFull,
         early_bird_cents: ebOff, early_bird_label: ebLabel,
