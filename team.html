@@ -988,7 +988,7 @@ function renderTeamClients(){
   const list=(_tcData.clients||[]).filter(c=>!q||String(c.name||'').toLowerCase().includes(q)||String(c.phone||'').includes(q));
   if(!list.length){el.innerHTML='<div class="empty">No clients'+(q?' match':' yet')+'.</div>';return;}
   el.innerHTML=list.map(c=>{
-    const open=_tcOpen===c.id;
+    const open=String(_tcOpen)===String(c.id);
     const em=String(c.email||'').toLowerCase();
     const prof=(_tcData.bc_profiles||{})[em];
     let extra='';
@@ -1013,7 +1013,7 @@ function renderTeamClients(){
       }
       extra+='</div>';
     }
-    return '<div class="appt" style="flex-direction:column;align-items:stretch;cursor:pointer" onclick="_tcOpen=_tcOpen==='+c.id+'?null:'+c.id+';renderTeamClients()">'
+    return '<div class="appt" style="flex-direction:column;align-items:stretch;cursor:pointer" onclick="_tcOpen=String(_tcOpen)===\''+c.id+'\'?null:\''+c.id+'\';renderTeamClients()">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem">'
       +'<div><div class="appt-c">'+(c.name?clientLink(c.name,{id:c.id,email:c.email||'',phone:c.phone||''}):'Unnamed')+(prof?' <span style="font-size:0.6rem;color:var(--gold)">✦ BC</span>':'')+'</div>'
       +'<div class="appt-s">'+esc(c.phone||'')+(c.last_service?' · Last: '+esc(c.last_service):'')+'</div></div>'
@@ -1214,7 +1214,7 @@ async function loadChats(){
 }
 
 function openSheet(id){
-  activeAppt=schedule.find(a=>a.id===id)||null;
+  activeAppt=schedule.find(a=>String(a.id)===String(id))||null;
   if(!activeAppt)return;
   document.getElementById('sheet-name').innerHTML=activeAppt.client_name
     ? clientLink(activeAppt.client_name,{phone:activeAppt.client_phone||''}) : 'Client';

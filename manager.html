@@ -3347,7 +3347,7 @@ function renderSchedPeople(){
     const sub=noDays
       ? '<span style="color:#B54708">no days set</span>'
       : 'through '+esc(fmtDs(c.last_date));
-    return `<button class="sched-person${schedMember===m.id?' on':''}" onclick="pickSchedMember(${m.id})">
+    return `<button class="sched-person${String(schedMember)===String(m.id)?' on':''}" onclick="pickSchedMember(${m.id})">
       <span class="av" style="background:${m.color}">${initials(m.name)}</span>
       <span><span class="nm">${esc(m.name)}</span><span class="sub">${sub}</span></span>
     </button>`;
@@ -4805,7 +4805,7 @@ function renderSchedule(){
   if(!today.length){list.innerHTML='<div class="empty"><div class="big">📅</div>No appointments on this day.<br>Tap “New Appointment” to book one.</div>';return;}
   list.innerHTML=today.map((a,i)=>{
     const color=a.member_color||'#8B7355';
-    const opts=members.map(m=>`<option value="${m.id}" ${Number(a.team_member_id)===m.id?'selected':''}>${esc(m.name)}</option>`).join('');
+    const opts=members.map(m=>`<option value="${m.id}" ${String(a.team_member_id)===String(m.id)?'selected':''}>${esc(m.name)}</option>`).join('');
     return `<div class="appt" style="--at:${color};animation-delay:${i*0.04}s">
       <div class="appt-time" style="--at:${color}"><div class="t">${fmtTime(a.time)}</div><div class="d">${a.status==='scheduled'?'Booked':a.status}</div></div>
       <div class="appt-main">
@@ -4826,7 +4826,7 @@ function renderSchedule(){
   }).join('');
 }
 function fillMemberSelect(sel,selected){
-  sel.innerHTML='<option value="">— Unassigned —</option>'+members.map(m=>`<option value="${m.id}" ${Number(selected)===m.id?'selected':''}>${esc(m.name)}</option>`).join('');
+  sel.innerHTML='<option value="">— Unassigned —</option>'+members.map(m=>`<option value="${m.id}" ${String(selected)===String(m.id)?'selected':''}>${esc(m.name)}</option>`).join('');
 }
 function fillServiceSelect(sel,selected){
   // Not just the service menu — she also blocks people in for a princess
@@ -5806,12 +5806,12 @@ async function loadWorkerGoals(id){
 function editGoal(memberId, goalId){
   const el = document.getElementById('goals-' + memberId);
   const g = goalId
-    ? (((window.__lastBoard||{}).goals)||[]).find(function(x){ return x.id===goalId; })
+    ? (((window.__lastBoard||{}).goals)||[]).find(function(x){ return String(x.id)===String(goalId); })
     : null;
   // Re-read from the card rather than caching: whatever is on screen is what
   // she just looked at.
   api('/api/goals?action=board&member_id=' + memberId).then(function(r){ return r.json(); }).then(function(b){
-    const cur = goalId ? (b.goals||[]).find(function(x){ return x.id===goalId; }) : null;
+    const cur = goalId ? (b.goals||[]).find(function(x){ return String(x.id)===String(goalId); }) : null;
     const opts = METRICS.map(function(mm){
       return '<option value="' + mm.v + '"' + (cur && cur.metric===mm.v ? ' selected':'') + '>' + mm.t + '</option>';
     }).join('');
@@ -8671,7 +8671,7 @@ function renderClients(){
   const el=document.getElementById('clients-list');
   if(!list.length){el.innerHTML='<div class="empty"><div class="big">👥</div>'+(clients.length?'No matches.':'No clients yet.<br><span style="font-size:0.72rem">Every booking and signup automatically creates a client profile here.</span>')+'</div>';return;}
   el.innerHTML=list.map((c,i)=>{
-    const isOpen=openClientId===c.id;
+    const isOpen=String(openClientId)===String(c.id);
     const head=`<div class="client-row" style="animation-delay:${i*0.03}s;${isOpen?'border-color:var(--gold);':''}" onclick="toggleClient(${c.id})">
       <div class="avatar" style="background:${OWNER_COLOR};width:38px;height:38px;font-size:0.95rem">${initials(c.name||'?')}</div>
       <div><div class="client-name">${c.name?clientLink(c.name,{id:c.id,email:c.email||'',phone:c.phone||''}):'Unnamed'}</div>
@@ -8715,7 +8715,7 @@ async function copyClientLink(id){
 }
 
 function toggleClient(id){
-  openClientId=openClientId===id?null:id;
+  openClientId=String(openClientId)===String(id)?null:id;
   renderClients();
   if(openClientId) loadClientHistory(openClientId);
 }
