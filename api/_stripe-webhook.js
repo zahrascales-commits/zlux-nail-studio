@@ -51,6 +51,12 @@ module.exports = async (req, res) => {
         const team = require('./_team-db');
         let placed = false;
 
+        // The rest of an appointment, paid ahead from its page.
+        if (md.kind === 'rest') {
+          try { const out = await require('./_visit').recordRest(md, cents); placed = !!out.matched; } catch (_) {}
+          if (placed) break;
+        }
+
         /* One payment covering several services booked for the same day.
            Each is marked with its own share, read from the payment itself —
            handing the whole amount to one of them is how the other ends up

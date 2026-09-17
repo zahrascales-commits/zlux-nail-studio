@@ -232,7 +232,21 @@ function render(){
           : '')
       + (!owes
           ? (((list && list.some(function(x){ return x.paid; })) || V.deposit_paid)
-              ? '<p style="margin-bottom:0.6rem">Paid — nothing more to do.</p><span class="paid">Paid ✓</span>'
+              ? '<p style="margin-bottom:0.6rem">Your deposit is paid — thank you.</p><span class="paid">Paid ✓</span>'
+                /* The rest, if they would like to be done with it before they
+                   arrive. Optional, and said so. */
+                + (Number(V.rest_cents) >= 50
+                    ? '<div class="rest" id="rest">'
+                      + '<h2 style="margin-top:1.4rem">Pay the rest now?</h2>'
+                      + '<div class="amt">' + money(V.rest_cents) + '</div>'
+                      + '<p>Completely optional — you can also pay at the studio. Pay now and there is nothing to do at the desk but enjoy your nails.</p>'
+                      + '<div id="ap-hint" style="display:none;font-size:0.82rem;color:var(--latte);margin-top:0.7rem">'
+                        + '&#63743;&nbsp; Apple Pay is ready — double-tap the side button to pay.</div>'
+                      + '<div id="card-el"></div>'
+                      + '<button class="btn" id="pay-btn" onclick="pay(\'rest\')">Pay the rest — ' + money(V.rest_cents) + '</button>'
+                      + '<div class="msg" id="pay-msg"></div>'
+                      + '</div>'
+                    : '')
               : '<p>No deposit needed for this one.</p>')
           : (many ? '' : '<div class="amt">' + money(due) + '</div>')
             + '<p>' + (many
@@ -269,11 +283,12 @@ function render(){
         + (V.inspo_count ? V.inspo_count + ' already sent ✓' : '') + '</div>'
     + '</div>';
 
-  if(owes) setupCard();
+  if(owes) setupCard(due);
+  else if(Number(V.rest_cents) >= 50) setupCard(Number(V.rest_cents));
   wireFile();
 }
 
-async function setupCard(){
+async function setupCard(amount){
   try{
     const cfg = await (await fetch('/api/pay?action=config')).json();
     // The endpoint returns publishable_key; reading publishableKey gave
@@ -281,7 +296,7 @@ async function setupCard(){
     const pk = cfg && (cfg.publishable_key || cfg.publishableKey);
     if(!pk) { $('pay-msg').textContent = 'Card payments are not switched on yet — message the studio.'; return; }
 
-    const due = Number(V.due_cents != null ? V.due_cents : V.deposit_cents) || 0;
+    const due = Number(amount != null ? amount : (V.due_cents != null ? V.due_cents : V.deposit_cents)) || 0;
     if(due < 50) return;
 
     stripe = Stripe(pk);
@@ -309,8 +324,10 @@ async function setupCard(){
   }catch(_){ $('pay-msg').textContent = 'Could not load the payment form — refresh and try again.'; }
 }
 
-async function pay(){
+async function pay(kind){
+  const payRest = kind === 'rest';
   const btn = $('pay-btn'), msg = $('pay-msg');
+  const label = payRest ? 'Pay the rest — ' + money(V.rest_cents) : 'Pay ' + money(V.due_cents != null ? V.due_cents : V.deposit_cents);
   if(!stripe || !elements){ msg.textContent = 'Payment form is still loading.'; return; }
   btn.disabled = true; btn.textContent = 'Charging…';
   msg.className = 'msg'; msg.textContent = '';
@@ -325,7 +342,7 @@ async function pay(){
     const makeIntent = async (noSave) => {
       const it = await (await fetch('/api/visit?action=pay_intent', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ t: TOKEN, no_save: !!noSave })
+        body: JSON.stringify({ t: TOKEN, no_save: !!noSave, kind: payRest ? 'rest' : 'deposit' })
       })).json();
       if(it.error) throw new Error(it.error);
       return it;
@@ -357,7 +374,7 @@ async function pay(){
 
     await recordPaid(paymentIntent.id);
   }catch(err){
-    btn.disabled = false; btn.textContent = 'Pay ' + money(V.due_cents != null ? V.due_cents : V.deposit_cents);
+    btn.disabled = false; btn.textContent = label;
     msg.className = 'msg err';
     msg.textContent = friendlyPayError(err);
     // A half-typed card is not something the studio needs to hear about.

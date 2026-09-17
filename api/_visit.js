@@ -96,6 +96,54 @@ async function memberInfoFor(appt) {
   } catch (_) { return { member: null, tier: null }; }
 }
 
+/* What is left to pay on a day's appointments once the deposits are in, by
+   the desk's own bill. Each share records where its deposit goes from and
+   to, so recording the payment twice (page and webhook) changes nothing. */
+async function restInfo(group) {
+  const bill = require('./_kiosk-bill');
+  let cents = 0;
+  const shares = [];
+  for (const r of (group && group.rows) || []) {
+    if (!Number(r.deposit_paid)) continue;
+    if (Number(r.checked_out_ts) > 0 || /complete|cancel|no_show/i.test(String(r.status || ''))) continue;
+    try {
+      const b = await bill.billFor({
+        src: 't', id: Number(r.id), name: r.client_name || '', email: String(r.client_email || '').toLowerCase(),
+        service: r.service || '', time: r.time || '', deposit_cents: Number(r.deposit_cents) || 0,
+        deposit_paid: 1, total_cents: Number(r.price_cents) > 0 ? Number(r.price_cents) : null, member_id: null,
+      });
+      const left = Math.max(0, Math.round(Number(b.remainder_cents) || 0));
+      if (left > 0 && r.chat_token) {
+        cents += left;
+        const from = Math.round(Number(r.deposit_cents) || 0);
+        shares.push(r.chat_token + ':' + from + ':' + (from + left));
+      }
+    } catch (_) {}
+  }
+  return { cents, shares: shares.join(',') };
+}
+
+/* Records a "pay the rest" payment against every appointment it covered. */
+async function recordRest(md, received) {
+  const parts = String(md.rest_shares || '').split(',').map(p => {
+    const [t, from, to] = p.split(':');
+    return { t, from: Number(from), to: Number(to) };
+  }).filter(p => p.t && p.to > p.from);
+  const sum = parts.reduce((s, p) => s + (p.to - p.from), 0);
+  if (!parts.length || sum !== Math.round(Number(received) || 0)) {
+    try {
+      await require('./_notify').notifyInApp('owner', null, '⚠️ A balance payment did not add up',
+        '$' + ((Number(received) || 0) / 100).toFixed(2) + ' was paid online towards the rest of an appointment but did not match what was owed. Check Deposits.');
+    } catch (_) {}
+    return { matched: false };
+  }
+  for (const p of parts) {
+    await execute('UPDATE team_appointments SET deposit_paid = 1, deposit_cents = ? WHERE chat_token = ? AND COALESCE(deposit_cents,0) < ?',
+      [p.to, p.t, p.to]);
+  }
+  return { matched: true, rows: parts.length };
+}
+
 async function depositFor(appt) {
   // A deposit already taken is a fact, not a calculation.
   if (Number(appt.deposit_cents) > 0) return Number(appt.deposit_cents);
@@ -207,6 +255,8 @@ module.exports = async function (req, res) {
         due_cents: group.dueCents,
         paid_cents: group.paidCents,
         all_paid: group.dueCents === 0,
+        // Once the deposit is in: the rest of the day, if they want to pay it now.
+        rest_cents: group.dueCents === 0 ? (await restInfo(group)).cents : 0,
         // Whether the payment keeps the card for the rest of the visit. The
         // page's payment form has to be built with the same answer, or
         // Stripe refuses to take the money.
@@ -237,11 +287,19 @@ module.exports = async function (req, res) {
       // Asked for when the card form and the payment disagreed about keeping
       // the card: take the deposit without keeping it rather than not at all.
       const noSave = (req.body || {}).no_save === true;
+      const payRest = (req.body || {}).kind === 'rest';
+      let rest = null;
+      if (payRest) {
+        if (group.dueCents > 0) return res.status(400).json({ error: 'The deposit comes first — pay that and the rest can follow.' });
+        rest = await restInfo(group);
+        if (rest.cents < 50) return res.status(400).json({ error: 'There is nothing left to pay on this appointment.' });
+      }
       /* Asked for the whole day. Charging only this service is how a second
          deposit got left behind. */
-      if (group.dueCents === 0) return res.status(400).json({ error: 'Everything booked for this day is already paid — nothing more to do.' });
-      if (group.dueCents < 50) return res.status(400).json({ error: 'There is no deposit on this appointment.' });
-      if (!group.tokenShares || group.tokenShares.length > 480) {
+      if (!payRest && group.dueCents === 0) return res.status(400).json({ error: 'Everything booked for this day is already paid — nothing more to do.' });
+      if (!payRest && group.dueCents < 50) return res.status(400).json({ error: 'There is no deposit on this appointment.' });
+      // A balance payment carries its own shares; the deposit shares are for deposits.
+      if (!payRest && (!group.tokenShares || group.tokenShares.length > 480)) {
         return res.status(400).json({ error: 'This booking needs the studio to take the deposit — message us and we will sort it.' });
       }
       const pay = require('./_pay');
@@ -283,14 +341,15 @@ module.exports = async function (req, res) {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + sk, 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
-          amount: String(group.dueCents), currency: 'usd', 'automatic_payment_methods[enabled]': 'true',
-          description: ('ZOLA deposit — ' + (appt.client_name || 'client') + ' · '
-            + group.owing.map(x => x.row.service || 'appointment').join(' + ')).slice(0, 300),
+          amount: String(payRest ? rest.cents : group.dueCents), currency: 'usd', 'automatic_payment_methods[enabled]': 'true',
+          description: ((payRest ? 'ZOLA balance — ' : 'ZOLA deposit — ') + (appt.client_name || 'client') + ' · '
+            + (payRest ? group.rows.map(x => x.service || 'appointment') : group.owing.map(x => x.row.service || 'appointment')).join(' + ')).slice(0, 300),
           'metadata[appt_token]': token,
+          ...(payRest ? { 'metadata[kind]': 'rest', 'metadata[rest_shares]': rest.shares.slice(0, 480) } : {}),
           /* Which services this one payment covers, and each one's share. Read
              back when it clears, so every service is marked paid with its own
              deposit rather than one of them being handed the lot. */
-          'metadata[appt_group]': group.tokenShares,
+          ...(payRest ? {} : { 'metadata[appt_group]': group.tokenShares }),
           // Kept for the rest of this appointment, at the desk — exactly when
           // the page was told so (an email on the booking), whether or not
           // the customer record could be made, so the two always agree.
@@ -300,7 +359,7 @@ module.exports = async function (req, res) {
       });
       const pi = await r.json();
       if (!r.ok) return res.status(400).json({ error: (pi.error && pi.error.message) || 'Stripe error' });
-      return res.json({ client_secret: pi.client_secret, payment_intent_id: pi.id, amount_cents: group.dueCents });
+      return res.json({ client_secret: pi.client_secret, payment_intent_id: pi.id, amount_cents: payRest ? rest.cents : group.dueCents });
     }
 
     // ── Confirm it cleared ──
@@ -324,6 +383,19 @@ module.exports = async function (req, res) {
 
       const md = pi.metadata || {};
       const received = Number(pi.amount_received || pi.amount) || 0;
+
+      // The rest of the appointment, paid ahead.
+      if (md.kind === 'rest') {
+        if (md.appt_token !== token) return res.status(400).json({ error: 'That payment is not for this appointment — message the studio.' });
+        const done = await recordRest(md, received);
+        try {
+          await require('./_notify').notifyInApp('owner', null,
+            '💳 ' + (appt.client_name || 'A client') + ' paid the rest of their appointment',
+            '$' + (received / 100).toFixed(2) + ' online · ' + (appt.service || '') + ' on ' + pretty(appt.date) + ' — nothing left to pay at the desk.');
+        } catch (_) {}
+        return res.json({ ok: true, recorded_cents: received, rest: true, matched: done.matched });
+      }
+
       const grp = require('./_deposit-group');
       const shares = grp.parseShares(md.appt_group);
 
@@ -402,6 +474,8 @@ module.exports = async function (req, res) {
 module.exports.ensureColumns = ensureColumns;
 module.exports.findByToken = findByToken;
 module.exports.depositFor = depositFor;
+module.exports.restInfo = restInfo;
+module.exports.recordRest = recordRest;
 module.exports.pretty = pretty;
 module.exports.time12 = time12;
 module.exports.memberInfoFor = memberInfoFor;

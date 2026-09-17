@@ -15,8 +15,9 @@ const SITE = process.env.PUBLIC_BASE_URL || 'https://zolanailstudio.com';
 const esc = s => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-function html({ client, service, artist, datePretty, timePretty, link, depositCents, depositPaid }) {
+function html({ client, service, artist, datePretty, timePretty, link, depositCents, depositPaid, paidCents, restCents }) {
   const first = String(client || '').trim().split(/\s+/)[0] || 'there';
+  const dollars = c => '$' + (Number(c || 0) / 100).toFixed(2).replace(/\.00$/, '');
   const money = '$' + (Number(depositCents || 0) / 100).toFixed(2).replace(/\.00$/, '');
 
   return `<div style="font-family:Helvetica,Arial,sans-serif;background:#faf7f4;padding:26px 14px">
@@ -51,9 +52,9 @@ function html({ client, service, artist, datePretty, timePretty, link, depositCe
         <strong>2.</strong> Send a picture of the nails you want${artist ? ' — it goes straight to ' + esc(artist) : ''}. A screenshot is perfect.
       </p>`}
 
-      ${depositPaid && depositCents ? `
+      ${depositPaid ? `
       <p style="font-size:15px;line-height:1.75;color:#3a3027;margin:0 0 20px">
-        Your deposit is paid. All that's left is showing us what you want${artist ? ' — it goes straight to ' + esc(artist) : ''}. A screenshot is perfect.
+        <strong>Your deposit${paidCents ? ' of ' + dollars(paidCents) : ''} is paid</strong> — thank you. All that's left is showing us what you want${artist ? ' — it goes straight to ' + esc(artist) : ''}. A screenshot is perfect.
       </p>` : ''}
 
       <a href="${link}" style="display:block;background:#0D0D0D;color:#C4A882;text-decoration:none;
@@ -65,6 +66,18 @@ function html({ client, service, artist, datePretty, timePretty, link, depositCe
       <p style="font-size:12px;line-height:1.7;color:#8C7A5E;margin:14px 0 0;text-align:center">
         ${depositPaid || !depositCents ? 'It works on your phone — no password.' : 'One link, both things. It works on your phone — no password.'}
       </p>
+
+      ${depositPaid && restCents >= 50 ? `
+      <div style="border:1px solid #eee5d8;background:#faf7f4;padding:16px 18px;margin-top:22px">
+        <p style="font-size:15px;line-height:1.7;color:#3a3027;margin:0 0 10px">
+          <strong>Want to be all set before you arrive?</strong> You can pay the rest now — <strong>${dollars(restCents)}</strong>.
+          Completely optional; you can also pay at the studio.
+        </p>
+        <a href="${link}#rest" style="display:inline-block;border:1px solid #0D0D0D;color:#0D0D0D;text-decoration:none;
+          padding:11px 16px;font-size:12px;font-weight:bold;letter-spacing:1.5px;text-transform:uppercase">
+          Pay the rest — ${dollars(restCents)}
+        </a>
+      </div>` : ''}
 
       <div style="border-top:1px solid #eee5d8;margin-top:24px;padding-top:18px">
         <p style="font-size:13px;line-height:1.8;color:#8C7A5E;margin:0 0 10px">
@@ -174,6 +187,8 @@ async function sendFor(appt, { force } = {}) {
     depositCents,
     // Paid means paid for the whole day, not just this one service.
     depositPaid: depositCents === 0 && grp.paid.length > 0,
+    paidCents: grp.paidCents,
+    restCents: depositCents === 0 && grp.paid.length > 0 ? (await visit.restInfo(grp)).cents : 0,
   });
 
   /* Said plainly when this replaces an earlier email, so the new total is
