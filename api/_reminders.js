@@ -159,11 +159,29 @@ module.exports = async (req, res) => {
     }
   }
 
+  // ── STRIPE HOUSEKEEPING ──
+  // Abandoned payments cancelled so Stripe's list only shows what matters,
+  // and any money that arrived with no booking reported the same day.
+  let stripeSweep = null;
+  try {
+    const hy = require('./_stripe-hygiene');
+    const sw = await hy.sweep({ dryRun: false, minAgeMin: 60 });
+    stripeSweep = { cancelled: sw.cancelled, failed: (sw.failed || []).length };
+    const lost = await hy.orphans(72);
+    for (const o of lost) {
+      if (await fresh('orphan:' + o.id)) {
+        const amt = '$' + (o.received / 100).toFixed(2);
+        await toOwner('💳 Payment with no booking: ' + amt,
+          (o.client || 'Someone') + ' paid ' + amt + ' (' + o.description.slice(0, 80) + ') but no appointment is linked to it. Check Studio Manager → Deposits and add or fix their booking.');
+      }
+    }
+  } catch (_) {}
+
   // ── ANYTHING BROKEN ──
   // The same list as the dashboard's "Needs attention", but only the things
   // worth a text, and each at most once every three days.
   let alerts = [];
   try { alerts = await require('./_dashboard').notifyOwner(toOwner, fresh); } catch (_) {}
 
-  return res.json({ ok: true, sent, deposit_chase: depositChase, alerts, at: new Date().toISOString() });
+  return res.json({ ok: true, sent, deposit_chase: depositChase, alerts, stripe_sweep: stripeSweep, at: new Date().toISOString() });
 };

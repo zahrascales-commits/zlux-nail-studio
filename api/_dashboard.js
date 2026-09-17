@@ -675,6 +675,19 @@ module.exports = async function (req, res) {
   if (req.headers['x-ceo-password'] !== CEO_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
   /* Everything a phone needs to show Apple Pay / Google Pay and take a card,
      read straight from Stripe. Read-only. */
+  /* Stripe housekeeping: incomplete payments, cleaning up abandoned ones,
+     money with no booking, and the wallet switches. */
+  {
+    const act = req.query.action || (req.body || {}).action || '';
+    const hy = require('./_stripe-hygiene');
+    try {
+      if (act === 'stripe_report') return res.json(await hy.report(Math.min(90, Math.max(1, Number(req.query.days) || 30))));
+      if (act === 'stripe_sweep' && req.method === 'POST') return res.json(await hy.sweep({ dryRun: (req.body || {}).dry_run !== false, minAgeMin: Math.max(30, Number((req.body || {}).min_age_min) || 60) }));
+      if (act === 'stripe_cancel' && req.method === 'POST') return res.json(await hy.cancelIds((req.body || {}).ids || []));
+      if (act === 'stripe_orphans') return res.json({ orphans: await hy.orphans(Math.min(240, Number(req.query.hours) || 72)) });
+      if (act === 'stripe_wallets' && req.method === 'POST') return res.json(await hy.wallets());
+    } catch (err) { return res.status(500).json({ error: String(err.message || err) }); }
+  }
   if ((req.query.action || '') === 'pay_check') {
     try {
       const sk = await stripeKey();
