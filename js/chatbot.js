@@ -171,7 +171,7 @@ async function askZolaFallback(msg) {
     return (deals ? deals + ' Hands or toes. ' : '') + "Pick your day on the booking page and it's yours. booking.html?deal=tuesday";
 
   if (m.includes('discount') || m.includes('first visit') || m.includes('coupon') || m.includes('code'))
-    return "Join the ZOLA list at the bottom of the homepage and 10% off your first visit lands in your inbox. Happy to sit with a trainee (with Zahra right beside them)? Code TRAIN20 takes $20 off." + (deals ? ' And every week: ' + deals : '');
+    return "Join the ZOLA list on the homepage and 10% off your first visit lands in your inbox. Happy to sit with a trainee (with Zahra right beside them)? Code TRAIN20 takes $20 off." + (deals ? ' And every week: ' + deals : '');
 
   if ((m.includes('which') && m.includes('member')) || m.includes('right for me') || (m.includes('choose') && m.includes('tier')))
     return "Want it simple — in and out, exactly what you need? Essential" + (ess ? ' (' + $(ess.cycle_cents) + ' every four weeks)' : '') + ". Want your nails healthier every visit — any length, Russian manicure, free removal, organic product? Elite" + (eli ? ' (' + $(eli.cycle_cents) + ')' : '') + ". Either way, you leave owing nothing. memberships.html";
@@ -210,7 +210,8 @@ async function askZolaFallback(msg) {
 
   if (m.includes('price') || m.includes('cost') || m.includes('how much')) {
     if (!F.services.length) return "The full menu with prices is here: services.html";
-    const min = Math.min.apply(null, F.services.map(s => Number(s.price_cents)));
+    const adult = F.services.filter(s => !/kid|removal/i.test(s.name));
+    const min = Math.min.apply(null, (adult.length ? adult : F.services).map(s => Number(s.price_cents)));
     const set = F.services.filter(s => /gel x|acrylic/i.test(s.name)).map(s => Number(s.price_cents));
     return "Single visits start at " + $(min) + (set.length ? ", and Gel X and acrylic sets from " + $(Math.min.apply(null, set)) : '') + ". "
       + (deals ? deals + ' ' : '') + "Memberships: " + tiers + ". services.html";

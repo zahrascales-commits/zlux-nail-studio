@@ -211,6 +211,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // the flash was.
     const urlFor = (slot, v) => '/api/photo?slot=' + encodeURIComponent(slot) + '&v=' + (v || 1);
 
+    // A photo well down the page waits until the visitor is heading its way:
+    // the princess-party picture alone was half a megabyte on every phone
+    // that never scrolled that far.
+    const later = 'IntersectionObserver' in window
+      ? new IntersectionObserver(es => es.forEach(e => {
+          if (!e.isIntersecting) return;
+          later.unobserve(e.target);
+          if (e.target._paint) { e.target._paint(); e.target._paint = null; }
+        }), { rootMargin: '800px 0px' })
+      : null;
+    const farDown = el => later && el.getBoundingClientRect().top > window.innerHeight * 1.5;
+
     const apply = (versions) => {
       slotEls.forEach(el => {
         const slot = el.dataset.photoSlot;
@@ -218,15 +230,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const url = urlFor(slot, versions[slot]);
         if (el.dataset.photoApplied === url) return;   // already showing this one
         el.dataset.photoApplied = url;
-        if (el.tagName === 'IMG') { el.src = url; el.style.display = 'block'; }
-        else {
-          const overlay = el.dataset.photoOverlay !== 'none'
-            ? 'linear-gradient(rgba(13,13,13,0.55), rgba(13,13,13,0.65)), ' : '';
-          el.style.backgroundImage = overlay + 'url(' + url + ')';
-          el.style.backgroundSize = 'cover';
-          el.style.backgroundPosition = 'center';
-        }
-        el.classList.add('has-photo');
+        const paint = () => {
+          if (el.tagName === 'IMG') { el.src = url; el.style.display = 'block'; }
+          else {
+            const overlay = el.dataset.photoOverlay !== 'none'
+              ? 'linear-gradient(rgba(13,13,13,0.55), rgba(13,13,13,0.65)), ' : '';
+            el.style.backgroundImage = overlay + 'url(' + url + ')';
+            el.style.backgroundSize = 'cover';
+            el.style.backgroundPosition = 'center';
+          }
+          el.classList.add('has-photo');
+        };
+        if (farDown(el)) { el._paint = paint; later.observe(el); }
+        else paint();
       });
     };
 
