@@ -122,6 +122,7 @@ app.all('/api/marketing',        require('./_marketing'));
 app.all('/api/classes',          require('./_classes'));
 app.all('/api/analytics',        require('./_analytics'));
 app.all('/api/dashboard',        require('./_dashboard'));
+app.all('/api/passkey',          require('./_passkey'));
 app.all('/api/ai-visibility',    require('./_ai-visibility'));
 app.all('/api/growth',           require('./_growth'));
 

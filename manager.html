@@ -1074,6 +1074,13 @@
   .status-off{background:var(--down-bg);color:var(--down)}
   .ny{background:#fff;border:1px solid #FECDCA;box-shadow:var(--shadow)}
   .ny-item i{margin-left:0.45rem}
+  .faceid-btn{display:flex;align-items:center;justify-content:center;gap:0.55rem;margin-top:0}
+  .login-or{text-align:center;font-size:0.8rem;color:var(--muted);margin:1rem 0 1.1rem;display:flex;align-items:center;gap:0.7rem}
+  .login-or::before,.login-or::after{content:'';flex:1;height:1px;background:var(--line)}
+  .fid-row{display:flex;align-items:center;gap:0.7rem;padding:0.6rem 0;border-top:1px solid var(--line);font-size:0.88rem}
+  .fid-row:first-child{border-top:none}
+  .fid-row b{font-weight:600;color:var(--ink)}
+  .fid-row span{color:var(--muted);font-size:0.78rem}
   .dep-line{display:inline-block;margin-top:0.35rem;font-size:0.84rem;font-weight:600;border-radius:8px;padding:0.22rem 0.6rem}
   .wk-chip{font-weight:600}
   .ny.calm{background:#fff;border-color:#ABEFC6}
@@ -1228,8 +1235,13 @@
   <div class="login-card">
     <div class="login-logo"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span></div>
     <div class="login-sub">Studio Manager</div>
+    <!-- Shown on a phone that has Face ID set up for Studio Manager. -->
+    <div id="faceid-login" style="display:none">
+      <button class="login-btn faceid-btn" id="faceid-btn" onclick="faceIdLogin()"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3H5a2 2 0 0 0-2 2v2M17 3h2a2 2 0 0 1 2 2v2M7 21H5a2 2 0 0 1-2-2v-2M17 21h2a2 2 0 0 0 2-2v-2"/><path d="M9 9v1M15 9v1M12 9v4h-1M9 16c1.7 1.3 4.3 1.3 6 0"/></svg><span id="faceid-label">Sign in with Face ID</span></button>
+      <div class="login-or">or use your password</div>
+    </div>
     <label class="fld-label">Owner Password</label>
-    <input class="login-input" type="password" id="pwd" placeholder="Enter your password" onkeydown="if(event.key==='Enter')login()" />
+    <input class="login-input" type="password" id="pwd" placeholder="Enter your password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()" />
     <button class="login-btn" onclick="login()">Enter Studio</button>
     <div class="login-err" id="login-err"></div>
   </div>
@@ -1944,6 +1956,11 @@
         <button class="btn btn-gold" onclick="saveSettings()">Save All Settings</button>
       </div>
       <div class="set-grid">
+        <div class="site-card" style="grid-column:1/-1">
+          <h3>Face ID sign-in</h3>
+          <p>Sign in with a glance instead of your password — on your iPhone, and anywhere else you set it up. Your face never leaves your phone; it just tells Studio Manager it's you.</p>
+          <div id="faceid-set"><div class="muted" style="font-size:0.84rem">Checking…</div></div>
+        </div>
         <div class="site-card">
           <h3>Your Color ✦</h3>
           <p>Your personal color across the studio system. Your appointments show as dots in this color. Only you can change colors — yours or your team's.</p>
@@ -3107,9 +3124,170 @@ async function login(){
     }catch{}
     setView(calView);
     renderMembers();refreshThreadDot();loadInquiries();loadBell();
+    if(!_viaFaceId) setTimeout(maybeOfferFaceId, 1200);
+    _viaFaceId = false;
   }catch{err.textContent='Connection error.';}
 }
 function logout(){sessionStorage.removeItem('zm_pwd');location.reload();}
+
+/* ══════════════ FACE ID ══════════════
+   A passkey: the phone keeps a private key that only unlocks after Face ID,
+   and signs a one-time challenge with it. The server checks the signature
+   and signs her in. See api/_passkey.js. */
+let _viaFaceId = false;
+const fidB64 = b => btoa(String.fromCharCode.apply(null, new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const fidBuf = s => { s = String(s || '').replace(/-/g, '+').replace(/_/g, '/'); s += '='.repeat((4 - s.length % 4) % 4); return Uint8Array.from(atob(s), c => c.charCodeAt(0)); };
+function fidWord(){
+  const ua = navigator.userAgent;
+  if(/iPhone|iPad|iPod/.test(ua)) return 'Face ID';
+  if(/Macintosh/.test(ua)) return 'Touch ID';
+  if(/Windows/.test(ua)) return 'Windows Hello';
+  return 'Face ID';
+}
+function fidDevice(){
+  const ua = navigator.userAgent;
+  if(/iPhone/.test(ua)) return 'iPhone';
+  if(/iPad/.test(ua)) return 'iPad';
+  if(/Macintosh/.test(ua)) return 'Mac';
+  if(/Android/.test(ua)) return 'Android phone';
+  if(/Windows/.test(ua)) return 'Windows computer';
+  return 'This device';
+}
+async function fidCapable(){
+  try{ return !!(window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); }
+  catch(_){ return false; }
+}
+function fidOnThisDevice(){ try{ return localStorage.getItem('zm_faceid') === '1'; }catch(_){ return false; } }
+
+async function faceIdLogin(auto){
+  const err = document.getElementById('login-err');
+  const btn = document.getElementById('faceid-btn');
+  err.textContent = '';
+  try{
+    const o = await (await fetch('/api/passkey?action=login_options', { cache: 'no-store' })).json();
+    if(!o.available){
+      try{ localStorage.removeItem('zm_faceid'); }catch(_){}
+      document.getElementById('faceid-login').style.display = 'none';
+      if(!auto) err.textContent = fidWord() + ' is not set up any more — use your password.';
+      return;
+    }
+    if(btn) btn.disabled = true;
+    const cred = await navigator.credentials.get({ publicKey: {
+      challenge: fidBuf(o.challenge), rpId: o.rpId, timeout: o.timeout, userVerification: 'required',
+      allowCredentials: (o.allowCredentials || []).map(c => ({ type: 'public-key', id: fidBuf(c.id) })),
+    }});
+    const r = await fetch('/api/passkey?action=login_verify', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'login_verify', id: cred.id, response: {
+        clientDataJSON: fidB64(cred.response.clientDataJSON),
+        authenticatorData: fidB64(cred.response.authenticatorData),
+        signature: fidB64(cred.response.signature),
+      }}),
+    });
+    const d = await r.json();
+    if(!r.ok || !d.password){ err.textContent = d.error || (fidWord() + ' did not work — use your password.'); return; }
+    _viaFaceId = true;
+    document.getElementById('pwd').value = d.password;
+    await login();
+    document.getElementById('pwd').value = '';
+  }catch(e){
+    // Cancelled, or the phone said no. On the automatic try that is not an
+    // error worth showing — the button is right there.
+    if(!auto && !(e && e.name === 'NotAllowedError')) err.textContent = fidWord() + ' did not work — use your password.';
+  }finally{ if(btn) btn.disabled = false; }
+}
+
+async function setupFaceId(){
+  closeFaceIdOffer();
+  try{
+    const o = await (await api('/api/passkey?action=register_options')).json();
+    if(o.error) throw new Error(o.error);
+    let cred;
+    try{
+      cred = await navigator.credentials.create({ publicKey: {
+        challenge: fidBuf(o.challenge), rp: o.rp,
+        user: Object.assign({}, o.user, { id: fidBuf(o.user.id) }),
+        pubKeyCredParams: o.pubKeyCredParams, authenticatorSelection: o.authenticatorSelection,
+        excludeCredentials: (o.excludeCredentials || []).map(c => ({ type: 'public-key', id: fidBuf(c.id) })),
+        attestation: o.attestation, timeout: o.timeout,
+      }});
+    }catch(e){
+      // Already set up on this phone.
+      if(e && e.name === 'InvalidStateError'){ try{ localStorage.setItem('zm_faceid', '1'); }catch(_){} toast(fidWord() + ' is already on for this ' + fidDevice()); loadFaceIdSettings(); return; }
+      if(e && e.name === 'NotAllowedError') return;
+      throw e;
+    }
+    const r = await api('/api/passkey?action=register_verify', { method: 'POST', body: JSON.stringify({
+      action: 'register_verify', name: fidDevice(),
+      response: { clientDataJSON: fidB64(cred.response.clientDataJSON), attestationObject: fidB64(cred.response.attestationObject) },
+    })});
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.error || 'Could not turn it on');
+    try{ localStorage.setItem('zm_faceid', '1'); localStorage.removeItem('zm_faceid_later'); }catch(_){}
+    toast(fidWord() + ' is on — next time, just look at your phone ✓');
+    loadFaceIdSettings();
+  }catch(e){ toast((e && e.message) || ('Could not turn on ' + fidWord())); }
+}
+
+async function maybeOfferFaceId(){
+  if(fidOnThisDevice() || !(await fidCapable())) return;
+  try{ const later = Number(localStorage.getItem('zm_faceid_later') || 0); if(Date.now() - later < 7 * 86400000) return; }catch(_){}
+  if(document.getElementById('faceid-offer')) return;
+  const w = fidWord();
+  const box = document.createElement('div');
+  box.className = 'overlay open'; box.id = 'faceid-offer';
+  box.innerHTML = '<div class="modal" style="max-width:380px;text-align:center">'
+    + '<div style="color:var(--ink);display:flex;justify-content:center;margin-bottom:0.6rem"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3H5a2 2 0 0 0-2 2v2M17 3h2a2 2 0 0 1 2 2v2M7 21H5a2 2 0 0 1-2-2v-2M17 21h2a2 2 0 0 0 2-2v-2"/><path d="M9 9v1M15 9v1M12 9v4h-1M9 16c1.7 1.3 4.3 1.3 6 0"/></svg></div>'
+    + '<div class="modal-title" style="margin-bottom:0.4rem">Sign in with ' + w + '?</div>'
+    + '<p class="muted" style="font-size:0.9rem;line-height:1.55;margin-bottom:1.1rem">Next time you open Studio Manager, just look at your phone — no password to type.</p>'
+    + '<button class="btn btn-gold" style="width:100%;justify-content:center;min-height:46px" onclick="setupFaceId()">Turn on ' + w + '</button>'
+    + '<button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:0.5rem;min-height:44px" onclick="faceIdLater()">Not now</button>'
+    + '</div>';
+  document.body.appendChild(box);
+}
+function closeFaceIdOffer(){ const b = document.getElementById('faceid-offer'); if(b) b.remove(); }
+function faceIdLater(){ try{ localStorage.setItem('zm_faceid_later', String(Date.now())); }catch(_){} closeFaceIdOffer(); }
+
+async function loadFaceIdSettings(){
+  const el = document.getElementById('faceid-set');
+  if(!el) return;
+  const capable = await fidCapable();
+  let keys = [];
+  try{ keys = ((await (await api('/api/passkey?action=list')).json()).keys) || []; }catch(_){}
+  const w = fidWord();
+  el.innerHTML = (keys.length
+      ? '<div style="margin-bottom:0.8rem">' + keys.map(k => '<div class="fid-row"><div style="flex:1"><b>' + esc(k.name || 'Device') + '</b><br><span>Set up ' + new Date(k.created_ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          + (k.last_used_ts ? ' · last used ' + new Date(k.last_used_ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ' · not used yet') + '</span></div>'
+          + '<button class="btn btn-ghost btn-sm" onclick="removeFaceId(\'' + esc(k.id) + '\')">Remove</button></div>').join('') + '</div>'
+      : '<p class="muted" style="font-size:0.85rem;margin-bottom:0.8rem">Not set up on any device yet.</p>')
+    + (capable
+        ? (fidOnThisDevice()
+            ? '<div class="pill ok">✓ On for this ' + esc(fidDevice()) + '</div>'
+            : '<button class="btn btn-gold" onclick="setupFaceId()">Set up ' + w + ' on this ' + esc(fidDevice()) + '</button>')
+        : '<p class="muted" style="font-size:0.82rem">This device cannot do ' + w + '. Open Studio Manager on your iPhone to set it up there.</p>');
+}
+async function removeFaceId(id){
+  if(!confirm('Remove Face ID for this device? You can set it up again any time.')) return;
+  try{
+    await api('/api/passkey?action=remove', { method: 'POST', body: JSON.stringify({ action: 'remove', id }) });
+    // If it was this phone, forget it here too.
+    try{ localStorage.removeItem('zm_faceid'); }catch(_){}
+    toast('Removed');
+    loadFaceIdSettings();
+  }catch(_){ toast('Could not remove it'); }
+}
+
+/* On the sign-in screen: offer Face ID where it is set up, and on the Home
+   Screen app ask straight away, like a banking app. */
+(async function(){
+  if(!fidOnThisDevice() || !(await fidCapable())) return;
+  document.getElementById('faceid-label').textContent = 'Sign in with ' + fidWord();
+  document.getElementById('faceid-login').style.display = 'block';
+  let signedInAlready = false;
+  try{ signedInAlready = !!sessionStorage.getItem('zm_pwd'); }catch(_){}
+  const standalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+  if(standalone && !signedInAlready) setTimeout(function(){ faceIdLogin(true); }, 350);
+})();
 
 /* ── TABS ── */
 // Reloading a screen is now defined once, so the tab switch, the Refresh
@@ -3155,7 +3333,7 @@ const TAB_LOADERS = {
   maillog:    () => loadMailLog(),
   paymath:    () => loadPayMath(),
   clients:    () => loadClients(),
-  settings:   () => { loadSettings(); mountOwnerPush(); },
+  settings:   () => { loadSettings(); mountOwnerPush(); loadFaceIdSettings(); },
 };
 
 function currentTab(){
