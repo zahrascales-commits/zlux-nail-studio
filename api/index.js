@@ -81,6 +81,7 @@ app.all('/api/account',          require('./_account'));
 app.all('/api/photos',           require('./_photos'));
 app.all('/api/coverage',         require('./_coverage'));
 app.all('/api/roster',           require('./_roster'));
+app.all('/api/proof',            require('./_proof'));
 app.all('/api/nail-health',      require('./_nail-health'));
 app.all('/api/inventory',        require('./_inventory'));
 app.all('/api/kiosk',            require('./_kiosk'));

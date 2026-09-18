@@ -419,7 +419,7 @@ ul { list-style: none; }
   color: var(--espresso);
   margin-top: 0.75rem;
 }
-.section-header h2.light { color: var(--cream); }
+.section-header h2.light, h2.light { color: var(--cream); }
 
 .container { max-width: 1200px; margin: 0 auto; }
 .container-sm { max-width: 760px; margin: 0 auto; }
@@ -815,6 +815,7 @@ ul { list-style: none; }
   color: var(--espresso);
   align-self: flex-start;
 }
+.chat-link { display: inline-block; margin-top: 0.35rem; color: var(--espresso); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--champagne); }
 .chat-msg.user {
   background: var(--espresso);
   color: var(--cream);
@@ -1738,7 +1739,7 @@ ul { list-style: none; }
    Flex/grid children default to min-width:auto, so they refuse to shrink
    below their content and push the whole page wider than the screen. That
    was dragging the nav (and the hamburger) off to the right on phones. */
-.member-save-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; max-width: 700px; margin: 0 auto; }
+.member-save-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; max-width: 700px; margin: 0 auto; }
 .member-save-grid > * { min-width: 0; }
 .team-card > * { min-width: 0; }
 @media (max-width: 700px) {
@@ -1916,4 +1917,79 @@ ul { list-style: none; }
   .sv-card { padding: 1.75rem 1.25rem; }
   .sv-head, .sv-row { grid-template-columns: 1fr auto; }
   .sv-head span:nth-child(2), .sv-row .sv-was { display: none; }
+}
+
+/* ── BOOK BAR (phones) ──
+   One button in reach once the hero has scrolled away. Everything else that
+   floats at the bottom of the screen moves up while it is showing. */
+.book-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 145;
+  display: flex; align-items: center; gap: 0.9rem;
+  padding: 0.7rem 1rem calc(0.7rem + env(safe-area-inset-bottom, 0px));
+  background: rgba(13,13,13,0.96); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(182,165,136,0.35);
+  box-shadow: 0 -10px 30px rgba(0,0,0,0.25);
+  transform: translateY(110%); transition: transform 0.35s ease;
+}
+.book-bar.on { transform: translateY(0); }
+.book-bar-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.1rem; }
+.book-bar-t { font-family: 'Cinzel', serif; font-size: 0.95rem; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.book-bar-s { font-family: 'Josefin Sans', sans-serif; font-size: 0.7rem; letter-spacing: 0.06em; color: rgba(221,208,184,0.7); }
+.book-bar-go {
+  flex-shrink: 0; background: var(--champagne); color: #0D0D0D; text-decoration: none;
+  font-family: 'Josefin Sans', sans-serif; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+  padding: 0.85rem 1.3rem; min-height: 46px; display: inline-flex; align-items: center;
+}
+@media (max-width: 760px) {
+  body.has-bookbar .chat-widget { bottom: calc(5.4rem + env(safe-area-inset-bottom, 0px)); }
+  body.has-bookbar .back-to-top { bottom: calc(5.6rem + env(safe-area-inset-bottom, 0px)); }
+  body.has-bookbar .sp-toast { bottom: calc(9rem + env(safe-area-inset-bottom, 0px)); }
+  .chat-widget { right: 1rem; bottom: 1rem; transition: bottom 0.35s ease; }
+  .chat-toggle { padding: 0.6rem 0.95rem; font-size: 0.62rem; }
+  .chat-box { width: min(330px, calc(100vw - 2rem)); }
+  .back-to-top { transition: opacity 0.3s, transform 0.3s, bottom 0.35s ease; }
+  /* The "Scroll" hint sat on top of the second hero button. */
+  .hero-scroll { display: none; }
+}
+
+/* ── HERO: the quiz link and the counted line ── */
+.hero-quiz {
+  display: inline-block; margin-top: 1.4rem;
+  font-family: 'Josefin Sans', sans-serif; font-size: 0.9rem; color: rgba(245,238,232,0.78);
+}
+.hero-quiz span { color: var(--champagne); border-bottom: 1px solid rgba(182,165,136,0.6); padding-bottom: 1px; }
+.hero-proof {
+  margin-top: 1.1rem; min-height: 1.2em;
+  font-family: 'Josefin Sans', sans-serif; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: rgba(221,208,184,0.8); opacity: 0; transition: opacity 0.6s ease;
+}
+.hero-proof.on { opacity: 1; }
+.hero-proof strong { color: var(--cream); font-weight: 600; }
+.hero-proof span { margin: 0 0.6rem; color: var(--champagne); }
+@media (max-width: 600px) {
+  .hero { min-height: 100svh; padding: 6.5rem 1.4rem 3rem; }
+  .hero h1 { font-size: clamp(2.5rem, 11vw, 3.2rem); margin: 1rem 0 1.1rem; }
+  .hero-sub { font-size: 0.98rem; line-height: 1.7; margin-bottom: 1.8rem; }
+  .hero-ctas .btn-gold, .hero-ctas .btn-outline { width: 100%; max-width: 320px; text-align: center; }
+}
+/* On a phone the membership card rises from the bottom instead of landing on the headline. */
+@media (max-width: 760px) {
+  .urgency-banner { top: auto; right: 12px; left: 12px; max-width: none; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+  body.has-bookbar .urgency-banner { bottom: calc(5.1rem + env(safe-area-inset-bottom, 0px)); }
+  .urgency-banner.visible { animation: zolaRise 0.45s ease-out; }
+}
+@keyframes zolaRise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── REVIEWS (shared at the kiosk, with permission) ── */
+.rv-grid { display: grid; gap: 1rem; max-width: 980px; margin: 0 auto; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.rv-card { margin: 0; background: #fff; border: 1px solid rgba(182,165,136,0.3); padding: 1.4rem 1.4rem 1.2rem; display: flex; flex-direction: column; gap: 0.7rem; }
+.rv-stars { color: var(--champagne); letter-spacing: 0.2em; font-size: 0.95rem; }
+.rv-card blockquote { margin: 0; font-family: 'Josefin Sans', sans-serif; font-size: 0.95rem; line-height: 1.7; color: var(--espresso); }
+.rv-card figcaption { font-family: 'Josefin Sans', sans-serif; font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--latte); }
+
+/* The booking page's text-message notice stays on screen from the start (carrier
+   reviewers read it there) — same words, a little smaller on a phone, so the
+   booking itself starts higher up. */
+@media (max-width: 600px) {
+  .sms-notice { font-size: 0.7rem; line-height: 1.6; padding: 0.75rem 0.9rem; margin-bottom: 1.1rem; }
 }

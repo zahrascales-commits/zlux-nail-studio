@@ -4,11 +4,23 @@ const { query, ensureTables } = require('./_team-db');
 
 module.exports = async function (req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=30');
   try {
     await ensureTables();
+
+    // One portrait on its own, so the list stays small and the phone keeps
+    // the picture. A new photo has a new length, so a new address.
+    if (req.query.photo) {
+      const [row] = await query('SELECT photo FROM team_members WHERE id=? AND show_on_site=1 AND active=1', [Number(req.query.photo) || 0]);
+      const m = row && /^data:(image\/[a-z+.-]+);base64,(.*)$/i.exec(String(row.photo || ''));
+      if (!m) return res.status(404).end();
+      res.setHeader('Content-Type', m[1]);
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      return res.end(Buffer.from(m[2], 'base64'));
+    }
+
+    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=30');
     const rows = await query(
-      "SELECT id, name, role, title, bio, color, photo, restricted FROM team_members WHERE show_on_site=1 AND active=1 ORDER BY id"
+      "SELECT id, name, role, title, bio, color, CASE WHEN photo LIKE 'data:%' THEN substr(photo, 1, 16) ELSE photo END AS photo, length(photo) AS photo_len, restricted FROM team_members WHERE show_on_site=1 AND active=1 ORDER BY id"
     );
 
     // Deliberately does not publish who does which service. Everyone will
@@ -20,7 +32,9 @@ module.exports = async function (req, res) {
       title: (r.title && String(r.title).trim()) || r.role || 'Nail Artist',
       bio: r.bio || '',
       color: r.color || '#B6A588',
-      photo: r.photo || '',
+      photo: /^data:image\//i.test(r.photo || '')
+        ? '/api/roster?photo=' + r.id + '&v=' + r.photo_len
+        : (r.photo || ''),
       initial: (r.name || '?').trim().charAt(0).toUpperCase(),
     }));
     return res.json({ team });

@@ -261,6 +261,13 @@
       <span data-r="1">☆</span><span data-r="2">☆</span><span data-r="3">☆</span><span data-r="4">☆</span><span data-r="5">☆</span>
     </div>
     <textarea class="note" id="kreview" placeholder="Anything you'd like us to know? (optional)"></textarea>
+    <!-- Only with their say-so, and off until they tick it: a review they
+         wrote to us is not one they wrote for the website. -->
+    <label style="display:flex;gap:0.7rem;align-items:center;justify-content:center;font-family:'Josefin Sans',sans-serif;
+      font-size:0.95rem;color:#C9B896;margin-top:1rem;cursor:pointer;width:min(560px,90vw);">
+      <input type="checkbox" id="kshare" style="width:22px;height:22px;accent-color:#B6A588;flex-shrink:0;" />
+      <span>You can share this on the ZOLA website (first name only)</span>
+    </label>
     <div class="row">
       <button class="big-btn ghost" onclick="finish()">Skip</button>
       <button class="big-btn gold" onclick="sendReview()">Submit</button>
@@ -283,7 +290,7 @@ let BAL=0, TIP=0, SVC='';   // balance owed, tip chosen, service name
 
 function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); document.getElementById(id).classList.add('on'); }
 function reset(){ clearTimeout(resetTimer); MODE='in';KNAME='';KSTARS=0;_pi=null;BAL=0;TIP=0;SVC='';
-  document.getElementById('kname').value=''; document.getElementById('kreview').value='';
+  document.getElementById('kname').value=''; document.getElementById('kreview').value=''; document.getElementById('kshare').checked=false;
   document.querySelectorAll('#kstars span').forEach(s=>s.textContent='☆');
   ['name-err','bal-err','card-err'].forEach(i=>document.getElementById(i).textContent='');
   show('s-home'); }
@@ -824,7 +831,8 @@ document.getElementById('kstars').addEventListener('click',e=>{
 async function sendReview(){
   if(KSTARS){
     await fetch('/api/kiosk?action=review',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'review',name:KNAME,stars:KSTARS,text:document.getElementById('kreview').value.trim()})}).catch(()=>{});
+      body:JSON.stringify({action:'review',name:KNAME,stars:KSTARS,text:document.getElementById('kreview').value.trim(),
+        share:document.getElementById('kshare').checked})}).catch(()=>{});
   }
   finish();
 }

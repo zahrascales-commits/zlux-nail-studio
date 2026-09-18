@@ -9,30 +9,108 @@
 const CEO_PASSWORD = process.env.CEO_PASSWORD || 'ZOLA2026';
 const MODEL = process.env.AI_MODEL || 'claude-haiku-4-5-20251001';
 
-// Everything the AI should know about the business.
-const BUSINESS_KNOWLEDGE = `
-ZOLA Nail Studio — Porterville, California. Luxury private nail membership studio.
-Founder & CEO: Zahra — 6+ years in the industry, celebrity clients and wedding work.
-Team: Emma Magana (Nail Artist — clean structured sets, detail-forward nail art),
-Lily Byers (Nail Artist — organic structure manicures, gel extensions, health-first).
-Brand voice: warm, confident, quiet luxury ("Quiet Luxury. Loud Results."). Never pushy, never desperate. Terms of endearment like "love" are on-brand, sparingly.
+/* Everything the AI should know about the business.
 
-MEMBERSHIPS (6-month minimum, then month-to-month, 30 days notice):
-- Signature Club $99/mo — 1 service/month (mani OR pedi), 50% off add-ons, third-priority booking, birthday month upgrade. 25 spots.
-- Luxe Club $199/mo — up to 2 services/month, complimentary Russian manicure monthly, 100% off add-ons (free) + 1 free scrub or lotion massage/mo, all organic products, second-priority booking. 15 spots. Most popular.
-- Black Card $299/mo FOUNDING RATE locked forever — up to 2 services/month, choose your specific artist, 100% off all add-ons (free every visit), monthly nail art, quarterly nail assessments, first-priority "Atelier Access". 10 spots.
-Members always book before guests. Unused services do NOT roll over.
+   The prices, memberships, deal days and team are read from the same
+   endpoints the website renders, so Ask Zola quotes exactly what the pages
+   show. It used to carry its own typed copy — three memberships that had
+   been retired, prices nobody charged any more, and a team that had moved
+   on — and told visitors all of it with confidence. */
+const SITE = (process.env.PUBLIC_BASE_URL || 'https://zolanailstudio.com').replace(/\/+$/, '');
+const $ = c => '$' + (Math.round(Number(c) || 0) / 100).toFixed(2).replace(/\.00$/, '');
 
-SERVICES (drop-in prices):
-Manicure: Regular Gel Manicure $55 · Organic Structured Manicure from $95 · Short Gel X $95 · Medium Gel X $100 · Long Gel X $110 · Short Acrylic $95 · Medium Acrylic $100 · Long Acrylic $110.
-Pedicure: Russian Dry Pedicure $95 (water-free Russian technique, grows out natural toenails, the healthiest pedicure offered) · Russian Dry Pedicure — Full Correction $125 (adds full-foot exfoliation, buffing, and callus correction each visit — the only way calluses truly resolve). Both are tailored to the client as ZOLA learns their preferences.
-Add-ons: Soak Off Removal +$35 · Russian Manicure Technique +$30 · Scrub Massage +$25 · Nail Art +$25 · Lotion Massage +$15.
-The studio works exclusively with hard gel and gel acrylic (no soft gel / regular polish) — better structure, healthier nails. Clients come to ZOLA because their nails actually GROW here.
+async function getJson(path) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 2500);
+  try { const r = await fetch(SITE + path, { signal: ctl.signal }); return r.ok ? await r.json() : null; }
+  catch (_) { return null; }
+  finally { clearTimeout(t); }
+}
 
-POLICIES: By appointment only, no walk-ins. 50% non-refundable deposit at booking. Cancel/reschedule free more than 24h ahead; late cancel or no-show forfeits the service for that period.
-PRINCESS PARTIES: kids' nail parties, $20/child (regularly $35), 6-child minimum, mini manicure + custom age-appropriate nail art, safe non-toxic products. We travel to you.
-CONTACT: Instagram @zola_officials_ · TikTok @zolaofficial · email zolastudioempire@gmail.com · book at booking.html · join at memberships.html.
-`;
+// Only what the booking page itself offers as an add-on, at what it charges.
+function addonLine() {
+  try {
+    const { addons } = require('./_store');
+    const by = n => (addons.find(a => a.name === n) || {}).price_cents;
+    return [
+      ['Soak Off Removal', by('Removal')],
+      ['Russian Manicure Technique', by('Russian Manicure')],
+      ['Lotion Massage', by('Lotion Massage')],
+      ['Kids Manicure (ages 3–8, done alongside your appointment)', by('Kids Manicure')],
+    ].filter(x => x[1]).map(x => x[0] + ' +' + $(x[1])).join(' · ');
+  } catch (_) { return ''; }
+}
+
+let _kAt = 0, _k = '';
+async function knowledge() {
+  if (_k && Date.now() - _kAt < 5 * 60000) return _k;
+  const [plans, deals, services, roster, settings] = await Promise.all([
+    getJson('/api/plans'), getJson('/api/deals'), getJson('/api/services'), getJson('/api/roster'), getJson('/api/site-settings'),
+  ]);
+
+  const L = [];
+  L.push('ZOLA Nail Studio — Porterville, California. Private nail membership studio, by appointment only.');
+  L.push('Founder & CEO: Zahra — 6+ years in the industry.');
+  const team = ((roster && roster.team) || []).map(m => m.name + ' (' + m.title + ')');
+  if (team.length) L.push('TEAM: ' + team.join(', ') + '. Clients are matched with an artist when they book.');
+  L.push('Brand voice: warm, confident, quiet luxury ("Quiet Luxury. Loud Results."). Never pushy. "Love" is on-brand, sparingly.');
+
+  const ps = (plans && plans.plans) || [];
+  if (ps.length) {
+    L.push('');
+    L.push('MEMBERSHIPS — the only ones open to new members:');
+    for (const p of ps) {
+      L.push('- ' + p.name + ' — ' + $(p.cycle_cents) + ' every four weeks, or ' + $(p.annual_cents) + ' a year'
+        + (p.annual_free_visits ? ' (that is ' + p.annual_free_visits + ' visits free)' : '') + '. "' + p.line + '" Includes: '
+        + (p.includes || []).join('; ') + '. ' + p.joined + ' joined, ' + p.spots_open + ' spots open.');
+    }
+    if (plans.addon && plans.addon.cents) {
+      L.push('Members can add a ' + plans.addon.name + ' for ' + $(plans.addon.cents)
+        + (plans.addon.correction_cents ? ' (' + $(plans.addon.correction_cents) + ' with full correction)' : '') + ' a visit.');
+    }
+    L.push('Both run a minimum of three months; after that, cancel any time from your own account in two clicks. Members book ahead of walk-ins. Services do not roll over. You leave owing nothing.');
+    L.push('Signature, Luxe and Black Card are older memberships, closed to new members — if asked, say so kindly and describe Essential and Elite. Join at memberships.html.');
+  }
+
+  const ds = (deals && deals.deals) || [];
+  if (ds.length) {
+    L.push('');
+    L.push('DEAL DAYS:');
+    for (const d of ds) {
+      L.push('- ' + d.name + ' — ' + d.blurb + ' ' + d.duration_label + ', hands or toes, every ' + d.weekday_name
+        + '. Book at booking.html?deal=' + d.key);
+    }
+    if (deals.instead_note) L.push(deals.instead_note);
+  }
+
+  const sv = ((services && services.services) || (Array.isArray(services) ? services : []))
+    .filter(s => !s.deal && Number(s.price_cents) >= 500 && !/test/i.test(s.name));
+  if (sv.length) {
+    L.push('');
+    L.push('SERVICES (single-visit prices): ' + sv.map(s => s.name + ' ' + $(s.price_cents)).join(' · ') + '.');
+  }
+  const ad = addonLine();
+  if (ad) L.push('ADD-ONS at booking: ' + ad + '.');
+  L.push('Russian Dry Pedicure: water-free Russian technique that grows out natural toenails. Full Correction adds exfoliation, buffing and callus correction each visit.');
+  L.push('The studio works with hard gel and gel acrylic for structure and nail health. Clients come to ZOLA because their nails actually grow here.');
+
+  L.push('');
+  L.push('OFFERS: 10% off your first visit — join the ZOLA list on the homepage and the code arrives by email. Sit with a trainee (Zahra right beside them) and code TRAIN20 takes $20 off.');
+  L.push('POLICIES: By appointment only, no walk-ins. A 50% non-refundable deposit is taken at booking (Essential and Elite members pay no deposit). Cancel more than 24 hours ahead and it can be rescheduled at no cost; for members, a late cancellation or no-show forfeits the service for that billing period.');
+  const hours = settings && settings.settings && settings.settings.biz_hours;
+  if (hours) L.push('HOURS: ' + hours + ' (by appointment).');
+  L.push('PRINCESS PARTIES: kids\' nail parties, $20 a child (regularly $35), 6-child minimum, mini manicure and custom age-appropriate art, safe non-toxic products. We travel to you. Enquire at contact.html.');
+  L.push('CONTACT: Instagram @zola_officials_ · TikTok @zolaofficial · email zolastudioempire@gmail.com.');
+
+  // Only keep what was read properly; a failed read leaves the last good copy.
+  if (ps.length && ds.length && sv.length) { _k = L.join('\n'); _kAt = Date.now(); }
+  return L.join('\n');
+}
+
+const COPY_RULES = 'Copy rules: never invent scarcity, urgency, numbers or reviews; only quote what is written here. Never use the word "expensive". '
+  + 'Never call Essential cheap, affordable, budget, a discount, a deal or value — it is the easy choice: in and out, exactly what you need. '
+  + 'Elite is about nail health over time. Say what people get, never list what is excluded. '
+  + 'When someone is ready, give the page to go to: booking.html to book (booking.html?deal=tuesday for $75 Tuesdays), memberships.html to join.';
 
 /* The key can live in Vercel or be pasted into Studio Manager. Looked up
    once a minute, not on every message. */
@@ -86,7 +164,7 @@ module.exports = async function (req, res) {
         }
       }
       msgs.push({ role: 'user', content: String(message).slice(0, 600) });
-      const system = `You are "Ask Zola", the AI concierge on the ZOLA Nail Studio website. Answer client questions using ONLY the business facts below. Be warm, concise (2-4 sentences), on-brand luxury but friendly. Gently guide people toward booking or a membership when it fits naturally. If asked something you don't know (like exact open slots), point them to booking.html or Instagram @zola_officials_. Never invent prices or policies.\n${BUSINESS_KNOWLEDGE}`;
+      const system = `You are "Ask Zola", the AI concierge on the ZOLA Nail Studio website. Answer client questions using ONLY the business facts below. Be warm, concise (2-4 sentences), on-brand luxury but friendly. Gently guide people toward booking or a membership when it fits naturally. If asked something you don't know (like exact open slots), point them to booking.html or Instagram @zola_officials_. Never invent prices or policies. Plain text only, no markdown.\n${COPY_RULES}\n\n${await knowledge()}`;
       const reply = await callClaude(system, msgs, 300);
       return res.json({ reply }); // reply:null → widget falls back to scripted answers
     }
@@ -95,13 +173,13 @@ module.exports = async function (req, res) {
     if (action === 'draft') {
       if (req.headers['x-ceo-password'] !== CEO_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
       const { name, contact, message, tone, instructions } = req.body || {};
-      const system = `You draft replies for Zahra, founder of ZOLA Nail Studio, to client inquiries. Write in her brand voice: warm, confident, quiet luxury, personal but professional. Keep it short (under 130 words), answer their actual question using the business facts, include ONE clear next step (book, join a membership, or reply). Sign off as "Zahra ✦ ZOLA Nail Studio". Output ONLY the reply body — no subject line, no preamble.\n${BUSINESS_KNOWLEDGE}`;
+      const system = `You draft replies for Zahra, founder of ZOLA Nail Studio, to client inquiries. Write in her brand voice: warm, confident, quiet luxury, personal but professional. Keep it short (under 130 words), answer their actual question using the business facts, include ONE clear next step (book, join a membership, or reply). Sign off as "Zahra ✦ ZOLA Nail Studio". Output ONLY the reply body — no subject line, no preamble.\n${COPY_RULES}\n\n${await knowledge()}`;
       const user = `Client inquiry from ${name || 'a client'} (${contact || 'no contact given'}):\n"${message}"\n${tone ? 'Tone: ' + tone : ''}${instructions ? '\nExtra instructions from Zahra: ' + instructions : ''}`;
       let draft = await callClaude(system, [{ role: 'user', content: user }], 350);
       if (!draft) {
         // No API key — smart template fallback so the button still works
         const first = (name || 'there').split(' ')[0];
-        draft = `Hi ${first},\n\nThank you so much for reaching out to ZOLA — I saw your message and I'd love to take care of you.\n\n${message && /party|kid|princess/i.test(message) ? 'Our Princess Parties are $35 per child with a 6-child minimum — mini manicures, custom nail art, and safe products for little hands. I’d love to hold a date for you.' : message && /price|cost|much/i.test(message) ? 'You can see our full menu at our services page — and if you visit regularly, a membership saves you up to 45% every month.' : 'The fastest way to get on my calendar is the booking page, and if you want priority access every month, take a look at our memberships — spots are limited.'}\n\nReply here or book anytime — I can't wait to meet you.\n\nZahra ✦ ZOLA Nail Studio`;
+        draft = `Hi ${first},\n\nThank you so much for reaching out to ZOLA — I saw your message and I'd love to take care of you.\n\n${message && /party|kid|princess/i.test(message) ? 'Our Princess Parties are $20 per child with a 6-child minimum — mini manicures, custom nail art, and safe products for little hands. I’d love to hold a date for you.' : message && /price|cost|much/i.test(message) ? 'You can see our full menu at our services page — and if you come in regularly, a membership means you leave owing nothing.' : 'The fastest way to get on my calendar is the booking page, and if you want priority access every month, take a look at our memberships.'}\n\nReply here or book anytime — I can't wait to meet you.\n\nZahra ✦ ZOLA Nail Studio`;
       }
       return res.json({ draft, ai: !!(await aiKey()) });
     }
@@ -111,3 +189,4 @@ module.exports = async function (req, res) {
     return res.status(200).json({ reply: null, error: String(err.message || err) });
   }
 };
+module.exports._test = { knowledge };

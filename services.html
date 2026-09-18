@@ -236,36 +236,43 @@
     <!-- Membership Savings Callout -->
     <div style="background:var(--espresso);padding:2rem 2.5rem;margin-top:2.5rem;margin-bottom:0.5rem;">
       <div style="text-align:center;margin-bottom:1.5rem;">
-        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.6rem;letter-spacing:0.22em;text-transform:uppercase;color:rgba(182,165,136,0.6);font-weight:700;margin-bottom:0.5rem;">Members Save More</div>
-        <div style="font-family:'Cinzel',serif;font-size:1.6rem;color:var(--cream);">Your membership works every appointment.</div>
+        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.6rem;letter-spacing:0.22em;text-transform:uppercase;color:rgba(182,165,136,0.6);font-weight:700;margin-bottom:0.5rem;">Coming Every Four Weeks?</div>
+        <div style="font-family:'Cinzel',serif;font-size:1.6rem;color:var(--cream);">Make it a membership.</div>
       </div>
-      <div class="member-save-grid">
-        <div style="background:rgba(182,165,136,0.07);border:1px solid rgba(182,165,136,0.2);padding:1.25rem;text-align:center;">
-          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--champagne);font-weight:700;margin-bottom:0.4rem;">Signature — $99/mo</div>
-          <div style="font-family:'Cinzel',serif;font-size:1.8rem;color:var(--champagne);margin-bottom:0.3rem;">50% off</div>
-          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:rgba(245,238,232,0.55);line-height:1.6;">all add-ons<br>1 service/month included</div>
-        </div>
-        <div style="background:rgba(182,165,136,0.12);border:1px solid rgba(182,165,136,0.35);padding:1.25rem;text-align:center;">
-          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--champagne);font-weight:700;margin-bottom:0.4rem;">Luxe — $199/mo</div>
-          <div style="font-family:'Cinzel',serif;font-size:1.8rem;color:var(--champagne);margin-bottom:0.3rem;">100% off</div>
-          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:rgba(245,238,232,0.55);line-height:1.6;">all add-ons<br>2 services/month included</div>
-        </div>
-        <div style="background:rgba(182,165,136,0.07);border:1px solid rgba(182,165,136,0.2);padding:1.25rem;text-align:center;">
-          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--champagne);font-weight:700;margin-bottom:0.4rem;">Black Card — $299/mo</div>
-          <div style="font-family:'Cinzel',serif;font-size:1.8rem;color:var(--champagne);margin-bottom:0.3rem;">100% off</div>
-          <div style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:rgba(245,238,232,0.55);line-height:1.6;">all add-ons<br>2 services/month included</div>
+      <!-- The two memberships sold today, from /api/plans — the same source as
+           the homepage and the memberships page. This used to list Signature,
+           Luxe and Black Card at $99/$199/$299 with "design not included",
+           the opposite of what Essential and Elite actually give. -->
+      <div class="member-save-grid" id="svc-plans">
+        <div style="grid-column:1/-1;text-align:center;font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:rgba(245,238,232,0.75);line-height:1.7;">
+          Essential and Elite — one full service every four weeks, any design, no deposit. You leave owing nothing.
         </div>
       </div>
-      <div style="text-align:center;margin-top:1.25rem;">
-        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.7rem;color:rgba(182,165,136,0.5);font-style:italic;">Design not included in membership services. Nail art available as an add-on.</div>
-      </div>
-      <div style="text-align:center;margin-top:1.25rem;">
-        <a href="memberships.html" class="btn-gold" style="animation:none;font-size:0.72rem;">View All Membership Perks</a>
+      <div style="text-align:center;margin-top:1.5rem;">
+        <a href="memberships.html" class="btn-gold" style="animation:none;font-size:0.72rem;">See Both Memberships</a>
       </div>
     </div>
+    <script>
+    (function(){
+      fetch('/api/plans').then(function(r){ return r.json(); }).then(function(d){
+        var ps = (d && d.plans) || [];
+        if (!ps.length) return;
+        var esc = function(x){ return String(x == null ? '' : x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+        document.getElementById('svc-plans').innerHTML = ps.map(function(p){
+          return '<div style="background:rgba(182,165,136,0.09);border:1px solid rgba(182,165,136,0.3);padding:1.4rem 1.25rem;text-align:center;">'
+            + '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--champagne);font-weight:700;margin-bottom:0.45rem;">' + esc(p.name) + '</div>'
+            + '<div style="font-family:\'Cinzel\',serif;font-size:1.9rem;color:var(--cream);margin-bottom:0.2rem;">$' + Math.round(p.cycle_cents / 100) + '<span style="font-size:0.8rem;color:rgba(245,238,232,0.55);"> / 4 weeks</span></div>'
+            + '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;color:rgba(245,238,232,0.7);line-height:1.6;margin-bottom:0.9rem;">' + esc(p.line) + '</div>'
+            + '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.76rem;color:rgba(245,238,232,0.6);line-height:1.8;">' + p.includes.slice(0, 3).map(esc).join('<br>') + '</div>'
+            + '<a href="signup.html?tier=' + encodeURIComponent(p.key) + '" style="display:inline-block;margin-top:1rem;color:var(--champagne);font-family:\'Josefin Sans\',sans-serif;font-size:0.72rem;letter-spacing:0.16em;text-transform:uppercase;border-bottom:1px solid var(--champagne);">Join ' + esc(p.name) + ' →</a>'
+            + '</div>';
+        }).join('');
+      }).catch(function(){});
+    })();
+    </script>
 
     <div style="background:rgba(182,165,136,0.06);border:1px solid rgba(182,165,136,0.18);padding:1.25rem 1.5rem;margin-top:0.5rem;text-align:center;">
-      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:var(--espresso);line-height:1.7;">All services require a <strong>50% non-refundable deposit</strong> at the time of booking. Members receive add-on discounts based on their tier.</p>
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:var(--espresso);line-height:1.7;">All services require a <strong>50% non-refundable deposit</strong> at the time of booking. Essential and Elite members pay no deposit.</p>
     </div>
 
     <div style="text-align:center;margin-top:2.5rem;">

@@ -1,15 +1,34 @@
 const FAQ_CHIPS = [
   { label: 'How does membership work?',    q: 'how does membership work' },
   { label: 'How do I book?',               q: 'how do I book an appointment' },
-  { label: 'What tier is right for me?',   q: 'which membership is right for me' },
+  { label: 'Which membership is for me?',  q: 'which membership is right for me' },
   { label: 'How much does it cost?',       q: 'how much does it cost' },
-  { label: 'Do services roll over?',       q: 'do unused services roll over' },
-  { label: 'Can I pick my artist?',        q: 'can I choose my nail artist' },
+  { label: 'What are the deal days?',      q: 'tell me about the tuesday and wednesday deals' },
+  { label: 'First-visit discount?',        q: 'is there a first visit discount' },
   { label: 'What is a structure mani?',    q: 'what is a structure manicure' },
-  { label: 'What is the Black Card?',      q: 'tell me about black card membership' },
+  { label: 'Do services roll over?',       q: 'do unused services roll over' },
   { label: 'Cancellation & deposits',      q: 'what is your cancellation and deposit policy' },
   { label: 'Kids / princess parties',      q: 'do you offer princess parties for kids' },
 ];
+
+/* The prices, memberships and deal days come from the same endpoints the
+   pages render, so the chat can never quote something the site does not
+   charge. The scripted answers below used to carry their own copy of all
+   of it — three retired memberships and prices from months ago. */
+let _zolaFacts = null;
+function zolaFacts() {
+  if (_zolaFacts) return _zolaFacts;
+  const get = p => fetch(p).then(r => r.json()).catch(() => null);
+  _zolaFacts = Promise.all([get('/api/plans'), get('/api/deals'), get('/api/services'), get('/api/addons'), get('/api/site-settings')])
+    .then(([p, d, s, a, st]) => ({
+      plans: (p && p.plans) || [],
+      deals: (d && d.deals) || [],
+      services: ((s && (s.services || s)) || []).filter(x => x && !x.deal && Number(x.price_cents) >= 500 && !/test/i.test(x.name)),
+      addons: Array.isArray(a) ? a : [],
+      hours: st && st.settings && st.settings.biz_hours,
+    }));
+  return _zolaFacts;
+}
 
 function renderFaqChips() {
   const existing = document.getElementById('chat-faq-chips');
@@ -43,9 +62,25 @@ function toggleChat() {
   const box = document.getElementById('chat-box');
   box.classList.toggle('open');
   if (box.classList.contains('open')) {
+    zolaFacts();
     renderFaqChips();
     setTimeout(() => document.getElementById('chat-input')?.focus(), 100);
   }
+}
+
+/* A page named in a reply becomes a button to it — "booking.html" in a
+   sentence is a dead end on a phone; "Book now →" is one tap. */
+function chatLinkify(text) {
+  const esc = String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const LABEL = {
+    booking: 'Book now', memberships: 'See the memberships', services: 'See the menu',
+    contact: 'Contact us', signup: 'Join now', pressons: 'Press-ons', classes: 'Classes',
+  };
+  return esc
+    .replace(/(?:https?:\/\/)?(?:www\.)?(?:zolanailstudio\.com)?\/?\b(booking|memberships|services|contact|signup|pressons|classes)\.html(\?[\w=%.-]+)?/g,
+      (m, page, q) => '<a class="chat-link" href="/' + page + '.html' + (q || '') + '">' + LABEL[page] + ' →</a>')
+    .replace(/@zola_officials_/g,
+      '<a class="chat-link" href="https://instagram.com/zola_officials_" target="_blank" rel="noopener">@zola_officials_</a>');
 }
 
 async function sendChat() {
@@ -87,9 +122,9 @@ async function sendChat() {
       body: JSON.stringify({ message: msg, history: window._zolaChatHistory || [] })
     });
     const data = await res.json();
-    reply = data.reply || askZolaFallback(msg);
+    reply = data.reply || await askZolaFallback(msg);
   } catch {
-    reply = askZolaFallback(msg);
+    reply = await askZolaFallback(msg);
   }
   // Keep a short rolling history so the AI remembers the conversation
   window._zolaChatHistory = (window._zolaChatHistory || []).concat(
@@ -99,115 +134,126 @@ async function sendChat() {
   document.getElementById('chat-thinking')?.remove();
   const botMsg = document.createElement('div');
   botMsg.className = 'chat-msg zlux';
-  botMsg.textContent = reply;
+  botMsg.innerHTML = chatLinkify(reply);
   messages.appendChild(botMsg);
   messages.scrollTop = messages.scrollHeight;
 }
 
-function askZolaFallback(msg) {
+async function askZolaFallback(msg) {
   const m = msg.toLowerCase();
+  let F = { plans: [], deals: [], services: [], addons: [] };
+  try { F = await zolaFacts(); } catch (_) {}
+  const $ = c => '$' + Math.round((Number(c) || 0) / 100).toLocaleString();
+  const plan = k => F.plans.find(p => p.key === k);
+  const ess = plan('ESSENTIAL'), eli = plan('ELITE');
+  const tiers = ess && eli
+    ? 'Essential (' + $(ess.cycle_cents) + ' every four weeks) and Elite (' + $(eli.cycle_cents) + ')'
+    : 'Essential and Elite';
+  const deals = F.deals.map(d => d.name + ' — ' + d.blurb).join(' ');
+  const addon = n => { const a = F.addons.find(x => x.name === n); return a ? ' (+' + $(a.price_cents) + ' at booking)' : ''; };
 
   if (m.match(/\b(hi|hey|hello|hola|good morning|good afternoon)\b/))
     return "Hi love — I'm Ask Zola. Ask me anything about services, memberships, or booking. I know this studio inside and out.";
 
   if (m.includes('structure') || (m.includes('what') && m.includes('manicure')))
-    return "A structure manicure is hard gel applied directly to your natural nail. It protects and strengthens the nail while it grows — without damaging it. Clients come to Zola because their nails actually grow here. This is not a standard nail service.";
+    return "A structure manicure is hard gel applied directly to your natural nail. It protects and strengthens the nail while it grows — without damaging it. Clients come to Zola because their nails actually grow here.";
 
   if (m.includes('hard gel') || m.includes('gel polish') || m.includes('acrylic') || (m.includes('difference') && m.includes('gel')))
-    return "We work exclusively with hard gel and gel acrylic. Soft gel and regular gel polish are not offered — those systems are more limiting and less supportive for nail health. Hard gel gives real structure without the damage that liquid-powder acrylic can cause when applied carelessly.";
+    return "We build with hard gel and gel acrylic for structure — it supports your natural nail instead of replacing it. If you just want colour, the Regular Gel Manicure is on the menu too. services.html";
 
   if (m.includes('grow') || m.includes('growth') || m.includes('natural nail'))
-    return "Clients come to Zola specifically because their nails grow here. The structure manicure supports your natural nail rather than replacing it. Most members see real growth within their first two to three months.";
+    return "Clients come to Zola specifically because their nails grow here. The structure manicure supports your natural nail rather than replacing it, and Elite members get a personal nail record that tracks the growth visit to visit.";
 
-  if (m.includes('russian'))
-    return "The Russian manicure technique is a precision method focused on the cuticle and surrounding skin. The result is cleaner, more polished, and longer-lasting. It's included for Luxe and Black Card members, and available as a $30 add-on for any service.";
+  if (m.includes('russian') && !m.includes('pedi'))
+    return "The Russian manicure technique is a precision method focused on the cuticle and surrounding skin — cleaner, more polished, longer-lasting. It's included on every Elite visit, and you can add it to any service" + addon('Russian Manicure') + ".";
+
+  if (m.includes('tuesday') || m.includes('wednesday') || m.includes('deal') || m.includes('special') || m.includes('promo'))
+    return (deals ? deals + ' Hands or toes. ' : '') + "Pick your day on the booking page and it's yours. booking.html?deal=tuesday";
+
+  if (m.includes('discount') || m.includes('first visit') || m.includes('coupon') || m.includes('code'))
+    return "Join the ZOLA list at the bottom of the homepage and 10% off your first visit lands in your inbox. Happy to sit with a trainee (with Zahra right beside them)? Code TRAIN20 takes $20 off." + (deals ? ' And every week: ' + deals : '');
 
   if ((m.includes('which') && m.includes('member')) || m.includes('right for me') || (m.includes('choose') && m.includes('tier')))
-    return "How often do you get your nails done? Once a month — Signature ($99) is perfect. Twice or more — Luxe ($199) gives 2 services plus extras. If you want the most access and a direct relationship with Zahra — Black Card ($299) is in a different category entirely.";
+    return "Want it simple — in and out, exactly what you need? Essential" + (ess ? ' (' + $(ess.cycle_cents) + ' every four weeks)' : '') + ". Want your nails healthier every visit — any length, Russian manicure, free removal, organic product? Elite" + (eli ? ' (' + $(eli.cycle_cents) + ')' : '') + ". Either way, you leave owing nothing. memberships.html";
 
-  if (m.includes('how does membership') || (m.includes('membership') && m.includes('work')))
-    return "You choose a tier, pay monthly, and get a set number of services included each month. Members book before the public calendar opens — priority access is one of the biggest perks. Your member ID gets you in, unlocks your discounts, and tracks your nail history.";
+  if (m.includes('black card') || m.includes('blackcard') || m.includes('signature') || m.includes('luxe') || m.includes('founding') || m.includes('quarterly') || m.includes('atelier'))
+    return "Signature, Luxe and Black Card are closed to new members now. The two memberships open today are " + tiers + " — one full service every four weeks, any design, no deposit, and you leave owing nothing. memberships.html";
 
-  if (m.includes('signature'))
-    return "Signature Club is $99/month. One service per month — your choice of manicure or pedicure. 50% off all add-ons, birthday month upgrade, and members-only booking access. It's the entry point — clean, consistent, no frills.";
+  if (m.includes('essential'))
+    return ess ? "Essential is " + $(ess.cycle_cents) + " every four weeks. " + ess.line + " " + ess.includes.join('. ') + ". You leave owing nothing. memberships.html"
+               : "Essential is one full service every four weeks, any design, no deposit — in and out, exactly what you need. memberships.html";
 
-  if (m.includes('luxe'))
-    return "Luxe Club is $199/month. Up to 2 services per month, a complimentary Russian manicure, 100% off all add-ons (free), one free scrub or lotion massage monthly, all organic products, and second-priority booking. Nail health is a priority at every appointment.";
+  if (m.includes('elite'))
+    return eli ? "Elite is " + $(eli.cycle_cents) + " every four weeks. " + eli.line + " " + eli.includes.join('. ') + ". memberships.html"
+               : "Elite is about nail health over time — Russian manicure, free removal and organic product every visit, at any length. memberships.html";
 
-  if (m.includes('black card') || m.includes('blackcard'))
-    return "Black Card is $299/month founding rate — locked forever. 2 services a month, choose your specific nail artist every time, 100% off all add-ons (free every visit), monthly nail art, quarterly nail assessments, personal client profile, and first access to every open slot. Most exclusive tier available.";
-
-  if (m.includes('member') || m.includes('membership') || m.includes('join') || m.includes('tier'))
-    return "Three tiers: Signature ($99/mo, 1 service, 50% off add-ons), Luxe ($199/mo, 2 services + Russian manicure + 100% off add-ons + organic products), Black Card ($299/mo founding rate, 2 services + 100% off add-ons + choose your artist + quarterly assessments). Spots are limited.";
+  if (m.includes('how does membership') || (m.includes('membership') && m.includes('work')) || m.includes('member') || m.includes('join') || m.includes('tier'))
+    return "Pick " + tiers + ". Each includes one full service every four weeks, any design at no extra charge, and no deposit — you leave owing nothing. Members book ahead of walk-ins. Minimum three months, then cancel any time from your account. memberships.html";
 
   if (m.includes('roll') || m.includes('unused') || (m.includes('miss') && m.includes('month')))
-    return "Signature and Luxe services do not roll over — if you don't book before the month ends, the service drops. Black Card members can carry over one service. The membership renews regardless.";
+    return "Services don't roll over — each four-week cycle has its own service, so book within it. Your membership renews on the same date each cycle.";
 
   if (m.includes('upgrade'))
-    return "Upgrades are available based on spot availability in the higher tier. Request through your Client Portal. Downgrades are only available after the 6-month minimum commitment.";
-
-  if (m.includes('founding') || m.includes('locked') || m.includes('price increase'))
-    return "The founding rate on Black Card is locked in forever for original members. Your price will never increase as long as your membership stays active. That guarantee does not apply to members who join later at a higher rate.";
-
-  if (m.includes('quarterly') || m.includes('assessment') || m.includes('nail health check'))
-    return "Black Card members receive a quarterly nail assessment — a Zola artist personally reviews your nail growth, health, and length progress and builds a custom plan. No other studio in this area offers this.";
+    return "You can move up to Elite from your Client Portal whenever you like.";
 
   if (m.includes('princess') || m.includes('kids') || m.includes('children') || m.includes('party') || m.includes('daughter'))
-    return "Zola offers princess parties for kids — mini manicures and custom nail art in a safe, elevated studio experience. $20 per child, minimum 6 children. Use the contact form to inquire about dates and availability.";
+    return "Zola offers princess parties for kids — mini manicures and custom nail art, with safe products for little hands, and we travel to you. $20 per child, minimum 6 children. Tell us your date: contact.html";
 
   if ((m.includes('choose') && m.includes('artist')) || (m.includes('pick') && m.includes('artist')) || m.includes('specific artist') || m.includes('my artist'))
-    return "Choosing your specific nail artist every appointment is exclusive to Black Card members. Signature and Luxe members are assigned based on availability. Black Card is the only tier where your artist is guaranteed every visit.";
+    return "Every artist here was trained by Zahra, hand on hand, until the work met her standard. You're matched with an artist when you book.";
 
   if (m.includes('profile') || m.includes('history') || m.includes('allerg') || m.includes('sensitiv'))
-    return "Every Black Card member has a personal client profile — a full record of services, sensitivities, shape preferences, allergies, and nail progress. Every appointment is informed by what came before. Nothing starts from scratch.";
+    return "Tell us about any allergies or sensitivities in the notes when you book and we'll plan around them. Elite members also get a personal nail record that tracks growth and health from visit to visit.";
 
   if (m.includes('organic') || (m.includes('product') && !m.includes('how much')))
-    return "Every product used at Zola is personally vetted by Zahra. Organic products are standard for Luxe and Black Card members. She will always choose the healthier option, regardless of cost. Most studios cannot say that.";
+    return "Every product used at Zola is personally vetted by Zahra. Organic product is used on every Elite visit, and the Organic Structured Manicure is on the menu for anyone. services.html";
 
-  if (m.includes('price') || m.includes('cost') || m.includes('how much'))
-    return "Services start at $90 for manicures and $95 for the Russian Dry Pedicure. Memberships start at $99/month and save you significantly compared to drop-in pricing. Full pricing is on the Services page.";
+  if (m.includes('price') || m.includes('cost') || m.includes('how much')) {
+    if (!F.services.length) return "The full menu with prices is here: services.html";
+    const min = Math.min.apply(null, F.services.map(s => Number(s.price_cents)));
+    const set = F.services.filter(s => /gel x|acrylic/i.test(s.name)).map(s => Number(s.price_cents));
+    return "Single visits start at " + $(min) + (set.length ? ", and Gel X and acrylic sets from " + $(Math.min.apply(null, set)) : '') + ". "
+      + (deals ? deals + ' ' : '') + "Memberships: " + tiers + ". services.html";
+  }
 
   if (m.includes('soak') || m.includes('removal') || m.includes('another salon'))
-    return "If you're coming from another salon, add a soak off removal (+$35) to your booking. It's on the booking page — select it as an add-on and we take care of the rest.";
-
-  if (m.includes('book') || m.includes('appointment') || m.includes('schedule') || m.includes('reserve') || m.includes('how do i book'))
-    return "Booking is appointment-only — no walk-ins. Go to the Book page, select your service and date, enter your info, and pay a 50% deposit to lock in your spot. Members get priority access to slots before guests see them.";
+    return "If you're coming from another salon, add a soak off removal" + addon('Removal') + " when you book and we take care of the rest. booking.html";
 
   if (m.includes('cancel') || m.includes('refund') || m.includes('deposit') || m.includes('cancellation'))
-    return "The 50% deposit is non-refundable. With 48+ hours notice, it applies toward your rescheduled appointment. No-shows forfeit it entirely. This protects the artist's time — it applies across all bookings without exception.";
+    return "Cancel more than 24 hours ahead and we'll reschedule you at no cost. The 50% deposit taken at booking is non-refundable, and members pay no deposit at all.";
 
-  if (m.includes('birthday'))
-    return "Every tier includes a birthday month upgrade — your choice of a free scrub, free massage, or free removal. Set your birthday month in your Client Portal or at booking. It unlocks automatically that month.";
+  if (m.includes('book') || m.includes('appointment') || m.includes('schedule') || m.includes('reserve') || m.includes('how do i book'))
+    return "Pick your service, then a day and time, then your details — a 50% deposit holds your spot (members pay none). booking.html";
 
   if (m.includes('walk') || m.includes('same day') || m.includes('drop in'))
-    return "Zola does not take walk-ins. Every appointment is reserved in advance. That's part of what makes the experience what it is — your time is protected, and so is ours.";
+    return "Zola does not take walk-ins. Every appointment is reserved in advance — your time is protected, and so is ours. booking.html";
 
   if (m.includes('nail art') || m.includes('design') || (m.includes('art') && !m.includes('artist')))
-    return "Nail art is available for any service. Black Card members have monthly nail art included. Style and design are discussed at your appointment. Clean, editorial work is what this studio is known for.";
+    return "Any design is included in both memberships at no extra charge. " + (deals ? 'On deal days: ' + deals : '') + " Clean, editorial work is what this studio is known for.";
 
   if (m.includes('how long') || m.includes('last') || m.includes('durable'))
     return "Structure manicures typically last three to five weeks depending on your natural growth and lifestyle. Because they work with your nail rather than against it, they grow out cleanly rather than lifting or breaking.";
 
   if (m.includes('location') || m.includes('where') || m.includes('address') || m.includes('porterville'))
-    return "Zola is located in Porterville, California. Appointment-only — book online through the Book page.";
+    return "Zola is in Porterville, California. Appointment only — book online. booking.html";
 
   if (m.includes('hours') || m.includes('open') || (m.includes('when') && !m.includes('member')))
-    return "The studio is available Monday through Sunday, 8 AM to 10 PM. All appointments are by booking — no walk-ins.";
+    return (F.hours ? "Hours: " + F.hours + ". " : "") + "Everything is by appointment — pick a time that suits you. booking.html";
 
   if (m.includes('instagram') || m.includes('tiktok') || m.includes('social') || m.includes('@zlux') || m.includes('@zola'))
     return "Follow the work at @zola_officials_ on Instagram or @zolaofficial on TikTok. For the fastest direct response, Instagram DMs are the place.";
 
   if (m.includes('different') || m.includes('other salon') || m.includes('why zola'))
-    return "Most salons prioritize speed and volume. Zola prioritizes health, precision, and privacy. Organic products, Russian technique expertise, personal client tracking, quarterly assessments — none of that exists at a standard salon. Every visit here has context.";
+    return "Most salons prioritize speed and volume. Zola prioritizes nail health, precision and privacy — Russian technique, organic product, and a personal nail record for Elite members. Every artist was trained by Zahra.";
 
   if (m.includes('gift') || m.includes('gift card'))
-    return "Gift cards are available! They make perfect presents. Purchase through the contact form and we'll send a digital gift card directly to you or the recipient.";
+    return "Gift cards are available! Ask through the contact page and we'll send a digital gift card to you or the recipient. contact.html";
 
   if (m.includes('pedicure') || m.includes('feet') || m.includes('toes') || m.includes('callus'))
-    return "Zola offers the Russian Dry Pedicure ($95) — a water-free, Russian-technique treatment that grows out your natural toenails flawlessly, no soaking required. For calluses and complete foot renewal, the Russian Dry Pedicure — Full Correction ($125) adds targeted exfoliation and buffing each visit — the only way calluses truly resolve.";
+    return "Zola offers the Russian Dry Pedicure — a water-free, Russian-technique treatment that grows out your natural toenails, no soaking required. For calluses, the Full Correction adds targeted exfoliation and buffing each visit. services.html";
 
   if (m.includes('worker') || m.includes('who does') || m.includes('zahra') || m.includes('who will do'))
-    return "Zola services are performed by Zahra and her trained team of nail technicians. Black Card members have the exclusive option to request Zahra for every appointment.";
+    return "Services are performed by Zahra and her team — every artist trained by Zahra herself.";
 
-  return "That's a great one for the Zola team — reach out through the contact form or DM @zola_officials_ on Instagram for the fastest response.";
+  return "That's a great one for the Zola team — reach out through the contact page or DM @zola_officials_ on Instagram for the fastest response.";
 }

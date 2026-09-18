@@ -52,17 +52,32 @@ module.exports = async function (req, res) {
     await ensure();
 
     // ── PUBLIC: the shoppable grid ──
+    // Each photo is its own address rather than riding inside this list.
+    // Inline, eight photos made a 1.5 MB download that had to finish before
+    // the first one showed, and was fetched again on every visit. Separate,
+    // each loads as it scrolls into view and the phone keeps it. A photo is
+    // never edited in place (a new one is a new post), so its id and size
+    // name it for good.
     if (req.method === 'GET' && (!action || action === 'feed')) {
       const rows = await query(
-        'SELECT id, data_url, caption, tags FROM ig_posts WHERE active=1 ORDER BY sort_order, id DESC LIMIT 60'
+        'SELECT id, length(data_url) AS n, caption, tags FROM ig_posts WHERE active=1 ORDER BY sort_order, id DESC LIMIT 60'
       );
       return res.json({
         posts: rows.map(r => {
           let tags = [];
           try { tags = JSON.parse(r.tags || '[]'); } catch (_) {}
-          return { id: r.id, photo: r.data_url, caption: r.caption || '', tags };
+          return { id: r.id, photo: '/api/shopig?action=img&id=' + r.id + '&v=' + r.n, caption: r.caption || '', tags };
         }),
       });
+    }
+
+    if (req.method === 'GET' && action === 'img') {
+      const row = await queryOne('SELECT data_url FROM ig_posts WHERE id=? AND active=1', [Number(req.query.id) || 0]);
+      const m = row && /^data:(image\/[a-z+.-]+);base64,(.*)$/i.exec(String(row.data_url || ''));
+      if (!m) return res.status(404).end();
+      res.setHeader('Content-Type', m[1]);
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      return res.end(Buffer.from(m[2], 'base64'));
     }
 
     if (!auth(req)) return res.status(401).json({ error: 'Unauthorized' });

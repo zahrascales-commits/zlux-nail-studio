@@ -154,10 +154,17 @@
     <div class="section-label" data-site-text="hero_kicker">Porterville, California</div>
     <h1 data-site-html="hero_quote">Nails That Speak<br><span class="gold-text">Before You Do</span></h1>
     <p class="hero-sub" data-site-text="hero_sub">A private membership studio where your dream nails come true — with a plan tailored just for you.</p>
+    <!-- Book first. Nine in ten visitors arrive from Instagram wanting a set;
+         a first appointment is the step they are ready for, and memberships
+         sit right beside it for the ones who already know. -->
     <div class="hero-ctas">
-      <a href="memberships.html" class="btn-gold">Buy a ZOLA Membership</a>
-      <a href="memberships.html" class="btn-outline">See All Tiers</a>
+      <a href="booking.html" class="btn-gold">Book Your Appointment</a>
+      <a href="memberships.html" class="btn-outline">Explore Memberships</a>
     </div>
+    <a href="#" class="hero-quiz" data-journey>Not sure what to get? <span>Find your set →</span></a>
+    <!-- Counted, not claimed: filled from /api/plans and /api/proof, and
+         left empty if either has nothing real to say. -->
+    <div class="hero-proof" id="hero-proof" aria-live="polite"></div>
   </div>
   <div class="hero-scroll">
     <span>Scroll</span>
@@ -259,6 +266,246 @@
   </div>
 </div>
 
+<!-- REVIEWS — only words clients wrote at the kiosk and ticked "you can
+     share this" on, first name and initial. Hidden until there are three,
+     so the section never looks thin; she can hide any one in Studio
+     Manager → Marketing. -->
+<section class="section section-soft" id="reviews" style="display:none;">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">In Their Words</div>
+      <h2>What Clients Say</h2>
+    </div>
+    <div class="rv-grid" id="rv-grid"></div>
+  </div>
+</section>
+<script>
+(function(){
+  window.zolaProof = window.zolaProof || fetch('/api/proof').then(function(r){ return r.json(); }).catch(function(){ return null; });
+  window.zolaProof.then(function(d){
+    var rs = (d && d.reviews) || [];
+    if (rs.length < 3) return;
+    var esc = function(x){ return String(x == null ? '' : x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+    document.getElementById('rv-grid').innerHTML = rs.slice(0, 6).map(function(r){
+      return '<figure class="rv-card"><div class="rv-stars" aria-label="' + r.stars + ' stars">' + '★★★★★'.slice(0, r.stars) + '</div>'
+        + '<blockquote>' + esc(r.text) + '</blockquote><figcaption>' + esc(r.name) + '</figcaption></figure>';
+    }).join('');
+    document.getElementById('reviews').style.display = '';
+  });
+})();
+</script>
+
+<!-- SERVICES MENU -->
+<section class="section section-soft">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">Services</div>
+      <h2>The Menu</h2>
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.88rem;color:var(--latte);margin-top:0.5rem;">Tap any service to book it. Members get one full service every four weeks and leave owing nothing.</p>
+    </div>
+    <div class="grid-2" style="max-width:880px;margin:0 auto;">
+      <div>
+        <div class="section-label" style="margin-bottom:1rem;">Manicure</div>
+        <div class="services-table" id="menu-mani">
+          <a class="service-row" href="booking.html?rebook=Regular%20Gel%20Manicure"><span class="service-name">Regular Gel Manicure</span><span class="service-price">$55</span></a>
+          <a class="service-row" href="booking.html?rebook=Organic%20Structured%20Manicure"><span class="service-name">Organic Structured Manicure</span><span class="service-price">$95</span></a>
+          <details class="service-group"><summary class="service-row"><span class="service-name">Gel X<span class="service-more">Short · Medium · Long</span></span><span class="service-price">from $95</span></summary>
+            <a class="service-row service-sub" href="booking.html?rebook=Short%20Gel%20X"><span class="service-name">Short</span><span class="service-price">$95</span></a>
+            <a class="service-row service-sub" href="booking.html?rebook=Medium%20Gel%20X"><span class="service-name">Medium</span><span class="service-price">$100</span></a>
+            <a class="service-row service-sub" href="booking.html?rebook=Long%20Gel%20X"><span class="service-name">Long</span><span class="service-price">$110</span></a>
+          </details>
+          <details class="service-group"><summary class="service-row"><span class="service-name">Acrylic<span class="service-more">Short · Medium · Long</span></span><span class="service-price">from $95</span></summary>
+            <a class="service-row service-sub" href="booking.html?rebook=Short%20Acrylic%20Set"><span class="service-name">Short</span><span class="service-price">$95</span></a>
+            <a class="service-row service-sub" href="booking.html?rebook=Medium%20Acrylic%20Set"><span class="service-name">Medium</span><span class="service-price">$100</span></a>
+            <a class="service-row service-sub" href="booking.html?rebook=Long%20Acrylic%20Set"><span class="service-name">Long</span><span class="service-price">$110</span></a>
+          </details>
+        </div>
+      </div>
+      <div>
+        <div class="section-label" style="margin-bottom:1rem;">Pedicure</div>
+        <div class="services-table" id="menu-pedi">
+          <a class="service-row" href="booking.html?rebook=Russian%20Dry%20Pedicure"><span class="service-name">Russian Dry Pedicure</span><span class="service-price">$95</span></a>
+          <a class="service-row" href="booking.html?rebook=Russian%20Dry%20Pedicure%20%E2%80%94%20Full%20Correction"><span class="service-name">Russian Dry Pedicure — Full Correction</span><span class="service-price">$125</span></a>
+        </div>
+        <div class="section-label" style="margin-top:1.5rem;margin-bottom:1rem;">Add-Ons</div>
+        <div class="services-table">
+          <div class="service-row"><span class="service-name">Soak Off Removal</span><span class="service-price">+$35</span></div>
+          <div class="service-row"><span class="service-name">Russian Manicure Technique</span><span class="service-price">+$20</span></div>
+          <div class="service-row"><span class="service-name">Scrub Massage</span><span class="service-price">+$25</span></div>
+        </div>
+        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.75rem;color:var(--latte);margin-top:1rem;">50% non-refundable deposit required at booking.</p>
+      </div>
+    </div>
+    <!-- Somebody reading prices is deciding what to book; the button that
+         follows the menu books it. -->
+    <div style="text-align:center;margin-top:2.5rem;">
+      <a href="booking.html" class="btn-gold" style="animation:none;">Book an Appointment</a>
+      <p style="margin-top:1rem;font-family:'Josefin Sans',sans-serif;font-size:0.82rem;color:var(--latte);">
+        Coming every month? <a href="memberships.html" style="color:var(--espresso);border-bottom:1px solid var(--champagne);">See the memberships →</a></p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     MEMBERSHIPS — right after the menu, for somebody already reading prices
+══════════════════════════════════════════════════ -->
+<section class="section section-cream" id="memberships">
+  <div class="container">
+    <div class="section-header reveal">
+      <div class="section-label">Membership</div>
+      <h2>Choose Your Club</h2>
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:var(--latte);margin-top:0.75rem;">One service every four weeks, any design included, and you leave owing nothing.</p>
+    </div>
+
+
+    <div class="membership-grid" id="home-plans">
+      <!-- Filled from /api/plans so the homepage, the memberships page and
+           checkout can never quote three different prices. -->
+    </div>
+    <p style="text-align:center;margin-top:2rem;font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);">Cancel any time after three months. <a href="memberships.html" style="color:var(--champagne);">Full terms →</a></p>
+    <div style="text-align:center;margin-top:1.5rem;">
+      <a href="memberships.html" class="btn-gold" style="animation:none;">Buy a ZOLA Membership</a>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section section-soft" id="how-it-works">
+  <div class="container">
+    <div class="section-header reveal">
+      <div class="section-label">Simple Process</div>
+      <h2>How ZOLA Works</h2>
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:var(--latte);margin-top:0.75rem;">Three steps from here to your first appointment.</p>
+    </div>
+    <div class="how-steps">
+      <div class="how-step reveal" data-delay="0s">
+        <div class="how-step-num">Step 01</div>
+        <div class="how-step-icon">✦</div>
+        <div class="how-step-title">Choose Your Tier</div>
+        <div class="how-step-desc">Pick Essential or Elite. One service every four weeks, any design included, and no deposit.</div>
+      </div>
+      <div class="how-step reveal" data-delay="0.13s">
+        <div class="how-step-num">Step 02</div>
+        <div class="how-step-icon">📅</div>
+        <div class="how-step-title">Book Your Session</div>
+        <div class="how-step-desc">Members book before everyone else. Your window opens first — you pick the exact time you want.</div>
+      </div>
+      <div class="how-step reveal" data-delay="0.26s">
+        <div class="how-step-num">Step 03</div>
+        <div class="how-step-icon">💅</div>
+        <div class="how-step-title">Experience ZOLA</div>
+        <div class="how-step-desc">Show up, relax, and leave with something extraordinary. No rushing, no shortcuts. Every single time.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat-item">
+    <div class="stat-num">6+</div>
+    <div class="stat-lbl">Years of Experience</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">200+</div>
+    <div class="stat-lbl">Clients Served</div>
+  </div>
+  <!-- These two are counted from /api/plans on load; the figures here are
+       only what shows if that does not arrive. -->
+  <div class="stat-item">
+    <div class="stat-num" id="stat-members">2</div>
+    <div class="stat-lbl" id="stat-members-lbl">Memberships</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num" id="stat-open">150</div>
+    <div class="stat-lbl">Membership Spots</div>
+  </div>
+</div>
+
+<!-- JOIN THE LIST -->
+<section class="section section-soft" id="join-list">
+  <div class="container container-sm" style="text-align:center;">
+    <div class="section-label reveal">Get 10% Off</div>
+    <h2 class="reveal" style="margin:0.75rem 0 1rem;">Take 10% Off Your First Visit</h2>
+    <p class="reveal" style="font-family:'Josefin Sans',sans-serif;font-size:0.92rem;color:var(--latte);max-width:460px;margin:0 auto 2rem;line-height:1.8;">
+      Join the ZOLA list and your code lands in your inbox right away. You'll also be first to hear about open spots, new drops, and studio news.
+    </p>
+    <div id="join-form" class="reveal" style="max-width:420px;margin:0 auto;text-align:left;">
+      <label class="luxury-label">Name</label>
+      <input class="luxury-input" id="j-name" placeholder="Your name" style="margin-bottom:0.75rem;" />
+      <label class="luxury-label">Email</label>
+      <input class="luxury-input" id="j-email" type="email" placeholder="you@email.com" style="margin-bottom:0.75rem;" onkeydown="if(event.key==='Enter')joinList()" />
+      <label class="luxury-label">Phone (optional)</label>
+      <input class="luxury-input" id="j-phone" placeholder="(555) 000-0000" style="margin-bottom:1.25rem;" />
+      <button class="btn-gold" id="j-btn" onclick="joinList()" style="animation:none;width:100%;">Send My 10% Off ✦</button>
+      <p id="j-err" style="display:none;font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:#b43232;margin-top:0.6rem;text-align:center;"></p>
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.68rem;color:var(--latte);margin-top:0.75rem;text-align:center;line-height:1.7;">By joining you agree to receive marketing emails, and texts if you give us your number. Message frequency varies, message and data rates may apply, reply STOP to opt out. <a href="privacy.html" target="_blank" rel="noopener" style="color:var(--champagne)">Privacy &amp; SMS Terms</a></p>
+    </div>
+    <div id="join-success" style="display:none;padding:1.5rem 0;">
+      <div style="font-family:'Cinzel',serif;font-size:1.8rem;color:var(--espresso);margin-bottom:0.5rem;">You're In ✦</div>
+      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:var(--latte);">Here's your code — use it when you book or at checkout.</p>
+      <div id="join-code" style="font-family:'Cinzel',serif;font-size:2rem;letter-spacing:0.18em;color:var(--champagne);background:rgba(182,165,136,0.1);border:1px dashed rgba(182,165,136,0.5);padding:0.9rem 1.2rem;display:inline-block;margin-top:1rem;"></div>
+      <p id="join-mailed" style="font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);margin-top:0.9rem;"></p>
+    </div>
+  </div>
+</section>
+
+<!-- MEET THE TEAM -->
+<section class="section section-cream">
+  <div class="container">
+    <div class="section-header reveal">
+      <div class="section-label">Your Artists</div>
+      <h2>Meet the Team</h2>
+    </div>
+    <div class="team-grid" id="home-team-grid"><!-- artists load from Studio Manager → Team → "Show on website" --></div>
+  </div>
+</section>
+
+<!-- BRAND STATEMENT -->
+<section class="section section-soft">
+  <div class="container container-sm">
+    <div class="section-header reveal">
+      <div class="section-label">The ZOLA Standard</div>
+      <h2>Quiet Luxury.<br>Loud Results.</h2>
+    </div>
+    <p style="font-family:'Josefin Sans',sans-serif;font-size:1rem;color:var(--latte);text-align:center;max-width:520px;margin:0 auto 3rem;line-height:1.9;">
+      ZOLA is not a nail salon. It's a private studio experience built for women who understand that excellence is in the details — from the products we use to the time we protect for you.
+    </p>
+    <div class="philosophy-pillars">
+      <div class="reveal" data-delay="0s">
+        <div class="pillar-title">Precision</div>
+        <div class="pillar-desc">Every nail shaped to your exact anatomy. No two sets identical.</div>
+      </div>
+      <div class="reveal" data-delay="0.12s">
+        <div class="pillar-title">Privacy</div>
+        <div class="pillar-desc">No walk-ins, no crowds, no waiting. Your time is sacred here.</div>
+      </div>
+      <div class="reveal" data-delay="0.24s">
+        <div class="pillar-title">Priority</div>
+        <div class="pillar-desc">Members always book first. Your spot is protected every month.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EVERYONE IS WELCOME -->
+<section class="section section-espresso">
+  <div class="container container-sm" style="text-align:center;">
+    <div class="section-label" style="color:rgba(182,165,136,0.6);">This Space Was Built for You</div>
+    <h2 class="light" style="margin:1rem 0 1.75rem;font-size:clamp(2rem,4vw,3.2rem);line-height:1.3;">You've always had<br>a seat at this table.</h2>
+    <p style="font-family:'Josefin Sans',sans-serif;font-size:1rem;color:var(--latte);line-height:2;max-width:560px;margin:0 auto 1.5rem;">
+      If you've ever walked into a salon and felt rushed, judged, invisible, or like your nails weren't worth real care — this is for you. Zola was not built for a certain type of person. It was built for the woman who deserved better and never found it.
+    </p>
+    <p style="font-family:'Josefin Sans',sans-serif;font-size:1rem;color:var(--blush);line-height:2;max-width:500px;margin:0 auto 2rem;">
+      Nobody is too much here. Nobody is not enough. You don't have to be popular, polished, or perfect to walk through this door. You just have to want to be taken care of.
+    </p>
+    <p style="font-family:'Cinzel',serif;font-size:1.5rem;color:var(--champagne);font-style:italic;margin-bottom:2rem;">
+      That table? It was always supposed to be yours.
+    </p>
+    <a href="memberships.html" class="btn-gold" style="animation:none;">Find Your Tier</a>
+  </div>
+</section>
+
 <!-- TRAINEE SPECIAL -->
 <section class="section trainee-band">
   <div class="container container-sm" style="text-align:center;">
@@ -310,183 +557,6 @@
   </div>
   <div id="home-member-err" style="display:none;text-align:center;font-family:'Josefin Sans',sans-serif;font-size:0.76rem;color:#e07070;margin-top:0.6rem;"></div>
 </div>
-
-<!-- STATS BAR -->
-<div class="stats-bar">
-  <div class="stat-item">
-    <div class="stat-num">6+</div>
-    <div class="stat-lbl">Years of Experience</div>
-  </div>
-  <div class="stat-item">
-    <div class="stat-num">200+</div>
-    <div class="stat-lbl">Clients Served</div>
-  </div>
-  <div class="stat-item">
-    <div class="stat-num">3</div>
-    <div class="stat-lbl">Membership Tiers</div>
-  </div>
-  <div class="stat-item">
-    <div class="stat-num">50</div>
-    <div class="stat-lbl">Total Spots Available</div>
-  </div>
-</div>
-
-<!-- HOW IT WORKS -->
-<section class="section section-soft" id="how-it-works">
-  <div class="container">
-    <div class="section-header reveal">
-      <div class="section-label">Simple Process</div>
-      <h2>How ZOLA Works</h2>
-      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:var(--latte);margin-top:0.75rem;">Three steps from here to your first appointment.</p>
-    </div>
-    <div class="how-steps">
-      <div class="how-step reveal" data-delay="0s">
-        <div class="how-step-num">Step 01</div>
-        <div class="how-step-icon">✦</div>
-        <div class="how-step-title">Choose Your Tier</div>
-        <div class="how-step-desc">Pick Essential or Elite. One service every four weeks, any design included, and no deposit.</div>
-      </div>
-      <div class="how-step reveal" data-delay="0.13s">
-        <div class="how-step-num">Step 02</div>
-        <div class="how-step-icon">📅</div>
-        <div class="how-step-title">Book Your Session</div>
-        <div class="how-step-desc">Members book before everyone else. Your window opens first — you pick the exact time you want.</div>
-      </div>
-      <div class="how-step reveal" data-delay="0.26s">
-        <div class="how-step-num">Step 03</div>
-        <div class="how-step-icon">💅</div>
-        <div class="how-step-title">Experience ZOLA</div>
-        <div class="how-step-desc">Show up, relax, and leave with something extraordinary. No rushing, no shortcuts. Every single time.</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ══════════════════════════════════════════════════
-     MEMBERSHIPS — FIRST SECTION AFTER HERO
-══════════════════════════════════════════════════ -->
-<section class="section section-cream" id="memberships">
-  <div class="container">
-    <div class="section-header reveal">
-      <div class="section-label">Membership</div>
-      <h2>Choose Your Club</h2>
-      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:var(--latte);margin-top:0.75rem;">One service every four weeks, any design included, and you leave owing nothing.</p>
-    </div>
-
-
-    <div class="membership-grid" id="home-plans">
-      <!-- Filled from /api/plans so the homepage, the memberships page and
-           checkout can never quote three different prices. -->
-    </div>
-    <p style="text-align:center;margin-top:2rem;font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);">Cancel any time after three months. <a href="memberships.html" style="color:var(--champagne);">Full terms →</a></p>
-    <div style="text-align:center;margin-top:1.5rem;">
-      <a href="memberships.html" class="btn-gold" style="animation:none;">Buy a ZOLA Membership</a>
-    </div>
-  </div>
-</section>
-
-<!-- BRAND STATEMENT -->
-<section class="section section-soft">
-  <div class="container container-sm">
-    <div class="section-header reveal">
-      <div class="section-label">The ZOLA Standard</div>
-      <h2>Quiet Luxury.<br>Loud Results.</h2>
-    </div>
-    <p style="font-family:'Josefin Sans',sans-serif;font-size:1rem;color:var(--latte);text-align:center;max-width:520px;margin:0 auto 3rem;line-height:1.9;">
-      ZOLA is not a nail salon. It's a private studio experience built for women who understand that excellence is in the details — from the products we use to the time we protect for you.
-    </p>
-    <div class="philosophy-pillars">
-      <div class="reveal" data-delay="0s">
-        <div class="pillar-title">Precision</div>
-        <div class="pillar-desc">Every nail shaped to your exact anatomy. No two sets identical.</div>
-      </div>
-      <div class="reveal" data-delay="0.12s">
-        <div class="pillar-title">Privacy</div>
-        <div class="pillar-desc">No walk-ins, no crowds, no waiting. Your time is sacred here.</div>
-      </div>
-      <div class="reveal" data-delay="0.24s">
-        <div class="pillar-title">Priority</div>
-        <div class="pillar-desc">Members always book first. Your spot is protected every month.</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- MEET THE TEAM -->
-<section class="section section-cream">
-  <div class="container">
-    <div class="section-header reveal">
-      <div class="section-label">Your Artists</div>
-      <h2>Meet the Team</h2>
-    </div>
-    <div class="team-grid" id="home-team-grid"><!-- artists load from Studio Manager → Team → "Show on website" --></div>
-  </div>
-</section>
-
-<!-- SERVICES MENU -->
-<section class="section section-soft">
-  <div class="container">
-    <div class="section-header">
-      <div class="section-label">Services</div>
-      <h2>The Menu</h2>
-      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.88rem;color:var(--latte);margin-top:0.5rem;">All services included in your membership at $0.00.</p>
-    </div>
-    <div class="grid-2" style="max-width:880px;margin:0 auto;">
-      <div>
-        <div class="section-label" style="margin-bottom:1rem;">Manicure</div>
-        <div class="services-table" id="menu-mani">
-          <a class="service-row" href="booking.html?rebook=Regular%20Gel%20Manicure"><span class="service-name">Regular Gel Manicure</span><span class="service-price">$55</span></a>
-          <a class="service-row" href="booking.html?rebook=Organic%20Structured%20Manicure"><span class="service-name">Organic Structured Manicure</span><span class="service-price">$95</span></a>
-          <details class="service-group"><summary class="service-row"><span class="service-name">Gel X<span class="service-more">Short · Medium · Long</span></span><span class="service-price">from $95</span></summary>
-            <a class="service-row service-sub" href="booking.html?rebook=Short%20Gel%20X"><span class="service-name">Short</span><span class="service-price">$95</span></a>
-            <a class="service-row service-sub" href="booking.html?rebook=Medium%20Gel%20X"><span class="service-name">Medium</span><span class="service-price">$100</span></a>
-            <a class="service-row service-sub" href="booking.html?rebook=Long%20Gel%20X"><span class="service-name">Long</span><span class="service-price">$110</span></a>
-          </details>
-          <details class="service-group"><summary class="service-row"><span class="service-name">Acrylic<span class="service-more">Short · Medium · Long</span></span><span class="service-price">from $95</span></summary>
-            <a class="service-row service-sub" href="booking.html?rebook=Short%20Acrylic%20Set"><span class="service-name">Short</span><span class="service-price">$95</span></a>
-            <a class="service-row service-sub" href="booking.html?rebook=Medium%20Acrylic%20Set"><span class="service-name">Medium</span><span class="service-price">$100</span></a>
-            <a class="service-row service-sub" href="booking.html?rebook=Long%20Acrylic%20Set"><span class="service-name">Long</span><span class="service-price">$110</span></a>
-          </details>
-        </div>
-      </div>
-      <div>
-        <div class="section-label" style="margin-bottom:1rem;">Pedicure</div>
-        <div class="services-table" id="menu-pedi">
-          <a class="service-row" href="booking.html?rebook=Russian%20Dry%20Pedicure"><span class="service-name">Russian Dry Pedicure</span><span class="service-price">$95</span></a>
-          <a class="service-row" href="booking.html?rebook=Russian%20Dry%20Pedicure%20%E2%80%94%20Full%20Correction"><span class="service-name">Russian Dry Pedicure — Full Correction</span><span class="service-price">$125</span></a>
-        </div>
-        <div class="section-label" style="margin-top:1.5rem;margin-bottom:1rem;">Add-Ons</div>
-        <div class="services-table">
-          <div class="service-row"><span class="service-name">Soak Off Removal</span><span class="service-price">+$35</span></div>
-          <div class="service-row"><span class="service-name">Russian Manicure Technique</span><span class="service-price">+$20</span></div>
-          <div class="service-row"><span class="service-name">Scrub Massage</span><span class="service-price">+$25</span></div>
-        </div>
-        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.75rem;color:var(--latte);margin-top:1rem;">50% non-refundable deposit required at booking.</p>
-      </div>
-    </div>
-    <div style="text-align:center;margin-top:2.5rem;">
-      <a href="memberships.html" class="btn-gold" style="animation:none;">Buy a ZOLA Membership</a>
-    </div>
-  </div>
-</section>
-
-<!-- EVERYONE IS WELCOME -->
-<section class="section section-espresso">
-  <div class="container container-sm" style="text-align:center;">
-    <div class="section-label" style="color:rgba(182,165,136,0.6);">This Space Was Built for You</div>
-    <h2 class="light" style="margin:1rem 0 1.75rem;font-size:clamp(2rem,4vw,3.2rem);line-height:1.3;">You've always had<br>a seat at this table.</h2>
-    <p style="font-family:'Josefin Sans',sans-serif;font-size:1rem;color:var(--latte);line-height:2;max-width:560px;margin:0 auto 1.5rem;">
-      If you've ever walked into a salon and felt rushed, judged, invisible, or like your nails weren't worth real care — this is for you. Zola was not built for a certain type of person. It was built for the woman who deserved better and never found it.
-    </p>
-    <p style="font-family:'Josefin Sans',sans-serif;font-size:1rem;color:var(--blush);line-height:2;max-width:500px;margin:0 auto 2rem;">
-      Nobody is too much here. Nobody is not enough. You don't have to be popular, polished, or perfect to walk through this door. You just have to want to be taken care of.
-    </p>
-    <p style="font-family:'Cinzel',serif;font-size:1.5rem;color:var(--champagne);font-style:italic;margin-bottom:2rem;">
-      That table? It was always supposed to be yours.
-    </p>
-    <a href="memberships.html" class="btn-gold" style="animation:none;">Find Your Tier</a>
-  </div>
-</section>
 
 <!-- PRINCESS PARTIES -->
 <section class="section section-cream">
@@ -588,34 +658,6 @@
       </div>
     </div>
     <p style="text-align:center;margin-top:1.75rem;font-family:'Josefin Sans',sans-serif;font-size:0.85rem;color:rgba(182,165,136,0.75);letter-spacing:0.02em;">Every set, every day — the real work lives on Instagram.</p>
-  </div>
-</section>
-
-<!-- JOIN THE LIST -->
-<section class="section section-soft" id="join-list">
-  <div class="container container-sm" style="text-align:center;">
-    <div class="section-label reveal">Get 10% Off</div>
-    <h2 class="reveal" style="margin:0.75rem 0 1rem;">Take 10% Off Your First Visit</h2>
-    <p class="reveal" style="font-family:'Josefin Sans',sans-serif;font-size:0.92rem;color:var(--latte);max-width:460px;margin:0 auto 2rem;line-height:1.8;">
-      Join the ZOLA list and your code lands in your inbox right away. You'll also be first to hear about open spots, new drops, and studio news.
-    </p>
-    <div id="join-form" class="reveal" style="max-width:420px;margin:0 auto;text-align:left;">
-      <label class="luxury-label">Name</label>
-      <input class="luxury-input" id="j-name" placeholder="Your name" style="margin-bottom:0.75rem;" />
-      <label class="luxury-label">Email</label>
-      <input class="luxury-input" id="j-email" type="email" placeholder="you@email.com" style="margin-bottom:0.75rem;" onkeydown="if(event.key==='Enter')joinList()" />
-      <label class="luxury-label">Phone (optional)</label>
-      <input class="luxury-input" id="j-phone" placeholder="(555) 000-0000" style="margin-bottom:1.25rem;" />
-      <button class="btn-gold" id="j-btn" onclick="joinList()" style="animation:none;width:100%;">Send My 10% Off ✦</button>
-      <p id="j-err" style="display:none;font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:#b43232;margin-top:0.6rem;text-align:center;"></p>
-      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.68rem;color:var(--latte);margin-top:0.75rem;text-align:center;line-height:1.7;">By joining you agree to receive marketing emails, and texts if you give us your number. Message frequency varies, message and data rates may apply, reply STOP to opt out. <a href="privacy.html" target="_blank" rel="noopener" style="color:var(--champagne)">Privacy &amp; SMS Terms</a></p>
-    </div>
-    <div id="join-success" style="display:none;padding:1.5rem 0;">
-      <div style="font-family:'Cinzel',serif;font-size:1.8rem;color:var(--espresso);margin-bottom:0.5rem;">You're In ✦</div>
-      <p style="font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:var(--latte);">Here's your code — use it when you book or at checkout.</p>
-      <div id="join-code" style="font-family:'Cinzel',serif;font-size:2rem;letter-spacing:0.18em;color:var(--champagne);background:rgba(182,165,136,0.1);border:1px dashed rgba(182,165,136,0.5);padding:0.9rem 1.2rem;display:inline-block;margin-top:1rem;"></div>
-      <p id="join-mailed" style="font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);margin-top:0.9rem;"></p>
-    </div>
   </div>
 </section>
 
@@ -783,8 +825,8 @@
 
 <!-- URGENCY BANNER -->
 <div class="urgency-banner" id="urgency-banner">
-  <button class="banner-close" onclick="document.getElementById('urgency-banner').style.display='none'">&times;</button>
-  <div class="section-label" style="font-size:0.58rem;">Limited Availability</div>
+  <button class="banner-close" aria-label="Close" onclick="closeBanner()">&times;</button>
+  <div class="section-label" style="font-size:0.58rem;">ZOLA Memberships</div>
   <div class="banner-title">Memberships are open</div>
   <p style="font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:var(--latte);margin-bottom:1rem;line-height:1.6;">Essential is $85 every four weeks. One full service, any design, no deposit — and you leave owing nothing.</p>
   <a href="memberships.html" class="btn-gold" style="font-size:0.68rem;padding:0.65rem 1.25rem;animation:none;display:inline-block;">See both memberships</a>
@@ -815,9 +857,10 @@
 <button class="back-to-top" id="back-to-top" aria-label="Back to top">↑</button>
 
 <!-- SOCIAL PROOF TOAST -->
-<div class="sp-toast" id="sp-toast">
-  <div class="sp-toast-title">Just viewed</div>
-  <div class="sp-toast-body">Black Card — 4 founding spots remaining</div>
+<!-- Filled only with real bookings and shared reviews (js/main.js, /api/proof). -->
+<div class="sp-toast" id="sp-toast" aria-live="polite">
+  <div class="sp-toast-title"></div>
+  <div class="sp-toast-body"></div>
 </div>
 
 <script src="js/service-groups.js?v=2"></script>
@@ -826,15 +869,27 @@
 <script src="js/analytics.js?v=2"></script>
 <script src="js/chatbot.js"></script>
 <script>
-  // Ticker
+  /* Ticker — only things that are true today. It used to promise that spots
+     were "strictly limited — once they're gone, they're gone" (132 of 150
+     are open) and quote savings on Signature, Luxe and Black Card, which are
+     no longer sold. The prices and deal days are read from the same place
+     the rest of the page reads them. */
   const facts = [
-    'Membership spots are strictly limited — once they\'re gone, they\'re gone.',
-    'Members always book before guests — your time is protected.',
-    'Black Card members receive Atelier Access — first pick of every available slot.',
-    'Signature members save $81/mo. Luxe members save $181/mo.',
-    'ZOLA is Porterville\'s only luxury nail membership studio.',
-    'Essential is $85 every four weeks — one full service, any design, no deposit.'
+    'Every set is custom-crafted. No templates, no rushing.',
+    'Members book ahead of walk-ins — your time is protected.',
+    'Every artist here was trained by Zahra, hand on hand.',
   ];
+  Promise.all([
+    fetch('/api/plans').then(r => r.json()).catch(() => null),
+    fetch('/api/deals').then(r => r.json()).catch(() => null),
+  ]).then(([p, d]) => {
+    if (window.__zolaTickerOwner) return;   // she has written her own
+    const plan = k => ((p && p.plans) || []).find(x => x.key === k);
+    const ess = plan('ESSENTIAL'), eli = plan('ELITE');
+    if (ess) facts.push('Essential is $' + Math.round(ess.cycle_cents / 100) + ' every four weeks — one full service, any design, no deposit.');
+    if (eli) facts.push('Elite — watch your nails get healthier every visit.');
+    ((d && d.deals) || []).forEach(x => facts.push(x.name + ' — ' + x.blurb));
+  });
   let ti = 0;
   setInterval(() => {
     ti = (ti + 1) % facts.length;
@@ -853,21 +908,40 @@
     if (pg) pg.style.gridTemplateColumns = '1fr';
   }
 
-  // Urgency banner at 8s
-  setTimeout(() => {
-    document.getElementById('urgency-banner').classList.add('visible');
-  }, 8000);
+  /* The membership card. On a computer it slides in at the side after a
+     few seconds, as it always has. On a phone it used to land on top of the
+     headline eight seconds in; now it waits a minute, comes up from the
+     bottom where it covers nothing, and waits its turn if the quiz card or
+     anything else is open. Closed once, it stays closed for the visit. */
+  function closeBanner(){
+    const b = document.getElementById('urgency-banner');
+    b.classList.remove('visible'); b.style.display = 'none';
+    try { sessionStorage.setItem('zola_banner_closed', '1'); } catch (_) {}
+  }
+  window.closeBanner = closeBanner;
+  (function(){
+    let closed = false;
+    try { closed = sessionStorage.getItem('zola_banner_closed') === '1'; } catch (_) {}
+    if (closed) return;
+    const phone = window.matchMedia('(max-width: 760px)').matches;
+    const busy = () => !!document.querySelector('#nj-wrap, .nj-nudge, .ig-sheet.open, .chat-box.open, .sp-toast.show');
+    const show = () => {
+      if (phone && (busy() || window.scrollY < window.innerHeight)) { setTimeout(show, 7000); return; }
+      document.getElementById('urgency-banner').classList.add('visible');
+    };
+    setTimeout(show, phone ? 60000 : 12000);
+  })();
 
   // Owner-editable site settings (from the Studio Manager "Site" tab)
   fetch('/api/site-settings').then(r => r.json()).then(d => {
     const s = d.settings || {};
     if (s.ticker_facts && s.ticker_facts.trim()) {
       const lines = s.ticker_facts.split('\n').map(x => x.trim()).filter(Boolean);
-      if (lines.length) { facts.length = 0; facts.push(...lines); }
+      if (lines.length) { window.__zolaTickerOwner = true; facts.length = 0; facts.push(...lines); }
     }
-    if (s.spots_sig !== undefined && s.spots_sig !== '') document.getElementById('sig-remaining').textContent = s.spots_sig + ' left';
-    if (s.spots_luxe !== undefined && s.spots_luxe !== '') document.getElementById('luxe-remaining').textContent = s.spots_luxe + ' left';
-    if (s.spots_black !== undefined && s.spots_black !== '') document.getElementById('black-remaining').textContent = s.spots_black + ' left';
+    // (The typed-in spot counts for Signature, Luxe and Black Card had no
+    // element left to fill — writing to one threw, and took the banner text
+    // and announcement bar below down with it. Spot counts are now counted.)
     if (s.banner_title) document.querySelector('#urgency-banner .banner-title').textContent = s.banner_title;
     if (s.banner_text) document.querySelector('#urgency-banner p').textContent = s.banner_text;
     if (s.announcement && s.announcement.trim()) {
@@ -968,9 +1042,28 @@
   const esc = s => String(s == null ? '' : s)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
+  // "Most chosen" goes to whichever actually has more members, and to
+  // neither on a tie — it is a count, not a preference.
+  const ranked = d.plans.slice().sort(function(a, b){ return b.joined - a.joined; });
+  const mostChosen = ranked.length > 1 && ranked[0].joined > ranked[1].joined ? ranked[0].key : '';
+
+  // The stats bar and the line under the hero, from the same counts.
+  const members = d.plans.reduce(function(n, p){ return n + (Number(p.joined) || 0); }, 0);
+  const open = d.plans.reduce(function(n, p){ return n + (Number(p.spots_open) || 0); }, 0);
+  const sm = document.getElementById('stat-members'), so = document.getElementById('stat-open');
+  if (sm && members) { sm.textContent = members; document.getElementById('stat-members-lbl').textContent = 'Members'; }
+  if (so) { so.textContent = open; so.nextElementSibling.textContent = 'Membership Spots Open'; }
+  (window.zolaProof || (window.zolaProof = fetch('/api/proof').then(function(r){ return r.json(); }).catch(function(){ return null; }))).then(function(pr){
+    const bits = [];
+    if (members >= 10) bits.push('<strong>' + members + '</strong> members');
+    if (pr && pr.week_bookings >= 3) bits.push('<strong>' + pr.week_bookings + '</strong> booked this week');
+    const el = document.getElementById('hero-proof');
+    if (el && bits.length) { el.innerHTML = bits.join('<span>·</span>'); el.classList.add('on'); }
+  }).catch(function(){});
+
   grid.innerHTML = d.plans.map(function(p, i){
     return '<div class="membership-card reveal" data-delay="' + (0.05 + i * 0.1) + 's">'
-      + (p.key === 'ELITE' ? '<div class="membership-badge">Most chosen</div>' : '')
+      + (p.key === mostChosen ? '<div class="membership-badge">Most chosen</div>' : '')
       + '<div class="section-label">' + esc(p.name) + '</div>'
       + '<div class="membership-price">' + money(p.cycle_cents) + '<span>/4 weeks</span></div>'
       + '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.85rem;color:var(--latte);margin:0.4rem 0 1rem;">'
@@ -987,6 +1080,6 @@
   }).join('');
 })();
 </script>
-<script src="/js/nail-journey.js?v=2" defer></script>
+<script src="/js/nail-journey.js?v=3" defer></script>
 </body>
 </html>

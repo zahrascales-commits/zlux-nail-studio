@@ -1,5 +1,6 @@
 /* ── THE NAIL JOURNEY ─────────────────────────────────────────────────────
-   One question when the site opens, then the one thing that answers it.
+   One question — offered once the visitor has looked around, never before —
+   then the one thing that answers it.
 
    The recommendation is deliberately short. The first draft ran to three
    screens and nobody finishes three screens on a phone — every extra
@@ -497,15 +498,105 @@
     } catch (_) { finish(); }
   }
 
-  function boot() {
-    if (!allowedHere() || alreadySeen()) return;
-    // A beat, so the page paints first. Landing on a blank screen behind a
-    // panel reads as an advert; ZOLA appearing and then offering to help
-    // does not.
-    setTimeout(function () { syncDealCopy(open); }, 900);
+  /* ── THE INVITATION ──
+     The panel used to open by itself 0.9 s after the page did, over the
+     whole screen, on every first visit. The traffic said what that cost:
+     nearly all of ~650 visitors a week reach the homepage from Instagram,
+     and almost none of them scrolled at all (1% average depth) — they met a
+     questionnaire where they expected nails, and left.
+
+     So the page comes first now. Once somebody has looked around — a
+     screen of scrolling, or twenty-five seconds — a small card offers the
+     question. It covers nothing and closes with one tap. Anything on a page
+     marked data-journey opens the panel straight away. */
+  var nudge = null;
+
+  function openJourney(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    hideNudge(false);
+    syncDealCopy(open);
   }
 
-  window.ZolaJourney = { open: open, close: close };
+  function hideNudge(forGood) {
+    if (forGood) remember();
+    document.body.classList.remove('nj-nudging');
+    if (!nudge) return;
+    var n = nudge; nudge = null;
+    n.classList.remove('on');
+    setTimeout(function () { if (n.parentNode) n.parentNode.removeChild(n); }, 350);
+  }
+
+  function nudgeStyles() {
+    return [
+      '.nj-nudge{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:170;',
+      'background:#F7F4EE;border:1px solid rgba(182,165,136,0.55);border-left:3px solid #B6A588;',
+      'box-shadow:0 14px 40px rgba(13,13,13,0.22);padding:1rem 2.6rem 1rem 1.1rem;',
+      'transform:translateY(130%);opacity:0;transition:transform .35s ease,opacity .35s ease,bottom .35s ease}',
+      '.nj-nudge.on{transform:translateY(0);opacity:1}',
+      'body.has-bookbar .nj-nudge{bottom:calc(5.1rem + env(safe-area-inset-bottom,0px))}',
+      '.nj-nudge-t{font-family:"Cinzel",serif;font-size:1.02rem;color:#2B2118;margin-bottom:0.25rem}',
+      '.nj-nudge-s{font-family:"Josefin Sans",sans-serif;font-size:0.84rem;line-height:1.5;color:#6B5B47}',
+      '.nj-nudge-go{margin-top:0.75rem;background:#2B2118;color:#F7F4EE;border:none;cursor:pointer;',
+      'font-family:"Josefin Sans",sans-serif;font-size:0.72rem;font-weight:600;letter-spacing:0.16em;',
+      'text-transform:uppercase;padding:0.75rem 1.2rem;min-height:44px}',
+      '.nj-nudge-x{position:absolute;top:0.35rem;right:0.35rem;width:40px;height:40px;background:none;border:none;',
+      'font-size:1.35rem;line-height:1;color:#8C7A5E;cursor:pointer}',
+      // The chat button would sit under the card on a phone; it steps aside.
+      '@media(max-width:760px){body.nj-nudging .chat-widget{opacity:0;pointer-events:none}}',
+      '@media(min-width:761px){.nj-nudge{left:24px;right:auto;bottom:88px;width:340px}}',
+    ].join('');
+  }
+
+  function showNudge() {
+    if (nudge || alreadySeen() || document.getElementById('nj-wrap')) return;
+    // Never on top of something else that is open.
+    if (document.querySelector('.ig-sheet.open, .chat-box.open, .nav-mobile.open, .urgency-banner.visible')) {
+      setTimeout(showNudge, 6000); return;
+    }
+    if (!document.getElementById('nj-nudge-css')) {
+      var css = document.createElement('style');
+      css.id = 'nj-nudge-css';
+      css.textContent = nudgeStyles();
+      document.head.appendChild(css);
+    }
+    nudge = document.createElement('div');
+    nudge.className = 'nj-nudge';
+    nudge.setAttribute('role', 'dialog');
+    nudge.setAttribute('aria-label', 'Find your set');
+    nudge.innerHTML = '<button class="nj-nudge-x" aria-label="No thanks">×</button>'
+      + '<div class="nj-nudge-t">Not sure what to book?</div>'
+      + '<div class="nj-nudge-s">Answer one question and we’ll show you the set made for you.</div>'
+      + '<button class="nj-nudge-go">Find my set →</button>';
+    document.body.appendChild(nudge);
+    document.body.classList.add('nj-nudging');
+    nudge.querySelector('.nj-nudge-x').addEventListener('click', function () { hideNudge(true); });
+    nudge.querySelector('.nj-nudge-go').addEventListener('click', openJourney);
+    requestAnimationFrame(function () { requestAnimationFrame(function () { if (nudge) nudge.classList.add('on'); }); });
+  }
+
+  function boot() {
+    // Links that open the panel work everywhere it is allowed, seen or not.
+    if (allowedHere()) {
+      document.addEventListener('click', function (e) {
+        var t = e.target && e.target.closest && e.target.closest('[data-journey]');
+        if (t) openJourney(e);
+      });
+    }
+    if (!allowedHere() || alreadySeen()) return;
+
+    var fired = false;
+    var go = function () {
+      if (fired) return;
+      fired = true;
+      window.removeEventListener('scroll', onScroll);
+      showNudge();
+    };
+    var onScroll = function () { if (window.scrollY > window.innerHeight * 0.9) go(); };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    setTimeout(go, 25000);
+  }
+
+  window.ZolaJourney = { open: openJourney, close: close };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);

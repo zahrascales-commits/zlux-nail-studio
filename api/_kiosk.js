@@ -35,6 +35,12 @@ async function ensure() {
     'ALTER TABLE team_appointments ADD COLUMN paid_cents INTEGER DEFAULT 0',
     'ALTER TABLE team_appointments ADD COLUMN pay_method TEXT DEFAULT \'\'',
   ]) { try { await execute(sql); } catch (_) {} }
+  // A review goes on the website only if the client ticked the box, and
+  // only until she hides it.
+  for (const sql of [
+    'ALTER TABLE kiosk_log ADD COLUMN share INTEGER DEFAULT 0',
+    'ALTER TABLE kiosk_log ADD COLUMN hidden INTEGER DEFAULT 0',
+  ]) { try { await execute(sql); } catch (_) {} }
 
   _ready = true;
 }
@@ -668,11 +674,11 @@ module.exports = async function (req, res) {
     }
 
     if (req.method === 'POST' && action === 'review') {
-      const { name, stars, text } = req.body || {};
+      const { name, stars, text, share } = req.body || {};
       const s = Math.max(1, Math.min(5, Number(stars) || 0));
       if (!s) return res.status(400).json({ error: 'Pick a star rating' });
-      await execute('INSERT INTO kiosk_log (type, name, stars, detail, ts) VALUES (?,?,?,?,?)',
-        ['review', String(name || 'Guest').trim().slice(0, 80), s, String(text || '').slice(0, 600), Date.now()]);
+      await execute('INSERT INTO kiosk_log (type, name, stars, detail, ts, share) VALUES (?,?,?,?,?,?)',
+        ['review', String(name || 'Guest').trim().slice(0, 80), s, String(text || '').slice(0, 600), Date.now(), share ? 1 : 0]);
       try { await notify.notifyInApp('owner', null, '⭐ ' + s + '-star review from ' + (name || 'a guest'), String(text || '(no comment)').slice(0, 200)); } catch (_) {}
       return res.json({ ok: true });
     }

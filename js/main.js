@@ -75,21 +75,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  /* ── REVEAL ON SCROLL (includes legacy .fade-in) ── */
-  const revealEls = document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .fade-in');
-  if (revealEls.length) {
+  /* ── REVEAL ON SCROLL (includes legacy .fade-in) ──
+     Also watches for content that arrives after the page loads. The two
+     membership cards on the homepage are drawn from /api/plans a moment
+     later, carrying .reveal — and because they were not on the page when
+     this looked, nothing ever revealed them. Every visitor saw a heading,
+     a blank gap the height of two cards, and a button. */
+  const REVEAL_SEL = '.reveal, .reveal-left, .reveal-right, .fade-in';
+  const revealNow = el => {
+    el.style.transitionDelay = el.dataset.delay || '0s';
+    el.classList.add('revealed');
+    el.classList.add('visible');
+  };
+  if (!('IntersectionObserver' in window)) {
+    document.querySelectorAll(REVEAL_SEL).forEach(revealNow);
+  } else {
     const ro = new IntersectionObserver((entries) => {
       entries.forEach(e => {
-        if (e.isIntersecting) {
-          const delay = e.target.dataset.delay || '0s';
-          e.target.style.transitionDelay = delay;
-          e.target.classList.add('revealed');
-          e.target.classList.add('visible');
-          ro.unobserve(e.target);
-        }
+        if (e.isIntersecting) { revealNow(e.target); ro.unobserve(e.target); }
       });
     }, { threshold: 0.1 });
-    revealEls.forEach(el => ro.observe(el));
+    const watch = el => { if (!el.classList.contains('revealed')) ro.observe(el); };
+    document.querySelectorAll(REVEAL_SEL).forEach(watch);
+    new MutationObserver(muts => {
+      muts.forEach(m => m.addedNodes.forEach(n => {
+        if (n.nodeType !== 1) return;
+        if (n.matches && n.matches(REVEAL_SEL)) watch(n);
+        if (n.querySelectorAll) n.querySelectorAll(REVEAL_SEL).forEach(watch);
+      }));
+    }).observe(document.body, { childList: true, subtree: true });
   }
 
   /* ── BUTTON RIPPLE ── */
@@ -140,37 +154,48 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* ── SOCIAL PROOF TOASTS ──
-     Timing tuned to published FOMO-notification research (Fomo.com /
-     ProveSource field data): first toast ~8-12s in (visitor has absorbed
-     the hero but hasn't decided to leave), each visible ~5s, then repeat
-     on a RANDOMIZED 25-45s gap (a fixed interval reads as robotic once
-     a visitor notices the rhythm). Capped at 6 appearances per session
-     so a long visit never turns into spam — quiet luxury, not a flash sale. */
+     Only things that happened: a booking somebody actually made this week
+     (the service and when — never who), or a review a client wrote at the
+     kiosk and said we could share. These used to be six lines typed into
+     the page — "Signature Club now 92% full", "4 founding spots remaining"
+     — about memberships no longer sold, shown to every visitor as if live.
+     Invented activity is the one thing this studio does not do, however
+     well it converts; with nothing real to say, nothing shows.
+     Three a visit at most, the first once they have settled in, and never
+     on top of another panel. */
   const toast = document.getElementById('sp-toast');
   if (toast) {
-    const msgs = [
-      ['Appointment booked', 'Organic Manicure — this week'],
-      ['Spot claimed', 'Signature Club now 92% full'],
-      ['New member', 'Joined Luxe Club today'],
-      ['Just viewed', 'Black Card — 4 founding spots remaining'],
-      ['Appointment booked', 'Russian Dry Pedicure — this week'],
-      ['Spot claimed', 'Luxe Club — 2 spots left'],
-    ];
-    const order = [...msgs.keys()].sort(() => Math.random() - 0.5); // shuffled, no immediate repeats
-    let shown = 0;
-    const MAX_SHOWS = 6;
+    const KEY = 'zola_proof_shown';
+    let seen = 0;
+    try { seen = Number(sessionStorage.getItem(KEY)) || 0; } catch (_) {}
+    const MAX = 3;
     const rand = (min, max) => Math.floor(min + Math.random() * (max - min));
+    const busy = () => !!document.querySelector('#nj-wrap, .nj-nudge.on, .urgency-banner.visible, .ig-sheet.open, .chat-box.open');
 
-    const show = () => {
-      const [title, body] = msgs[order[shown % order.length]];
-      toast.querySelector('.sp-toast-title').textContent = title;
-      toast.querySelector('.sp-toast-body').textContent  = body;
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 5000);
-      shown++;
-      if (shown < MAX_SHOWS) setTimeout(show, rand(25000, 45000));
-    };
-    setTimeout(show, rand(8000, 12000));
+    if (seen < MAX) (window.zolaProof || (window.zolaProof = fetch('/api/proof').then(r => r.json()).catch(() => null))).then(d => {
+      const msgs = [];
+      ((d && d.recent) || []).forEach(b => msgs.push(['Booked at ZOLA', b.service + ' · ' + b.ago]));
+      ((d && d.reviews) || []).slice(0, 4).forEach(r => {
+        const t = r.text.length > 90 ? r.text.slice(0, 88).replace(/\s+\S*$/, '') + '…' : r.text;
+        msgs.push(['★★★★★'.slice(0, r.stars) + '  ' + r.name, '“' + t + '”']);
+      });
+      if (!msgs.length) return;
+      const order = [...msgs.keys()].sort(() => Math.random() - 0.5);
+      let i = 0;
+      const show = () => {
+        if (seen >= MAX || i >= order.length) return;
+        if (busy()) { setTimeout(show, 8000); return; }
+        const [title, body] = msgs[order[i++]];
+        toast.querySelector('.sp-toast-title').textContent = title;
+        toast.querySelector('.sp-toast-body').textContent  = body;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 5500);
+        seen++;
+        try { sessionStorage.setItem(KEY, String(seen)); } catch (_) {}
+        setTimeout(show, rand(35000, 55000));
+      };
+      setTimeout(show, rand(14000, 20000));
+    }).catch(() => {});
   }
 
   /* ── OWNER-UPLOADED SITE PHOTOS ──
@@ -345,7 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.style.overflow = '';
     };
     const openSheet = (post) => {
-      document.getElementById('ig-sheet-photo').style.backgroundImage = 'url(' + post.photo + ')';
+      document.getElementById('ig-sheet-photo').style.backgroundImage = 'url("' + post.photo + '")';
       document.getElementById('ig-sheet-cap').textContent = post.caption || '';
       const items = document.getElementById('ig-sheet-items');
       if (!post.tags.length) {
@@ -376,13 +401,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const posts = (d && d.posts) || [];
       if (!posts.length) return; // section stays hidden
       document.getElementById('shop-ig').style.display = '';
+      // Each photo is its own cached image now; it loads as it nears the
+      // screen rather than all at once with the page.
       igGrid.innerHTML = posts.map((p, i) =>
         '<button class="ig-cell" data-i="' + i + '" aria-label="Shop this photo"' +
-        ' style="background-image:url(' + p.photo + ')">' +
+        ' data-bg="' + esc(p.photo) + '">' +
           '<span class="ig-cell-veil"><span class="ig-cell-cta">Shop Now</span>' +
           (p.tags.length ? '<span class="ig-cell-n">' + p.tags.length + ' item' + (p.tags.length === 1 ? '' : 's') + '</span>' : '') +
           '</span></button>').join('');
+      const paint = btn => { if (btn.dataset.bg) { btn.style.backgroundImage = 'url("' + btn.dataset.bg + '")'; btn.removeAttribute('data-bg'); } };
+      const near = 'IntersectionObserver' in window
+        ? new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { paint(e.target); near.unobserve(e.target); } }), { rootMargin: '400px 0px' })
+        : null;
       igGrid.querySelectorAll('.ig-cell').forEach(btn => {
+        if (near) near.observe(btn); else paint(btn);
         btn.addEventListener('click', () => openSheet(posts[Number(btn.dataset.i)]));
       });
     }).catch(() => {});
@@ -458,7 +490,12 @@ document.addEventListener('DOMContentLoaded', () => {
         a: Math.random() * 0.5 + 0.15,
       });
     }
-    (function draw() {
+    // Only while the hero is on screen — drawing it all the way down the
+    // page was a phone's battery spent on something nobody could see.
+    let heroOn = true, drawing = false;
+    const draw = () => {
+      if (!heroOn) { drawing = false; return; }
+      drawing = true;
       ctx.clearRect(0, 0, W, H);
       pts.forEach(p => {
         p.x = (p.x + p.vx + W) % W;
@@ -469,7 +506,58 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fill();
       });
       requestAnimationFrame(draw);
-    })();
+    };
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(es => {
+        heroOn = es[0].isIntersecting;
+        if (heroOn && !drawing) draw();
+      }).observe(canvas);
+    }
+    draw();
   }
+
+  /* ── BOOK BAR (phones) ──
+     Nine in ten visitors arrive from Instagram on a phone, and once the hero
+     has scrolled away there was nothing on screen that books. This keeps
+     one button in reach, on the pages where people browse. Not on booking
+     or checkout (they are already there), not on the memberships page (its
+     own button is the one that matters), and not for a signed-in member
+     who is being shown their upgrade bar in the same spot. */
+  (function bookBar() {
+    const page = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+    const ON = ['index.html', 'services.html', 'about.html', 'classes.html', 'contact.html', 'pressons.html'];
+    if (ON.indexOf(page) < 0) return;
+    if (!window.matchMedia || !window.matchMedia('(max-width: 760px)').matches) return;
+
+    const bar = document.createElement('div');
+    bar.className = 'book-bar';
+    bar.setAttribute('role', 'region');
+    bar.setAttribute('aria-label', 'Book an appointment');
+    bar.innerHTML =
+      '<div class="book-bar-txt"><span class="book-bar-t">ZOLA Nail Studio</span>' +
+      '<span class="book-bar-s">Porterville · by appointment</span></div>' +
+      '<a class="book-bar-go" href="booking.html">Book now</a>';
+    document.body.appendChild(bar);
+
+    // The deal days are the strongest reason to book this week; say them.
+    fetch('/api/deals').then(r => r.json()).then(d => {
+      const ds = (d && d.deals) || [];
+      if (!ds.length) return;
+      const lead = ds.find(x => x.featured) || ds[0];
+      const rest = ds.filter(x => x !== lead).map(x => x.name);
+      bar.querySelector('.book-bar-t').textContent = lead.name;
+      bar.querySelector('.book-bar-s').textContent = rest.length ? rest.join(' · ') + ' too · hands or toes' : 'Hands or toes · every ' + lead.weekday_name;
+    }).catch(() => {});
+
+    const upgradeShowing = () => !!document.querySelector('[aria-label="Membership upgrade"]');
+    const sync = () => {
+      const on = window.scrollY > window.innerHeight * 0.55 && !upgradeShowing();
+      bar.classList.toggle('on', on);
+      document.body.classList.toggle('has-bookbar', on);
+    };
+    window.addEventListener('scroll', sync, { passive: true });
+    window.addEventListener('resize', sync, { passive: true });
+    sync();
+  })();
 
 });
