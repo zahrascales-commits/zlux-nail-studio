@@ -3187,6 +3187,8 @@ async function faceIdLogin(auto){
     const d = await r.json();
     if(!r.ok || !d.password){ err.textContent = d.error || (fidWord() + ' did not work — use your password.'); return; }
     _viaFaceId = true;
+    // Worked here, so next time this app can ask for Face ID by itself.
+    try{ localStorage.setItem('zm_faceid', '1'); }catch(_){}
     document.getElementById('pwd').value = d.password;
     await login();
     document.getElementById('pwd').value = '';
@@ -3278,15 +3280,23 @@ async function removeFaceId(id){
 }
 
 /* On the sign-in screen: offer Face ID where it is set up, and on the Home
-   Screen app ask straight away, like a banking app. */
+   Screen app ask straight away, like a banking app.
+   The Home Screen app keeps its own storage apart from Safari, but the Face
+   ID key itself lives in iCloud Keychain and is shared by her iPhone, iPad
+   and Mac — so on Apple devices the button shows whenever a key exists. */
 (async function(){
-  if(!fidOnThisDevice() || !(await fidCapable())) return;
+  if(!(await fidCapable())) return;
+  const here = fidOnThisDevice();
+  if(!here){
+    if(!/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)) return;
+    try{ if(!(await (await fetch('/api/passkey?action=status', { cache: 'no-store' })).json()).available) return; }catch(_){ return; }
+  }
   document.getElementById('faceid-label').textContent = 'Sign in with ' + fidWord();
   document.getElementById('faceid-login').style.display = 'block';
   let signedInAlready = false;
   try{ signedInAlready = !!sessionStorage.getItem('zm_pwd'); }catch(_){}
   const standalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-  if(standalone && !signedInAlready) setTimeout(function(){ faceIdLogin(true); }, 350);
+  if(here && standalone && !signedInAlready) setTimeout(function(){ faceIdLogin(true); }, 350);
 })();
 
 /* ── TABS ── */

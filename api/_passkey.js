@@ -163,6 +163,13 @@ module.exports = async function (req, res) {
     }
 
     /* ── Signing in ── */
+    // Is Face ID set up anywhere? (The sign-in screen asks before showing
+    // the button; no challenge is made just for looking.)
+    if (action === 'status') {
+      const keys = await query('SELECT id FROM owner_passkeys');
+      return res.json({ available: keys.length > 0 });
+    }
+
     if (action === 'login_options') {
       const keys = await query('SELECT id FROM owner_passkeys');
       if (!keys.length) return res.json({ available: false });
