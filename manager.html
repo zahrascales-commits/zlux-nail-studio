@@ -9744,7 +9744,7 @@ async function loadSiteReviews(){
   const shared = rs.filter(r => r.share);
   const onSite = shared.filter(r => r.on_site).length;
   const stars = n => '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n);
-  el.innerHTML = '<p class="muted" style="font-size:0.85rem;line-height:1.6;margin-bottom:0.9rem">Clients review their visit on the check-in iPad. The ones who tick <b>“you can share this on the ZOLA website”</b> and give 4 or 5 stars with a few words show on your homepage, first name and initial only. '
+  el.innerHTML = '<p class="muted" style="font-size:0.85rem;line-height:1.6;margin-bottom:0.9rem">Clients review their visit on the check-in iPad. The ones who tick <b>“you can share this on the ZOLA website”</b> and give 4 or 5 stars with a few words show on your homepage, first name only. '
       + (onSite >= 3 ? '<b>' + onSite + ' showing now.</b>' : 'The section appears once there are 3 — <b>' + onSite + ' so far.</b>') + '</p>'
     + (shared.length ? shared.map(r =>
         '<div style="display:flex;gap:0.9rem;align-items:flex-start;padding:0.8rem 0;border-top:1px solid var(--line)">'

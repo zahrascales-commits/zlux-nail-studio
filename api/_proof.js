@@ -34,12 +34,12 @@ function ago(ms, now) {
   return d === 1 ? 'yesterday' : d + ' days ago';
 }
 
-// "Joanna Martinez" → "Joanna M." — enough to be a person, not enough to find.
+// First name only — exactly what the kiosk tells them we will show.
 function shortName(n) {
   const parts = String(n || '').trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return 'A ZOLA client';
   const first = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
-  return parts[1] ? first + ' ' + parts[1].charAt(0).toUpperCase() + '.' : first;
+  return first;
 }
 
 // The first service of a booking, as the menu names it.
