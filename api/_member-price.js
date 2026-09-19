@@ -34,7 +34,7 @@ async function record(memberId, { paid_cents, billing_period, promo_code }) {
     await execute(
       'UPDATE members SET paid_cents=?, billing_period=?, promo_code=? WHERE member_id=?',
       [Math.max(0, Math.round(Number(paid_cents) || 0)),
-       ['yearly', 'cycle', 'monthly'].includes(billing_period) ? billing_period : 'monthly',
+       ['yearly', 'cycle', 'monthly', 'w2', 'w3', 'w5'].includes(billing_period) ? billing_period : 'monthly',
        String(promo_code || '').slice(0, 32),
        memberId]);
   } catch (_) {}
@@ -55,6 +55,8 @@ function monthlyValue(member) {
   // 'cycle' is every four weeks — what Essential and Elite bill on. The
   // retired tiers billed monthly and must keep doing so here.
   const cycle = period === 'cycle';
+  // Every 2, 3 or 5 weeks — the rhythms a member can choose (see _plans).
+  const rhythmWeeks = { w2: 2, w3: 3, w5: 5 }[period] || 0;
   const paid = Number((member || {}).paid_cents) || 0;
 
   if (paid > 0) {
@@ -68,9 +70,11 @@ function monthlyValue(member) {
     // Treating a four-week cycle as a month understates those members by a
     // whole payment a year. Treating a monthly member as a cycle overstates
     // them by the same amount, which is why these are not the same case.
+    //   w2/w3/w5 — fifty-two weeks a year over that many weeks each
     const perMonth = yearly ? Math.round(paid / 12)
+      : rhythmWeeks ? Math.round(paid * 52 / rhythmWeeks / 12)
       : (cycle ? Math.round(paid * 13 / 12) : paid);
-    return { cents: perMonth, estimated: false, yearly, cycle };
+    return { cents: perMonth, estimated: false, yearly, cycle: cycle || !!rhythmWeeks };
   }
   // Nothing recorded: this member predates the column. The list price is the
   // best guess available and is marked as one.
@@ -106,6 +110,7 @@ async function backfillFromStripe(members) {
       if (!item || !item.price) continue;
 
       const interval = item.price.recurring && item.price.recurring.interval;
+      const every = Number(item.price.recurring && item.price.recurring.interval_count) || 1;
       let cents = Number(item.price.unit_amount) || 0;
 
       // A coupon on the subscription is the difference between the list price
@@ -120,7 +125,7 @@ async function backfillFromStripe(members) {
       await record(m.member_id, {
         paid_cents: cents,
         billing_period: interval === 'year' ? 'yearly'
-          : (interval === 'week' ? 'cycle' : 'monthly'),
+          : (interval === 'week' ? ([2, 3, 5].includes(every) ? 'w' + every : 'cycle') : 'monthly'),
         promo_code: (sub.metadata && sub.metadata.promo_code) || '',
       });
       filled++;

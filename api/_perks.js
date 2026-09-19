@@ -62,7 +62,7 @@ const TIERS = {
       /* One allowance, spent however they like. Two separate perks read as
          two appointments — and behaved like it, handing out a second free
          service nobody meant to give. */
-      { key: 'free_service', kind: 'free_service', label: 'One service, on us',            detail: 'Every month. A manicure or a pedicure — your choice, not ours.', value: 1, of: 'any' },
+      { key: 'free_service', kind: 'free_service', label: 'One service, on us',            detail: 'Every cycle, on the rhythm you chose. A manicure or a pedicure — your choice, not ours.', value: 1, of: 'any' },
       { key: 'addons_half', kind: 'discount',     label: 'Every add-on at half price',     detail: 'Removal, Russian manicure, nail art, scrub, massage — all 50% off, every visit.', value: 50 },
       { key: 'calendar',    kind: 'calendar',     label: 'The calendar opens early',       detail: 'You see and book 3 days further out than anyone walking in off the street.', value: 3 },
       { key: 'account',     kind: 'account',      label: 'Your own account',               detail: 'Your visits, your perks, your nail record — all in one place.' },
@@ -75,7 +75,7 @@ const TIERS = {
     price: 199,
     daysAhead: 13,
     perks: [
-      { key: 'free_service', kind: 'free_service', label: 'Two services, on us',           detail: 'Every month. Two manicures, two pedicures, or one of each — your choice.', value: 2, of: 'any' },
+      { key: 'free_service', kind: 'free_service', label: 'Two services, on us',           detail: 'Every cycle, on the rhythm you chose. Two manicures, two pedicures, or one of each — your choice.', value: 2, of: 'any' },
       { key: 'addons_free', kind: 'discount',     label: 'Every add-on free',              detail: 'Not discounted — free. Every add-on, every visit, no upsell, ever.',    value: 100 },
       { key: 'calendar',    kind: 'calendar',     label: '13 days of calendar, unlocked',  detail: 'You book almost two weeks further out than guests. The good slots are gone by the time they look.', value: 13 },
       { key: 'account',     kind: 'account',      label: 'Your own account',               detail: 'Your visits, your perks, your nail record — all in one place.' },
@@ -88,7 +88,7 @@ const TIERS = {
     price: 299,
     daysAhead: 20,
     perks: [
-      { key: 'free_service', kind: 'free_service', label: 'Two services, on us',            detail: 'Every month. Any two services on the menu — your choice, not ours.', value: 2, of: 'any' },
+      { key: 'free_service', kind: 'free_service', label: 'Two services, on us',            detail: 'Every cycle, on the rhythm you chose. Any two services on the menu — your choice, not ours.', value: 2, of: 'any' },
       { key: 'addons_free',  kind: 'discount',     label: 'Every add-on free',              detail: 'Every add-on, every visit, no exceptions and no upsell.',            value: 100 },
       { key: 'pick_artist',  kind: 'artist',       label: 'You choose your artist',         detail: 'Every single time. You are never handed to whoever happens to be free.' },
       { key: 'calendar',     kind: 'calendar',     label: '20 days of calendar, unlocked',  detail: 'You are three weeks ahead of the room. Nothing is gone by the time you look.', value: 20 },
@@ -177,6 +177,51 @@ function includedCount(tier) {
   return t.perks.filter(x => x.kind === 'free_service').reduce((s, x) => s + (x.value || 0), 0);
 }
 
+/* ── WHICH ALLOWANCE A VISIT COUNTS AGAINST ─────────────────────────────
+   A member who chose a rhythm — a visit every 2, 3, 4 or 5 weeks, stored as
+   cadence_weeks — gets her included services once per cycle of that
+   rhythm, counted from the moment she joined, which is when Stripe started
+   billing her. Someone on every two weeks is paying twice a month, so a
+   calendar-month allowance would take a visit she paid for.
+
+   Everyone who joined before rhythms existed has no cadence_weeks and keeps
+   the calendar month, exactly as before. The key goes in the same
+   service_usage.month_year column: "2026-09" for a month, "c2026-09-19" for
+   the cycle that began that day, so the two can never collide. */
+function usageKey(member, when) {
+  const w = Number(member && member.cadence_weeks) || 0;
+  const start = Date.parse((member && member.membership_started_at) || '');
+  let t = Date.now();
+  if (when) {
+    const s = String(when);
+    const d = /^\d{4}-\d{2}-\d{2}$/.test(s) ? Date.parse(s + 'T12:00:00Z') : new Date(when).getTime();
+    if (!isNaN(d)) t = d;
+  }
+  if (w >= 2 && w <= 5 && !isNaN(start)) {
+    // By date, not by the hour: a visit on the day her new cycle begins is
+    // that cycle's visit, whatever time of day Stripe renewed her.
+    const day = ms => Date.parse(new Date(ms).toISOString().slice(0, 10) + 'T00:00:00Z');
+    const len = w * 7 * 86400000;
+    const s0 = day(start);
+    const n = Math.max(0, Math.floor((day(t) - s0) / len));
+    return 'c' + new Date(s0 + n * len).toISOString().slice(0, 10);
+  }
+  return new Date(t).toISOString().slice(0, 7);
+}
+
+// The same, looked up by member ID. `apptDate` places a rhythm member's
+// visit in its cycle; `legacyWhen` is whatever the calendar-month code used
+// before (the booking moment, or the appointment's month on a cancel), so
+// nothing changes for members who joined before rhythms.
+async function usageKeyFor(memberId, apptDate, legacyWhen) {
+  let m = null;
+  try {
+    m = await queryOne('SELECT cadence_weeks, membership_started_at FROM members WHERE member_id = ?', [String(memberId)]);
+  } catch (_) { /* no cadence column yet — nobody has a rhythm */ }
+  if (m && Number(m.cadence_weeks) >= 2) return usageKey(m, apptDate);
+  return usageKey(null, legacyWhen);
+}
+
 function tierConfig(tier) {
   return TIERS[String(tier || '').toUpperCase()] || null;
 }
@@ -221,7 +266,7 @@ async function walletFor(memberId) {
   const cfg = tierConfig(member.tier);
   if (!cfg) return null;
 
-  const mk = monthKey();
+  const mk = await usageKeyFor(member.member_id, null, null);
   let usage = null;
   try {
     usage = await queryOne('SELECT * FROM service_usage WHERE member_id = ? AND month_year = ?', [member.member_id, mk]);
@@ -389,6 +434,8 @@ module.exports = async function (req, res) {
 module.exports.TIERS = TIERS;
 module.exports.walletFor = walletFor;
 module.exports.includedCount = includedCount;
+module.exports.usageKey = usageKey;
+module.exports.usageKeyFor = usageKeyFor;
 module.exports.windowFor = windowFor;
 module.exports.tierConfig = tierConfig;
 module.exports.publicDays = publicDays;

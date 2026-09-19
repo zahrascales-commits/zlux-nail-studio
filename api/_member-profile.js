@@ -26,7 +26,7 @@ module.exports = async (req, res) => {
       const announcements = await query(`SELECT * FROM announcements WHERE tier_target = 'ALL' OR tier_target = ? ORDER BY sent_at DESC LIMIT 10`, [member.tier]);
       const messages    = await query(`SELECT * FROM messages WHERE (to_role='CLIENT' AND to_id=?) OR (from_role='CLIENT' AND from_id=?) ORDER BY created_at DESC LIMIT 20`, [memberId, memberId]);
 
-      const monthYear = new Date().toISOString().slice(0, 7);
+      const monthYear = await require('./_perks').usageKeyFor(memberId, null, null);
       const usage = await queryOne('SELECT * FROM service_usage WHERE member_id = ? AND month_year = ?', [memberId, monthYear]);
 
       return res.status(200).json({

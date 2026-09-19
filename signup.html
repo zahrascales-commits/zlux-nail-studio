@@ -148,7 +148,7 @@
     }
     .tier-selector {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 0.75rem;
       margin-bottom: 1.5rem;
     }
@@ -268,7 +268,7 @@
     .confirmation-detail .label { color: var(--latte); }
     .confirmation-detail .value { color: var(--espresso); font-weight: 600; }
     @media (max-width: 480px) {
-      .tier-selector { grid-template-columns: 1fr; }
+      .tier-selector { grid-template-columns: 1fr 1fr; }
       .signup-wrap { padding: 6rem 1rem 3rem; }
     }
     /* ── HOW YOU PAY ──
@@ -301,6 +301,47 @@
   .plan-strike{text-decoration:line-through;opacity:0.55;}
   .details-wrap{display:none;}
   .details-wrap.show{display:block;animation:fadeUp 0.3s ease;}
+
+  /* ── HOW OFTEN ──
+     The question is when she wants her nails done, and the answer is what
+     she saves. What she is billed follows from it, and is said underneath,
+     plainly, in smaller type. */
+  .tier-more-label{font-family:'Josefin Sans',sans-serif;font-size:0.62rem;letter-spacing:0.18em;
+    text-transform:uppercase;color:var(--latte);margin:-0.6rem 0 0.5rem;}
+  .tier-more{grid-template-columns:repeat(3,1fr) !important;}
+  .tier-more .tier-opt{padding:0.75rem 0.5rem;}
+  .tier-more .tier-opt-price{font-size:1.15rem;}
+  .rh-sub{font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:var(--latte);margin:0 0 0.8rem;}
+  .rh-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.7rem;}
+  .rh{position:relative;border:1px solid rgba(182,165,136,0.35);background:#fff;padding:1.15rem 0.9rem 0.95rem;
+    cursor:pointer;text-align:left;width:100%;font:inherit;transition:border-color .2s,box-shadow .2s;}
+  .rh:hover{border-color:var(--champagne);}
+  .rh.on{border-color:var(--espresso);border-width:2px;padding:calc(1.15rem - 1px) calc(0.9rem - 1px) calc(0.95rem - 1px);
+    box-shadow:0 10px 30px rgba(26,20,12,0.13);}
+  .rh-badge{position:absolute;top:-10px;left:0.8rem;background:var(--champagne);color:var(--espresso);
+    font-family:'Josefin Sans',sans-serif;font-size:0.6rem;font-weight:700;letter-spacing:0.14em;
+    text-transform:uppercase;padding:0.28rem 0.6rem;}
+  .rh-badge.dark{background:var(--espresso);color:var(--champagne);}
+  .rh-when{font-family:'Cinzel',serif;font-size:1.02rem;color:var(--espresso);line-height:1.2;}
+  .rh-amt{font-family:'Cinzel',serif;font-size:1.55rem;color:var(--espresso);line-height:1;margin-top:0.5rem;}
+  .rh-amt small{font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:var(--latte);}
+  .rh-was{font-family:'Josefin Sans',sans-serif;font-size:0.74rem;color:var(--latte);text-decoration:line-through;opacity:0.7;margin-left:0.3rem;}
+  .rh-note{font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:var(--latte);line-height:1.45;margin-top:0.45rem;}
+  .rh-save{margin-top:0.9rem;background:rgba(182,165,136,0.16);border:1px solid rgba(182,165,136,0.5);
+    padding:0.7rem 0.9rem;font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:var(--espresso);}
+  .rh-fine{font-family:'Josefin Sans',sans-serif;font-size:0.74rem;color:var(--latte);line-height:1.6;margin-top:0.6rem;}
+  .rh-year{display:flex;gap:0.7rem;align-items:flex-start;margin-top:0.8rem;padding:0.8rem 0.9rem;cursor:pointer;
+    border:1px dashed rgba(182,165,136,0.6);font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:var(--espresso);line-height:1.5;}
+  .rh-year.on{border-style:solid;border-color:var(--espresso);background:rgba(182,165,136,0.08);}
+  .rh-year input{margin-top:0.2rem;accent-color:#2B2118;width:18px;height:18px;flex-shrink:0;}
+  .rh-perks{margin-top:1.2rem;background:var(--espresso);color:var(--cream);padding:1.3rem 1.2rem;}
+  .rh-perks-t{font-family:'Cinzel',serif;font-size:1.15rem;color:var(--champagne);margin-bottom:0.3rem;}
+  .rh-perks-s{font-family:'Josefin Sans',sans-serif;font-size:0.84rem;color:rgba(245,238,232,0.8);margin-bottom:0.8rem;line-height:1.6;}
+  .rh-perks ul{list-style:none;margin:0;padding:0;}
+  .rh-perks li{font-family:'Josefin Sans',sans-serif;font-size:0.85rem;line-height:1.55;color:var(--cream);
+    padding-left:1.3rem;position:relative;margin-bottom:0.45rem;}
+  .rh-perks li::before{content:'✦';position:absolute;left:0;color:var(--champagne);font-size:0.7rem;top:0.25rem;}
+  .rh-perks li b{color:var(--champagne);font-weight:600;}
   /* ── THE RATE THEY JUST LOCKED ──
      Shown the moment the payment goes through, because that is the moment
      somebody quietly wonders whether they should have waited. Answering it
@@ -415,7 +456,7 @@
   <div class="step-panel active" id="step-1">
     <div class="signup-card">
       <h1 class="signup-heading">Join Zola</h1>
-      <p class="signup-sub">Choose your tier and fill in your details. You'll set up payment on the next screen.</p>
+      <p class="signup-sub">Choose your membership and how often you want your nails done. You'll set up payment on the next screen.</p>
 
       <div class="error-msg" id="err-1"></div>
 
@@ -438,12 +479,36 @@
             <div class="tier-opt-desc">Owner test run<br>real card charge</div>
           </div>
         </div>
+        <!-- The original three, sold again — the Join buttons on the
+             memberships page used to land here with nothing to pick. -->
+        <div class="tier-more-label">Or one of our original three</div>
+        <div class="tier-selector tier-more">
+          <div class="tier-opt" data-tier="SIGNATURE" onclick="selectTier('SIGNATURE')">
+            <div class="tier-opt-name">Signature</div>
+            <div class="tier-opt-price">$99</div>
+            <div class="tier-opt-desc">One service</div>
+          </div>
+          <div class="tier-opt" data-tier="LUXE" onclick="selectTier('LUXE')">
+            <div class="tier-opt-name">Luxe</div>
+            <div class="tier-opt-price">$199</div>
+            <div class="tier-opt-desc">Two services</div>
+          </div>
+          <div class="tier-opt" data-tier="BLACK_CARD" onclick="selectTier('BLACK_CARD')">
+            <div class="tier-opt-name">Black Card</div>
+            <div class="tier-opt-price">$299</div>
+            <div class="tier-opt-desc">Two services</div>
+          </div>
+        </div>
       </div>
 
       <div class="plan-wrap" id="plan-wrap">
-        <div class="form-field" style="margin-bottom:0.25rem;"><label>How would you like to pay?</label></div>
-        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:var(--latte);margin:0;">Exactly the same membership either way. One of them costs less.</p>
-        <div class="plan-grid" id="plan-grid"></div>
+        <div class="form-field" style="margin-bottom:0.25rem;"><label>How often do you want your nails done?</label></div>
+        <p class="rh-sub">Come more often and every visit costs less.</p>
+        <div class="rh-grid" id="rh-grid"></div>
+        <div id="rh-save"></div>
+        <div id="rh-year"></div>
+        <div class="rh-fine" id="rh-fine"></div>
+        <div class="rh-perks" id="rh-perks"></div>
       </div>
 
       <div class="details-wrap" id="details-wrap">
@@ -510,12 +575,12 @@
   <div class="step-panel" id="step-2">
     <div class="signup-card">
       <h1 class="signup-heading">Secure Payment</h1>
-      <p class="signup-sub" id="payment-sub">Your first month is charged today. Membership renews automatically each month.</p>
+      <p class="signup-sub" id="payment-sub">Your first payment is charged today, then on the rhythm you chose.</p>
 
       <div class="error-msg" id="err-2"></div>
 
       <div class="policy-note">
-        <strong>Three-month minimum.</strong> Your membership renews automatically via Stripe until you cancel. After your first three months you can cancel any time from your account. No refunds on months already billed. By continuing you agree to these terms.
+        <strong>Three-month minimum.</strong> Your membership renews automatically via Stripe until you cancel. After your first three months you can cancel any time from your account. No refunds on payments already made. By continuing you agree to these terms.
       </div>
 
       <div id="signup-price-display" style="text-align:center;margin-bottom:1.5rem;">
@@ -665,43 +730,79 @@ setTimeout(function(){
      client as far as the client is concerned. Eleven cycles' money for
      thirteen cycles of membership, which is where the annual figure comes
      from. */
+  // `monthly` is the regular four-week price (the field name predates the
+  // four-week cycle). `services` is how many each payment covers.
   const PLANS = {
-    ESSENTIAL: { monthly: 8500,  yearly: 8500 * 11  },
-    ELITE:     { monthly: 11000, yearly: 11000 * 11 },
-    TEST:      { monthly: 158,   yearly: 1580       },
+    ESSENTIAL:  { name: 'Essential',  monthly: 8500,  yearly: 8500 * 11,  services: 1 },
+    ELITE:      { name: 'Elite',      monthly: 11000, yearly: 11000 * 11, services: 1 },
+    SIGNATURE:  { name: 'Signature',  monthly: 9900,  yearly: 99900,      services: 1 },
+    LUXE:       { name: 'Luxe',       monthly: 19900, yearly: 199900,     services: 2 },
+    BLACK_CARD: { name: 'Black Card', monthly: 29900, yearly: 299900,     services: 2 },
+    TEST:       { name: 'Test Membership', monthly: 158, yearly: 1580,    services: 1, fixed: true },
   };
+
+  /* ── HOW OFTEN ──────────────────────────────────────────────────────
+     Every 2 weeks is 10% off, every 3 weeks 5% off, every 4 weeks the
+     regular price, every 5 weeks $10 more — on every membership. The same
+     sum as the server's (api/_plans.js), and replaced by the server's own
+     figures the moment they load, so what she reads here is to the cent
+     what Stripe charges. */
+  const RHYTHMS = [
+    { weeks: 2, pct_off: 10, add_cents: 0,    note: 'Always fresh — never grown out' },
+    { weeks: 3, pct_off: 5,  add_cents: 0,    note: 'Polished, with a little breathing room' },
+    { weeks: 4, pct_off: 0,  add_cents: 0,    note: 'The classic fill rhythm' },
+    { weeks: 5, pct_off: 0,  add_cents: 1000, note: 'The longest stretch between visits' },
+  ];
+  let rhythm = 4;
+  function rhythmCents(tier, weeks) {
+    const p = PLANS[tier];
+    const r = RHYTHMS.find(function (x) { return x.weeks === Number(weeks); });
+    if (!p || !r) return 0;
+    if (p.fixed) return p.monthly;
+    if (p.byWeeks && p.byWeeks[r.weeks]) return p.byWeeks[r.weeks];
+    return Math.round(p.monthly * (100 - r.pct_off) / 100) + r.add_cents;
+  }
 
   /* And asked for properly, so the next price change cannot leave this page
      quoting last month's number. */
   (async function syncPlanPrices() {
     try {
       const d = await (await fetch('/api/plans')).json();
-      for (const p of (d.plans || [])) {
+      for (const p of (d.plans || []).concat(d.legacy || [])) {
         if (!PLANS[p.key]) continue;
         if (Number(p.cycle_cents) > 0) PLANS[p.key].monthly = Number(p.cycle_cents);
         if (Number(p.annual_cents) > 0) PLANS[p.key].yearly = Number(p.annual_cents);
+        if (p.name) PLANS[p.key].name = p.name;
+        if (Number(p.services) > 0) PLANS[p.key].services = Number(p.services);
+        if (Array.isArray(p.includes)) PLANS[p.key].includes = p.includes;
+        if (Array.isArray(p.rhythms)) {
+          PLANS[p.key].byWeeks = {};
+          p.rhythms.forEach(function (r) { PLANS[p.key].byWeeks[r.weeks] = Number(r.cents); });
+        }
         // LIST_PRICE is declared further down; this runs after the script
         // body so it exists, but the guard keeps a silent failure impossible.
         if (Number(p.cycle_cents) > 0 && typeof LIST_PRICE !== 'undefined') {
           LIST_PRICE[p.key] = Number(p.cycle_cents) * 13;
         }
       }
-      // Whatever is on screen was drawn with the old numbers.
       // Redraw whatever is already on screen with the real numbers.
-      if (typeof selectedTier !== 'undefined' && selectedTier && typeof selectTier === 'function') {
-        selectTier(selectedTier);
-      }
-      document.querySelectorAll('[data-tier]').forEach(function (el) {
-        const key = el.getAttribute('data-tier');
-        const price = el.querySelector('.tier-opt-price');
-        if (key && price && PLANS[key]) price.textContent = '$' + Math.round(PLANS[key].monthly / 100);
-      });
+      paintTierPrices();
+      if (typeof selectedTier !== 'undefined' && selectedTier) { renderPlans(); renewalLine(); }
     } catch (_) { /* the fallback above is correct; a failed fetch changes nothing */ }
   })();
-  // Thirteen four-week cycles in a year, which is why a year costs ten
-  // cycles' money and the difference is exactly three visits.
+  // The tier cards show one visit's price at the rhythm on screen.
+  function paintTierPrices() {
+    document.querySelectorAll('.tier-opt[data-tier]').forEach(function (el) {
+      const key = el.getAttribute('data-tier');
+      const price = el.querySelector('.tier-opt-price');
+      if (key && price && PLANS[key]) price.textContent = planMoney(rhythmCents(key, rhythm));
+    });
+  }
+  // Thirteen four-week cycles in a year, which is why a year costs eleven
+  // cycles' money and the difference is exactly two visits.
   const CYCLES_PER_YEAR = 13;
-  let billing = 'yearly';
+  // Pay as she goes on her rhythm, unless she ticks the year.
+  let billing = 'monthly';
   // Declared up here with the rest of the state it belongs to. Living
   // further down meant renewalLine() read it before it existed, which threw
   // on every arrival from a Join button.
@@ -712,20 +813,37 @@ setTimeout(function(){
   // the same elements instance as the card field.
   let stripe, cardElement, elements;
 
-  const TIER_PRICE = { SIGNATURE: '$99/mo', LUXE: '$199/mo', BLACK_CARD: '$299/mo', TEST: '$1.58/mo' };
-  const TIER_LABEL = { ESSENTIAL: 'Essential', ELITE: 'Elite', TEST: 'Test Membership' };
-  const TIER_AMOUNT = { SIGNATURE: '$99', LUXE: '$199', BLACK_CARD: '$299', TEST: '$1.58' };
+  // What she is charged each time, and how often, in words. These were three
+  // fixed lists naming only the older tiers, so for Essential and Elite the
+  // payment screen said "$0" and the charge she authorised read "$0 today".
+  const tierName = t => (PLANS[t] && PLANS[t].name) || '';
+  function chargeCents() {
+    if (!selectedTier || !PLANS[selectedTier]) return 0;
+    return billing === 'yearly' ? PLANS[selectedTier].yearly : rhythmCents(selectedTier, rhythm);
+  }
+  // After a discount code, which the server prices against the same amount.
+  function dueCents() {
+    return appliedPromo && appliedPromo.monthly_cents != null ? appliedPromo.monthly_cents : chargeCents();
+  }
+  function everyWords() {
+    if (billing === 'yearly') return 'every year';
+    if (PLANS[selectedTier] && PLANS[selectedTier].fixed) return 'every month';
+    return 'every ' + rhythm + ' weeks';
+  }
 
-  // Read tier from URL param
-  const urlTier = (new URLSearchParams(window.location.search).get('tier') || '').toUpperCase();
-  if (['ESSENTIAL','ELITE','TEST'].includes(urlTier)) { selectTier(urlTier); }
-  // The memberships page sends billing=cycle or billing=annual. Honour it,
-  // so somebody who chose "every 4 weeks" is not quietly switched to a year.
-  const urlBilling = (new URLSearchParams(window.location.search).get('billing') || '').toLowerCase();
+  // Read the choice from the URL first, then draw it — the memberships page
+  // sends tier, rhythm and billing. (Billing used to be read after the tier
+  // was drawn, so the screen showed one plan while another was selected.)
+  const qs = new URLSearchParams(window.location.search);
+  const urlTier = (qs.get('tier') || '').toUpperCase();
+  const urlRhythm = Number(qs.get('rhythm'));
+  if ([2, 3, 4, 5].includes(urlRhythm)) rhythm = urlRhythm;
+  const urlBilling = (qs.get('billing') || '').toLowerCase();
   if (urlBilling === 'cycle') billing = 'monthly';
-  if (urlBilling === 'annual') billing = 'yearly';
+  if (urlBilling === 'annual' || urlBilling === 'yearly') { billing = 'yearly'; rhythm = 4; }
   // The $1.58 test tier only appears with ?tier=TEST (owner test runs)
   if (urlTier === 'TEST') { const t = document.getElementById('test-tier-opt'); if (t) t.style.display = 'block'; }
+  if (PLANS[urlTier]) { selectTier(urlTier); }
 
   // Read referral from URL param
   const urlRef = new URLSearchParams(window.location.search).get('ref') || '';
@@ -757,40 +875,89 @@ setTimeout(function(){
     return '$' + (v % 1 === 0 ? v.toLocaleString('en-US') : v.toFixed(2));
   }
 
+  /* The rhythm cards, the saving, the year option, the small print, and
+     what every visit includes. Called renderPlans because the page's safety
+     net above calls it by that name. */
   function renderPlans(){
-    const grid = document.getElementById('plan-grid');
+    const grid = document.getElementById('rh-grid');
     const p = PLANS[selectedTier];
     if(!grid || !p) return;
-    // A year of four-week payments is thirteen of them, not twelve. Comparing
-    // against twelve would understate the saving and, worse, would not be true.
-    const yearOfCycles = p.monthly * CYCLES_PER_YEAR;
-    const freeVisits = Math.round((yearOfCycles - p.yearly) / p.monthly);
+    paintTierPrices();
+    const two = p.services > 1;
+    const per = two ? ' / ' + p.services + ' services' : ' a visit';
 
-    grid.innerHTML =
-      // Annual first: on a phone this is the one under your thumb, on a
-      // desktop it is the one read first. It is the recommendation, not an
-      // equal alternative.
-      '<button type="button" class="plan' + (billing === 'yearly' ? ' on' : '') + '" onclick="pickBilling(\'yearly\')">'
-        + '<span class="plan-best">Best value</span>'
-        + '<div class="plan-when">Pay for the year</div>'
-        + '<div class="plan-amt">' + planMoney(p.yearly) + '<small> /year</small></div>'
-        + '<div class="plan-note"><span class="plan-strike">' + planMoney(yearOfCycles) + '</span> paid every 4 weeks</div>'
-        // Visits, never a percentage — nobody should have to do arithmetic
-        // to find out whether this is a good idea.
-        + '<div class="plan-save">' + freeVisits + ' visits free</div>'
-      + '</button>'
-      + '<button type="button" class="plan' + (billing === 'monthly' ? ' on' : '') + '" onclick="pickBilling(\'monthly\')">'
-        + '<div class="plan-when">Pay every 4 weeks</div>'
-        + '<div class="plan-amt">' + planMoney(p.monthly) + '<small> /4 weeks</small></div>'
-        + '<div class="plan-note">Cancel any time after three months.</div>'
+    if (p.fixed) {
+      grid.innerHTML = '<div class="rh-note" style="grid-column:1/-1">Owner test run — ' + planMoney(p.monthly) + ', billed monthly.</div>';
+      ['rh-save', 'rh-year', 'rh-perks'].forEach(function (id) { document.getElementById(id).innerHTML = ''; });
+      document.getElementById('rh-fine').textContent = '';
+      return;
+    }
+
+    grid.innerHTML = RHYTHMS.map(function (r) {
+      const cents = rhythmCents(selectedTier, r.weeks);
+      const on = billing !== 'yearly' && rhythm === r.weeks;
+      const badge = r.pct_off ? '<span class="rh-badge">Save ' + r.pct_off + '%</span>'
+        : (r.weeks === 4 ? '<span class="rh-badge dark">Regular price</span>' : '');
+      return '<button type="button" class="rh' + (on ? ' on' : '') + '" onclick="pickRhythm(' + r.weeks + ')" aria-pressed="' + on + '">'
+        + badge
+        + '<div class="rh-when">Every ' + r.weeks + ' weeks</div>'
+        + '<div class="rh-amt">' + planMoney(cents) + '<small>' + per + '</small>'
+          + (r.pct_off ? '<span class="rh-was">' + planMoney(p.monthly) + '</span>' : '') + '</div>'
+        + '<div class="rh-note">' + r.note + '</div>'
       + '</button>';
+    }).join('');
+
+    // The saving, said as money on every visit — never left to arithmetic.
+    const r = RHYTHMS.find(function (x) { return x.weeks === rhythm; });
+    const saved = p.monthly - rhythmCents(selectedTier, rhythm);
+    document.getElementById('rh-save').innerHTML = (billing !== 'yearly' && r && r.pct_off)
+      ? '<div class="rh-save">✦ Coming every ' + rhythm + ' weeks saves you <b>' + planMoney(saved) + '</b> on every visit.</div>'
+      : '';
+
+    // The year is only offered at four weeks — a quieter choice beneath.
+    const yearOfCycles = p.monthly * CYCLES_PER_YEAR;
+    const freeVisits = Math.max(0, Math.floor((yearOfCycles - p.yearly) / p.monthly));
+    document.getElementById('rh-year').innerHTML = (rhythm === 4 && p.yearly)
+      ? '<label class="rh-year' + (billing === 'yearly' ? ' on' : '') + '">'
+        + '<input type="checkbox" ' + (billing === 'yearly' ? 'checked ' : '') + 'onchange="pickBilling(this.checked ? \'yearly\' : \'monthly\')" />'
+        + '<span><b>Pay for the year instead — ' + planMoney(p.yearly) + '.</b> '
+        + (freeVisits ? freeVisits + ' visits free, ' : '') + 'every four weeks for a year.</span></label>'
+      : '';
+
+    // What she is charged, and when — plainly, in the small type.
+    document.getElementById('rh-fine').textContent = billing === 'yearly'
+      ? 'Billed ' + planMoney(p.yearly) + ' once a year, starting today. Three-month minimum, then cancel any time.'
+      : 'Billed ' + planMoney(rhythmCents(selectedTier, rhythm)) + ' every ' + rhythm + ' weeks, starting today. Three-month minimum, then cancel any time.';
+
+    // Everything that comes with it, the loudest thing on the page after the price.
+    const inc = (p.includes || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
+    document.getElementById('rh-perks').innerHTML =
+      '<div class="rh-perks-t">You leave owing nothing.</div>'
+      + '<div class="rh-perks-s">Your ' + (two ? 'services are' : 'service is') + ' paid for before you walk in — nothing to pay at the appointment, every time you come.</div>'
+      + '<ul>'
+        + '<li><b>Nothing to pay at your appointment</b></li>'
+        + '<li><b>' + (two ? 'Two services' : 'Your service') + ' every ' + (billing === 'yearly' ? '4' : rhythm) + ' weeks</b>, on your schedule</li>'
+        + inc
+      + '</ul>';
+  }
+
+  function pickRhythm(w){
+    rhythm = Number(w);
+    billing = 'monthly';
+    signupData.billing = billing;
+    renderPlans();
+    renewalLine();
+    // A code was priced against the old rhythm; price it again.
+    if (appliedPromo) checkPromo();
   }
 
   function pickBilling(b){
     billing = b;
+    if (b === 'yearly') rhythm = 4;
     signupData.billing = b;
     renderPlans();
     renewalLine();
+    if (appliedPromo) checkPromo();
     // Everything below opens as soon as there is a choice on the table.
     // No focus stealing and no scroll jump here: this runs on the first tier
     // tap too, and being thrown down the page then is disorienting.
@@ -824,22 +991,25 @@ setTimeout(function(){
     signupData.referralCode = document.getElementById('referral-code').value.trim().toUpperCase();
     signupData.tier = selectedTier;
 
-    document.getElementById('price-display').textContent = TIER_AMOUNT[selectedTier];
+    signupData.rhythm = billing === 'yearly' ? 4 : rhythm;
+    document.getElementById('price-display').textContent = money(dueCents());
     renewalLine();
-    // Has to agree with the authorisation directly beneath it. Saying
-    // "$299/mo" under a line that says "$2,999 every year" reads as a bait
-    // and switch, on the one screen where trust decides whether the card
-    // comes out at all.
-    const payYearly = billing === 'yearly';
-    const payAmount = (payYearly
-      ? { SIGNATURE: 99900, LUXE: 199900, BLACK_CARD: 299900, TEST: 1580 }
-      : { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900, TEST: 158 })[selectedTier] || 0;
-    document.getElementById('payment-sub').textContent =
-      "You're joining the " + TIER_LABEL[selectedTier] + ' at ' + money(payAmount)
-      + (payYearly ? ' for the year. Charged today.' : ' every 4 weeks. Your first payment is charged today.');
+    // Has to agree with the authorisation directly beneath it — the same
+    // amount and the same schedule, on the one screen where trust decides
+    // whether the card comes out at all.
+    const p = PLANS[selectedTier];
+    document.getElementById('payment-sub').textContent = billing === 'yearly'
+      ? "You're joining " + tierName(selectedTier) + ' for the year. Charged today.'
+      : (p && p.fixed)
+        ? "Owner test run — " + money(dueCents()) + ' today, then monthly.'
+        : "You're joining " + tierName(selectedTier) + ' — your nails done every ' + rhythm + ' weeks, and nothing to pay at the appointment.';
 
     goToStep(2);
     initStripe();
+    // Back and forth between screens: the wallet sheet must show today's amount.
+    if (typeof paymentRequest !== 'undefined' && paymentRequest) {
+      try { paymentRequest.update({ total: { label: 'ZOLA ' + tierName(selectedTier) + (billing === 'yearly' ? ' — one year' : ' — then ' + everyWords()), amount: walletAmount() } }); } catch (_) {}
+    }
   }
 
   async function initStripe() {
@@ -884,7 +1054,7 @@ setTimeout(function(){
   // words. This is also the difference between a renewal and a chargeback.
   const agree = document.getElementById('agree-recurring');
   if (agree && !agree.checked) {
-    showError('err-2', 'Please tick the box to authorise the monthly charge.');
+    showError('err-2', 'Please tick the box to authorise the charge.');
     agree.focus();
     return;
   }
@@ -935,7 +1105,7 @@ setTimeout(function(){
   // What a year of four-week payments actually costs. This is the only
   // honest thing to compare an annual price against — an inflated "normally
   // $599" number would be worth less than believability.
-  const LIST_PRICE = { ESSENTIAL: 8500 * 13, ELITE: 11000 * 13 };
+  const LIST_PRICE = { ESSENTIAL: 8500 * 13, ELITE: 11000 * 13, SIGNATURE: 9900 * 13, LUXE: 19900 * 13, BLACK_CARD: 29900 * 13 };
 
   function heldUntil() {
     const d = new Date();
@@ -948,44 +1118,40 @@ setTimeout(function(){
 
   function renderLockIn() {
     const tier = signupData.tier;
-    // Somebody who paid for the year should be told what they paid for the
-    // year. Showing them a monthly figure they never agreed to is how a
-    // reassuring screen turns into a support message.
+    const p = PLANS[tier] || {};
     const yearly = (typeof billing !== 'undefined' && billing === 'yearly');
-    const per = yearly ? '/year' : '/4 weeks';
-    const listMonthly = LIST_PRICE[tier] || 0;
-
-    const paidMonthly = (signupData.appliedPromo && signupData.appliedPromo.monthly_cents != null)
+    const weeks = signupData.rhythm || rhythm;
+    const first = esc(String(signupData.fullName || '').split(' ')[0]);
+    // What they pay each time, after any code — to the cent.
+    const paid = (signupData.appliedPromo && signupData.appliedPromo.monthly_cents != null)
       ? signupData.appliedPromo.monthly_cents
-      : (PLANS[tier] ? PLANS[tier].monthly : 0);
+      : (yearly ? (p.yearly || 0) : rhythmCents(tier, weeks));
+    const per = yearly ? ' a year' : (p.fixed ? ' a month' : ' every ' + weeks + ' weeks');
 
-    const paid = yearly ? (PLANS[tier] ? PLANS[tier].yearly : 0) : paidMonthly;
-    const was  = yearly ? listMonthly * 12 : listMonthly;
-    const saveYear = yearly
-      ? Math.max(0, was - paid)
-      : Math.max(0, (was - paid) * 12);
-    const money = c => '$' + Math.round(c / 100).toLocaleString();
-
-    // What the studio would have charged for these services one at a time,
-    // against what they are paying — plus the early-bird seat if they got
-    // one. All of it as a single number first, because that is the one they
-    // will remember and repeat to somebody else.
+    /* Only comparisons that are true, to the cent:
+         the year      — against thirteen payments at the four-week price
+         every 2 or 3  — against the regular four-week price of the same visit
+       This used to set a year of payments against one payment ("$1,020 saved
+       this month") and, for the year, multiply a year by twelve again. */
+    let was = 0, wasLabel = '', nowLabel = '', savedWhen = '';
+    if (yearly && p.monthly) {
+      was = p.monthly * CYCLES_PER_YEAR; wasLabel = 'A year, paid every 4 weeks'; nowLabel = 'Your year'; savedWhen = 'saved this year';
+    } else if (!p.fixed && p.monthly && paid < p.monthly) {
+      was = p.monthly; wasLabel = 'Regular price, every 4 weeks'; nowLabel = 'Your price, every ' + weeks + ' weeks'; savedWhen = 'saved on every visit';
+    }
     const bird = signupData.earlyBird;
     const birdOff = (bird && bird.amount_cents) || 0;
-    const upfrontSaving = Math.max(0, was - paid) + birdOff;
-    const periodWord = yearly ? 'this year' : 'this month';
+    const saving = Math.max(0, was - paid);
 
-    const html =
-      '<div class="save-hero">'
-        + '<div class="save-eyebrow">✦ Congratulations, ' + esc(signupData.fullName.split(' ')[0]) + ' ✦</div>'
-        + '<div class="save-num">' + money(upfrontSaving) + '</div>'
-        + '<div class="save-per">saved ' + periodWord
-          + (saveYear > upfrontSaving ? ' — and ' + money(saveYear + birdOff) + ' over your first year' : '')
-          + '</div>'
+    const hero = (saving > 0 || birdOff > 0)
+      ? '<div class="save-hero">'
+        + '<div class="save-eyebrow">✦ Congratulations, ' + first + ' ✦</div>'
+        + '<div class="save-num">' + money(saving + birdOff) + '</div>'
+        + '<div class="save-per">' + (saving > 0 ? savedWhen : 'off your first payment') + '</div>'
         + '<div class="save-break">'
-          + (was > paid
-              ? '<div class="save-line"><span>These services separately</span><b>' + money(was) + '</b></div>'
-                + '<div class="save-line"><span>Your ' + (yearly ? 'yearly' : 'monthly') + ' rate</span><b>' + money(paid) + '</b></div>'
+          + (saving > 0
+              ? '<div class="save-line"><span>' + wasLabel + '</span><b>' + money(was) + '</b></div>'
+                + '<div class="save-line"><span>' + nowLabel + '</span><b>' + money(paid) + '</b></div>'
               : '')
           + (birdOff > 0
               ? '<div class="save-line"><span>' + esc(bird.label || 'Early bird') + ' — you were number ' + bird.seat_number + '</span><b>−' + money(birdOff) + '</b></div>'
@@ -993,10 +1159,18 @@ setTimeout(function(){
         + '</div>'
         + (birdOff > 0
             ? '<div class="save-bird">And you made it. You are <b>number ' + bird.seat_number + '</b> — '
-              + 'one of the first to join, which is another <b>' + money(birdOff) + '</b> off. '
-              + 'That is gone once the places are.</div>'
+              + 'one of the first to join, which is another <b>' + money(birdOff) + '</b> off your first payment.</div>'
             : '')
       + '</div>'
+      : '<div class="save-hero">'
+        + '<div class="save-eyebrow">✦ Welcome, ' + first + ' ✦</div>'
+        + '<div class="save-per" style="font-size:1rem;line-height:1.6">'
+          + (p.fixed ? 'Your test membership is live.'
+             : 'Your nails, every ' + (yearly ? 4 : weeks) + ' weeks — and nothing to pay at the appointment.')
+        + '</div>'
+      + '</div>';
+
+    const html = hero
       + '<div class="lockin">'
         + '<div class="lockin-eyebrow">Thank you for signing up today</div>'
         + '<div class="lockin-prices">'
@@ -1004,8 +1178,8 @@ setTimeout(function(){
           + '<span class="lockin-now">' + money(paid) + '<small>' + per + '</small></span>'
         + '</div>'
         + '<div class="lockin-body">'
-          + 'You joined in <b>' + thisMonth() + '</b>, so <b>' + money(paid) + ' '
-          + (yearly ? 'a year' : 'a month') + ' is your rate for a full year</b> — it will not '
+          + 'You joined in <b>' + thisMonth() + '</b>, so <b>' + money(paid) + per
+          + ' is your rate for a full year</b> — it will not '
           + 'move, whatever happens to our pricing after this month.'
         + '</div>'
         + '<div class="lockin-until">Your rate is held through ' + heldUntil() + '</div>'
@@ -1093,6 +1267,7 @@ setTimeout(function(){
           referralCode: signupData.referralCode || undefined,
           promoCode: (document.getElementById('promo-code') || {}).value || undefined,
           billing: billing,
+          rhythm: billing === 'yearly' ? 4 : rhythm,
           stripePaymentMethodId: paymentMethodId,
         })
       });
@@ -1141,7 +1316,7 @@ setTimeout(function(){
 
       // Step 3 — show member ID
       document.getElementById('display-member-id').textContent = data.memberId;
-      document.getElementById('display-tier').textContent = TIER_LABEL[signupData.tier];
+      document.getElementById('display-tier').textContent = tierName(signupData.tier);
       document.getElementById('display-email').textContent = signupData.email;
       renderLockIn();
       goToStep(3);
@@ -1161,14 +1336,11 @@ setTimeout(function(){
      The sheet shows the real amount, including whatever a discount code
      has taken off, because a wallet showing one figure while the card is
      charged another is how a chargeback starts. */
+  // Today's charge. This returned $0 for Essential and Elite, and a zero
+  // total means no wallet button at all — so neither could be paid with
+  // Apple Pay or Google Pay.
   function walletAmount() {
-    const yearly = billing === 'yearly';
-    const base = (yearly
-      ? { SIGNATURE: 99900, LUXE: 199900, BLACK_CARD: 299900, TEST: 1580 }
-      : { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900, TEST: 158 })[selectedTier] || 0;
-    return appliedPromo && appliedPromo.monthly_cents != null && !yearly
-      ? appliedPromo.monthly_cents
-      : base;
+    return dueCents();
   }
 
   let paymentRequest = null;
@@ -1183,8 +1355,8 @@ setTimeout(function(){
       country: 'US',
       currency: 'usd',
       total: {
-        label: 'ZOLA ' + (TIER_LABEL[selectedTier] || 'Membership')
-          + (billing === 'yearly' ? ' — one year' : ' — first month'),
+        label: 'ZOLA ' + (tierName(selectedTier) || 'Membership')
+          + (billing === 'yearly' ? ' — one year' : ' — then ' + everyWords()),
         amount: amount,
       },
       requestPayerName: true,
@@ -1251,8 +1423,8 @@ setTimeout(function(){
     if (n === 4 && signupData.memberId) {
       document.getElementById('conf-name').textContent = signupData.fullName;
       document.getElementById('conf-id').textContent = signupData.memberId;
-      document.getElementById('conf-tier').textContent = TIER_LABEL[signupData.tier];
-      document.getElementById('conf-rate').textContent = TIER_PRICE[signupData.tier];
+      document.getElementById('conf-tier').textContent = tierName(signupData.tier);
+      document.getElementById('conf-rate').textContent = money(dueCents()) + ' ' + everyWords();
       document.getElementById('conf-billing').textContent = signupData.nextBilling ? new Date(signupData.nextBilling).toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'}) : '—';
       document.getElementById('conf-email').textContent = signupData.email;
       localStorage.setItem('zlux_member_id', signupData.memberId);
@@ -1318,7 +1490,8 @@ setTimeout(function(){
     msg.textContent = 'Checking…';
     try{
       const r = await fetch('/api/promo?action=check&code=' + encodeURIComponent(code)
-        + '&tier=' + encodeURIComponent(selectedTier || '') + '&membership=1');
+        + '&tier=' + encodeURIComponent(selectedTier || '') + '&membership=1'
+        + '&rhythm=' + (billing === 'yearly' ? 4 : rhythm) + '&billing=' + encodeURIComponent(billing));
       const d = await r.json();
       if(!d.ok){
         msg.style.color = '#b43232';
@@ -1327,8 +1500,8 @@ setTimeout(function(){
         appliedPromo = d;
         msg.style.color = '#3c8c50';
         msg.textContent = d.label
-          ? d.label + ' — you will pay ' + money(d.monthly_cents) + ' a month.'
-          : 'Applied — you will pay ' + money(d.monthly_cents) + ' a month.';
+          ? d.label + ' — you will pay ' + money(d.monthly_cents) + ' ' + everyWords() + '.'
+          : 'Applied — you will pay ' + money(d.monthly_cents) + ' ' + everyWords() + '.';
       }
     }catch(_){
       msg.style.color = '#b43232';
@@ -1352,11 +1525,15 @@ setTimeout(function(){
     const el = document.getElementById('renewal-terms');
     if(!el || !selectedTier) return;
     const yearly = billing === 'yearly';
-    const base = (yearly ? { SIGNATURE: 99900, LUXE: 199900, BLACK_CARD: 299900, TEST: 1580 }
-                         : { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900, TEST: 158 })[selectedTier] || 0;
-    const monthly = appliedPromo ? appliedPromo.monthly_cents : base;
+    // Exactly what Stripe will take, and exactly when. This read from a list
+    // of the older three tiers, so for Essential and Elite it asked people
+    // to authorise "$0 today and $0 every month".
+    const monthly = dueCents();
+    const fixed = PLANS[selectedTier] && PLANS[selectedTier].fixed;
     const d = new Date();
-    if (yearly) d.setFullYear(d.getFullYear() + 1); else d.setMonth(d.getMonth() + 1);
+    if (yearly) d.setFullYear(d.getFullYear() + 1);
+    else if (fixed) d.setMonth(d.getMonth() + 1);
+    else d.setDate(d.getDate() + rhythm * 7);
     const next = d.toLocaleDateString('en-US', yearly ? { month: 'long', day: 'numeric', year: 'numeric' } : { month: 'long', day: 'numeric' });
     el.innerHTML =
       '<label style="display:flex;gap:0.6rem;align-items:flex-start;cursor:pointer;">'
@@ -1364,7 +1541,7 @@ setTimeout(function(){
       + '<span style="font-family:\'Josefin Sans\',sans-serif;font-size:0.82rem;line-height:1.7;color:var(--latte);">'
       + 'I authorise ZOLA Nail Studio to charge this card <strong style="color:var(--espresso);">'
       + money(monthly) + ' today</strong> and <strong style="color:var(--espresso);">'
-      + money(monthly) + (yearly ? ' every year' : ' every month') + '</strong> from ' + next + ', until I cancel. '
+      + money(monthly) + ' ' + everyWords() + '</strong> from ' + next + ', until I cancel. '
       + 'I can cancel any time after my first three months.'
       + (appliedPromo && appliedPromo.kind === 'fixed_total'
           ? '<br><span style="color:var(--champagne);">Your ' + money(monthly)

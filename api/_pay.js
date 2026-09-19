@@ -349,7 +349,8 @@ async function freeServicesLeft(member_id, member_tier) {
   if (!limit) return 0;
   try {
     const { queryOne } = require('./_db');
-    const monthYear = new Date().toISOString().slice(0, 7);
+    // Today's cycle for a member on a rhythm, the calendar month otherwise.
+    const monthYear = await require('./_perks').usageKeyFor(member_id, null, null);
     const row = await queryOne('SELECT services_used FROM service_usage WHERE member_id = ? AND month_year = ?', [member_id, monthYear]);
     return Math.max(0, limit - Number((row && row.services_used) || 0));
   } catch (_) { return 0; }

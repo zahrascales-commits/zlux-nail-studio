@@ -28,6 +28,7 @@ const PLANS = [
     cycle_cents: 8500,
     annual_cents: 8500 * (CYCLES_PER_YEAR - FREE_VISITS_ANNUAL),
     capacity: 100,
+    services: 1,
     // Short, and in the order somebody skimming would want them.
     includes: [
       'One full service of your choice — structured manicure, GelX, or acrylic, any size up to medium',
@@ -43,6 +44,7 @@ const PLANS = [
     cycle_cents: 11000,
     annual_cents: 11000 * (CYCLES_PER_YEAR - FREE_VISITS_ANNUAL),
     capacity: 50,
+    services: 1,
     includes: [
       'Everything in Essential, at any length'+String.fromCharCode(44)+' short to long',
       'Russian manicure every visit',
@@ -80,25 +82,66 @@ const ADDON = { name: 'Russian pedicure', cents: 7500, correction_cents: 8500 };
 // have are gone for good. A handful of spots each, because that is what
 // reopening a closed tier honestly is.
 const LEGACY = [
+  // Each payment covers the services listed — on whichever rhythm she picks.
   {
-    key: 'SIGNATURE', name: 'Signature', cycle_cents: 9900, annual_cents: 99900, capacity: 28,
-    includes: ['One service a month — a manicure or a pedicure, your choice', 'Half off every add-on', 'Books 3 days before the public'],
-    line: 'Hands and feet, every month.',
+    key: 'SIGNATURE', name: 'Signature', cycle_cents: 9900, annual_cents: 99900, capacity: 28, services: 1,
+    includes: ['One service every cycle — a manicure or a pedicure, your choice', 'Half off every add-on', 'Books 3 days before the public'],
+    line: 'Hands or feet, on your schedule.',
   },
   {
-    key: 'LUXE', name: 'Luxe', cycle_cents: 19900, annual_cents: 199900, capacity: 18,
-    includes: ['Two services a month — two manicures, two pedicures, or one of each', 'Every add-on free', 'Books 13 days before the public'],
+    key: 'LUXE', name: 'Luxe', cycle_cents: 19900, annual_cents: 199900, capacity: 18, services: 2,
+    includes: ['Two services every cycle — two manicures, two pedicures, or one of each', 'Every add-on free', 'Books 13 days before the public'],
     line: 'More of everything, nothing extra to pay.',
   },
   {
-    key: 'BLACK_CARD', name: 'Black Card', cycle_cents: 29900, annual_cents: 299900, capacity: 13,
-    includes: ['Two services a month', 'Every add-on free', 'Choose your own artist, every visit', 'Books 20 days before the public'],
+    key: 'BLACK_CARD', name: 'Black Card', cycle_cents: 29900, annual_cents: 299900, capacity: 13, services: 2,
+    includes: ['Two services every cycle', 'Every add-on free', 'Choose your own artist, every visit', 'Books 20 days before the public'],
     line: 'The one where you pick who does your nails.',
   },
 ];
 
 const ALL = () => PLANS.concat(LEGACY);
 const byKey = k => ALL().find(p => p.key === String(k || '').toUpperCase()) || null;
+
+/* ── HOW OFTEN THEY COME ─────────────────────────────────────────────────
+   Every membership lets the client choose her rhythm: a visit every 2, 3,
+   4 or 5 weeks, billed on that same rhythm. Four weeks is the regular
+   price. Coming more often is rewarded — 10% off every two weeks, 5% off
+   every three — and five weeks is $10 more, because a longer gap means
+   more growth and more work at each visit. Set by Zahra, 2026-09-19.
+
+   Each payment covers what the membership includes (one service for
+   Essential, Elite and Signature; two for Luxe and Black Card), so the
+   allowance resets on the same rhythm she is billed on.
+
+   Exact cents, never rounded: 10% off $85 is $76.50, and the page, the
+   authorisation she ticks and the Stripe price are all that same number.
+   Paying for the year is only offered at the four-week rhythm. */
+const RHYTHMS = [
+  { weeks: 2, pct_off: 10, add_cents: 0 },
+  { weeks: 3, pct_off: 5,  add_cents: 0 },
+  { weeks: 4, pct_off: 0,  add_cents: 0 },
+  { weeks: 5, pct_off: 0,  add_cents: 1000 },
+];
+const rhythmFor = w => RHYTHMS.find(r => r.weeks === Number(w)) || null;
+
+// What one payment costs for this plan at this rhythm, in cents.
+function rhythmCents(plan, weeks) {
+  const p = typeof plan === 'string' ? byKey(plan) : plan;
+  const r = rhythmFor(weeks);
+  if (!p || !r) return 0;
+  return Math.round(p.cycle_cents * (100 - r.pct_off) / 100) + r.add_cents;
+}
+
+function rhythmsFor(p) {
+  return RHYTHMS.map(r => ({
+    weeks: r.weeks,
+    cents: rhythmCents(p, r.weeks),
+    pct_off: r.pct_off,
+    add_cents: r.add_cents,
+    saved_cents: r.pct_off ? p.cycle_cents - rhythmCents(p, r.weeks) : 0,
+  }));
+}
 
 // Three cycles' worth — the only way this saving is ever described. A
 // percentage would make somebody do arithmetic to find out whether it is a
@@ -159,6 +202,8 @@ function shapeOne(p, taken) {
     capacity: p.capacity, joined,
     spots_open: Math.max(0, p.capacity - joined),
     full: joined >= p.capacity,
+    services: p.services || 1,
+    rhythms: rhythmsFor(p),
   };
 }
 
@@ -166,26 +211,10 @@ async function publicShape() {
   const taken = await counts();
   return {
     cycles_per_year: CYCLES_PER_YEAR,
+    rhythms: RHYTHMS,
     addon: ADDON,
     legacy: LEGACY.map(p => shapeOne(p, taken)),
-    plans: PLANS.map(p => {
-      const joined = Math.min(taken[p.key] || 0, p.capacity);
-      const s = annualSaving(p);
-      return {
-        key: p.key,
-        name: p.name,
-        line: p.line,
-        includes: p.includes,
-        cycle_cents: p.cycle_cents,
-        annual_cents: p.annual_cents,
-        annual_saved_cents: s.saved_cents,
-        annual_free_visits: s.free_visits,
-        capacity: p.capacity,
-        joined,
-        spots_open: Math.max(0, p.capacity - joined),
-        full: joined >= p.capacity,
-      };
-    }),
+    plans: PLANS.map(p => shapeOne(p, taken)),
   };
 }
 
@@ -212,6 +241,36 @@ module.exports = async function (req, res) {
       return res.json(await publicShape());
     }
 
+    // ── OWNER: make sure every membership has its Stripe price at every
+    // rhythm, then read each one back from Stripe — the amount and the
+    // schedule Stripe will actually charge, not what this file hopes it will.
+    if (req.method === 'POST' && action === 'stripe_rhythms') {
+      const Stripe = require('stripe');
+      const stripe = Stripe(await require('./_pay').getStripeSecret());
+      const { rhythmPriceFor } = require('./_member-signup');
+      const out = [];
+      for (const p of ALL()) {
+        for (const r of RHYTHMS) {
+          const want = rhythmCents(p, r.weeks);
+          try {
+            const id = await rhythmPriceFor(stripe, p.key, r.weeks);
+            const pr = await stripe.prices.retrieve(id);
+            out.push({
+              tier: p.key, weeks: r.weeks, want_cents: want, price_id: pr.id,
+              unit_amount: pr.unit_amount, currency: pr.currency, active: pr.active,
+              interval: pr.recurring && pr.recurring.interval,
+              interval_count: pr.recurring && pr.recurring.interval_count,
+              ok: pr.unit_amount === want && pr.currency === 'usd' && pr.active
+                && pr.recurring && pr.recurring.interval === 'week' && pr.recurring.interval_count === r.weeks,
+            });
+          } catch (e) {
+            out.push({ tier: p.key, weeks: r.weeks, want_cents: want, ok: false, error: String(e.message || e) });
+          }
+        }
+      }
+      return res.json({ ok: out.every(x => x.ok), prices: out });
+    }
+
     return res.status(400).json({ error: 'Unknown action' });
   } catch (err) {
     return res.status(500).json({ error: String(err.message || err) });
@@ -224,6 +283,9 @@ module.exports.ALL = ALL;
 module.exports.ADDON = ADDON;
 module.exports.CYCLES_PER_YEAR = CYCLES_PER_YEAR;
 module.exports.byKey = byKey;
+module.exports.RHYTHMS = RHYTHMS;
+module.exports.rhythmFor = rhythmFor;
+module.exports.rhythmCents = rhythmCents;
 module.exports.annualSaving = annualSaving;
 module.exports.counts = counts;
 module.exports.publicShape = publicShape;

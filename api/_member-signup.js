@@ -55,6 +55,34 @@ async function cyclePriceFor(stripe, tier) {
   return created.id;
 }
 
+// One payment at the rhythm she chose — a visit every 2, 3, 4 or 5 weeks,
+// billed on the same rhythm (see RHYTHMS in _plans). Stripe bills it as a
+// weekly interval counted in that many weeks. Found by lookup key after the
+// first sale; the key carries the amount, so a changed price becomes a new
+// Stripe price rather than an edit to one people are already paying. At four
+// weeks Essential and Elite land on the same key cyclePriceFor made, so
+// their existing price is reused rather than duplicated.
+async function rhythmPriceFor(stripe, tier, weeks) {
+  const plans = require('./_plans');
+  const amount = plans.rhythmCents(tier, weeks);
+  if (!amount) return null;
+  const lookupKey = ('zola_' + tier + '_' + weeks + 'week_' + amount).toLowerCase();
+  try {
+    const found = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
+    if (found && found.data && found.data[0]) return found.data[0].id;
+  } catch (_) {}
+  const plan = plans.byKey(tier);
+  const created = await stripe.prices.create({
+    unit_amount: amount,
+    currency: 'usd',
+    recurring: { interval: 'week', interval_count: Number(weeks) },
+    lookup_key: lookupKey,
+    product_data: { name: 'ZOLA ' + (plan ? plan.name : tier) + ' — every ' + weeks + ' weeks' },
+    metadata: { tier, rhythm_weeks: String(weeks) },
+  });
+  return created.id;
+}
+
 async function yearlyPriceFor(stripe, tier) {
   const amount = TIER_YEARLY_CENTS[tier];
   if (!amount) return null;
@@ -128,7 +156,7 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { fullName, email, phone, dateOfBirth, heardAbout, tier, password, referralCode, promoCode, billing, stripePaymentMethodId, action } = req.body;
+  const { fullName, email, phone, dateOfBirth, heardAbout, tier, password, referralCode, promoCode, billing, rhythm, stripePaymentMethodId, action } = req.body;
 
   // Re-send member ID via SMS
   if (action === 'resend_sms') {
@@ -168,6 +196,15 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'Invalid tier.' });
   }
 
+  // How often she comes, and so how often she is billed. Paying for the year
+  // is only offered at four weeks. Checked before anything is created, so a
+  // bad value never leaves a half-made customer behind.
+  const yearly = String(billing || 'monthly') === 'yearly';
+  const weeks = yearly ? 4 : (Number(rhythm) || 4);
+  if (![2, 3, 4, 5].includes(weeks)) {
+    return res.status(400).json({ error: 'Please choose how often you would like to come.' });
+  }
+
   try {
     const stripe = Stripe(await require('./_pay').getStripeSecret());
 
@@ -201,15 +238,20 @@ module.exports = async (req, res) => {
     } catch (_) {}
     if (!priceId) priceId = process.env[`STRIPE_PRICE_${tier}`] || null;
     if (!priceId) priceId = TIER_PRICES[tier];
-    // Essential and Elite have no legacy price to fall back on and bill on a
-    // four-week cycle, so their price is made here the first time one sells.
-    if (['ESSENTIAL', 'ELITE'].includes(tier)) {
-      try { priceId = await cyclePriceFor(stripe, tier); } catch (_) {}
+    // Every membership bills on the rhythm she chose, at that rhythm's price.
+    // Not wrapped in a catch: if Stripe cannot give us this exact price the
+    // signup stops, rather than quietly charging her some other amount.
+    if (tier !== 'TEST' && !yearly) {
+      priceId = await rhythmPriceFor(stripe, tier, weeks);
+      if (!priceId) throw new Error('That membership could not be priced — please try again.');
     }
+    // What one payment is before any code or early-bird seat comes off.
+    const plansLib = require('./_plans');
+    const listCents = yearly ? (TIER_YEARLY_CENTS[tier] || 0)
+      : (tier === 'TEST' ? TIER_CENTS.TEST : plansLib.rhythmCents(tier, weeks));
 
     // Paying for the year swaps the price entirely. Done after the monthly
     // lookup so a studio that has set its own monthly prices keeps them.
-    const yearly = String(billing || 'monthly') === 'yearly';
     if (yearly) {
       try {
         const yid = await yearlyPriceFor(stripe, tier);
@@ -233,7 +275,7 @@ module.exports = async (req, res) => {
       if (!allowed.ok) return res.status(400).json({ error: allowed.why });
 
       // Ask Stripe what this actually costs rather than trusting a table.
-      let monthly = (yearly ? TIER_YEARLY_CENTS[tier] : TIER_CENTS[tier]) || 0;
+      let monthly = listCents;
       try {
         const price = await stripe.prices.retrieve(priceId);
         if (price && price.unit_amount) monthly = price.unit_amount;
@@ -264,7 +306,7 @@ module.exports = async (req, res) => {
     } catch (_) {}
 
     if (ebCents > 0) {
-      let listPrice = (yearly ? TIER_YEARLY_CENTS[tier] : TIER_CENTS[tier]) || 0;
+      let listPrice = listCents;
       try {
         const price = await stripe.prices.retrieve(priceId);
         if (price && price.unit_amount) listPrice = price.unit_amount;
@@ -294,6 +336,7 @@ module.exports = async (req, res) => {
       expand: ['latest_invoice.payment_intent'],
       metadata: {
         tier, memberEmail: email, billing: yearly ? 'yearly' : 'monthly',
+        rhythm_weeks: String(weeks),
         ...(appliedPromo ? { promo_code: appliedPromo.code } : {}),
       },
     });
@@ -314,7 +357,7 @@ module.exports = async (req, res) => {
     const now = new Date().toISOString();
     const nextBilling = subscription.current_period_end
       ? new Date(subscription.current_period_end * 1000).toISOString()
-      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      : new Date(Date.now() + (yearly ? 365 : weeks * 7) * 24 * 60 * 60 * 1000).toISOString();
     const referredByCode = referralCode || null;
 
     await execute(`
@@ -330,14 +373,20 @@ module.exports = async (req, res) => {
       now, nextBilling, new Date().toISOString().slice(0, 7)
     ]);
 
+    // Her rhythm. Her included services reset on it, counted from today —
+    // the same moment Stripe's billing cycle starts.
+    if (tier !== 'TEST') {
+      try { await execute('ALTER TABLE members ADD COLUMN cadence_weeks INTEGER'); } catch (_) {}
+      try { await execute('UPDATE members SET cadence_weeks=? WHERE member_id=?', [weeks, memberId]); } catch (_) {}
+    }
+
     /* What they are actually being charged, written down at the moment it is
        decided. Every revenue figure on this site used to be derived from a
        hardcoded list price, so a founding-rate member paying $100 counted as
        $299 and every discount the studio gave was invisible in its own
        accounts. */
     try {
-      const listNow = (yearly ? TIER_YEARLY_CENTS[tier] : TIER_CENTS[tier]) || 0;
-      let actually = listNow;
+      let actually = listCents;
       if (appliedPromo && appliedPromo.monthly_cents != null) actually = appliedPromo.monthly_cents;
       // The early bird comes off the first payment only, so it is not what
       // they pay every period and must not be recorded as if it were.
@@ -346,8 +395,9 @@ module.exports = async (req, res) => {
         // Essential and Elite bill every four weeks, which is thirteen
         // payments a year rather than twelve. Recording that as monthly
         // would undercount every one of them by a payment a year.
+        // 'cycle' is every four weeks; 'w2', 'w3', 'w5' the other rhythms.
         billing_period: yearly ? 'yearly'
-          : (['ESSENTIAL', 'ELITE'].includes(tier) ? 'cycle' : 'monthly'),
+          : (tier === 'TEST' ? 'monthly' : (weeks === 4 ? 'cycle' : 'w' + weeks)),
         promo_code: appliedPromo ? appliedPromo.code : '',
       });
     } catch (_) {}
@@ -374,7 +424,8 @@ module.exports = async (req, res) => {
         first_name: String(fullName || '').trim().split(/\s+/)[0],
         tier: plan ? plan.name : tier,
         tier_key: tier,
-        amount: plan ? ('$' + Math.round(plan.cycle_cents / 100)) : '',
+        amount: '$' + (listCents / 100).toFixed(2).replace(/\.00$/, ''),
+        rhythm: yearly ? 'for the year' : 'every ' + weeks + ' weeks',
         studio: 'ZOLA Nail Studio',
       });
     } catch (_) {}
@@ -391,6 +442,9 @@ module.exports = async (req, res) => {
         ? { amount_cents: ebResult.amount_cents, seat_number: ebResult.seat_number, label: ebResult.label }
         : null,
       nextBillingDate: nextBilling,
+      rhythm_weeks: weeks,
+      yearly,
+      charge_cents: listCents,
       clientSecret: subscription.latest_invoice?.payment_intent?.client_secret || null,
     });
 
@@ -465,4 +519,5 @@ async function sendWelcome({ fullName, email, phone, memberId, tier }) {
 
 // Reused when a member is moved from the yearly plan onto this one.
 module.exports.cyclePriceFor = cyclePriceFor;
+module.exports.rhythmPriceFor = rhythmPriceFor;
 module.exports.yearlyPriceFor = yearlyPriceFor;

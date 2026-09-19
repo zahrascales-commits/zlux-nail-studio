@@ -2,6 +2,7 @@ const FAQ_CHIPS = [
   { label: 'How does membership work?',    q: 'how does membership work' },
   { label: 'How do I book?',               q: 'how do I book an appointment' },
   { label: 'Which membership is for me?',  q: 'which membership is right for me' },
+  { label: 'How often can I come?',        q: 'how often can I come' },
   { label: 'How much does it cost?',       q: 'how much does it cost' },
   { label: 'What are the deal days?',      q: 'tell me about the tuesday and wednesday deals' },
   { label: 'First-visit discount?',        q: 'is there a first visit discount' },
@@ -22,6 +23,7 @@ function zolaFacts() {
   _zolaFacts = Promise.all([get('/api/plans'), get('/api/deals'), get('/api/services'), get('/api/addons'), get('/api/site-settings')])
     .then(([p, d, s, a, st]) => ({
       plans: (p && p.plans) || [],
+      legacy: (p && p.legacy) || [],
       deals: (d && d.deals) || [],
       services: ((s && (s.services || s)) || []).filter(x => x && !x.deal && Number(x.price_cents) >= 500 && !/test/i.test(x.name)),
       addons: Array.isArray(a) ? a : [],
@@ -141,10 +143,12 @@ async function sendChat() {
 
 async function askZolaFallback(msg) {
   const m = msg.toLowerCase();
-  let F = { plans: [], deals: [], services: [], addons: [] };
+  let F = { plans: [], legacy: [], deals: [], services: [], addons: [] };
   try { F = await zolaFacts(); } catch (_) {}
-  const $ = c => '$' + Math.round((Number(c) || 0) / 100).toLocaleString();
-  const plan = k => F.plans.find(p => p.key === k);
+  const $ = c => { const v = (Number(c) || 0) / 100; return '$' + (v % 1 === 0 ? v.toLocaleString('en-US') : v.toFixed(2)); };
+  const plan = k => F.plans.concat(F.legacy || []).find(p => p.key === k);
+  const at = (p, w) => { const r = p && (p.rhythms || []).find(x => x.weeks === w); return r ? r.cents : 0; };
+  const RHYTHM = 'Choose how often you come: every 2 weeks saves 10% on every visit, every 3 weeks saves 5%, every 4 weeks is the regular price, and every 5 weeks is $10 more. You pay on the same rhythm, so there is nothing to pay at the appointment.';
   const ess = plan('ESSENTIAL'), eli = plan('ELITE');
   const tiers = ess && eli
     ? 'Essential (' + $(ess.cycle_cents) + ' every four weeks) and Elite (' + $(eli.cycle_cents) + ')'
@@ -167,6 +171,9 @@ async function askZolaFallback(msg) {
   if (m.includes('russian') && !m.includes('pedi'))
     return "The Russian manicure technique is a precision method focused on the cuticle and surrounding skin — cleaner, more polished, longer-lasting. It's included on every Elite visit, and you can add it to any service" + addon('Russian Manicure') + ".";
 
+  if (m.includes('how often') || m.includes('every 2') || m.includes('every two') || m.includes('every 3') || m.includes('every 5') || m.includes('rhythm') || m.includes('how frequent') || m.includes('biweekly') || m.includes('bi-weekly'))
+    return RHYTHM + (ess && at(ess, 2) ? ' Essential every 2 weeks is ' + $(at(ess, 2)) + ' a visit.' : '') + ' memberships.html';
+
   if (m.includes('tuesday') || m.includes('wednesday') || m.includes('deal') || m.includes('special') || m.includes('promo'))
     return (deals ? deals + ' Hands or toes. ' : '') + "Pick your day on the booking page and it's yours. booking.html?deal=tuesday";
 
@@ -174,10 +181,12 @@ async function askZolaFallback(msg) {
     return "Join the ZOLA list on the homepage and 10% off your first visit lands in your inbox. Happy to sit with a trainee (with Zahra right beside them)? Code TRAIN20 takes $20 off." + (deals ? ' And every week: ' + deals : '');
 
   if ((m.includes('which') && m.includes('member')) || m.includes('right for me') || (m.includes('choose') && m.includes('tier')))
-    return "Want it simple — in and out, exactly what you need? Essential" + (ess ? ' (' + $(ess.cycle_cents) + ' every four weeks)' : '') + ". Want your nails healthier every visit — any length, Russian manicure, free removal, organic product? Elite" + (eli ? ' (' + $(eli.cycle_cents) + ')' : '') + ". Either way, you leave owing nothing. memberships.html";
+    return "Want it simple — in and out, exactly what you need? Essential" + (ess ? ' (' + $(ess.cycle_cents) + ' every four weeks)' : '') + ". Want your nails healthier every visit — any length, Russian manicure, free removal, organic product? Elite" + (eli ? ' (' + $(eli.cycle_cents) + ')' : '') + ". Either way, you leave owing nothing — and coming every 2 weeks saves 10% on every visit. memberships.html";
 
   if (m.includes('black card') || m.includes('blackcard') || m.includes('signature') || m.includes('luxe') || m.includes('founding') || m.includes('quarterly') || m.includes('atelier'))
-    return "Signature, Luxe and Black Card are closed to new members now. The two memberships open today are " + tiers + " — one full service every four weeks, any design, no deposit, and you leave owing nothing. memberships.html";
+    return (F.legacy || []).length
+      ? 'Our original three are open again: ' + F.legacy.map(p => p.name + ' (' + $(p.cycle_cents) + ' every 4 weeks' + ((p.services || 1) > 1 ? ', ' + p.services + ' services' : '') + ')').join(', ') + '. ' + RHYTHM + ' memberships.html'
+      : 'Signature, Luxe and Black Card are on the memberships page, beside Essential and Elite. memberships.html';
 
   if (m.includes('essential'))
     return ess ? "Essential is " + $(ess.cycle_cents) + " every four weeks. " + ess.line + " " + ess.includes.join('. ') + ". You leave owing nothing. memberships.html"
@@ -188,10 +197,10 @@ async function askZolaFallback(msg) {
                : "Elite is about nail health over time — Russian manicure, free removal and organic product every visit, at any length. memberships.html";
 
   if (m.includes('how does membership') || (m.includes('membership') && m.includes('work')) || m.includes('member') || m.includes('join') || m.includes('tier'))
-    return "Pick " + tiers + ". Each includes one full service every four weeks, any design at no extra charge, and no deposit — you leave owing nothing. Members book ahead of walk-ins. Minimum three months, then cancel any time from your account. memberships.html";
+    return "Choose " + tiers.replace(') and Elite', ') or Elite').replace(/^Essential and Elite$/, 'Essential or Elite') + " — or one of our original three. " + RHYTHM + " Any design at no extra charge and no deposit. Members book ahead of walk-ins. Minimum three months, then cancel any time from your account. memberships.html";
 
   if (m.includes('roll') || m.includes('unused') || (m.includes('miss') && m.includes('month')))
-    return "Services don't roll over — each four-week cycle has its own service, so book within it. Your membership renews on the same date each cycle.";
+    return "Services don't roll over — each cycle (every 2, 3, 4 or 5 weeks, whichever you chose) has its own, so book within it.";
 
   if (m.includes('upgrade'))
     return "You can move up to Elite from your Client Portal whenever you like.";

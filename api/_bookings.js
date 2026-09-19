@@ -220,7 +220,9 @@ module.exports = async (req, res) => {
     if (member_id && member_tier) {
       const limit = require('./_perks').includedCount(member_tier);
       if (limit) {
-        const monthYear = new Date().toISOString().slice(0, 7);
+        // Her cycle if she chose a rhythm (by the appointment's date); the
+        // calendar month, as always, if she joined before rhythms existed.
+        const monthYear = await require('./_perks').usageKeyFor(member_id, date, null);
         try {
           const usage = await queryOne('SELECT services_used FROM service_usage WHERE member_id = ? AND month_year = ?', [member_id, monthYear]);
           const used = usage ? Number(usage.services_used) : 0;
@@ -354,7 +356,7 @@ module.exports = async (req, res) => {
        member paying full price for a pedicure, a $75 Tuesday or a removal
        also lost an included visit they never got. */
     if (member_id && member_tier && calc && calc.used_included) {
-      const monthYear = new Date().toISOString().slice(0, 7);
+      const monthYear = await require('./_perks').usageKeyFor(member_id, date, null);
       try {
         await execute(`INSERT INTO service_usage (member_id, month_year, services_used) VALUES (?,?,1)
           ON CONFLICT(member_id,month_year) DO UPDATE SET services_used = services_used + 1`,
@@ -551,7 +553,7 @@ module.exports = async (req, res) => {
 
     // Decrement service usage for member
     if (booking.member_id && booking.member_tier) {
-      const monthYear = booking.date.slice(0, 7);
+      const monthYear = await require('./_perks').usageKeyFor(booking.member_id, booking.date, booking.date);
       try {
         await execute('UPDATE service_usage SET services_used = MAX(0, services_used - 1) WHERE member_id = ? AND month_year = ?',
           [booking.member_id, monthYear]);

@@ -56,20 +56,24 @@ async function knowledge() {
   L.push('Brand voice: warm, confident, quiet luxury ("Quiet Luxury. Loud Results."). Never pushy. "Love" is on-brand, sparingly.');
 
   const ps = (plans && plans.plans) || [];
+  const older = (plans && plans.legacy) || [];
+  const rhythmLine = p => (p.rhythms || []).map(r => 'every ' + r.weeks + ' weeks ' + $(r.cents)
+    + (r.pct_off ? ' (save ' + r.pct_off + '%)' : r.add_cents ? '' : ' (regular price)')).join(', ');
   if (ps.length) {
     L.push('');
-    L.push('MEMBERSHIPS — the only ones open to new members:');
-    for (const p of ps) {
-      L.push('- ' + p.name + ' — ' + $(p.cycle_cents) + ' every four weeks, or ' + $(p.annual_cents) + ' a year'
-        + (p.annual_free_visits ? ' (that is ' + p.annual_free_visits + ' visits free)' : '') + '. "' + p.line + '" Includes: '
+    L.push('HOW OFTEN: every membership lets the client choose how often she comes — every 2 weeks (10% off every visit), every 3 weeks (5% off), every 4 weeks (the regular price) or every 5 weeks ($10 more). She is billed on the same rhythm, so there is nothing to pay at the appointment. Paying for the year is offered at every 4 weeks only.');
+    L.push('MEMBERSHIPS (all open to join at memberships.html):');
+    for (const p of ps.concat(older)) {
+      L.push('- ' + p.name + ' — ' + ((p.services || 1) > 1 ? p.services + ' services each cycle. ' : '')
+        + rhythmLine(p) + '. Or ' + $(p.annual_cents) + ' for the year'
+        + (p.annual_free_visits ? ' (' + p.annual_free_visits + ' visits free)' : '') + '. "' + p.line + '" Includes: '
         + (p.includes || []).join('; ') + '. ' + p.joined + ' joined, ' + p.spots_open + ' spots open.');
     }
     if (plans.addon && plans.addon.cents) {
-      L.push('Members can add a ' + plans.addon.name + ' for ' + $(plans.addon.cents)
+      L.push('Essential and Elite members can add a ' + plans.addon.name + ' for ' + $(plans.addon.cents)
         + (plans.addon.correction_cents ? ' (' + $(plans.addon.correction_cents) + ' with full correction)' : '') + ' a visit.');
     }
-    L.push('Both run a minimum of three months; after that, cancel any time from your own account in two clicks. Members book ahead of walk-ins. Services do not roll over. You leave owing nothing.');
-    L.push('Signature, Luxe and Black Card are older memberships, closed to new members — if asked, say so kindly and describe Essential and Elite. Join at memberships.html.');
+    L.push('Every membership runs a minimum of three months; after that, cancel any time from your own account in two clicks. Members book ahead of walk-ins. Included services do not roll over from one cycle to the next. You leave owing nothing.');
   }
 
   const ds = (deals && deals.deals) || [];

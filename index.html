@@ -888,6 +888,7 @@
     const ess = plan('ESSENTIAL'), eli = plan('ELITE');
     if (ess) facts.push('Essential is $' + Math.round(ess.cycle_cents / 100) + ' every four weeks — one full service, any design, no deposit.');
     if (eli) facts.push('Elite — watch your nails get healthier every visit.');
+    if (ess && (ess.rhythms || []).some(r => r.weeks === 2 && r.pct_off)) facts.push('Come every 2 weeks and save 10% on every visit — any membership.');
     ((d && d.deals) || []).forEach(x => facts.push(x.name + ' — ' + x.blurb));
   });
   let ti = 0;
@@ -1038,7 +1039,8 @@
   try{ d = await (await fetch('/api/plans')).json(); }catch(_){ return; }
   if(!d || !d.plans) return;
 
-  const money = c => '$' + Math.round((c || 0) / 100).toLocaleString();
+  // To the cent: every 2 weeks on Essential is $76.50, not $77.
+  const money = c => { const v = (Number(c) || 0) / 100; return '$' + (v % 1 === 0 ? v.toLocaleString('en-US') : v.toFixed(2)); };
   const esc = s => String(s == null ? '' : s)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
@@ -1082,6 +1084,13 @@
       + (p.key === mostChosen ? '<div class="membership-badge">Most chosen</div>' : '')
       + '<div class="section-label">' + esc(p.name) + '</div>'
       + '<div class="membership-price">' + money(p.cycle_cents) + '<span>/4 weeks</span></div>'
+      // Coming more often costs less per visit — said on the card, not left to be found.
+      + ((p.rhythms || []).filter(function(r){ return r.pct_off; }).length
+          ? '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;color:var(--espresso);background:rgba(182,165,136,0.14);padding:0.45rem 0.65rem;margin:0.2rem 0 0.6rem;">'
+            + (p.rhythms || []).filter(function(r){ return r.pct_off; }).map(function(r){
+                return 'Every ' + r.weeks + ' weeks: <strong>' + money(r.cents) + '</strong> — save ' + r.pct_off + '%';
+              }).join('<br>') + '</p>'
+          : '')
       + '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.85rem;color:var(--latte);margin:0.4rem 0 1rem;">'
         + esc(p.line) + '</p>'
       + '<ul>' + p.includes.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>'

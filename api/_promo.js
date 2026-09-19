@@ -243,8 +243,17 @@ module.exports.handler = async function (req, res) {
 
       // For a membership, say what they will actually pay. A code that only
       // reports "$199 off" tells somebody nothing about their bill.
-      const TIER_CENTS = { SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900, TEST: 158 };
-      const base = TIER_CENTS[tier] || 0;
+      // Priced against exactly what they are about to be charged: their tier
+      // at the rhythm they picked, or the year. This only knew the three
+      // older tiers, so a code on Essential or Elite could not say what it
+      // would come to.
+      const plans = require('./_plans');
+      const plan = plans.byKey(tier);
+      const weeks = Number(src.rhythm) || 4;
+      const base = tier === 'TEST' ? 158
+        : !plan ? 0
+        : String(src.billing || '') === 'yearly' ? plan.annual_cents
+        : plans.rhythmCents(plan, weeks);
       const off = base ? valueAgainst(r, base) : r.amount_off_cents;
 
       return res.json({

@@ -114,9 +114,15 @@ module.exports = async (req, res) => {
         if (member) {
           const next = new Date(invoice.period_end * 1000).toISOString();
           await execute('UPDATE members SET next_billing_at=? WHERE stripe_customer_id=?', [next, customerId]);
-          const monthYear = new Date().toISOString().slice(0, 7);
-          await execute(`INSERT INTO service_usage (member_id, month_year, services_used) VALUES (?,?,0) ON CONFLICT(member_id,month_year) DO UPDATE SET services_used=0, russian_mani_used=0, scrub_used=0`,
-            [member.member_id, monthYear]);
+          // A member on a rhythm starts every cycle with a fresh allowance of
+          // its own (see usageKey in _perks), so there is nothing to reset —
+          // and resetting on a late webhook could hand back a visit already
+          // used this cycle. Calendar-month members reset as they always have.
+          if (!(Number(member.cadence_weeks) >= 2)) {
+            const monthYear = new Date().toISOString().slice(0, 7);
+            await execute(`INSERT INTO service_usage (member_id, month_year, services_used) VALUES (?,?,0) ON CONFLICT(member_id,month_year) DO UPDATE SET services_used=0, russian_mani_used=0, scrub_used=0`,
+              [member.member_id, monthYear]);
+          }
         }
         break;
       }
@@ -132,7 +138,7 @@ module.exports = async (req, res) => {
               to: member.email,
               from: 'studio@zluxnails.com',
               subject: 'Zola — Payment failed',
-              html: `<p>Hello ${member.full_name.split(' ')[0]},</p><p>Your monthly membership payment failed. Please update your payment method at <a href="https://zolanailstudio.com/client-portal.html">your portal</a> within 3 days to avoid suspension.</p><p>— Zola</p>`,
+              html: `<p>Hello ${member.full_name.split(' ')[0]},</p><p>Your membership payment did not go through. Please update your payment method at <a href="https://zolanailstudio.com/client-portal.html">your portal</a> within 3 days to avoid suspension.</p><p>— Zola</p>`,
             });
           } catch (_) {}
         }
