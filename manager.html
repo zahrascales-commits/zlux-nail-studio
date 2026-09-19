@@ -2205,25 +2205,24 @@
         <div class="site-card">
           <h3>Rotating Ticker Facts</h3>
           <p>The gold rotating lines under the homepage hero. One per line.</p>
-          <textarea id="site-ticker" rows="7" placeholder="Membership spots are strictly limited — once they're gone, they're gone."></textarea>
+          <textarea id="site-ticker" rows="7" placeholder="Leave empty to use the automatic lines (your deal days, Essential and Elite)."></textarea>
         </div>
         <div class="site-card">
-          <h3>Spots Remaining</h3>
-          <p>Shown on the membership cards ("3 left") — your scarcity numbers.</p>
-          <label class="fld-label">Signature — spots left</label>
-          <input id="site-sig" type="number" min="0" style="margin-bottom:0.7rem" />
-          <label class="fld-label">Luxe — spots left</label>
-          <input id="site-luxe" type="number" min="0" style="margin-bottom:0.7rem" />
-          <label class="fld-label">Black Card — spots left</label>
-          <input id="site-black" type="number" min="0" />
+          <h3>Homepage Numbers</h3>
+          <p>The line under the homepage buttons and the stats bar — "73 members · 23 booked this week". Leave a box empty and the site counts it for you. A <b>booked this week</b> number you type shows for 7 days, then the automatic count takes over again, so it never goes out of date.</p>
+          <label class="fld-label">Members</label>
+          <input id="site-proof-members" type="number" min="0" placeholder="Counted automatically" style="margin-bottom:0.7rem" />
+          <label class="fld-label">Booked this week</label>
+          <input id="site-proof-week" type="number" min="0" placeholder="Counted automatically" />
+          <div id="site-proof-note" class="muted" style="font-size:0.78rem;line-height:1.55;margin-top:0.6rem"></div>
         </div>
         <div class="site-card">
-          <h3>Urgency Banner</h3>
-          <p>The slide-in banner on the homepage (appears after 8 seconds).</p>
+          <h3>Membership Banner</h3>
+          <p>The card that slides in on the homepage — after 12 seconds on a computer; on a phone after a minute, once they have scrolled.</p>
           <label class="fld-label">Banner Title</label>
-          <input id="site-banner-title" placeholder="Black Card: 4 Founding Spots Left" style="margin-bottom:0.7rem" />
+          <input id="site-banner-title" placeholder="Memberships are open" style="margin-bottom:0.7rem" />
           <label class="fld-label">Banner Text</label>
-          <textarea id="site-banner-text" rows="3" placeholder="The founding rate locks in at $299/mo for a full year…"></textarea>
+          <textarea id="site-banner-text" rows="3" placeholder="Essential is $85 every four weeks. One full service, any design, no deposit — and you leave owing nothing."></textarea>
         </div>
         <div class="site-card">
           <h3>Studio Address 📍</h3>
@@ -8149,9 +8148,10 @@ async function loadSite(){
   try{
     const r=await api('/api/site-settings');const d=await r.json();const s=d.settings||{};
     document.getElementById('site-ticker').value=s.ticker_facts||'';
-    document.getElementById('site-sig').value=s.spots_sig??'';
-    document.getElementById('site-luxe').value=s.spots_luxe??'';
-    document.getElementById('site-black').value=s.spots_black??'';
+    document.getElementById('site-proof-members').value=s.proof_members||'';
+    document.getElementById('site-proof-week').value=s.proof_week||'';
+    _proofWeekLoaded=[String(s.proof_week||''),Number(s.proof_week_ts)||0];
+    loadProofNote(s);
     document.getElementById('site-address').value=s.studio_address||'';
     document.getElementById('site-hero-kicker').value=s.hero_kicker||'';
     document.getElementById('site-hero-quote').value=s.hero_quote||'';
@@ -8161,12 +8161,36 @@ async function loadSite(){
     document.getElementById('site-announcement').value=s.announcement||'';
   }catch{toast('Could not load settings');}
 }
+/* What the homepage counts on its own, shown beside the boxes so she can see
+   what a blank box would say — and whether a typed weekly number has run
+   its seven days. */
+let _proofWeekLoaded=['',0];
+async function loadProofNote(s){
+  const el=document.getElementById('site-proof-note');
+  if(!el) return;
+  try{
+    const [p,pr]=await Promise.all([fetch('/api/plans').then(r=>r.json()),fetch('/api/proof').then(r=>r.json())]);
+    const all=(p.plans||[]).concat(p.legacy||[]).reduce((n,x)=>n+(Number(x.joined)||0),0);
+    let t='Counted right now: <b>'+all+' members</b> (every membership) · <b>'+(pr.week_bookings||0)+' booked</b> on the website in the last 7 days.';
+    const ts=Number(s.proof_week_ts)||0;
+    if(String(s.proof_week||'')!==''&&ts){
+      const left=7*86400000-(Date.now()-ts);
+      t+=left>0?'<br>Your '+esc(s.proof_week)+' shows until '+new Date(ts+7*86400000).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+'.'
+               :'<br>Your '+esc(s.proof_week)+' has run its 7 days — the site is counting again. Type this week\'s number to replace it.';
+    }
+    el.innerHTML=t;
+  }catch(_){ el.textContent=''; }
+}
+
 async function saveSite(){
+  // A weekly number restarts its seven days when it is typed or changed.
+  const wk=document.getElementById('site-proof-week').value.trim();
+  const wkTs=wk===''?'':(wk!==_proofWeekLoaded[0]||!_proofWeekLoaded[1]?String(Date.now()):String(_proofWeekLoaded[1]));
   const settings={
     ticker_facts:document.getElementById('site-ticker').value,
-    spots_sig:document.getElementById('site-sig').value,
-    spots_luxe:document.getElementById('site-luxe').value,
-    spots_black:document.getElementById('site-black').value,
+    proof_members:document.getElementById('site-proof-members').value.trim(),
+    proof_week:wk,
+    proof_week_ts:wkTs,
     banner_title:document.getElementById('site-banner-title').value,
     banner_text:document.getElementById('site-banner-text').value,
     announcement:document.getElementById('site-announcement').value,
@@ -8176,7 +8200,11 @@ async function saveSite(){
     hero_sub:document.getElementById('site-hero-sub').value,
   };
   const r=await api('/api/site-settings',{method:'PUT',body:JSON.stringify({settings})});
-  if(r.ok)toast('Published — live on the site now ✦');else toast('Save failed');
+  if(r.ok){
+    toast('Published — live on the site now ✦');
+    _proofWeekLoaded=[wk,Number(wkTs)||0];
+    loadProofNote(settings);
+  }else toast('Save failed');
 }
 
 /* ── CLIENTS ── */

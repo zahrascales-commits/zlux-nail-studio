@@ -1047,16 +1047,32 @@
   const ranked = d.plans.slice().sort(function(a, b){ return b.joined - a.joined; });
   const mostChosen = ranked.length > 1 && ranked[0].joined > ranked[1].joined ? ranked[0].key : '';
 
-  // The stats bar and the line under the hero, from the same counts.
-  const members = d.plans.reduce(function(n, p){ return n + (Number(p.joined) || 0); }, 0);
+  /* The stats bar and the line under the hero, from the same numbers.
+     Counted by default: every member on every membership, including the
+     older ones, and website bookings made in the last seven days. She can
+     set either in Studio Manager → Site → Homepage Numbers — she knows the
+     bookings that came in by DM and text, which the site cannot see. A
+     "booked this week" she types is only used for seven days, so a number
+     from some other week never sits on the page calling itself this week. */
+  const counted = d.plans.concat(d.legacy || []).reduce(function(n, p){ return n + (Number(p.joined) || 0); }, 0);
   const open = d.plans.reduce(function(n, p){ return n + (Number(p.spots_open) || 0); }, 0);
-  const sm = document.getElementById('stat-members'), so = document.getElementById('stat-open');
-  if (sm && members) { sm.textContent = members; document.getElementById('stat-members-lbl').textContent = 'Members'; }
+  const so = document.getElementById('stat-open');
   if (so) { so.textContent = open; so.nextElementSibling.textContent = 'Membership Spots Open'; }
-  (window.zolaProof || (window.zolaProof = fetch('/api/proof').then(function(r){ return r.json(); }).catch(function(){ return null; }))).then(function(pr){
+  const settingsP = fetch('/api/site-settings').then(function(r){ return r.json(); }).then(function(x){ return (x && x.settings) || {}; }).catch(function(){ return {}; });
+  const proofP = window.zolaProof || (window.zolaProof = fetch('/api/proof').then(function(r){ return r.json(); }).catch(function(){ return null; }));
+  Promise.all([settingsP, proofP]).then(function(r){
+    const st = r[0], pr = r[1];
+    const setM = parseInt(st.proof_members, 10);
+    const members = setM > 0 ? setM : counted;
+    const setW = parseInt(st.proof_week, 10);
+    const weekFresh = setW >= 0 && Date.now() - (Number(st.proof_week_ts) || 0) < 7 * 86400000;
+    const week = weekFresh ? setW : ((pr && pr.week_bookings) || 0);
+
+    const sm = document.getElementById('stat-members');
+    if (sm && members) { sm.textContent = members; document.getElementById('stat-members-lbl').textContent = 'Members'; }
     const bits = [];
     if (members >= 10) bits.push('<strong>' + members + '</strong> members');
-    if (pr && pr.week_bookings >= 3) bits.push('<strong>' + pr.week_bookings + '</strong> booked this week');
+    if (week >= 3) bits.push('<strong>' + week + '</strong> booked this week');
     const el = document.getElementById('hero-proof');
     if (el && bits.length) { el.innerHTML = bits.join('<span>·</span>'); el.classList.add('on'); }
   }).catch(function(){});
