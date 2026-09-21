@@ -1125,6 +1125,19 @@
   .card-t{font-weight:650;font-size:0.98rem;color:var(--ink)}
   .card-s{color:var(--muted);font-size:0.8rem}
   .card-h .sp{margin-left:auto;display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap}
+  /* New bookings — the first thing on Home. */
+  .nb-row{display:flex;flex-wrap:wrap;gap:0.55rem 0.9rem;align-items:flex-start;padding:0.75rem 0.85rem;border:1px solid var(--line);
+    border-left:3px solid var(--line);border-radius:10px;margin-bottom:0.5rem;background:#fff}
+  .nb-row.fresh{border-left-color:#B6A588;background:#FFFDF7}
+  .nb-when{width:96px;flex:0 0 96px;font-size:0.78rem;color:var(--muted);line-height:1.4}
+  .nb-main{flex:1 1 180px;min-width:0}
+  .nb-who{font-weight:650;color:var(--ink);display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap}
+  .nb-svc{font-size:0.82rem;color:var(--muted);line-height:1.5;margin:0.1rem 0 0.35rem}
+  .nb-new{font-size:0.62rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+    background:#0B1B33;color:#fff;border-radius:100px;padding:0.14rem 0.45rem}
+  .nb-row > .btn{margin-left:auto;align-self:center}
+  /* On a phone the time booked reads as a line above the name. */
+  @media(max-width:640px){ .nb-when{flex:0 0 100%;width:100%;order:-1} .nb-row > .btn{margin-left:0} }
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:0.85rem;margin-bottom:1rem}
   .kpi{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:1rem 1.05rem;
     cursor:pointer;text-align:left;font:inherit;color:inherit;transition:box-shadow 0.15s,border-color 0.15s;display:block;width:100%}
@@ -3307,7 +3320,7 @@ async function removeFaceId(id){
 // Initialised after login instead — at parse time PWD is still empty,
 
 const TAB_LOADERS = {
-  overview:   () => { loadHomeTop(); loadMoneyNow(); loadNeedsYou(); loadMissingConfirms(); loadOverview(); loadDispatch(); loadFloor(); },
+  overview:   () => { loadHomeTop(); loadNewBookings(); loadMoneyNow(); loadNeedsYou(); loadMissingConfirms(); loadOverview(); loadDispatch(); loadFloor(); },
   mkt:        () => { loadMktHome(); loadSiteReviews(); },
   coupons:    () => loadCoupons(),
   referrals:  () => loadReferrals(),
@@ -6605,6 +6618,83 @@ async function loadMissingConfirms(){
     + '</div>';
 }
 
+/* ── NEW BOOKINGS ──────────────────────────────────────────────────────
+   Everything booked in the last seven days, newest first, at the top of
+   Home. Anything since she last pressed "Mark all as seen" is marked new
+   and outlined in gold. Read from the bookings already loaded at sign-in,
+   so the section costs no extra request. */
+function nbMs(t){ const x = Date.parse(String(t || "").replace(" ", "T") + "Z"); return isNaN(x) ? 0 : x; }
+function nbAgo(ms){
+  const m = Math.floor((Date.now() - ms) / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return m + (m === 1 ? " minute ago" : " minutes ago");
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + (h === 1 ? " hour ago" : " hours ago");
+  const d = Math.floor(h / 24);
+  return d === 1 ? "yesterday" : d + " days ago";
+}
+function nbSeen(){ try{ return Number(localStorage.getItem("zm_newbk_seen")) || 0; }catch(_){ return 0; } }
+function markNewBookingsSeen(){
+  try{ localStorage.setItem("zm_newbk_seen", String(Date.now())); }catch(_){}
+  loadNewBookings();
+}
+async function loadNewBookings(){
+  const el = document.getElementById("new-bookings");
+  if (!el) return;
+  const since = Date.now() - 7 * 86400000;
+  const rows = (appts || [])
+    .filter(function(a){ return nbMs(a.created_at) >= since && !/cancel/i.test(String(a.status || "")); })
+    .sort(function(a, b){ return nbMs(b.created_at) - nbMs(a.created_at); });
+  const seen = nbSeen();
+  const fresh = rows.filter(function(a){ return nbMs(a.created_at) > seen; }).length;
+  const show = rows.slice(0, 8);
+
+  el.innerHTML = '<div class="card" style="margin-bottom:1.2rem">'
+    + '<div class="card-h"><div class="card-t">New bookings</div>'
+      + (fresh ? '<span class="pill ok">' + fresh + ' new</span>' : "")
+      + '<div class="card-s">Booked in the last 7 days</div>'
+      + '<div class="sp">'
+        + (fresh ? '<button class="btn btn-ghost btn-sm" onclick="markNewBookingsSeen()">Mark all as seen</button>' : "")
+        + '<button class="btn btn-ghost btn-sm" onclick="showTab(\'bookings\')">See all</button>'
+      + '</div></div>'
+    + (show.length
+        ? show.map(function(a){
+            const isNew = nbMs(a.created_at) > seen;
+            return '<div class="nb-row' + (isNew ? " fresh" : "") + '">'
+              + '<div class="nb-when">' + esc(nbAgo(nbMs(a.created_at))) + '</div>'
+              + '<div class="nb-main">'
+                + '<div class="nb-who">' + (a.client_name ? clientLink(a.client_name, { phone: a.client_phone || "", email: a.client_email || "" }) : "Guest")
+                  + (isNew ? ' <span class="nb-new">New</span>' : "") + '</div>'
+                + '<div class="nb-svc">' + esc(a.service || "—") + ' · ' + esc(niceDay(a.date)) + ' at ' + esc(time12(a.time))
+                  + ' · with ' + esc(apptOwnerName(a)) + '</div>'
+                + depLine(a)
+              + '</div>'
+              + '<button class="btn btn-ghost btn-sm" onclick="editAppt(' + a.id + ')">Open</button>'
+            + '</div>';
+          }).join("")
+        : '<div class="empty">Nothing new in the last 7 days.</div>')
+    + (rows.length > show.length
+        ? '<div style="font-size:0.78rem;color:var(--muted);margin-top:0.4rem">and ' + (rows.length - show.length) + ' more</div>'
+        : "")
+  + '</div>';
+
+  // Whether each deposit is really paid comes from Stripe; ask for the days
+  // these bookings fall on, then redraw with the answer.
+  if (show.some(function(a){ return depInfo(a).state === "loading"; })) nbDeposits(show);
+}
+let _nbDepAsked = "";
+async function nbDeposits(list){
+  const days = list.map(function(a){ return a.date; }).filter(Boolean).sort();
+  if (!days.length) return;
+  const key = days[0] + "|" + days[days.length - 1];
+  if (key === _nbDepAsked) return;
+  _nbDepAsked = key;
+  try{
+    const j = await (await api("/api/dashboard?action=deposit_states&from=" + days[0] + "&to=" + days[days.length - 1])).json();
+    if (j.states) { DEP_STATES = Object.assign({}, DEP_STATES, j.states); loadNewBookings(); }
+  }catch(_){}
+}
+
 async function sendOneConfirm(id){
   const msg = document.getElementById('mc-msg');
   if(msg) msg.textContent = 'Sending…';
@@ -9627,6 +9717,8 @@ function renderHomeFrame(){
         + '<button class="btn btn-ghost" onclick="showTab(\'coupons\')">Create a coupon</button>'
         + '<a class="btn btn-ghost" href="index.html" target="_blank" rel="noopener">View site ↗</a>'
       + '</div></div>'
+    // New bookings sits first, right under the greeting (filled by loadNewBookings).
+    + '<div id="new-bookings"></div>'
     + '<div class="card" style="margin-bottom:1rem"><div class="card-h"><div class="card-t">Needs attention</div><div id="al-pills"></div>'
       + '<div class="sp"><span class="card-s" id="al-when"></span><button class="btn btn-ghost btn-sm" onclick="loadAlerts(true).then(renderAlerts)">Check now</button></div></div>'
       + '<div id="al-body">' + loadingCard(56) + '</div></div>'
