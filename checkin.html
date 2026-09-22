@@ -274,6 +274,20 @@
     </div>
   </div>
 
+  <!-- ONE MORE THING — only after four or five stars, and only when she has
+       saved her Google review link in Studio Manager → Marketing. A happy
+       client standing at the iPad is the only person who will ever actually
+       leave one, and Google reviews are what put the studio on the map. -->
+  <div class="screen" id="s-google">
+    <div class="checkmark">★</div>
+    <h2>Would you put that on Google?</h2>
+    <p class="sub">It takes about twenty seconds, and it is the single biggest thing that helps people in Porterville find us.</p>
+    <div class="row">
+      <button class="big-btn ghost" onclick="finish()">Not now</button>
+      <a class="big-btn gold" id="g-review-link" href="#" target="_blank" rel="noopener" onclick="setTimeout(finish,600)">Leave a Google review</a>
+    </div>
+  </div>
+
   <!-- THANK YOU -->
   <div class="screen" id="s-bye">
     <div class="checkmark">✦</div>
@@ -286,6 +300,9 @@
 
 <script>
 let MODE='in', KNAME='', KSTARS=0, _st=null, _el=null, _pi=null, resetTimer=null;
+// Her Google review link, if she has saved one (Studio Manager → Marketing).
+let GOOGLE_REVIEW_URL='';
+try{ fetch('/api/site-settings').then(r=>r.json()).then(d=>{ GOOGLE_REVIEW_URL=(d&&d.settings&&d.settings.mkt_review_url)||''; }).catch(()=>{}); }catch(_){}
 let BAL=0, TIP=0, SVC='';   // balance owed, tip chosen, service name
 
 function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); document.getElementById(id).classList.add('on'); }
@@ -833,6 +850,12 @@ async function sendReview(){
     await fetch('/api/kiosk?action=review',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action:'review',name:KNAME,stars:KSTARS,text:document.getElementById('kreview').value.trim(),
         share:document.getElementById('kshare').checked})}).catch(()=>{});
+  }
+  // Four or five stars, and a review link saved: ask. Anything less goes
+  // straight to thank-you — nobody is sent to Google to complain in public.
+  if(KSTARS>=4 && GOOGLE_REVIEW_URL){
+    document.getElementById('g-review-link').href=GOOGLE_REVIEW_URL;
+    show('s-google'); autoReset(30000); return;
   }
   finish();
 }
