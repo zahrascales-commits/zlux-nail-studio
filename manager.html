@@ -419,6 +419,14 @@
   .site-card h3{font-family:'Cinzel', serif;font-size:0.95rem;color:var(--gold);margin-bottom:0.4rem}
   .site-card p{font-size:0.74rem;color:var(--muted);margin-bottom:0.9rem;line-height:1.6}
   .site-card textarea,.site-card input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--cream);padding:0.7rem 0.85rem;outline:none;font-family:inherit;font-size:0.85rem}
+  .qr-wrap{display:flex;gap:1.4rem;flex-wrap:wrap;align-items:flex-start}
+  .qr-left{flex:1 1 320px;min-width:0}
+  .qr-right{flex:0 0 auto;margin:0 auto}
+  #qr-preview{width:230px;height:auto;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);background:#fff}
+  .qr-targets{display:flex;gap:0.4rem;flex-wrap:wrap}
+  .qr-t{font:inherit;font-size:0.8rem;padding:0.45rem 0.8rem;border:1px solid var(--line);background:var(--card);
+    color:var(--ink);border-radius:100px;cursor:pointer}
+  .qr-t.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .ntf-row{display:flex;align-items:flex-start;gap:0.55rem;font-size:0.85rem;color:var(--cream);margin:0.5rem 0;cursor:pointer;line-height:1.4}
   .ntf-row input{width:auto;margin-top:0.15rem}
   .ntf-sub{font-size:0.76rem;color:var(--muted);margin:0 0 0.6rem 1.6rem}
@@ -2215,6 +2223,32 @@
         <button class="btn btn-gold" onclick="saveSite()">Save &amp; Publish</button>
       </div>
       <div class="site-grid">
+        <!-- Her link and its QR code, ready to copy, save or send. -->
+        <div class="site-card" style="grid-column:1/-1;">
+          <h3>Your Link &amp; QR Code</h3>
+          <p>Print it, stick it on the mirror, put it on a card — anyone who points a phone at it lands on your site. Pick what it should open, then copy the link, copy the picture, or send it straight to someone.</p>
+          <div class="qr-wrap">
+            <div class="qr-left">
+              <div class="fld-label" style="margin-bottom:0.4rem">What should it open?</div>
+              <div class="qr-targets" id="qr-targets"></div>
+              <div class="fld-label" style="margin:0.9rem 0 0.4rem">The link</div>
+              <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                <input id="qr-link" readonly onclick="this.select()" style="flex:1;min-width:210px" />
+                <button class="btn btn-ghost btn-sm" onclick="copyText(document.getElementById('qr-link').value)">Copy link</button>
+              </div>
+              <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.9rem">
+                <button class="btn btn-gold btn-sm" id="qr-share" onclick="shareQr()">Send or save it</button>
+                <button class="btn btn-ghost btn-sm" onclick="copyQr()">Copy picture</button>
+                <button class="btn btn-ghost btn-sm" onclick="downloadQr()">Download</button>
+              </div>
+              <div class="muted" id="qr-msg" style="font-size:0.78rem;line-height:1.6;margin-top:0.7rem">On a phone, <b>Send or save it</b> opens your share sheet — Messages, Instagram, or Save Image to put it in Photos.</div>
+            </div>
+            <div class="qr-right">
+              <canvas id="qr-preview" width="1080" height="1350" aria-label="QR code for your website"></canvas>
+            </div>
+          </div>
+          <div id="qr-stage" style="display:none"></div>
+        </div>
         <div class="site-card">
           <h3>Rotating Ticker Facts</h3>
           <p>The gold rotating lines under the homepage hero. One per line.</p>
@@ -8228,6 +8262,7 @@ async function igDelete(id){
 
 /* ── SITE EDITOR ── */
 async function loadSite(){
+  drawQr();
   loadShopIg();
   loadPromos();
   loadClientRates();
@@ -10021,6 +10056,145 @@ async function saveMkt(keys){
     loadMktHome();
   }catch(err){ toast(err.message); }
 }
+/* ── HER LINK, AS A PICTURE ────────────────────────────────────────────
+   The QR is drawn onto a card — her wordmark, the code, the address — at
+   1080×1350, which is big enough to print and the right shape to send. The
+   QR library only draws a bare code; everything around it is drawn here.
+   Copy, download and the phone share sheet all hand over the same image. */
+const QR_TARGETS = [
+  { key: "site",  label: "Website",     url: "https://zolanailstudio.com/",                 line: "Scan to see the studio" },
+  { key: "book",  label: "Book now",    url: "https://zolanailstudio.com/booking.html",     line: "Scan to book your appointment" },
+  { key: "mem",   label: "Memberships", url: "https://zolanailstudio.com/memberships.html", line: "Scan to see the memberships" },
+  { key: "press", label: "Press-ons",   url: "https://zolanailstudio.com/pressons.html",    line: "Scan to shop the press-ons" },
+];
+let QR_PICK = "site";
+
+function qrTarget(){ return QR_TARGETS.find(t => t.key === QR_PICK) || QR_TARGETS[0]; }
+
+// The brand serif, fetched once, so the card does not come out in Times.
+let _qrFont = null;
+function qrFont(){
+  if (_qrFont) return _qrFont;
+  _qrFont = new Promise(function(done){
+    try{
+      if (!document.getElementById("qr-cinzel")) {
+        const l = document.createElement("link");
+        l.id = "qr-cinzel"; l.rel = "stylesheet";
+        l.href = "https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&display=swap";
+        document.head.appendChild(l);
+      }
+      if (document.fonts && document.fonts.load) {
+        Promise.all([document.fonts.load('600 96px Cinzel'), document.fonts.load('400 34px Cinzel')])
+          .then(function(){ done(true); }).catch(function(){ done(false); });
+        setTimeout(function(){ done(false); }, 2500);
+      } else done(false);
+    }catch(_){ done(false); }
+  });
+  return _qrFont;
+}
+
+async function drawQr(){
+  const t = qrTarget();
+  const link = document.getElementById("qr-link");
+  if (link) link.value = t.url;
+  const targets = document.getElementById("qr-targets");
+  if (targets) targets.innerHTML = QR_TARGETS.map(x =>
+    '<button class="qr-t' + (x.key === QR_PICK ? " on" : "") + '" onclick="pickQr(\'' + x.key + '\')">' + esc(x.label) + '</button>').join("");
+
+  // The library draws into a hidden div; we take its canvas and place it.
+  const stage = document.getElementById("qr-stage");
+  if (!stage || typeof QRCode === "undefined") return;
+  stage.innerHTML = "";
+  new QRCode(stage, { text: t.url, width: 720, height: 720, colorDark: "#0D0D0D", colorLight: "#FFFFFF", correctLevel: QRCode.CorrectLevel.H });
+  const src = stage.querySelector("canvas");
+  if (!src) return;
+
+  const ok = await qrFont();
+  const serif = ok ? "Cinzel, Georgia, serif" : "Georgia, serif";
+  const c = document.getElementById("qr-preview");
+  const x = c.getContext("2d");
+  const W = c.width, H = c.height;
+
+  x.fillStyle = "#F7F4EE"; x.fillRect(0, 0, W, H);
+  x.strokeStyle = "rgba(182,165,136,0.55)"; x.lineWidth = 6;
+  x.strokeRect(34, 34, W - 68, H - 68);
+
+  x.textAlign = "center"; x.fillStyle = "#0D0D0D";
+  x.font = "600 104px " + serif;
+  x.fillText("ZOLA", W / 2, 218);
+  x.font = "400 30px Inter, system-ui, sans-serif";
+  x.fillStyle = "#8A6A3F";
+  x.fillText("N A I L   S T U D I O", W / 2, 268);
+
+  // A white plate behind the code keeps it scannable on the cream.
+  const size = 700, qx = (W - size) / 2, qy = 330;
+  x.fillStyle = "#FFFFFF";
+  x.fillRect(qx - 26, qy - 26, size + 52, size + 52);
+  x.drawImage(src, qx, qy, size, size);
+
+  x.fillStyle = "#0D0D0D";
+  x.font = "400 44px " + serif;
+  x.fillText(t.line, W / 2, qy + size + 120);
+  x.font = "600 36px Inter, system-ui, sans-serif";
+  x.fillStyle = "#8A6A3F";
+  x.fillText("zolanailstudio.com", W / 2, qy + size + 182);
+  x.font = "400 27px Inter, system-ui, sans-serif";
+  x.fillStyle = "#667085";
+  x.fillText("2037 W Linda Vista Ave #D · Porterville, CA", W / 2, qy + size + 232);
+}
+
+function pickQr(k){ QR_PICK = k; drawQr(); }
+
+function qrBlob(){
+  return new Promise(function(done){
+    const c = document.getElementById("qr-preview");
+    if (!c || !c.toBlob) return done(null);
+    c.toBlob(function(b){ done(b); }, "image/png");
+  });
+}
+function qrFileName(){ return "zola-" + qrTarget().key + "-qr.png"; }
+function qrSay(m){ const el = document.getElementById("qr-msg"); if (el) el.innerHTML = m; }
+
+async function copyQr(){
+  try{
+    const b = await qrBlob();
+    if (!b || !navigator.clipboard || !window.ClipboardItem) throw new Error();
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": b })]);
+    toast("QR code copied — paste it anywhere ✦");
+  }catch(_){
+    toast("This browser will not copy pictures — use Download");
+    qrSay("Your browser would not copy the picture. Tap <b>Download</b> instead, or press and hold the code and choose Copy.");
+  }
+}
+
+async function downloadQr(){
+  const b = await qrBlob();
+  if (!b) return toast("Could not make the picture");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(b);
+  a.download = qrFileName();
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  toast("Saved to your downloads");
+}
+
+/* On a phone this is the one that matters: the share sheet carries Messages,
+   Instagram and "Save Image", which is how a picture actually reaches Photos
+   on an iPhone. On a computer there is no sheet, so it downloads instead. */
+async function shareQr(){
+  const b = await qrBlob();
+  if (!b) return toast("Could not make the picture");
+  const t = qrTarget();
+  try{
+    const file = new File([b], qrFileName(), { type: "image/png" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], text: t.url });
+      return;
+    }
+  }catch(e){ if (e && e.name === "AbortError") return; }
+  downloadQr();
+}
+
 function copyText(t){
   try{ navigator.clipboard.writeText(t).then(() => toast('Copied ✓'), () => prompt('Copy this:', t)); }
   catch(_){ prompt('Copy this:', t); }
@@ -10392,6 +10566,7 @@ async function fixPaymentGaps(n){
 (function(){const saved=sessionStorage.getItem('zm_pwd');if(saved){document.getElementById('pwd').value=saved;login();}})();
 </script>
 <script src="js/client-profile.js?v=4"></script>
+<script src="js/qrcode.min.js"></script>
 <script src="js/service-groups.js?v=2"></script>
 <script src="js/push.js?v=3"></script>
 <script src="js/pwa.js?v=2"></script>
