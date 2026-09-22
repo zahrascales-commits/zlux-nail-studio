@@ -493,6 +493,84 @@
   </div>
 </section>
 
+<!-- WHAT CLIENTS SAY — real words from real clients, arriving like texts.
+     Two sources, both true: reviews left on the check-in iPad, and reviews
+     clients gave Zahra in person, typed into Studio Manager → Marketing
+     with their initials. Nothing here is written by us. If there are none,
+     the band removes itself. -->
+<section class="rv-band" id="rv-band" hidden>
+  <div class="rv-in">
+    <div class="rv-eyebrow">What clients say</div>
+    <div class="rv-thread" id="rv-thread" aria-live="polite"></div>
+  </div>
+</section>
+
+<script>
+(function(){
+  var band = document.getElementById("rv-band"), thread = document.getElementById("rv-thread");
+  if (!band || !thread) return;
+  var esc = function(x){ return String(x == null ? "" : x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); };
+  // Her colours, one per bubble, so a face-less initial still feels like a person.
+  var TINT = ["#B6A588", "#9E6B8E", "#7E8C6A", "#8C7A5E", "#6F7F93", "#A8756B"];
+  var still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var bubble = function(r, i){
+    var initials = (String(r.name || "").match(/[A-Za-z]/g) || []).slice(0, 2).join("").toUpperCase() || "✦";
+    var el = document.createElement("div");
+    el.className = "rv-msg";
+    el.innerHTML = '<span class="rv-av" style="background:' + TINT[i % TINT.length] + '">' + esc(initials) + '</span>'
+      + '<div class="rv-b"><div class="rv-t">' + esc(r.text) + '</div>'
+      + (r.stars >= 4 ? '<div class="rv-s">' + "★★★★★".slice(0, r.stars) + '</div>' : '')
+      + '<div class="rv-n">' + esc(r.name) + '</div></div>';
+    return el;
+  };
+
+  (window.zolaProof || (window.zolaProof = fetch("/api/proof").then(function(r){ return r.json(); }).catch(function(){ return null; })))
+    .then(function(d){
+      var rs = (d && d.reviews) || [];
+      if (!rs.length) { band.remove(); return; }
+      band.hidden = false;
+
+      // Anyone who asked for less movement gets them all at once, still.
+      if (still) {
+        rs.slice(0, 4).forEach(function(r, i){ var b = bubble(r, i); b.classList.add("in"); thread.appendChild(b); });
+        return;
+      }
+
+      var i = 0, typing = null;
+      var KEEP = 3;
+      var showNext = function(){
+        if (document.hidden) { setTimeout(showNext, 2000); return; }
+        // the three dots first, the way a message actually arrives
+        typing = document.createElement("div");
+        typing.className = "rv-msg rv-typing-row";
+        typing.innerHTML = '<span class="rv-av" style="background:' + TINT[i % TINT.length] + '"></span>'
+          + '<div class="rv-b rv-typing"><i></i><i></i><i></i></div>';
+        thread.appendChild(typing);
+        requestAnimationFrame(function(){ typing.classList.add("in"); });
+
+        setTimeout(function(){
+          if (typing) { typing.remove(); typing = null; }
+          var r = rs[i % rs.length];
+          var b = bubble(r, i);
+          thread.appendChild(b);
+          requestAnimationFrame(function(){ requestAnimationFrame(function(){ b.classList.add("in"); }); });
+          i++;
+          // older ones drift away once the thread is full
+          var msgs = thread.querySelectorAll(".rv-msg");
+          if (msgs.length > KEEP) {
+            var old = msgs[0];
+            old.classList.add("out");
+            setTimeout(function(){ if (old.parentNode) old.remove(); }, 500);
+          }
+          setTimeout(showNext, 4200);
+        }, 900);
+      };
+      setTimeout(showNext, 400);
+    });
+})();
+</script>
+
 <!-- ══ THE DEAL DAYS ══
      First thing under the hero, because that is where she wants Tuesday.
      Built from /api/deals so renaming them is one edit on the server and
@@ -586,35 +664,6 @@
     </div>
   </div>
 </div>
-
-<!-- REVIEWS — only words clients wrote at the kiosk and ticked "you can
-     share this" on, first name only. Hidden until there are three,
-     so the section never looks thin; she can hide any one in Studio
-     Manager → Marketing. -->
-<section class="section section-soft" id="reviews" style="display:none;">
-  <div class="container">
-    <div class="section-header">
-      <div class="section-label">In Their Words</div>
-      <h2>What Clients Say</h2>
-    </div>
-    <div class="rv-grid" id="rv-grid"></div>
-  </div>
-</section>
-<script>
-(function(){
-  window.zolaProof = window.zolaProof || fetch('/api/proof').then(function(r){ return r.json(); }).catch(function(){ return null; });
-  window.zolaProof.then(function(d){
-    var rs = (d && d.reviews) || [];
-    if (rs.length < 3) return;
-    var esc = function(x){ return String(x == null ? '' : x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-    document.getElementById('rv-grid').innerHTML = rs.slice(0, 6).map(function(r){
-      return '<figure class="rv-card"><div class="rv-stars" aria-label="' + r.stars + ' stars">' + '★★★★★'.slice(0, r.stars) + '</div>'
-        + '<blockquote>' + esc(r.text) + '</blockquote><figcaption>' + esc(r.name) + '</figcaption></figure>';
-    }).join('');
-    document.getElementById('reviews').style.display = '';
-  });
-})();
-</script>
 
 <!-- SERVICES MENU -->
 <section class="section section-soft">

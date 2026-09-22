@@ -67,10 +67,23 @@ async function recentBookings(now) {
   };
 }
 
+/* Two kinds, both real.
+   - From the kiosk: a client tapped the stars and ticked "you can share this".
+   - From Zahra: words a client gave her in person or by message, typed into
+     Studio Manager with their initials. Those carry no star rating, because
+     the client never gave one — so the page shows the words, not a score
+     nobody chose. `method='owner'` is what tells the two apart. */
 async function sharedReviews() {
   const rows = await query(
-    "SELECT id, name, stars, detail, ts FROM kiosk_log WHERE type='review' AND share=1 AND COALESCE(hidden,0)=0 AND stars >= 4 AND length(trim(detail)) >= 12 ORDER BY ts DESC LIMIT 12");
-  return rows.map(r => ({ name: shortName(r.name), stars: Number(r.stars), text: String(r.detail).trim(), ts: Number(r.ts) }));
+    "SELECT id, name, stars, detail, ts, COALESCE(method,'') AS method FROM kiosk_log"
+    + " WHERE type='review' AND share=1 AND COALESCE(hidden,0)=0 AND length(trim(detail)) >= 12"
+    + " AND (stars >= 4 OR COALESCE(method,'') = 'owner') ORDER BY ts DESC LIMIT 20");
+  return rows.map(r => ({
+    name: r.method === 'owner' ? String(r.name || '').trim() : shortName(r.name),
+    stars: r.method === 'owner' ? 0 : Number(r.stars),
+    text: String(r.detail).trim(),
+    ts: Number(r.ts),
+  }));
 }
 
 module.exports = async function (req, res) {
@@ -96,18 +109,42 @@ module.exports = async function (req, res) {
 
     if (action === 'reviews') {
       const rows = await query(
-        "SELECT id, name, stars, detail, ts, COALESCE(share,0) AS share, COALESCE(hidden,0) AS hidden FROM kiosk_log WHERE type='review' ORDER BY ts DESC LIMIT 80");
+        "SELECT id, name, stars, detail, ts, COALESCE(share,0) AS share, COALESCE(hidden,0) AS hidden, COALESCE(method,'') AS method FROM kiosk_log WHERE type='review' ORDER BY ts DESC LIMIT 80");
       return res.json({
         reviews: rows.map(r => {
           const share = Number(r.share) === 1, hidden = Number(r.hidden) === 1;
-          const eligible = share && Number(r.stars) >= 4 && String(r.detail || '').trim().length >= 12;
+          const mine = r.method === 'owner';
+          const eligible = share && String(r.detail || '').trim().length >= 12 && (mine || Number(r.stars) >= 4);
           return {
-            id: Number(r.id), name: r.name, public_name: shortName(r.name), stars: Number(r.stars),
-            text: r.detail || '', ts: Number(r.ts), share, hidden,
+            id: Number(r.id), name: r.name, public_name: mine ? String(r.name || '').trim() : shortName(r.name),
+            stars: Number(r.stars), text: r.detail || '', ts: Number(r.ts), share, hidden, mine,
             on_site: eligible && !hidden,
           };
         }),
       });
+    }
+
+    // ── OWNER: a review a client gave her, typed in by hand ──
+    // Her word that it is real; stored beside the kiosk ones so the homepage
+    // has a single list to read and a single place to hide one.
+    if (action === 'review_add' && req.method === 'POST') {
+      const b = req.body || {};
+      const name = String(b.name || '').trim().slice(0, 40);
+      const text = String(b.text || '').trim().slice(0, 600);
+      if (text.length < 12) return res.status(400).json({ error: 'Please paste the review itself — at least a sentence.' });
+      if (!name) return res.status(400).json({ error: 'Add the initials or first name to put under it.' });
+      await execute(
+        "INSERT INTO kiosk_log (type, name, stars, detail, ts, share, hidden, method) VALUES ('review',?,0,?,?,1,0,'owner')",
+        [name, text, Number(b.ts) || Date.now()]);
+      return res.json({ ok: true });
+    }
+
+    if (action === 'review_delete' && req.method === 'POST') {
+      // Only ones she typed in herself — a client's own review is never deleted,
+      // only hidden.
+      await execute("DELETE FROM kiosk_log WHERE id=? AND type='review' AND COALESCE(method,'')='owner'",
+        [Number((req.body || {}).id) || 0]);
+      return res.json({ ok: true });
     }
 
     if (action === 'review_hide' && req.method === 'POST') {

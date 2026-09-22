@@ -9864,11 +9864,24 @@ async function loadSiteReviews(){
   const shared = rs.filter(r => r.share);
   const onSite = shared.filter(r => r.on_site).length;
   const stars = n => '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n);
-  el.innerHTML = '<p class="muted" style="font-size:0.85rem;line-height:1.6;margin-bottom:0.9rem">Clients review their visit on the check-in iPad. The ones who tick <b>“you can share this on the ZOLA website”</b> and give 4 or 5 stars with a few words show on your homepage, first name only. '
-      + (onSite >= 3 ? '<b>' + onSite + ' showing now.</b>' : 'The section appears once there are 3 — <b>' + onSite + ' so far.</b>') + '</p>'
+  el.innerHTML = '<p class="muted" style="font-size:0.85rem;line-height:1.6;margin-bottom:0.9rem">These show on your homepage as little messages, one after another. Two ways in: a client leaves one on the check-in iPad and ticks <b>“you can share this”</b>, or you add one a client gave you below. <b>' + onSite + ' showing now.</b></p>'
+    /* Reviews clients gave her by message or in person. Her word that they
+       are real; no star rating is invented for them, because the client
+       never gave one. */
+    + '<div style="border:1px solid var(--line);border-radius:10px;padding:0.9rem 1rem;margin-bottom:1rem;background:var(--bg)">'
+      + '<div style="font-weight:650;font-size:0.9rem;margin-bottom:0.5rem">Add a review a client gave you</div>'
+      + '<textarea id="rv-new-text" rows="3" placeholder="Paste exactly what she said." style="width:100%;margin-bottom:0.5rem"></textarea>'
+      + '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">'
+        + '<input id="rv-new-name" placeholder="Initials, e.g. A.G" style="flex:1;min-width:150px" />'
+        + '<button class="btn btn-gold btn-sm" onclick="addSiteReview()">Add to the website</button>'
+      + '</div>'
+      + '<div class="muted" style="font-size:0.78rem;margin-top:0.5rem">Only real ones. Initials are enough — no surnames on the site.</div>'
+    + '</div>'
     + (shared.length ? shared.map(r =>
         '<div style="display:flex;gap:0.9rem;align-items:flex-start;padding:0.8rem 0;border-top:1px solid var(--line)">'
-        + '<div style="flex:1;min-width:0"><div style="color:#B6A588;letter-spacing:0.1em">' + stars(r.stars) + '</div>'
+        + '<div style="flex:1;min-width:0">'
+        + (r.mine ? '<div class="muted" style="font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase">Added by you</div>'
+                  : '<div style="color:#B6A588;letter-spacing:0.1em">' + stars(r.stars) + '</div>')
         + '<div style="font-size:0.9rem;line-height:1.55;margin:0.25rem 0">' + esc(r.text || '(no words)') + '</div>'
         + '<div class="muted" style="font-size:0.78rem">' + esc(r.public_name) + ' · ' + new Date(r.ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '</div></div>'
         + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.4rem">'
@@ -9876,8 +9889,33 @@ async function loadSiteReviews(){
         + (r.hidden
             ? '<button class="btn btn-ghost btn-sm" onclick="setSiteReview(' + r.id + ',false)">Show</button>'
             : '<button class="btn btn-ghost btn-sm" onclick="setSiteReview(' + r.id + ',true)">Hide</button>')
+        // A client's own review is only ever hidden; one she typed in she can remove.
+        + (r.mine ? '<button class="btn btn-ghost btn-sm" onclick="deleteSiteReview(' + r.id + ')">Delete</button>' : '')
         + '</div></div>').join('')
-      : '<div class="empty">No shared reviews yet — they will appear here as clients check out.</div>');
+      : '<div class="empty">Nothing yet — add one above, or wait for the next client to leave one at the iPad.</div>');
+}
+async function addSiteReview(){
+  const t = document.getElementById('rv-new-text'), n = document.getElementById('rv-new-name');
+  const text = (t.value || '').trim(), name = (n.value || '').trim();
+  if(text.length < 12) { toast('Paste the review itself — at least a sentence'); t.focus(); return; }
+  if(!name) { toast('Add the initials to put under it'); n.focus(); return; }
+  try{
+    const r = await api('/api/proof?action=review_add', { method: 'POST', body: JSON.stringify({ action: 'review_add', name, text }) });
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.error || 'Could not add it');
+    t.value = ''; n.value = '';
+    toast('On the website ✦');
+  }catch(e){ toast(e.message || 'Could not add it'); }
+  loadSiteReviews();
+}
+async function deleteSiteReview(id){
+  if(!confirm('Delete this review? It comes off the website straight away.')) return;
+  try{
+    const r = await api('/api/proof?action=review_delete', { method: 'POST', body: JSON.stringify({ action: 'review_delete', id }) });
+    if(!r.ok) throw new Error();
+    toast('Deleted');
+  }catch(_){ toast('Could not delete it — try again'); }
+  loadSiteReviews();
 }
 async function setSiteReview(id, hidden){
   try{
