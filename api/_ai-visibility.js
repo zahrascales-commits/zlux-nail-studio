@@ -407,6 +407,9 @@ async function llmsTxt(req, res) {
     '- TikTok: https://www.tiktok.com/@zolaofficial',
     '- Email: zolastudioempire@gmail.com',
     '- Website: ' + SITE,
+    // Where she is, in the words somebody would actually ask an assistant.
+    '- Serving: Porterville, Strathmore, Terra Bella, Lindsay, Springville, Exeter, Tulare, Visalia and the rest of Tulare County, in California\'s Central Valley',
+    '- Booking notice: appointments are booked at least three days ahead; no walk-ins',
     '',
   ];
   if (deals.length) {
@@ -418,7 +421,10 @@ async function llmsTxt(req, res) {
   for (const s of regular) lines.push('- ' + s.name + ': ' + money(s.price_cents) + ', ' + mins(s.duration_min) + '. ' + clean(s.description));
   lines.push('',
     '## Memberships',
-    '- Monthly nail memberships with included services and member pricing: ' + SITE + '/memberships.html',
+    '- Five memberships, all open to join: Essential, Elite, Signature, Luxe and Black Card.',
+    '- The client chooses how often she comes — every 2 weeks (10% off every visit), every 3 weeks (5% off), every 4 weeks (regular price) or every 5 weeks ($10 more) — and is billed on that same rhythm.',
+    '- Each payment covers what the membership includes, any design at no extra charge, no deposit, and nothing to pay at the appointment.',
+    '- Prices and what each one includes: ' + SITE + '/memberships.html',
     '',
     '## Also offered',
     '- Custom press-on nail sets, sold online: ' + SITE + '/pressons.html',
