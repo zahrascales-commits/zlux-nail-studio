@@ -953,7 +953,7 @@ module.exports = async function (req, res) {
          ORDER BY a.appointment_date, a.appointment_time`, [today]).catch(() => []);
       const clients = await query('SELECT email, phone FROM clients').catch(() => []);
       const pmap = {}; for (const c of clients) if (c.email) pmap[String(c.email).toLowerCase()] = c.phone;
-      return rows.map(r => ({
+      const out = rows.map(r => ({
         id: r.id, date: r.date, time: r.time, service: r.service,
         total_cents: Number(r.total_cents) || 0, deposit_cents: Number(r.deposit_cents) || 0,
         deposit_paid: Number(r.deposit_paid) ? 1 : 0,
@@ -961,6 +961,42 @@ module.exports = async function (req, res) {
         phone: r.mphone || pmap[String(r.guest_email || '').toLowerCase()] || '',
         email: r.memail || r.guest_email || '',
       }));
+
+      /* The team book too. Bookings taken through the studio land here and
+         nowhere else, so reading one book meant whole clients never showed
+         up on either list — including people who still owed a deposit and
+         were never chased for it. Status is compared case-insensitively
+         because this book writes 'scheduled' and the other 'SCHEDULED'. */
+      const team = await query(
+        `SELECT id, client_name, client_phone, client_email, date, time, service,
+                deposit_cents, price_cents, deposit_paid
+         FROM team_appointments
+         WHERE LOWER(COALESCE(status,'')) = 'scheduled' AND date >= ?
+         ORDER BY date, time`, [today]).catch(() => []);
+      for (const r of team) {
+        out.push({
+          id: r.id, team: 1, date: r.date, time: r.time || '', service: r.service || '',
+          total_cents: Number(r.price_cents) || 0, deposit_cents: Number(r.deposit_cents) || 0,
+          deposit_paid: Number(r.deposit_paid) ? 1 : 0,
+          name: r.client_name || 'Client',
+          phone: r.client_phone || '', email: r.client_email || '',
+        });
+      }
+
+      // One visit in both books is one row, and a deposit recorded in
+      // either book counts as paid.
+      const seen = new Map();
+      for (const r of out) {
+        const k = [String(r.name).trim().toLowerCase(), r.date, r.time].join('|');
+        const had = seen.get(k);
+        if (!had) { seen.set(k, r); continue; }
+        if (!had.deposit_paid && r.deposit_paid) had.deposit_paid = 1;
+        if (!had.deposit_cents && r.deposit_cents) had.deposit_cents = r.deposit_cents;
+        if (!had.phone && r.phone) had.phone = r.phone;
+        if (!had.email && r.email) had.email = r.email;
+      }
+      return [...seen.values()].sort((a, b) =>
+        String(a.date + a.time).localeCompare(String(b.date + b.time)));
     }
 
     /* Every deposit ever taken, and it never leaves this list. The lists
@@ -1027,7 +1063,13 @@ module.exports = async function (req, res) {
     }
 
     if (method === 'POST' && action === 'deposit_mark') {
-      const { id, paid } = req.body || {};
+      const { id, paid, team } = req.body || {};
+      // The row came from one book or the other and the ids are separate
+      // counters — writing to the wrong one would mark a different client.
+      if (team) {
+        await execute('UPDATE team_appointments SET deposit_paid=? WHERE id=?', [paid ? 1 : 0, Number(id)]);
+        return res.json({ ok: true });
+      }
       const { execute: mainExec } = require('./_db');
       try { await mainExec('ALTER TABLE appointments ADD COLUMN deposit_paid INTEGER DEFAULT 0'); } catch (_) {}
       await mainExec('UPDATE appointments SET deposit_paid=? WHERE id=?', [paid ? 1 : 0, Number(id)]);
@@ -1035,8 +1077,11 @@ module.exports = async function (req, res) {
     }
 
     if (method === 'POST' && action === 'request_deposit') {
-      const { id } = req.body || {};
-      const row = (await depositRows()).find(r => String(r.id) === String(id));
+      const { id, team } = req.body || {};
+      // Both books number their rows from 1, so the id alone can point at
+      // two different clients. Which book it came from settles it.
+      const row = (await depositRows()).find(r =>
+        String(r.id) === String(id) && (team ? r.team === 1 : r.team !== 1));
       if (!row) return res.status(404).json({ error: 'Appointment not found' });
       const first = row.name.split(' ')[0];
       const dep = '$' + Math.round(row.deposit_cents / 100);

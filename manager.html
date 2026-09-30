@@ -4033,9 +4033,9 @@ function depCard(a,unpaid){
       <span class="status-pill ${unpaid?'status-off':'status-on'}">${unpaid?'Unpaid':'Paid ✓'}</span>
     </div>
     <div class="mc-actions">
-      ${unpaid?`<button class="btn btn-gold btn-sm" onclick="requestDeposit(${a.id})">Send 24-hour notice</button>
-      <button class="btn btn-ghost btn-sm" onclick="markDeposit(${a.id},1)">Mark as paid</button>`
-      :`<button class="btn btn-ghost btn-sm" onclick="markDeposit(${a.id},0)">Mark as unpaid</button>`}
+      ${unpaid?`<button class="btn btn-gold btn-sm" onclick="requestDeposit(${a.id},${a.team?1:0})">Send 24-hour notice</button>
+      <button class="btn btn-ghost btn-sm" onclick="markDeposit(${a.id},1,${a.team?1:0})">Mark as paid</button>`
+      :`<button class="btn btn-ghost btn-sm" onclick="markDeposit(${a.id},0,${a.team?1:0})">Mark as unpaid</button>`}
     </div>
   </div>`;
 }
@@ -4089,14 +4089,16 @@ function renderDepHistory(){
   }).join('')+'</div>';
 }
 
-async function markDeposit(id,paid){
-  await api('/api/manager',{method:'POST',body:JSON.stringify({action:'deposit_mark',id,paid:!!paid})});
+/* `team` says which book the row came from — both number their rows from
+   1, so without it the same id can point at two different clients. */
+async function markDeposit(id,paid,team){
+  await api('/api/manager',{method:'POST',body:JSON.stringify({action:'deposit_mark',id,paid:!!paid,team:team?1:0})});
   toast(paid?'Marked paid ✓':'Marked unpaid');await loadDeposits();
 }
-async function requestDeposit(id){
-  const a=depData.find(x=>String(x.id)===String(id));
+async function requestDeposit(id,team){
+  const a=depData.find(x=>String(x.id)===String(id)&&((team?1:0)===(x.team?1:0)));
   if(!confirm('Send '+(a?a.name:'this client')+' the 24-hour deposit notice now?'))return;
-  const r=await api('/api/manager',{method:'POST',body:JSON.stringify({action:'request_deposit',id})});
+  const r=await api('/api/manager',{method:'POST',body:JSON.stringify({action:'request_deposit',id,team:team?1:0})});
   const d=await r.json();
   toast(d.ok?'Notice sent ✦':'Could not send');
 }
