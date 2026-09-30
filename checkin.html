@@ -255,10 +255,16 @@
     </div>
 
     <div id="rb-note" style="width:min(520px,92vw);margin-top:0.7rem;font-size:0.86rem;text-align:left"></div>
+    <!-- Said before they tap, not after. Nobody should be surprised by a
+         charge they already agreed to. -->
+    <div id="rb-terms" style="width:min(520px,92vw);margin-top:0.7rem;font-size:0.8rem;
+      text-align:left;opacity:0.75;line-height:1.5">
+      Booking now takes your deposit from the card we have on file, so there's nothing to pay when you arrive.
+    </div>
     <div class="err" id="rb-err"></div>
 
     <div class="row">
-      <button class="big-btn gold" id="rb-go" onclick="rbBook()">Book it ✦</button>
+      <button class="big-btn gold" id="rb-go" onclick="rbBook()">Book &amp; pay deposit ✦</button>
     </div>
     <button id="rb-skip" onclick="show('s-review')"
       style="margin-top:0.9rem;background:none;border:none;color:#B6A588;font-family:inherit;
@@ -860,6 +866,29 @@ async function rbBook(){
       d.service + ' with ' + (d.artist || 'us') + ' on ' + niceDate(d.date) + ' at ' + d.time;
     document.getElementById('rb-card').style.display = 'none';
     document.getElementById('rb-skip').style.display = 'none';
+    const terms = document.getElementById('rb-terms');
+    if(terms) terms.style.display = 'none';
+
+    /* The deposit is taken here and now, so it never has to be chased. The
+       client is told either way — a silent charge is how a lovely visit
+       turns into a chargeback. */
+    const dep = d.deposit || {};
+    const note = document.getElementById('rb-note');
+    if(note){
+      if(dep.due_cents > 0 && dep.charged){
+        const card = dep.card ? (' to your ' + dep.card.brand + ' ending ' + dep.card.last4) : '';
+        note.innerHTML = '<div style="color:#9ED5A8">Deposit of $'
+          + (dep.due_cents/100).toFixed(2) + ' paid' + escK(card) + ' ✦'
+          + '<br><span style="opacity:0.75;font-size:0.82rem">Nothing to pay when you arrive.</span></div>';
+      } else if(dep.due_cents > 0){
+        note.innerHTML = '<div style="color:#E7C07B">A $'
+          + (dep.due_cents/100).toFixed(2) + ' deposit is needed to hold this one.'
+          + '<br><span style="opacity:0.8;font-size:0.82rem">Please see the front desk before you go.</span></div>';
+      } else {
+        note.innerHTML = '<div style="opacity:0.7;font-size:0.85rem">No deposit needed ✦</div>';
+      }
+    }
+
     btn.textContent = 'Lovely — see you then';
     btn.disabled = false;
     btn.onclick = function(){ show('s-review'); };

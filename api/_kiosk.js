@@ -347,10 +347,95 @@ module.exports = async function (req, res) {
         [artistId, appt.name || '', appt.phone || '', appt.email || '', service, date, time,
          'Rebooked at checkout', tok]);
 
+      const newId = out && out.lastInsertRowid;
+
+      /* ── THE DEPOSIT, TAKEN NOW ──
+         A rebooking used to be created owing a deposit, which then had to
+         be chased days later. The client is standing at the desk with a
+         card already on file, so it is taken here and the appointment is
+         paid for before they walk out. Members whose tier includes "no
+         deposit" are charged nothing — depositFor already knows that. */
+      let deposit = { due_cents: 0, charged: false, why: '', card: null };
+      try {
+        const visit = require('./_visit');
+        const due = Math.round(Number(await visit.depositFor({
+          service, client_email: appt.email || '', client_name: appt.name || '',
+          deposit_cents: 0,
+        })) || 0);
+        deposit.due_cents = due;
+
+        if (due > 0) {
+          const pay = require('./_pay');
+          const bill = require('./_kiosk-bill');
+          const chg = require('./_kiosk-charge');
+          const sk = await pay.getStripeSecret();
+          const b = await bill.billFor(appt).catch(() => null);
+          const customerId = sk ? await bill.customerIdFor(sk, b && b.stripe_customer_id, appt.email || '') : '';
+          const card = customerId ? await bill.cardOnFile(sk, customerId) : null;
+
+          if (!sk) deposit.why = 'Card payments are not switched on.';
+          else if (!card) deposit.why = 'No card on file for them yet.';
+          else {
+            deposit.card = { brand: card.brand, last4: card.last4 };
+            const paid = await chg.chargeOnFile({
+              sk, customerId, paymentMethodId: card.id,
+              amountCents: due,
+              description: 'Deposit · ' + service + ' on ' + date + ' at ' + time,
+              metadata: { kind: 'rebook_deposit', appointment_id: String(newId || ''), date, time },
+            });
+            if (paid.ok) {
+              deposit.charged = true;
+              deposit.payment_intent = paid.id;
+              await execute('UPDATE team_appointments SET deposit_cents=?, deposit_paid=1 WHERE id=?',
+                [due, Number(newId)]).catch(() => {});
+              try {
+                await chg.recordAuthorization({
+                  ref: 't' + newId, client_name: appt.name || '', client_email: appt.email || '',
+                  amount_cents: due, remainder_cents: 0, tip_cents: 0,
+                  method: 'card_on_file', card_brand: card.brand, card_last4: card.last4,
+                  signature: '', payment_intent: paid.id, outcome: 'deposit_taken_at_rebooking',
+                });
+              } catch (_) {}
+            } else {
+              deposit.why = paid.why || 'The card was declined.';
+              // Still recorded as owed, so it lands on the deposits list
+              // rather than quietly becoming a free booking.
+              await execute('UPDATE team_appointments SET deposit_cents=?, deposit_paid=0 WHERE id=?',
+                [due, Number(newId)]).catch(() => {});
+            }
+          }
+          if (!deposit.charged && !deposit.why) deposit.why = 'Could not take it automatically.';
+          if (!deposit.charged) {
+            await execute('UPDATE team_appointments SET deposit_cents=?, deposit_paid=0 WHERE id=?',
+              [due, Number(newId)]).catch(() => {});
+          }
+        }
+      } catch (err) {
+        deposit.why = 'Could not take the deposit automatically.';
+      }
+
       try {
         await execute('INSERT INTO kiosk_log (type, name, detail, ts) VALUES (?,?,?,?)',
-          ['rebook', String(appt.name || '').slice(0, 80), service + ' on ' + date + ' at ' + time, Date.now()]);
+          ['rebook', String(appt.name || '').slice(0, 80),
+           service + ' on ' + date + ' at ' + time
+             + (deposit.due_cents
+                 ? (deposit.charged
+                     ? ' · deposit $' + (deposit.due_cents / 100).toFixed(2) + ' charged to card on file'
+                     : ' · deposit $' + (deposit.due_cents / 100).toFixed(2) + ' NOT taken — ' + deposit.why)
+                 : ''),
+           Date.now()]);
       } catch (_) {}
+
+      // A deposit that did not go through is the one thing here she has to
+      // act on, so it is its own alert rather than a line in a summary.
+      if (deposit.due_cents > 0 && !deposit.charged) {
+        try {
+          await notify.notifyInApp('owner', null,
+            '⚠ Deposit not taken — ' + (appt.name || 'a client'),
+            '$' + (deposit.due_cents / 100).toFixed(2) + ' for ' + service + ' on ' + date
+              + ' · ' + deposit.why);
+        } catch (_) {}
+      }
 
       try {
         await notify.notifyInApp('owner', null,
@@ -361,10 +446,11 @@ module.exports = async function (req, res) {
 
       return res.json({
         ok: true,
-        id: out && out.lastInsertRowid,
+        id: newId,
         date, time, service,
         artist: (await queryOne('SELECT name FROM team_members WHERE id=?', [artistId]) || {}).name || '',
         charge,
+        deposit,
       });
     }
 
