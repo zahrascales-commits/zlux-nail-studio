@@ -427,6 +427,23 @@
   .qr-t{font:inherit;font-size:0.8rem;padding:0.45rem 0.8rem;border:1px solid var(--line);background:var(--card);
     color:var(--ink);border-radius:100px;cursor:pointer}
   .qr-t.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  /* All your links */
+  .lk-group{margin-bottom:1.6rem}
+  .lk-group h3{font-size:0.78rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);
+    margin:0 0 0.6rem;font-weight:700}
+  .lk-list{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
+  .lk{display:flex;align-items:center;gap:1rem;padding:0.85rem 1rem;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .lk:last-child{border-bottom:none}
+  .lk-main{flex:1 1 240px;min-width:0}
+  .lk-name{font-size:0.95rem;font-weight:600;color:var(--ink);text-decoration:none;display:inline-block}
+  .lk-name:hover{text-decoration:underline}
+  .lk-note{font-size:0.76rem;color:var(--muted);line-height:1.5;margin-top:0.15rem}
+  .lk-url{font-size:0.74rem;color:var(--muted);word-break:break-all;margin-top:0.2rem}
+  .lk-btns{display:flex;gap:0.4rem;flex:0 0 auto}
+  .lk-tag{font-size:0.66rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:700;
+    padding:0.15rem 0.5rem;border-radius:100px;margin-left:0.5rem;vertical-align:middle}
+  .lk-tag.client{background:#E8F3EA;color:#1E6B34}
+  .lk-tag.staff{background:#EDEFF3;color:#4A5563}
   .ntf-row{display:flex;align-items:flex-start;gap:0.55rem;font-size:0.85rem;color:var(--cream);margin:0.5rem 0;cursor:pointer;line-height:1.4}
   .ntf-row input{width:auto;margin-top:0.15rem}
   .ntf-sub{font-size:0.76rem;color:var(--muted);margin:0 0 0.6rem 1.6rem}
@@ -1371,6 +1388,7 @@
     <div class="nav-group" data-group="site">
       <button class="nav-head" onclick="toggleNavGroup('site')"><span class="ni" data-i="globe"></span><span class="nl">Site &amp; Shop</span><span class="gdot"></span><span class="chev" data-i="chev"></span></button>
       <div class="nav-kids">
+        <button class="tab" data-tab="links" onclick="showTab('links')"><span class="nl">All your links</span></button>
         <button class="tab" data-tab="site" onclick="showTab('site')"><span class="nl">Website content</span></button>
         <button class="tab" data-tab="services" onclick="showTab('services')"><span class="nl">Services &amp; prices</span></button>
         <button class="tab" data-tab="shop" onclick="showTab('shop')"><span class="nl">Press-on shop</span></button>
@@ -1400,6 +1418,20 @@
   <div id="nav-veil" onclick="closeNav()"></div>
 
   <div class="wrap">
+
+    <!-- ALL YOUR LINKS
+         Every address in one place, so she never has to remember or hunt for
+         one. Tap the name to open it, or copy it to send. -->
+    <section class="panel" id="panel-links">
+      <div class="page-head">
+        <div>
+          <div class="page-title">All Your Links</div>
+          <div class="page-desc">Every page of yours, in one place. Tap a name to open it, or copy the link to text or post it.</div>
+        </div>
+        <button class="btn btn-ghost" onclick="copyAllLinks()">Copy them all</button>
+      </div>
+      <div id="links-body"></div>
+    </section>
 
     <!-- SALES DASHBOARD -->
     <section class="panel" id="panel-sales">
@@ -3354,6 +3386,7 @@ async function removeFaceId(id){
 // Initialised after login instead — at parse time PWD is still empty,
 
 const TAB_LOADERS = {
+  links:      () => renderLinks(),
   overview:   () => { loadHomeTop(); loadNewBookings(); loadMoneyNow(); loadNeedsYou(); loadMissingConfirms(); loadOverview(); loadDispatch(); loadFloor(); },
   mkt:        () => { loadMktHome(); loadSiteReviews(); },
   coupons:    () => loadCoupons(),
@@ -10056,6 +10089,71 @@ async function saveMkt(keys){
     loadMktHome();
   }catch(err){ toast(err.message); }
 }
+/* ── ALL YOUR LINKS ────────────────────────────────────────────────────
+   One screen holding every address, grouped by who it is for, so she never
+   has to remember which page does what. Built from this list, so adding a
+   page later is one line. */
+const ZOLA_LINKS = [
+  { group: "Send these to clients", items: [
+    { name: "Your website",        url: "https://zolanailstudio.com/",                 note: "The front door — everything links from here.", tag: "client" },
+    { name: "Book an appointment", url: "https://zolanailstudio.com/booking.html",     note: "The one to put in your Instagram bio.", tag: "client" },
+    { name: "Memberships",         url: "https://zolanailstudio.com/memberships.html", note: "All five tiers, with what each one includes.", tag: "client" },
+    { name: "Join a membership",   url: "https://zolanailstudio.com/signup.html",      note: "Straight to signing up — skips the browsing.", tag: "client" },
+    { name: "Press-on shop",       url: "https://zolanailstudio.com/pressons.html",    note: "Custom sets, ordered online.", tag: "client" },
+    { name: "Classes",             url: "https://zolanailstudio.com/classes.html",     note: "Russian manicure and hard gel training.", tag: "client" },
+    { name: "Services & prices",   url: "https://zolanailstudio.com/services.html",    note: "The full menu.", tag: "client" },
+    { name: "Send an inspo photo", url: "https://zolanailstudio.com/inspo.html",       note: "For clients sending a picture before their visit.", tag: "client" },
+    { name: "Save a card on file", url: "https://zolanailstudio.com/card.html",        note: "Send when someone needs to put a card down.", tag: "client" },
+    { name: "Their portal",        url: "https://zolanailstudio.com/client-portal.html", note: "Where a client sees her visits and membership.", tag: "client" },
+  ]},
+  { group: "In the studio", items: [
+    { name: "Check in & check out", url: "https://zolanailstudio.com/checkin.html",    note: "The iPad screen. Both buttons are on the first page — one link does both.", tag: "staff" },
+    { name: "Studio Manager",       url: "https://zolanailstudio.com/manager.html",    note: "This screen. Bookmark it on your phone.", tag: "staff" },
+    { name: "Worker portal",        url: "https://zolanailstudio.com/worker.html",     note: "What your artists sign into.", tag: "staff" },
+    { name: "Team portal",          url: "https://zolanailstudio.com/team.html",       note: "Schedules and team information.", tag: "staff" },
+    { name: "An appointment page",  url: "https://zolanailstudio.com/visit.html",      note: "Deposits and paying the rest. Usually opened from a text.", tag: "staff" },
+  ]},
+  { group: "Your other sites", items: [
+    { name: "The ZOLA Method course", url: "https://zola-method.vercel.app", note: "Your 40-lesson training course.", tag: "client" },
+  ]},
+  { group: "Where people find you", items: [
+    { name: "Instagram — @zola_officials_", url: "https://instagram.com/zola_officials_", note: "Where about 9 in 10 of your website visitors come from.", tag: "client" },
+    { name: "TikTok — @zolaofficial",       url: "https://tiktok.com/@zolaofficial",      note: "Linked in every page footer.", tag: "client" },
+  ]},
+];
+
+function renderLinks(){
+  const box = document.getElementById('links-body');
+  if(!box) return;
+  box.innerHTML = ZOLA_LINKS.map(function(g){
+    return '<div class="lk-group"><h3>' + esc(g.group) + '</h3><div class="lk-list">' +
+      g.items.map(function(it){
+        return '<div class="lk">' +
+          '<div class="lk-main">' +
+            '<a class="lk-name" href="' + esc(it.url) + '" target="_blank" rel="noopener">' + esc(it.name) + '</a>' +
+            '<span class="lk-tag ' + it.tag + '">' + (it.tag === 'client' ? 'Share it' : 'Staff') + '</span>' +
+            '<div class="lk-note">' + esc(it.note) + '</div>' +
+            '<div class="lk-url">' + esc(it.url) + '</div>' +
+          '</div>' +
+          '<div class="lk-btns">' +
+            '<button class="btn btn-ghost btn-sm" onclick="copyText(\'' + it.url + '\')">Copy</button>' +
+            '<a class="btn btn-gold btn-sm" href="' + esc(it.url) + '" target="_blank" rel="noopener">Open</a>' +
+          '</div>' +
+        '</div>';
+      }).join('') + '</div></div>';
+  }).join('');
+}
+
+function copyAllLinks(){
+  const lines = [];
+  ZOLA_LINKS.forEach(function(g){
+    lines.push(g.group.toUpperCase());
+    g.items.forEach(function(it){ lines.push(it.name + ' — ' + it.url); });
+    lines.push('');
+  });
+  copyText(lines.join('\n').trim());
+}
+
 /* ── HER LINK, AS A PICTURE ────────────────────────────────────────────
    The QR is drawn onto a card — her wordmark, the code, the address — at
    1080×1350, which is big enough to print and the right shape to send. The
