@@ -162,6 +162,31 @@ async function resolveVisit(body) {
   } catch (_) { return { appt, remainder: 0 }; }
 }
 
+/* Two appointments in one day, settled with one card. The kiosk sends every
+   ref it is paying for; each one is priced on its own — membership, deposit
+   and all — and the total is the sum. Returns null for anything that is not
+   a genuine multi-appointment checkout, so the single path below is
+   untouched. Refs are matched against this person's own appointments, so a
+   ref belonging to somebody else cannot be slipped in. */
+async function resolveVisits(body) {
+  const refs = Array.isArray(body.refs) ? [...new Set(body.refs.filter(Boolean).map(String))] : [];
+  if (refs.length < 2) return null;
+  const find = require('./_kiosk-find');
+  const bill = require('./_kiosk-bill');
+  let matches = [];
+  try { matches = (await find.findFor(body.q || body.name || '')).matches || []; } catch (_) { return null; }
+  const visits = [];
+  for (const ref of refs) {
+    const a = matches.find(m => (m.src + m.id) === ref);
+    if (!a) continue;
+    let remainder = 0;
+    try { remainder = Math.max(0, Number((await bill.billFor(a)).remainder_cents) || 0); } catch (_) {}
+    visits.push({ appt: a, remainder });
+  }
+  if (visits.length < 2) return null;
+  return { visits, remainder: visits.reduce((s, v) => s + v.remainder, 0) };
+}
+
 module.exports = async function (req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -465,7 +490,12 @@ module.exports = async function (req, res) {
 
     if (req.method === 'POST' && action === 'pay_intent') {
       const body = req.body || {};
-      const resolved = await resolveVisit(body);
+      /* Paying for two appointments at once means charging for two: the
+         card has to be for the whole total, not the first visit's share. */
+      const manyIn = await resolveVisits(body);
+      const resolved = manyIn
+        ? { appt: manyIn.visits[0].appt, remainder: manyIn.remainder }
+        : await resolveVisit(body);
       const appt = resolved.appt;
       const tip = Math.max(0, Math.round(Number(body.tip_cents) || 0));
       const balance = resolved.remainder;
@@ -526,7 +556,11 @@ module.exports = async function (req, res) {
       if (!name) return res.status(400).json({ error: 'Name required' });
       // Cash is the one the browser could otherwise decide the size of.
       try { await execute('ALTER TABLE team_appointments ADD COLUMN paid_verified INTEGER DEFAULT 1'); } catch (_) {}
-      const resolvedOut = await resolveVisit(req.body || {});
+      // Two appointments paid in one go, or the ordinary single one.
+      const multi = await resolveVisits(req.body || {});
+      const resolvedOut = multi
+        ? { appt: multi.visits[0].appt, remainder: multi.remainder }
+        : await resolveVisit(req.body || {});
       let amount = resolvedOut.remainder + Math.max(0, Math.round(Number(tip_cents) || 0));
 
       const APPS = ['venmo', 'cashapp', 'applepay'];
@@ -545,24 +579,47 @@ module.exports = async function (req, res) {
       // finished, what they paid, how, and what they tipped. A tip that
       // lives only in the kiosk log is a tip nobody can ever total up.
       const appt = resolvedOut.appt;
-      if (appt) {
-        await stampBothBooks(appt, {
-          checked_out_ts: Date.now(),
-          paid_cents: amount,
-          tip_cents: tip,
-          /* Venmo, Cash App and Apple Cash settle outside Stripe, so all
-             the studio ever knows is that somebody said they sent it. Kept
-             under its own name and never called paid, because counting it
-             as money in is how a total stops being true. */
-          pay_method: PAY_METHOD,
-          paid_verified: VERIFIED ? 1 : 0,
-          status: 'COMPLETED',
-          deposit_paid: 1,
-        });
+      const stampFields = {
+        checked_out_ts: Date.now(),
+        /* Venmo, Cash App and Apple Cash settle outside Stripe, so all
+           the studio ever knows is that somebody said they sent it. Kept
+           under its own name and never called paid, because counting it
+           as money in is how a total stops being true. */
+        pay_method: PAY_METHOD,
+        paid_verified: VERIFIED ? 1 : 0,
+        status: 'COMPLETED',
+        deposit_paid: 1,
+      };
+      if (multi) {
+        /* One payment, but each appointment keeps its own share, so the
+           reports still say what every visit was worth and which artist
+           earned which tip. The last one takes the rounding so the parts
+           always add back up to what was actually charged. */
+        const total = multi.remainder;
+        const n = multi.visits.length;
+        let leftAmt = amount, leftTip = tip;
+        for (let i = 0; i < n; i++) {
+          const v = multi.visits[i];
+          const frac = total > 0 ? (v.remainder / total) : (1 / n);
+          const last = i === n - 1;
+          const payShare = last ? leftAmt : Math.round(amount * frac);
+          const tipShare = last ? leftTip : Math.round(tip * frac);
+          leftAmt -= payShare; leftTip -= tipShare;
+          await stampBothBooks(v.appt, Object.assign({}, stampFields, {
+            paid_cents: payShare, tip_cents: tipShare,
+          }));
+        }
+      } else if (appt) {
+        await stampBothBooks(appt, Object.assign({}, stampFields, {
+          paid_cents: amount, tip_cents: tip,
+        }));
       }
+      const logBits = [];
+      if (multi) logBits.push(multi.visits.length + ' appointments together');
+      if (tip) logBits.push('tip $' + (tip / 100).toFixed(2));
       await execute('INSERT INTO kiosk_log (type, name, method, amount_cents, detail, ts) VALUES (?,?,?,?,?,?)',
         ['checkout', String(name).trim().slice(0, 80), PAY_METHOD, amount,
-         tip ? ('tip $' + (tip / 100).toFixed(2)) : '', Date.now()]);
+         logBits.join(' · '), Date.now()]);
       const amt = '$' + (amount / 100).toFixed(2);
       const tipNote = tip ? (' · includes a $' + (tip / 100).toFixed(2) + ' tip 💛') : '';
       try {

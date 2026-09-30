@@ -158,6 +158,18 @@
     <div class="row"><button class="big-btn ghost" onclick="show('s-name')">Search again</button></div>
   </div>
 
+  <!-- TWO APPOINTMENTS, ONE PERSON -->
+  <div class="screen" id="s-both">
+    <h2 id="both-title">You have two appointments today</h2>
+    <p class="sub">Pay for them all at once, or one at a time.</p>
+    <div id="both-list" style="margin-top:1.3rem;display:flex;flex-direction:column;gap:0.6rem;width:min(560px,92vw);text-align:left"></div>
+    <div class="row">
+      <button class="big-btn gold" onclick="payTogether()">Pay together — <span id="both-total"></span></button>
+      <button class="big-btn ghost" onclick="paySeparately()">Pay separately</button>
+    </div>
+    <div class="row" style="margin-top:0.4rem"><button class="big-btn ghost" style="min-width:0;padding:0.7rem 1.4rem;font-size:0.78rem" onclick="show('s-name')">Search again</button></div>
+  </div>
+
   <!-- CHECKOUT: VENMO / CASH APP / APPLE CASH -->
   <div class="screen" id="s-app">
     <h2 id="app-title">Scan to pay</h2>
@@ -385,7 +397,16 @@ async function nameNext(){
       const r=await fetch('/api/kiosk?action=find&q='+encodeURIComponent(name));
       const d=await r.json();
       const list = d.matches || [];
-      if(list.length > 1){ offerChoices(list); return; }
+      /* Two hits on a phone number or an email are the same person twice —
+         she booked twice today. Two hits on a name might be two different
+         people, and charging one for the other's visit is unforgivable, so
+         that still goes to the picker. */
+      if(list.length > 1){
+        const sure = d.how === 'phone' || d.how === 'email';
+        const sameName = list.every(x => (x.name||'').trim().toLowerCase() === (list[0].name||'').trim().toLowerCase());
+        if(sure || sameName) offerTogether(list); else offerChoices(list);
+        return;
+      }
       takeBill(list[0] || null);
     }catch{ err.textContent='Hmm, try that once more ✦'; }
   }
@@ -397,12 +418,18 @@ async function nameNext(){
    costs, what their membership already covered, what deposit was taken,
    and whether there is a card we can charge without asking again. */
 let KREF = '', KCARD = null, KMEMBER = false;
+/* Empty for an ordinary checkout. When she is paying for more than one
+   appointment at once it holds every ref, and the server settles them all
+   against the single payment. */
+let KREFS = [];
 /* The rest of the bill. LIST is what the service is worth, which is what a
    tip should be a percentage of — a member owing nothing was being offered
    a tip on nothing, so her artist got tipped on nothing. */
 let LIST = 0, COVERED = 0, DEPOSIT = 0, HANDLES = null;
 
-function offerChoices(list){
+function offerChoices(list){ offerChoicesList(list); show('s-pick'); }
+
+function offerChoicesList(list){
   document.getElementById('pick-list').innerHTML = list.map(function(x, i){
     return '<button class="big-btn ghost" style="min-width:0;text-align:left;padding:1rem 1.2rem" '
       + 'onclick="pickOne(' + i + ')">'
@@ -412,13 +439,57 @@ function offerChoices(list){
       + '</div></button>';
   }).join('');
   window._picks = list;
-  show('s-pick');
 }
 
 function pickOne(i){ takeBill((window._picks || [])[i] || null); }
 
+/* ── TWO APPOINTMENTS IN ONE DAY ───────────────────────────────────────
+   Both visits on one screen with one total, so a client who came in twice
+   pays once. Each appointment is still priced on its own — membership,
+   deposit and all — and the server settles them separately behind the one
+   payment, so nobody's report loses a visit. */
+function offerTogether(list){
+  window._picks = list;
+  const money = c => '$' + ((Number(c)||0)/100).toFixed(2);
+  const total = list.reduce((s,x) => s + (Number(x.remainder_cents)||0), 0);
+  document.getElementById('both-title').textContent =
+    'You have ' + (list.length === 2 ? 'two' : list.length) + ' appointments today';
+  document.getElementById('both-total').textContent = money(total);
+  document.getElementById('both-list').innerHTML = list.map(function(x){
+    return '<div style="display:flex;justify-content:space-between;gap:1rem;align-items:baseline;'
+      + 'padding:0.75rem 1rem;border:1px solid rgba(182,165,136,0.3);border-radius:12px">'
+      + '<div><div style="font-size:1rem">' + escK(x.service || 'Appointment') + '</div>'
+      + '<div style="font-size:0.76rem;opacity:0.72;margin-top:0.15rem">'
+        + escK(x.time || '') + (x.artist ? ' · ' + escK(x.artist) : '') + '</div></div>'
+      + '<div style="font-size:1.05rem;white-space:nowrap">' + money(x.remainder_cents) + '</div></div>';
+  }).join('');
+  // The picker is ready behind it, so "separately" is one tap away.
+  offerChoicesList(list);
+  show('s-both');
+}
+
+function paySeparately(){ show('s-pick'); }
+
+function payTogether(){
+  const list = window._picks || [];
+  if(list.length < 2) return takeBill(list[0] || null);
+  TIP = 0;
+  KREFS   = list.map(x => x.ref).filter(Boolean);
+  KREF    = KREFS[0] || '';
+  BAL     = list.reduce((s,x) => s + (Number(x.remainder_cents)||0), 0);
+  LIST    = list.reduce((s,x) => s + (Number(x.list_cents)||0), 0);
+  COVERED = list.reduce((s,x) => s + (Number(x.covered_by_membership)||0), 0);
+  DEPOSIT = list.reduce((s,x) => s + (Number(x.deposit_taken_cents)||0), 0);
+  SVC     = list.map(x => x.service).filter(Boolean).join(' + ');
+  const withCard = list.find(x => x.card_on_file);
+  KCARD   = withCard ? withCard.card_on_file : null;
+  KMEMBER = list.some(x => !!x.is_member);
+  showTipScreen();
+}
+
 function takeBill(x){
   TIP = 0;
+  KREFS = [];
   /* Not finding somebody is not the same as them owing nothing. Sending
      an unmatched client to the tip screen shows them a $0 bill and asks
      for a gratuity on a service they have not paid for. */
@@ -678,7 +749,7 @@ async function appSent(){
   try{
     const r = await fetch('/api/kiosk?action=checkout', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ action:'checkout', name:KNAME, q:KNAME, ref:KREF,
+      body: JSON.stringify({ action:'checkout', name:KNAME, q:KNAME, ref:KREF, refs:KREFS,
                              method:APPMETHOD, tip_cents:TIP })
     });
     const d = await r.json();
@@ -809,7 +880,7 @@ async function payCard(){
   try{
     const cfg=await (await fetch('/api/pay?action=config')).json();
     if(!cfg.enabled||typeof Stripe==='undefined'){ err.textContent='Card isn\'t available right now — please pay cash at the desk ✦'; return; }
-    const r=await fetch('/api/kiosk?action=pay_intent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'pay_intent',name:KNAME,q:KNAME,ref:KREF,tip_cents:TIP})});
+    const r=await fetch('/api/kiosk?action=pay_intent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'pay_intent',name:KNAME,q:KNAME,ref:KREF,refs:KREFS,tip_cents:TIP})});
     const d=await r.json();
     if(!d.client_secret){ err.textContent=d.error||'Could not start payment.'; return; }
     _pi=d.payment_intent_id;
@@ -829,13 +900,13 @@ async function confirmCard(){
   btn.disabled=false; btn.textContent='Pay Now';
   if(error){ err.textContent=error.message||'Card declined — try again.'; return; }
   await fetch('/api/kiosk?action=checkout',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action:'checkout',name:KNAME,q:KNAME,ref:KREF,method:'card',payment_intent_id:(paymentIntent&&paymentIntent.id)||_pi,tip_cents:TIP})});
+    body:JSON.stringify({action:'checkout',name:KNAME,q:KNAME,ref:KREF,refs:KREFS,method:'card',payment_intent_id:(paymentIntent&&paymentIntent.id)||_pi,tip_cents:TIP})});
   offerRebook();
 }
 
 async function payCash(){
   await fetch('/api/kiosk?action=checkout',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action:'checkout',name:KNAME,q:KNAME,ref:KREF,method:'cash',tip_cents:TIP})});
+    body:JSON.stringify({action:'checkout',name:KNAME,q:KNAME,ref:KREF,refs:KREFS,method:'cash',tip_cents:TIP})});
   offerRebook();
 }
 

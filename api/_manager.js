@@ -963,8 +963,67 @@ module.exports = async function (req, res) {
       }));
     }
 
+    /* Every deposit ever taken, and it never leaves this list. The lists
+       above it are a to-do and only cover what is still upcoming, so a
+       deposit used to vanish the moment the appointment happened — the
+       money was collected and then there was nothing to point at. Both
+       books are read, because a deposit can be recorded in either, and a
+       visit written in both is shown once. */
+    async function depositHistory() {
+      const { query: mainQuery } = require('./_db');
+      const out = [];
+
+      const main = await mainQuery(
+        `SELECT a.id, a.appointment_date AS date, a.appointment_time AS time, a.service,
+                a.total_cents, a.deposit_cents, a.status,
+                m.full_name, a.guest_name
+         FROM appointments a LEFT JOIN members m ON a.member_id = m.member_id
+         WHERE COALESCE(a.deposit_paid,0) = 1 AND COALESCE(a.deposit_cents,0) > 0
+         ORDER BY a.appointment_date DESC, a.appointment_time DESC
+         LIMIT 1000`).catch(() => []);
+      for (const r of main) {
+        out.push({
+          src: 'a', id: r.id, date: r.date, time: r.time || '',
+          service: r.service || '', status: r.status || '',
+          name: r.full_name || r.guest_name || 'Client',
+          deposit_cents: Number(r.deposit_cents) || 0,
+          total_cents: Number(r.total_cents) || 0,
+        });
+      }
+
+      const team = await query(
+        `SELECT id, client_name, date, time, service, deposit_cents, price_cents, status
+         FROM team_appointments
+         WHERE COALESCE(deposit_paid,0) = 1 AND COALESCE(deposit_cents,0) > 0
+         ORDER BY date DESC, time DESC
+         LIMIT 1000`).catch(() => []);
+      for (const r of team) {
+        out.push({
+          src: 't', id: r.id, date: r.date, time: r.time || '',
+          service: r.service || '', status: r.status || '',
+          name: r.client_name || 'Client',
+          deposit_cents: Number(r.deposit_cents) || 0,
+          total_cents: Number(r.price_cents) || 0,
+        });
+      }
+
+      const seen = new Set(), rows = [];
+      for (const r of out) {
+        const k = [String(r.name).trim().toLowerCase(), r.date, r.time].join('|');
+        if (seen.has(k)) continue;
+        seen.add(k); rows.push(r);
+      }
+      rows.sort((a, b) => String(b.date + b.time).localeCompare(String(a.date + a.time)));
+      return rows;
+    }
+
     if (method === 'GET' && action === 'deposits') {
-      return res.json({ appointments: await depositRows() });
+      const history = await depositHistory();
+      return res.json({
+        appointments: await depositRows(),
+        history,
+        history_total_cents: history.reduce((s, r) => s + r.deposit_cents, 0),
+      });
     }
 
     if (method === 'POST' && action === 'deposit_mark') {

@@ -1083,6 +1083,18 @@
   .cal-cell.today{background:#F9F5EF}
   .cal-cell.has-appts{background:#F4F0FA;border-color:#E4D9F2}
   .cal-cell.has-appts .cal-num{color:#6941C6}
+  /* Payday — green, deliberately nothing like the purple a booking uses. */
+  .cal-cell.payday{background:#E7F7EC;border-color:#17A356;box-shadow:inset 0 0 0 1px #17A356}
+  .cal-cell.payday .cal-num{color:#0E7A3D;font-weight:800}
+  .pay-tag{display:block;font-size:0.54rem;font-weight:800;letter-spacing:0.03em;
+    color:#0E7A3D;margin-top:2px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pay-row{display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;
+    padding:0.6rem 0;border-bottom:1px solid var(--line)}
+  .pay-row:last-of-type{border-bottom:none}
+  .pay-row input,.pay-row select{font:inherit;font-size:0.82rem;padding:0.45rem 0.6rem;
+    border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+  .pay-row input[type=date]{min-width:150px}
+  .pay-next{font-size:0.8rem;color:#0E7A3D;flex:1 1 180px}
   .view-switch{border-radius:8px;border-color:var(--border-hi)}
   .view-switch button{color:var(--ink-2);letter-spacing:0;text-transform:none;font-size:0.8rem}
   .view-switch button.on{background:var(--ink);color:#fff}
@@ -1498,6 +1510,17 @@
       <div id="dep-unpaid" style="display:grid;gap:0.6rem;margin-bottom:1.5rem;"></div>
       <div class="ai-tag" style="margin-bottom:0.6rem;">✓ Deposit received</div>
       <div id="dep-paid" style="display:grid;gap:0.6rem;"></div>
+
+      <!-- Never filtered, never cleared. Every deposit ever taken. -->
+      <div class="page-head" style="margin-top:2rem;align-items:baseline">
+        <div>
+          <div class="page-title" style="font-size:1.1rem">Every deposit ever paid</div>
+          <div class="page-desc" id="dep-hist-sum">The full record — past appointments included. Nothing is ever removed from this list.</div>
+        </div>
+        <input id="dep-hist-q" placeholder="Search a name…" oninput="renderDepHistory()"
+          style="font:inherit;font-size:0.82rem;padding:0.45rem 0.7rem;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);min-width:170px" />
+      </div>
+      <div id="dep-history"></div>
     </section>
 
     <!-- INVENTORY -->
@@ -1935,6 +1958,13 @@
       <div id="schedule-list" style="display:none"></div>
       <div id="upcoming-wrap" style="display:none"></div>
       <div class="legend" id="cal-legend"></div>
+
+      <!-- Paydays. Only ever on this screen — never the worker or team portal. -->
+      <div class="site-card" style="margin-top:1.4rem">
+        <h3>💵 Paydays</h3>
+        <p>Green on the calendar above. Put in the last day you paid someone and how often they're paid — every date after that is worked out for you, on the dot, forever. Only you see this.</p>
+        <div id="payday-body"></div>
+      </div>
 
       <div class="page-head" style="margin-top:2rem;">
         <div>
@@ -3201,6 +3231,7 @@ async function login(){
       const sr=await api('/api/site-settings');const sd=await sr.json();const s=sd.settings||{};
       if(s.owner_color)applyOwnerColor(s.owner_color);
       if(s.default_view&&['month','week','day','upcoming'].includes(s.default_view))calView=s.default_view;
+      loadPaydays(s.paydays);
     }catch{}
     setView(calView);
     renderMembers();refreshThreadDot();loadInquiries();loadBell();
@@ -3408,7 +3439,7 @@ const TAB_LOADERS = {
   payouts:    () => { loadPayouts(); loadPayoutsStripe(); },
   giftcards:  () => loadGiftCards(),
   faq:        () => loadFaq(),
-  schedule:   () => { renderCal(); loadBlocks(); loadDayHours(); },
+  schedule:   () => { renderCal(); loadBlocks(); loadDayHours(); renderPaydayCard(); },
   sales:      () => loadShowcaseCfg().then(loadSales),
   deposits:   () => loadDeposits(),
   inventory:  () => loadInventory(),
@@ -3986,7 +4017,9 @@ let depData=[];
 async function loadDeposits(){
   try{
     const r=await api('/api/manager?action=deposits');const d=await r.json();
-    depData=d.appointments||[];renderDeposits();
+    depData=d.appointments||[];
+    depHistory=d.history||[];depHistTotal=Number(d.history_total_cents)||0;
+    renderDeposits();renderDepHistory();
   }catch{document.getElementById('dep-unpaid').innerHTML='<div class="empty" style="padding:1.5rem">Could not load.</div>';}
 }
 function depCard(a,unpaid){
@@ -4013,6 +4046,49 @@ function renderDeposits(){
   document.getElementById('dep-unpaid').innerHTML=un.length?un.map(a=>depCard(a,true)).join(''):'<div class="empty" style="padding:1rem">Everyone upcoming has paid ✓</div>';
   document.getElementById('dep-paid').innerHTML=pd.length?pd.map(a=>depCard(a,false)).join(''):'<div class="empty" style="padding:1rem">No paid deposits yet.</div>';
 }
+/* The permanent record. The lists above are a to-do for upcoming visits;
+   this one keeps every deposit ever taken, whatever happened to the
+   appointment afterwards. */
+let depHistory=[], depHistTotal=0;
+
+function renderDepHistory(){
+  const box=document.getElementById('dep-history'); if(!box) return;
+  const q=(document.getElementById('dep-hist-q')||{}).value||'';
+  const term=q.trim().toLowerCase();
+  const rows=term?depHistory.filter(r=>String(r.name||'').toLowerCase().includes(term)):depHistory;
+
+  const sum=document.getElementById('dep-hist-sum');
+  if(sum){
+    const shown=rows.reduce((s,r)=>s+(Number(r.deposit_cents)||0),0);
+    sum.textContent=term
+      ? (rows.length+' deposit'+(rows.length===1?'':'s')+' · $'+(shown/100).toFixed(2)+' from “'+q.trim()+'”')
+      : (depHistory.length+' deposit'+(depHistory.length===1?'':'s')+' · $'+(depHistTotal/100).toFixed(2)+' taken in total. Nothing is ever removed from this list.');
+  }
+
+  if(!rows.length){
+    box.innerHTML='<div class="empty" style="padding:1.2rem">'
+      +(term?'Nobody by that name has paid a deposit.':'No deposits recorded yet.')+'</div>';
+    return;
+  }
+  box.innerHTML='<div class="lk-list">'+rows.map(function(r){
+    const dep='$'+((Number(r.deposit_cents)||0)/100).toFixed(2);
+    const tot=Number(r.total_cents)||0;
+    const st=String(r.status||'').toUpperCase();
+    const when=r.date?fmtDateLabel(r.date):'—';
+    const label=st==='COMPLETED'?'Came in':st==='CANCELLED'?'Cancelled':st==='NO_SHOW'?'No show':st==='SCHEDULED'?'Upcoming':(st||'');
+    const tone=st==='CANCELLED'||st==='NO_SHOW'?'#B42318':'#0E7A3D';
+    return '<div class="lk"><div class="lk-main">'
+      + '<div class="lk-name" style="cursor:default">'+esc(r.name||'Client')+'</div>'
+      + '<div class="lk-note">'+esc(r.service||'—')+' · '+esc(when)+(r.time?' at '+esc(fmtTime(r.time)):'')+'</div>'
+      + (label?'<div class="lk-note" style="color:'+tone+';font-weight:600">'+esc(label)+'</div>':'')
+      + '</div>'
+      + '<div style="text-align:right;white-space:nowrap">'
+        + '<div style="font-size:1rem;font-weight:700;color:#0E7A3D">'+dep+'</div>'
+        + (tot?'<div class="lk-note">of $'+(tot/100).toFixed(2)+'</div>':'')
+      + '</div></div>';
+  }).join('')+'</div>';
+}
+
 async function markDeposit(id,paid){
   await api('/api/manager',{method:'POST',body:JSON.stringify({action:'deposit_mark',id,paid:!!paid})});
   toast(paid?'Marked paid ✓':'Marked unpaid');await loadDeposits();
@@ -4503,6 +4579,91 @@ function depMark(a){
   return s === 'paid' || s === 'none_due' || s === 'done' ? '✓ ' : s === 'unpaid' ? '✗ ' : '';
 }
 
+/* ── PAYDAYS ───────────────────────────────────────────────────────────
+   Green on the month, every fourteen days from the last one she paid, on
+   the dot, forever. This lives in Studio Manager only — nothing about it
+   reaches the worker or team portals, so the artist never sees her own pay
+   dates on a calendar. */
+let PAYDAYS = [];
+
+function loadPaydays(raw){
+  try{ PAYDAYS = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : []; }
+  catch(_){ PAYDAYS = []; }
+  if(!Array.isArray(PAYDAYS)) PAYDAYS = [];
+}
+
+const dsToNum = ds => Math.round(Date.parse(ds + 'T12:00:00') / 86400000);
+
+// Everyone due to be paid on this date. Anchor day counts — it was one.
+function paydaysOn(ds){
+  const d = dsToNum(ds);
+  if(isNaN(d)) return [];
+  return PAYDAYS.filter(function(p){
+    if(!p || !p.anchor) return false;
+    const a = dsToNum(p.anchor);
+    if(isNaN(a) || d < a) return false;
+    const every = Number(p.every) || 14;
+    return every > 0 && ((d - a) % every === 0);
+  });
+}
+
+/* The next one due, today included. Counted forward from the anchor in
+   local days — going through UTC lands a day out every California evening,
+   which would have shown the wrong payday half the time. */
+function nextPayday(p){
+  const a = dsToNum(p.anchor); if(isNaN(a)) return '';
+  const every = Number(p.every) || 14;
+  const t = dsToNum(localDsM());
+  const steps = t <= a ? 0 : Math.ceil((t - a) / every);
+  const d = new Date(p.anchor + 'T12:00:00');
+  d.setDate(d.getDate() + steps * every);
+  return localDsM(d);
+}
+
+function fmtPayDate(ds){
+  if(!ds) return '—';
+  return new Date(ds + 'T12:00:00').toLocaleDateString('en-US',
+    { weekday:'long', month:'long', day:'numeric' });
+}
+
+function renderPaydayCard(){
+  const box = document.getElementById('payday-body');
+  if(!box) return;
+  const rows = PAYDAYS.map(function(p, i){
+    return '<div class="pay-row">'
+      + '<input value="' + esc(p.name || '') + '" placeholder="Who" onchange="editPayday(' + i + ',\'name\',this.value)" />'
+      + '<input type="date" value="' + esc(p.anchor || '') + '" onchange="editPayday(' + i + ',\'anchor\',this.value)" />'
+      + '<select onchange="editPayday(' + i + ',\'every\',this.value)">'
+        + [[7,'Every week'],[14,'Every two weeks'],[28,'Every four weeks']].map(function(o){
+            return '<option value="' + o[0] + '"' + ((Number(p.every)||14) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('')
+      + '</select>'
+      + '<div class="pay-next">Next: <b>' + esc(fmtPayDate(nextPayday(p))) + '</b></div>'
+      + '<button class="btn btn-ghost btn-sm" onclick="removePayday(' + i + ')">Remove</button>'
+      + '</div>';
+  }).join('');
+  box.innerHTML = (rows || '<div class="muted" style="font-size:0.8rem">Nobody set up yet.</div>')
+    + '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.9rem">'
+    + '<button class="btn btn-ghost btn-sm" onclick="addPayday()">+ Add someone</button>'
+    + '<button class="btn btn-gold btn-sm" onclick="savePaydays()">Save</button></div>';
+}
+
+function addPayday(){ PAYDAYS.push({ name:'', anchor:'', every:14 }); renderPaydayCard(); }
+function removePayday(i){ PAYDAYS.splice(i,1); renderPaydayCard(); renderCal(); }
+function editPayday(i,k,v){
+  if(!PAYDAYS[i]) return;
+  PAYDAYS[i][k] = k === 'every' ? Number(v) : v;
+  renderPaydayCard(); renderCal();
+}
+async function savePaydays(){
+  try{
+    const clean = PAYDAYS.filter(p => p && p.anchor);
+    const r = await api('/api/site-settings', { method:'PUT',
+      body: JSON.stringify({ settings: { paydays: JSON.stringify(clean) } }) });
+    if(!r.ok) throw new Error('Could not save');
+    PAYDAYS = clean; renderPaydayCard(); renderCal(); toast('Paydays saved ✓');
+  }catch(err){ toast(err.message || 'Could not save'); }
+}
+
 function renderMonth(){
   const d=new Date(curDate+'T12:00:00');
   const y=d.getFullYear(),mo=d.getMonth();
@@ -4523,7 +4684,11 @@ function renderMonth(){
     // A booked day is tinted, not just dotted — at a glance she can see how
     // full a month is without reading every cell.
     const busy=dayAppts.length?' has-appts':'';
-    cells+=`<div class="cal-cell ${ds===today?'today':''} ${ds===curDate?'sel':''}${busy}" onclick="openDay('${ds}')"><span class="cal-num">${day}</span>${dots}${count}</div>`;
+    // Payday, in green, so it reads as money and never as a booking.
+    const due=paydaysOn(ds);
+    const payCls=due.length?' payday':'';
+    const payTag=due.length?`<span class="pay-tag">💵 Pay ${esc(due.map(p=>p.name||'').filter(Boolean).join(', ')||'day')}</span>`:'';
+    cells+=`<div class="cal-cell ${ds===today?'today':''} ${ds===curDate?'sel':''}${busy}${payCls}" onclick="openDay('${ds}')"><span class="cal-num">${day}</span>${dots}${count}${payTag}</div>`;
   }
   document.getElementById('cal-month-wrap').innerHTML=
     `<div class="cal-month"><div class="cal-dows"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div><div class="cal-cells">${cells}</div></div>`;

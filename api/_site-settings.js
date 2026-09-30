@@ -21,7 +21,10 @@ module.exports = async function (req, res) {
     // vapid_private walked straight past it onto a public page.
     if (req.method === 'GET') {
       const NEVER_SENT = /(secret|private|token|password|passcode|webhook|api_?key|_key$|_sid$|^twilio_|^resend_|^anthropic|^openai)/i;
-      const OWNER_ONLY = /(phone|email)/i;
+      // Paydays name a staff member and when she is paid. That is the
+      // owner's business and nobody else's — least of all the person being
+      // paid, who could otherwise read it off this endpoint.
+      const OWNER_ONLY = /(phone|email|payday)/i;
       const isOwner = req.headers['x-ceo-password'] === CEO_PASSWORD;
       const rows = await query('SELECT key, value FROM site_settings');
       const out = {};
