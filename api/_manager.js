@@ -2089,12 +2089,21 @@ module.exports = async function (req, res) {
       // with the deposit and inspiration links is sent to.
       try { await require('./_visit').ensureColumns(); } catch (_) {}
       const tok = token();
+      // An agreed total set while booking by hand — services plus add-ons.
+      // Written now so the till asks for the right money from the start
+      // rather than falling back to one service off the menu.
+      const agreedCents = Math.max(0, Math.round(Number((req.body || {}).price_cents) || 0));
       const r = await execute(
+        `INSERT INTO team_appointments (team_member_id, client_name, client_phone, client_email, service, date, time, notes, status, chat_token, price_cents)
+         VALUES (?,?,?,?,?,?,?,?, 'scheduled', ?, ?)`,
+        [team_member_id ? Number(team_member_id) : null, client_name || '', client_phone || '',
+         String(client_email || '').trim().toLowerCase(), service || '', date, time, notes || '', tok, agreedCents]
+      ).catch(async () => execute(
         `INSERT INTO team_appointments (team_member_id, client_name, client_phone, client_email, service, date, time, notes, status, chat_token)
          VALUES (?,?,?,?,?,?,?,?, 'scheduled', ?)`,
         [team_member_id ? Number(team_member_id) : null, client_name || '', client_phone || '',
          String(client_email || '').trim().toLowerCase(), service || '', date, time, notes || '', tok]
-      );
+      ));
       /* The confirmation with both links — pay the deposit, send your
          inspiration. Sent here so an appointment Zahra takes by hand
          arrives exactly like one booked online, rather than with no money

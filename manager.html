@@ -2915,6 +2915,32 @@
     </div>
     <div class="field"><label class="fld-label">Client Email (for instant confirmation)</label><input id="a-email" placeholder="client@email.com" /></div>
     <div class="field"><label class="fld-label">Service or task</label><select id="a-service"></select><input id="a-service-other" placeholder="Type what they are doing" style="display:none;margin-top:0.5rem" /></div>
+
+    <!-- Add-ons and the agreed price. She books people herself, so she needs
+         what the booking page gives a client: more than one thing, and a
+         total she can set. What lands here is what the till asks for. -->
+    <div class="field">
+      <label class="fld-label">Add-ons &amp; extras</label>
+      <div id="a-addons"></div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="addApptLine()"
+        style="margin-top:0.5rem;padding:0.35rem 0.7rem;font-size:0.7rem">+ Add another service</button>
+    </div>
+    <div class="field two">
+      <div>
+        <label class="fld-label">Total price</label>
+        <div style="display:flex;align-items:center;gap:0.4rem">
+          <span style="font-size:1rem;color:var(--muted)">$</span>
+          <input id="a-price" type="number" min="0" step="1" placeholder="0"
+            oninput="apptPriceTouched=true;renderApptTotal()" style="flex:1" />
+        </div>
+        <div id="a-price-hint" style="font-size:0.68rem;color:var(--muted);margin-top:0.3rem"></div>
+      </div>
+      <div>
+        <label class="fld-label">What they'll owe at checkout</label>
+        <div id="a-owed" style="font-size:1.15rem;font-weight:700;padding-top:0.45rem">—</div>
+        <div id="a-owed-hint" style="font-size:0.68rem;color:var(--muted);margin-top:0.2rem"></div>
+      </div>
+    </div>
     <div class="field two">
       <div><label class="fld-label">Date</label><input type="date" id="a-date" /></div>
       <div><label class="fld-label">Time</label>
@@ -3223,6 +3249,7 @@ async function login(){
     showTab((location.hash || '').replace('#', '') || 'overview');
     fillTime12Selects();
     loadServiceCatalog();
+    loadPriceMenus();
     sessionStorage.setItem('zm_pwd',pwd);
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='block';
@@ -5279,10 +5306,13 @@ function fillServiceSelect(sel,selected){
     +EXTRA.map(s=>`<option ${s===selected?'selected':''}>${s}</option>`).join('');
   sel.onchange=function(){
     const box=document.getElementById('a-service-other');
-    if(!box)return;
-    const other=this.value==='Other (type it)';
-    box.style.display=other?'block':'none';
-    if(other)box.focus();
+    if(box){
+      const other=this.value==='Other (type it)';
+      box.style.display=other?'block':'none';
+      if(other)box.focus();
+    }
+    // Changing the service changes what the menu says it costs.
+    if(typeof renderApptTotal==='function') renderApptTotal();
   };
 }
 // The list is a suggestion, not a limit. Anything a person would recognise
@@ -5344,8 +5374,119 @@ function openApptModal(){
   const _so=document.getElementById('a-service-other'); if(_so){_so.value='';_so.style.display='none';}
   fillTimeSelect(document.getElementById('a-time'),'10:00');
   document.getElementById('a-delete').style.display='none';
+  apptLines=[]; apptPriceTouched=false;
+  { const p=document.getElementById('a-price'); if(p) p.value=''; }
+  renderApptLines();
   openModal('modal-appt');
 }
+/* ── WHAT THEY'RE HAVING, AND WHAT IT COSTS ────────────────────────────
+   The booking page lets a client pick a service and add-ons. Booking
+   somebody in by hand only ever allowed one service, so an appointment she
+   took herself could not say "structured manicure, removal and a Russian"
+   — and the till then asked for the wrong money. These are the same
+   add-ons the booking page offers, priced from the same menu, and the
+   total written here is the one checkout collects against. */
+let ADDONS = [], SERVICE_PRICES = {}, apptLines = [], apptPriceTouched = false;
+
+async function loadPriceMenus(){
+  try{
+    const r = await fetch('/api/addons'); const list = await r.json();
+    if(Array.isArray(list)) ADDONS = list.filter(a => a && a.name);
+  }catch(_){}
+  try{
+    const r = await fetch('/api/services'); const list = await r.json();
+    (Array.isArray(list) ? list : []).forEach(s => {
+      if(s && s.name) SERVICE_PRICES[s.name] = Number(s.price_cents) || 0;
+    });
+  }catch(_){}
+}
+
+function addApptLine(name, cents){
+  apptLines.push({ name: name || '', cents: Number(cents) || 0 });
+  renderApptLines();
+}
+function removeApptLine(i){ apptLines.splice(i,1); renderApptLines(); }
+function editApptLine(i, key, v){
+  if(!apptLines[i]) return;
+  if(key === 'name'){
+    apptLines[i].name = v;
+    // Picking a known add-on fills its price; she can still overwrite it.
+    const known = ADDONS.find(a => a.name === v);
+    if(known) apptLines[i].cents = Number(known.price_cents) || 0;
+    else if(SERVICE_PRICES[v] != null) apptLines[i].cents = SERVICE_PRICES[v];
+    renderApptLines();
+    return;
+  }
+  apptLines[i].cents = Math.max(0, Math.round(Number(v) * 100) || 0);
+  renderApptTotal();
+}
+
+function renderApptLines(){
+  const box = document.getElementById('a-addons'); if(!box) return;
+  if(!apptLines.length){
+    box.innerHTML = '<div style="font-size:0.72rem;color:var(--muted)">Just the one service. Add a removal, a Russian manicure, nail art and so on here.</div>';
+    renderApptTotal(); return;
+  }
+  const opts = n => {
+    const names = [...new Set(ADDONS.map(a=>a.name).concat(SERVICES))];
+    return '<option value="">— pick or type —</option>'
+      + names.map(x => '<option value="'+esc(x)+'"'+(x===n?' selected':'')+'>'+esc(x)+'</option>').join('')
+      + (n && !names.includes(n) ? '<option value="'+esc(n)+'" selected>'+esc(n)+'</option>' : '');
+  };
+  box.innerHTML = apptLines.map(function(l,i){
+    return '<div style="display:flex;gap:0.4rem;align-items:center;margin-bottom:0.4rem">'
+      + '<select onchange="editApptLine('+i+',\'name\',this.value)" style="flex:1;min-width:0">'+opts(l.name)+'</select>'
+      + '<span style="color:var(--muted)">$</span>'
+      + '<input type="number" min="0" step="1" value="'+(l.cents/100)+'" style="width:5.5rem"'
+      + ' oninput="editApptLine('+i+',\'cents\',this.value)" />'
+      + '<button type="button" class="btn btn-ghost btn-sm" style="padding:0.25rem 0.5rem;font-size:0.65rem"'
+      + ' onclick="removeApptLine('+i+')">✕</button></div>';
+  }).join('');
+  renderApptTotal();
+}
+
+function currentServiceName(){
+  const sel = document.getElementById('a-service');
+  const other = document.getElementById('a-service-other');
+  if(!sel) return '';
+  return (sel.value === 'Other (type it)' && other && other.value.trim()) ? other.value.trim() : sel.value;
+}
+
+// The main service plus every extra, so the number she types over is the
+// right starting point rather than a blank box.
+function suggestedTotalCents(){
+  const base = SERVICE_PRICES[currentServiceName()] || 0;
+  return base + apptLines.reduce((s,l) => s + (Number(l.cents)||0), 0);
+}
+
+function renderApptTotal(){
+  const priceEl = document.getElementById('a-price'); if(!priceEl) return;
+  const suggested = suggestedTotalCents();
+  if(!apptPriceTouched && suggested > 0) priceEl.value = Math.round(suggested/100);
+
+  const hint = document.getElementById('a-price-hint');
+  if(hint){
+    const base = SERVICE_PRICES[currentServiceName()] || 0;
+    const bits = [];
+    if(base) bits.push(currentServiceName()+' $'+(base/100).toFixed(0));
+    apptLines.forEach(l => { if(l.name) bits.push(l.name+' $'+((l.cents||0)/100).toFixed(0)); });
+    hint.textContent = bits.length ? ('Menu: '+bits.join(' + ')+' = $'+(suggested/100).toFixed(0)) : '';
+  }
+
+  // What checkout will ask for: the total, less whatever deposit is in.
+  const id = document.getElementById('a-id').value;
+  const a = id ? appts.find(x=>Number(x.id)===Number(id)) : null;
+  const total = Math.max(0, Math.round(Number(priceEl.value)*100) || 0);
+  const dep = a && Number(a.deposit_paid) ? (Number(a.deposit_cents)||0) : 0;
+  const owed = Math.max(0, total - dep);
+  const owedEl = document.getElementById('a-owed');
+  const owedHint = document.getElementById('a-owed-hint');
+  if(owedEl) owedEl.textContent = total ? ('$'+(owed/100).toFixed(2)) : '—';
+  if(owedHint) owedHint.textContent = dep
+    ? ('$'+(total/100).toFixed(2)+' less the $'+(dep/100).toFixed(2)+' deposit already paid')
+    : (total ? 'No deposit paid yet' : '');
+}
+
 function editAppt(id){
   const a=appts.find(x=>Number(x.id)===Number(id));if(!a)return;
   document.getElementById('appt-modal-title').textContent='Edit Appointment';
@@ -5371,6 +5512,25 @@ function editAppt(id){
   document.getElementById('a-delete').style.display='inline-flex';
   const depBox=document.getElementById('a-deposit');
   if(depBox){ depBox.innerHTML=depLine(a); depBox.style.display='block'; }
+
+  /* Extras are kept on the row as "Main + Removal + Russian Manicure", so
+     reopening shows them as lines again instead of one long service name. */
+  apptLines = [];
+  const parts = String(a.service||'').split(' + ').map(s=>s.trim()).filter(Boolean);
+  parts.slice(1).forEach(n => apptLines.push({ name:n, cents: (ADDONS.find(x=>x.name===n)||{}).price_cents || SERVICE_PRICES[n] || 0 }));
+  if(parts.length){
+    const sel=document.getElementById('a-service');
+    const other=document.getElementById('a-service-other');
+    const known=[...sel.options].some(o=>o.value===parts[0]);
+    if(known){ sel.value=parts[0]; if(other){other.value='';other.style.display='none';} }
+    else if(other){ sel.value='Other (type it)'; other.value=parts[0]; other.style.display='block'; }
+  }
+  const priceEl=document.getElementById('a-price');
+  const saved=Number(a.price_cents)||0;
+  apptPriceTouched = saved > 0;              // a price she already set wins
+  if(priceEl) priceEl.value = saved ? Math.round(saved/100) : '';
+  renderApptLines();
+
   openModal('modal-appt');
 }
 async function saveAppt(){
@@ -5380,11 +5540,22 @@ async function saveAppt(){
     client_name:document.getElementById('a-client').value.trim(),
     client_phone:document.getElementById('a-phone').value.trim(),
     client_email:document.getElementById('a-email').value.trim(),
-    // 'Other' means she typed it herself — save what she typed, not the label
+    // 'Other' means she typed it herself — save what she typed, not the
+    // label. Extras ride on the same line so every screen that only reads
+    // the service name still shows what they are having.
     service:(function(){
       const v=document.getElementById('a-service').value;
       const o=document.getElementById('a-service-other');
-      return (v==='Other (type it)' && o && o.value.trim()) ? o.value.trim() : v;
+      const base=(v==='Other (type it)' && o && o.value.trim()) ? o.value.trim() : v;
+      const extras=apptLines.map(l=>String(l.name||'').trim()).filter(Boolean);
+      return [base].concat(extras).filter(Boolean).join(' + ');
+    })(),
+    // The agreed total. billFor treats this as the price and works the
+    // remainder out from it, so what she types here is what they are asked
+    // for at checkout.
+    price_cents:(function(){
+      const el=document.getElementById('a-price');
+      return Math.max(0, Math.round(Number(el && el.value)*100) || 0);
     })(),
     date:document.getElementById('a-date').value,
     time:parseTimeInput(document.getElementById('a-time').value),
