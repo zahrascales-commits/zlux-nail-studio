@@ -1442,6 +1442,31 @@
         </div>
         <button class="btn btn-ghost" onclick="copyAllLinks()">Copy them all</button>
       </div>
+
+      <!-- The website code, right here, so it can go straight to whoever
+           asked for it. Same card as the one on Website content. -->
+      <div class="site-card" style="margin-bottom:1.4rem">
+        <h3>Your website QR code</h3>
+        <p>Point a phone at it and it opens zolanailstudio.com. Send it, save it, or print it.</p>
+        <div class="qr-wrap">
+          <div class="qr-left">
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+              <input id="lk-qr-link" readonly onclick="this.select()" value="https://zolanailstudio.com/" style="flex:1;min-width:210px" />
+              <button class="btn btn-ghost btn-sm" onclick="copyText('https://zolanailstudio.com/')">Copy link</button>
+            </div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.9rem">
+              <button class="btn btn-gold btn-sm" onclick="shareLinksQr()">Send or save it</button>
+              <button class="btn btn-ghost btn-sm" onclick="copyLinksQr()">Copy picture</button>
+              <button class="btn btn-ghost btn-sm" onclick="downloadLinksQr()">Download</button>
+            </div>
+            <div class="muted" id="lk-qr-msg" style="font-size:0.78rem;line-height:1.6;margin-top:0.7rem">On a phone, <b>Send or save it</b> opens your share sheet — Messages, Instagram, or Save Image to put it in Photos.</div>
+          </div>
+          <div class="qr-right">
+            <canvas id="lk-qr" width="1080" height="1350" aria-label="QR code for your website"></canvas>
+          </div>
+        </div>
+      </div>
+
       <div id="links-body"></div>
     </section>
 
@@ -3444,7 +3469,7 @@ async function removeFaceId(id){
 // Initialised after login instead — at parse time PWD is still empty,
 
 const TAB_LOADERS = {
-  links:      () => renderLinks(),
+  links:      () => { renderLinks(); drawLinksQr(); },
   overview:   () => { loadHomeTop(); loadNewBookings(); loadMoneyNow(); loadNeedsYou(); loadMissingConfirms(); loadOverview(); loadDispatch(); loadFloor(); },
   mkt:        () => { loadMktHome(); loadSiteReviews(); },
   coupons:    () => loadCoupons(),
@@ -10482,6 +10507,47 @@ function renderLinks(){
   }).join('');
 }
 
+/* The website code on the links screen. Same picture as the card on
+   Website content — one routine draws both. */
+function linksQrTarget(){ return QR_TARGETS.find(t => t.key === "site") || QR_TARGETS[0]; }
+async function drawLinksQr(){
+  await paintQrCard(document.getElementById("lk-qr"), linksQrTarget());
+}
+async function copyLinksQr(){
+  try{
+    const b = await qrBlobFrom(document.getElementById("lk-qr"));
+    if (!b || !navigator.clipboard || !window.ClipboardItem) throw new Error();
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": b })]);
+    toast("QR code copied — paste it anywhere ✦");
+  }catch(_){
+    toast("This browser will not copy pictures — use Download");
+    const el = document.getElementById("lk-qr-msg");
+    if (el) el.innerHTML = "Your browser would not copy the picture. Tap <b>Download</b> instead, or press and hold the code and choose Copy.";
+  }
+}
+async function downloadLinksQr(){
+  const b = await qrBlobFrom(document.getElementById("lk-qr"));
+  if (!b) return toast("Could not make the picture");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(b);
+  a.download = "zola-website-qr.png";
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  toast("Saved to your downloads");
+}
+async function shareLinksQr(){
+  const b = await qrBlobFrom(document.getElementById("lk-qr"));
+  if (!b) return toast("Could not make the picture");
+  try{
+    const file = new File([b], "zola-website-qr.png", { type: "image/png" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], text: linksQrTarget().url });
+      return;
+    }
+  }catch(e){ if (e && e.name === "AbortError") return; }
+  downloadLinksQr();
+}
+
 function copyAllLinks(){
   const lines = [];
   ZOLA_LINKS.forEach(function(g){
@@ -10536,18 +10602,25 @@ async function drawQr(){
   const targets = document.getElementById("qr-targets");
   if (targets) targets.innerHTML = QR_TARGETS.map(x =>
     '<button class="qr-t' + (x.key === QR_PICK ? " on" : "") + '" onclick="pickQr(\'' + x.key + '\')">' + esc(x.label) + '</button>').join("");
+  await paintQrCard(document.getElementById("qr-preview"), t);
+}
 
-  // The library draws into a hidden div; we take its canvas and place it.
-  const stage = document.getElementById("qr-stage");
-  if (!stage || typeof QRCode === "undefined") return;
-  stage.innerHTML = "";
+/* The card itself, drawn into whichever canvas it is given. One routine so
+   the code on the links screen is the same picture as the one here rather
+   than a second version that drifts. */
+async function paintQrCard(c, t){
+  if (!c || !t || typeof QRCode === "undefined") return false;
+
+  // The library draws into a div of its own; we take its canvas and place it.
+  const stage = document.createElement("div");
+  stage.style.display = "none";
+  document.body.appendChild(stage);
   new QRCode(stage, { text: t.url, width: 720, height: 720, colorDark: "#0D0D0D", colorLight: "#FFFFFF", correctLevel: QRCode.CorrectLevel.H });
   const src = stage.querySelector("canvas");
-  if (!src) return;
+  if (!src) { stage.remove(); return false; }
 
   const ok = await qrFont();
   const serif = ok ? "Cinzel, Georgia, serif" : "Georgia, serif";
-  const c = document.getElementById("qr-preview");
   const x = c.getContext("2d");
   const W = c.width, H = c.height;
 
@@ -10577,17 +10650,20 @@ async function drawQr(){
   x.font = "400 27px Inter, system-ui, sans-serif";
   x.fillStyle = "#667085";
   x.fillText("2037 W Linda Vista Ave #D · Porterville, CA", W / 2, qy + size + 232);
+
+  stage.remove();
+  return true;
 }
 
 function pickQr(k){ QR_PICK = k; drawQr(); }
 
-function qrBlob(){
+function qrBlobFrom(c){
   return new Promise(function(done){
-    const c = document.getElementById("qr-preview");
     if (!c || !c.toBlob) return done(null);
     c.toBlob(function(b){ done(b); }, "image/png");
   });
 }
+function qrBlob(){ return qrBlobFrom(document.getElementById("qr-preview")); }
 function qrFileName(){ return "zola-" + qrTarget().key + "-qr.png"; }
 function qrSay(m){ const el = document.getElementById("qr-msg"); if (el) el.innerHTML = m; }
 
