@@ -147,7 +147,13 @@ async function recordRest(md, received) {
 async function depositFor(appt) {
   // A deposit already taken is a fact, not a calculation.
   if (Number(appt.deposit_cents) > 0) return Number(appt.deposit_cents);
+  return correctDepositFor(appt);
+}
 
+/* What this appointment's deposit SHOULD be, whatever has already been
+   taken. Used to notice a deposit that came up short — a multi-service
+   appointment that was charged for one service. */
+async function correctDepositFor(appt) {
   const { member, tier } = await memberInfoFor(appt);
 
   /* Essential and Elite promise no deposit in as many words. The retired
@@ -171,11 +177,34 @@ async function depositFor(appt) {
       });
     } catch (_) {}
 
-    const calc = require('./_pay').computeDeposit({
-      service_name: appt.service, addon_names: [], member_tier: tier || null,
-      free_service: false, percent_off: ownRate,
-    });
-    if (calc && calc.deposit_cents) return calc.deposit_cents;
+    /* ── HALF OF EVERYTHING, NOT HALF OF ONE THING ──────────────────────
+       An appointment booked by hand carries all of its services on one
+       line: "Russian Dry Pedicure — Full Correction + Removal + Organic
+       Structured Manicure". Priced as a single name, the menu lookup
+       matched whichever service appeared in that string first and asked
+       for half of that alone — Beiriz was asked for $47.50 against $255 of
+       work. The deposit is half of the whole appointment.
+
+       The agreed total leads, because it is what was actually agreed when
+       the appointment was taken; the menu only fills in when there is no
+       agreed price. */
+    const pay = require('./_pay');
+    const parts = String(appt.service || '').split(/\s\+\s/).map(x => x.trim()).filter(Boolean);
+    let listed = 0, covered = 0;
+    for (const name of (parts.length ? parts : [appt.service])) {
+      const calc = pay.computeDeposit({
+        service_name: name, addon_names: [], member_tier: tier || null,
+        free_service: false, percent_off: ownRate,
+      });
+      if (!calc) continue;
+      listed += Number(calc.total_cents) || 0;
+      covered += Number(calc.covered_cents) || 0;
+    }
+
+    const agreed = Math.max(0, Math.round(Number(appt.total_cents || appt.price_cents) || 0));
+    // What the membership takes off still comes off an agreed price.
+    const base = agreed > 0 ? Math.max(0, agreed - covered) : listed;
+    if (base > 0) return Math.max(50, Math.ceil(base * 0.5));
   } catch (_) {}
   return 0;
 }
@@ -255,6 +284,9 @@ module.exports = async function (req, res) {
         due_cents: group.dueCents,
         paid_cents: group.paidCents,
         all_paid: group.dueCents === 0,
+        // How many services this appointment covers — so a short deposit can
+        // be explained ("that covered one of your three services").
+        service_count: String(appt.service || '').split(/\s\+\s/).filter(Boolean).length,
         // Once the deposit is in: the rest of the day, if they want to pay it now.
         rest_cents: group.dueCents === 0 ? (await restInfo(group)).cents : 0,
         // Whether the payment keeps the card for the rest of the visit. The
@@ -474,6 +506,7 @@ module.exports = async function (req, res) {
 module.exports.ensureColumns = ensureColumns;
 module.exports.findByToken = findByToken;
 module.exports.depositFor = depositFor;
+module.exports.correctDepositFor = correctDepositFor;
 module.exports.restInfo = restInfo;
 module.exports.recordRest = recordRest;
 module.exports.pretty = pretty;

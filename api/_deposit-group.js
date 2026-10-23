@@ -9,7 +9,7 @@
 // So a deposit is worked out for the day, not the row. Every page, email and
 // reminder that asks for money asks for this number, and paying it marks
 // every one of those services paid, each with its own share.
-const { query, execute } = require('./_team-db');
+const { query, queryOne, execute } = require('./_team-db');
 
 const digits = s => String(s || '').replace(/[^0-9]/g, '');
 const lower = s => String(s || '').trim().toLowerCase();
@@ -67,10 +67,30 @@ async function groupFor(appt) {
     }
   }
 
+  /* A deposit that came up short still owes the difference. Appointments
+     booked by hand carry every service on one line, and until this was
+     fixed the link asked for half of whichever service the menu matched
+     first — half of a $95 manicure against $255 of work. Those clients
+     have paid something, so they are not "unpaid"; they owe the rest of
+     the deposit, and this is where that is noticed.
+
+     Only ahead of the appointment, and only for a difference worth asking
+     about: anything already in the chair settles at the desk, and nobody
+     gets a payment link for sixty cents. */
+  const TOPUP_FLOOR = 500;
+  const todayLA = new Date(Date.now() - 7 * 3600000).toISOString().slice(0, 10);
+
   const paid = [], owing = [];
   for (const r of rows) {
     if (Number(r.deposit_paid)) {
-      paid.push({ row: r, cents: Math.round(Number(r.deposit_cents) || 0) });
+      const taken = Math.round(Number(r.deposit_cents) || 0);
+      paid.push({ row: r, cents: taken });
+      let should = 0;
+      try { should = Math.round(Number(await visit.correctDepositFor(r)) || 0); } catch (_) { should = 0; }
+      const short = should - taken;
+      if (short >= TOPUP_FLOOR && r.chat_token && String(r.date || '') >= todayLA) {
+        owing.push({ row: r, owed: short, topup: true, already: taken });
+      }
       continue;
     }
     let owed = 0;
@@ -117,10 +137,22 @@ async function recordShares(shares, receivedCents) {
   let recorded = 0;
   for (const s of shares) {
     try {
-      await execute(
-        'UPDATE team_appointments SET deposit_paid = 1, deposit_cents = ? ' +
-        'WHERE chat_token = ? AND COALESCE(deposit_paid,0) = 0',
-        [s.cents, s.token]);
+      /* Topping up a deposit that was short adds to what was already taken;
+         a first payment sets it. Written as two statements rather than one
+         sum, so a row that was never paid cannot double-count a figure that
+         was only ever an estimate of what was owed. */
+      const row = await queryOne(
+        'SELECT COALESCE(deposit_paid,0) AS paid FROM team_appointments WHERE chat_token = ?', [s.token]);
+      if (row && Number(row.paid)) {
+        await execute(
+          'UPDATE team_appointments SET deposit_cents = COALESCE(deposit_cents,0) + ? WHERE chat_token = ?',
+          [s.cents, s.token]);
+      } else {
+        await execute(
+          'UPDATE team_appointments SET deposit_paid = 1, deposit_cents = ? ' +
+          'WHERE chat_token = ? AND COALESCE(deposit_paid,0) = 0',
+          [s.cents, s.token]);
+      }
       recorded++;
     } catch (_) {}
   }

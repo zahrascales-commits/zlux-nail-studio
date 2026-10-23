@@ -4621,6 +4621,8 @@ function depLine(a){
   const s = depInfo(a);
   const wrap = (color, bg, text) => '<div class="dep-line" data-dep="' + esc(String(a.id)) + '" style="color:' + color + ';background:' + bg + '">' + text + '</div>';
   if (s.state === 'paid') return wrap('#067647', '#ECFDF3', '✓ Deposit paid — ' + depMoney(s.deposit_cents));
+  // Paid, but for fewer services than were booked.
+  if (s.state === 'short') return wrap('#B54708', '#FFFAEB', '⚠ Deposit short — ' + depMoney(s.deposit_cents) + ' paid of ' + depMoney(s.should_cents) + ' · ' + depMoney(s.due_cents) + ' still owed');
   if (s.state === 'unpaid') return wrap('#B42318', '#FEF3F2', '✗ Deposit not paid — ' + depMoney(s.due_cents) + ' due');
   if (s.state === 'none_due') return wrap('#344054', '#F2F4F7', 'No deposit needed — covered by membership');
   if (s.state === 'done') return wrap('#344054', '#F2F4F7', 'Checked out' + (s.deposit_paid && s.deposit_cents ? ' · deposit ' + depMoney(s.deposit_cents) : '') + (s.paid_cents ? ' · paid ' + depMoney(s.paid_cents) + ' at the desk' : ''));

@@ -630,7 +630,17 @@ async function depositStates(from, to) {
         return;
       }
       if (Number(a.deposit_paid) === 1) {
-        out[id] = { state: 'paid', deposit_cents: Math.round(Number(a.deposit_cents) || 0) };
+        const taken = Math.round(Number(a.deposit_cents) || 0);
+        /* A deposit can be paid and still be short — an appointment with
+           three services whose link only asked for one of them. Say so on
+           the calendar, rather than a tick beside half the money. */
+        let should = taken;
+        if (String(a.date) >= todayKey) {
+          try { should = Math.round(Number(await visit.correctDepositFor(a)) || 0); } catch (_) { should = taken; }
+        }
+        out[id] = should - taken >= 500
+          ? { state: 'short', deposit_cents: taken, should_cents: should, due_cents: should - taken }
+          : { state: 'paid', deposit_cents: taken };
         return;
       }
       // A day already gone needs no working out — nobody is paying a deposit for it now.

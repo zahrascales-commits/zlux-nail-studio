@@ -249,6 +249,14 @@ function render(){
                     : '')
               : '<p>No deposit needed for this one.</p>')
           : (many ? '' : '<div class="amt">' + money(due) + '</div>')
+            /* A deposit that was taken short. Say what was paid and what is
+               left, or the number looks like a second charge for the same
+               thing. */
+            + (Number(V.paid_cents) > 0 && !many
+                ? '<p style="margin-bottom:0.6rem">You have already paid <b>' + money(V.paid_cents) + '</b>'
+                  + (V.service_count > 1 ? ' — that covered one of your ' + V.service_count + ' services.' : '.')
+                  + ' This is the rest of the deposit for everything booked.</p>'
+                : '')
             + '<p>' + (many
                 ? 'One payment covers every service above, and it comes off what you pay on the day.'
                 : 'This holds your spot and comes off the price of your service.') + '</p>'
