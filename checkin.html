@@ -47,6 +47,11 @@
     padding:0.6rem 0.7rem;border-radius:8px;outline:none}
   .rb-row select:focus,.rb-row input:focus{border-color:#C9B896}
   .rb-row option{background:#140d07;color:#F2ECE1}
+  .rb-add{background:none;border:1px dashed rgba(182,165,136,0.55);color:#C9B896;
+    font-family:'Josefin Sans',sans-serif;font-size:0.9rem;padding:0.55rem 0.9rem;border-radius:10px;cursor:pointer}
+  .rb-add:active{transform:scale(0.98)}
+  .rb-x{background:none;border:none;color:#B6A588;font-size:1.5rem;line-height:1;padding:0 0.2rem;cursor:pointer;flex:0 0 auto}
+  .rb-total{font-family:'Josefin Sans',sans-serif;font-size:0.9rem;color:#DDD0B8;margin-left:auto}
   .stars{display:flex;gap:1rem;font-size:3.4rem;margin:1.6rem 0 0.4rem;cursor:pointer;user-select:none}
   .stars span{transition:transform 0.12s}
   .stars span:active{transform:scale(1.2)}
@@ -244,8 +249,10 @@
 
     <div id="rb-card" style="width:min(520px,92vw);margin:1.3rem 0 0;text-align:left;
       border:1px solid rgba(182,165,136,0.4);padding:1.1rem 1.2rem">
-      <div class="rb-row"><span>Service</span>
-        <select id="rb-service"></select></div>
+      <div id="rb-services"></div>
+      <div class="rb-row" style="border-bottom:none;padding-top:0">
+        <button type="button" class="rb-add" id="rb-add" onclick="rbAddService()">+ Add another service</button>
+        <span id="rb-total" class="rb-total"></span></div>
       <div class="rb-row"><span>With</span>
         <select id="rb-artist"></select></div>
       <div class="rb-row"><span>Date</span>
@@ -786,10 +793,9 @@ async function offerRebook(){
     s.weeks === 4 ? 'Same time in 4 weeks?' : 'Same time in ' + (s.weeks || 2) + ' weeks?';
   document.getElementById('rb-why').textContent = s.reason || '';
 
-  const svc = document.getElementById('rb-service');
-  svc.innerHTML = (RB.services || []).map(function(x){
-    return '<option' + (x.name === RB.service ? ' selected' : '') + '>' + escK(x.name) + '</option>';
-  }).join('') || ('<option>' + escK(RB.service || '') + '</option>');
+  // Whatever she came in for today, ready to repeat.
+  RB_PICKS = [RB.service || ((RB.services || [])[0] || {}).name || ''].filter(Boolean);
+  renderRbServices();
 
   const art = document.getElementById('rb-artist');
   art.innerHTML = (RB.artists || []).map(function(a){
@@ -806,6 +812,48 @@ async function offerRebook(){
 
   document.getElementById('rb-err').textContent = '';
   show('s-rebook');
+}
+
+/* The services for the next visit. One to start with — whatever she just
+   had — and she can add more to the same appointment rather than booking
+   three separate slots for one sitting. */
+let RB_PICKS = [];
+
+function rbServiceOptions(selected){
+  return (RB.services || []).map(function(x){
+    return '<option' + (x.name === selected ? ' selected' : '') + '>' + escK(x.name) + '</option>';
+  }).join('') || ('<option>' + escK(selected || RB.service || '') + '</option>');
+}
+
+function rbPriceOf(name){
+  const hit = (RB.services || []).find(function(x){ return x.name === name; });
+  return hit ? Number(hit.price_cents) || 0 : 0;
+}
+
+function renderRbServices(){
+  const box = document.getElementById('rb-services');
+  if(!box) return;
+  box.innerHTML = RB_PICKS.map(function(name, i){
+    return '<div class="rb-row"><span>' + (i === 0 ? 'Service' : 'And') + '</span>'
+      + '<select onchange="rbSetService(' + i + ', this.value)">' + rbServiceOptions(name) + '</select>'
+      + (i > 0 ? '<button type="button" class="rb-x" onclick="rbRemoveService(' + i + ')" aria-label="Remove">×</button>' : '')
+      + '</div>';
+  }).join('');
+
+  // What it comes to, so nobody is surprised by the deposit.
+  const total = RB_PICKS.reduce(function(sum, n){ return sum + rbPriceOf(n); }, 0);
+  const el = document.getElementById('rb-total');
+  if(el) el.textContent = total > 0
+    ? (RB_PICKS.length > 1 ? RB_PICKS.length + ' services · $' + (total/100).toFixed(2) : '$' + (total/100).toFixed(2))
+    : '';
+}
+
+function rbSetService(i, v){ RB_PICKS[i] = v; renderRbServices(); }
+function rbRemoveService(i){ RB_PICKS.splice(i, 1); renderRbServices(); }
+function rbAddService(){
+  const first = (RB.services || [])[0];
+  RB_PICKS.push((first && first.name) || RB.service || '');
+  renderRbServices();
 }
 
 function fillTimes(list, preferred){
@@ -854,7 +902,7 @@ async function rbBook(){
         q: KNAME, ref: KREF,
         date: document.getElementById('rb-date').value,
         time: document.getElementById('rb-time').value,
-        service: document.getElementById('rb-service').value,
+        services: RB_PICKS.slice(),
         artist_id: document.getElementById('rb-artist').value,
       })
     });

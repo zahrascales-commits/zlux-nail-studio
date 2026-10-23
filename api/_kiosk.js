@@ -323,7 +323,27 @@ module.exports = async function (req, res) {
 
       const date = String(body.date || '').slice(0, 10);
       const time = String(body.time || '').slice(0, 5);
-      const service = String(body.service || appt.service || '').slice(0, 120);
+
+      /* One appointment can hold several services. Booking them one at a
+         time made three bookings, three slots and three deposits for a visit
+         that is really one sitting. */
+      const picked = (Array.isArray(body.services) ? body.services : [body.service])
+        .map(x => String(x || '').trim()).filter(Boolean).slice(0, 6);
+      const names = picked.length ? picked : [String(appt.service || '').trim()].filter(Boolean);
+      const service = names.join(' + ').slice(0, 240);
+
+      /* Priced here from the menu and written onto the appointment, so the
+         deposit taken in a moment is half of everything booked and the desk
+         asks for the right balance afterwards. */
+      let priceCents = 0;
+      try {
+        const payLib = require('./_pay');
+        for (const n of names) {
+          const c = payLib.computeDeposit({ service_name: n, addon_names: [], member_tier: null, free_service: false });
+          if (c) priceCents += Number(c.total_cents) || 0;
+        }
+      } catch (_) { priceCents = 0; }
+
       const artistId = Number(body.artist_id) || null;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Pick a date.' });
       if (!/^\d{2}:\d{2}$/.test(time)) return res.status(400).json({ error: 'Pick a time.' });
@@ -342,10 +362,16 @@ module.exports = async function (req, res) {
 
       const out = await execute(
         `INSERT INTO team_appointments
+           (team_member_id, client_name, client_phone, client_email, service, date, time, notes, status, chat_token, price_cents)
+         VALUES (?,?,?,?,?,?,?,?,'scheduled',?,?)`,
+        [artistId, appt.name || '', appt.phone || '', appt.email || '', service, date, time,
+         'Rebooked at checkout', tok, priceCents]
+      ).catch(async () => execute(
+        `INSERT INTO team_appointments
            (team_member_id, client_name, client_phone, client_email, service, date, time, notes, status, chat_token)
          VALUES (?,?,?,?,?,?,?,?,'scheduled',?)`,
         [artistId, appt.name || '', appt.phone || '', appt.email || '', service, date, time,
-         'Rebooked at checkout', tok]);
+         'Rebooked at checkout', tok]));
 
       const newId = out && out.lastInsertRowid;
 
@@ -360,7 +386,7 @@ module.exports = async function (req, res) {
         const visit = require('./_visit');
         const due = Math.round(Number(await visit.depositFor({
           service, client_email: appt.email || '', client_name: appt.name || '',
-          deposit_cents: 0,
+          deposit_cents: 0, price_cents: priceCents,
         })) || 0);
         deposit.due_cents = due;
 

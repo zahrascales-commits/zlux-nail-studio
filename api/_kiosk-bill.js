@@ -81,14 +81,34 @@ async function billFor(appt) {
     });
   } catch (_) {}
 
-  const calc = pay.computeDeposit({
-    service_name: appt.service,
-    addon_names: [],
-    member_tier: tier,
-    free_service: freeLeft > 0,
-    design_tier: null,
-    percent_off: ownRate,
-  });
+  /* Every service on the appointment, priced one at a time and added up.
+     Booked by hand, three services arrive on one line — and the menu lookup
+     matched whichever of them came first, so a member's included service
+     covered one of three and the desk asked for the rest at full price. The
+     allowance is spent in order, the same way the booking page spends it. */
+  const parts = String(appt.service || '').split(/\s\+\s/).map(x => x.trim()).filter(Boolean);
+  let left = freeLeft;
+  let calc = null;
+  for (const name of (parts.length ? parts : [appt.service])) {
+    const c = pay.computeDeposit({
+      service_name: name,
+      addon_names: [],
+      member_tier: tier,
+      free_service: left > 0,
+      design_tier: null,
+      percent_off: ownRate,
+    });
+    if (!c) continue;
+    if (c.used_included) left--;
+    calc = calc
+      ? {
+          total_cents: calc.total_cents + c.total_cents,
+          covered_cents: (calc.covered_cents || 0) + (c.covered_cents || 0),
+          service_list_cents: (calc.service_list_cents || 0) + (c.service_list_cents || 0),
+          used_included: calc.used_included || c.used_included,
+        }
+      : c;
+  }
 
   /* A price agreed when they booked outranks today's menu. Greenley agreed
      $90 and paid half; the menu moved to $95 afterwards and would
