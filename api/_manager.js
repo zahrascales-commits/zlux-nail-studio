@@ -1263,18 +1263,29 @@ module.exports = async function (req, res) {
       const paidLines = g.paid.map(x =>
         (x.row.service || 'Appointment') + ' at ' + visit.time12(x.row.time) + ' — ' + money(x.cents) + ' paid ✓');
       const owingLines = g.owing.map(x =>
-        (x.row.service || 'Appointment') + ' at ' + visit.time12(x.row.time) + ' — ' + money(x.owed));
+        (x.row.service || 'Appointment') + ' at ' + visit.time12(x.row.time) + ' — '
+        + money(x.owed) + (x.topup ? ' still to pay' : ''));
 
       /* The apology is only there when the split was ours: they paid exactly
          what a page asked them to. With nothing paid yet there is nothing to
-         apologise for, so it is simply a friendly note. */
+         apologise for, so it is simply a friendly note.
+
+         Two ways a deposit comes up short, and they need different words:
+         the day was split across separate links and one got paid, or a
+         single link asked for half of one service instead of half of the
+         appointment. Telling somebody about "separate links" when she only
+         ever saw one reads as a story. */
+      const shorted = g.owing.some(x => x.topup);
       const opening = split
         ? [
             'Hi ' + first + ',',
             'Thank you for your deposit — it came through perfectly.',
-            'I’m sorry for the mix-up on our side: your services on ' + day
-              + ' were set up with separate deposit links, so it only covered the first one. '
-              + 'To make things easier, here’s everything for that day in one place:',
+            shorted
+              ? 'I’m sorry for the mix-up on our side: the link only charged a deposit for one of your '
+                + 'services rather than the whole appointment. Here is everything for ' + day + ' in one place:'
+              : 'I’m sorry for the mix-up on our side: your services on ' + day
+                + ' were set up with separate deposit links, so it only covered the first one. '
+                + 'To make things easier, here’s everything for that day in one place:',
           ]
         : [
             'Hi ' + first + ',',
