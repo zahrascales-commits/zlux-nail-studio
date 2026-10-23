@@ -1260,11 +1260,21 @@ module.exports = async function (req, res) {
       const due = money(g.dueCents);
       const split = g.paid.length > 0;
 
-      const paidLines = g.paid.map(x =>
-        (x.row.service || 'Appointment') + ' at ' + visit.time12(x.row.time) + ' — ' + money(x.cents) + ' paid ✓');
-      const owingLines = g.owing.map(x =>
-        (x.row.service || 'Appointment') + ' at ' + visit.time12(x.row.time) + ' — '
-        + money(x.owed) + (x.topup ? ' still to pay' : ''));
+      /* Several services booked on one line are read back as a list, not as
+         one unbroken name three services long. */
+      const svcLabel = row => String(row.service || 'Appointment').split(/\s\+\s/).join(', ');
+
+      /* An appointment that paid something and still owes the rest is ONE
+         line with both figures on it. Listed twice — once paid, once owing —
+         it reads as two bookings for the same slot. */
+      const topupIds = new Set(g.owing.filter(x => x.topup).map(x => String(x.row.id)));
+      const paidLines = g.paid
+        .filter(x => !topupIds.has(String(x.row.id)))
+        .map(x => svcLabel(x.row) + ' at ' + visit.time12(x.row.time) + ' — ' + money(x.cents) + ' paid ✓');
+      const owingLines = g.owing.map(x => x.topup
+        ? svcLabel(x.row) + ' at ' + visit.time12(x.row.time) + ' — ' + money((x.already || 0) + x.owed)
+          + ' deposit · ' + money(x.already || 0) + ' paid · ' + money(x.owed) + ' still to pay'
+        : svcLabel(x.row) + ' at ' + visit.time12(x.row.time) + ' — ' + money(x.owed));
 
       /* The apology is only there when the split was ours: they paid exactly
          what a page asked them to. With nothing paid yet there is nothing to
