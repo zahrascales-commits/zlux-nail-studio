@@ -3276,6 +3276,7 @@ async function login(){
     loadServiceCatalog();
     loadPriceMenus();
     sessionStorage.setItem('zm_pwd',pwd);
+    keepSignedIn(pwd);
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='block';
     // owner color + default view from saved settings
@@ -3291,7 +3292,43 @@ async function login(){
     _viaFaceId = false;
   }catch{err.textContent='Connection error.';}
 }
-function logout(){sessionStorage.removeItem('zm_pwd');location.reload();}
+/* ── STAYING SIGNED IN ──────────────────────────────────────────────────
+   Her own phone, her own studio: opening the app should show the studio,
+   not a password box. The sign-in is kept on the device until she taps Log
+   Out — her phone is already locked behind her face, and a second lock on
+   top of it was costing her a minute every time she wanted to see the day.
+
+   It can be turned off in Settings, which is the only way anything is
+   stored on a device without being asked for. */
+const KEEP_KEY = 'zm_keep', KEEP_AT = 'zm_keep_at', KEEP_OFF = 'zm_keep_off';
+const KEEP_DAYS = 60;
+function keepWanted(){ try{ return localStorage.getItem(KEEP_OFF) !== "1"; }catch(_){ return false; } }
+function keepSignedIn(pwd){
+  if(!keepWanted()) return;
+  try{ localStorage.setItem(KEEP_KEY, pwd); localStorage.setItem(KEEP_AT, String(Date.now())); }catch(_){}
+}
+function keptPassword(){
+  try{
+    if(!keepWanted()) return "";
+    const pwd = localStorage.getItem(KEEP_KEY) || "";
+    const at = Number(localStorage.getItem(KEEP_AT)) || 0;
+    // Not forever. Sixty days without opening it and she types it once.
+    if(!pwd || !at || Date.now() - at > KEEP_DAYS * 86400000){ forgetDevice(); return ""; }
+    return pwd;
+  }catch(_){ return ""; }
+}
+function forgetDevice(){ try{ localStorage.removeItem(KEEP_KEY); localStorage.removeItem(KEEP_AT); }catch(_){} }
+function setStaySignedIn(on){
+  try{ localStorage.setItem(KEEP_OFF, on ? "0" : "1"); }catch(_){}
+  if(on){ if(PWD) keepSignedIn(PWD); } else forgetDevice();
+  toast(on ? "This device will stay signed in" : "You will be asked for your password next time");
+  loadFaceIdSettings();
+}
+function logout(){
+  sessionStorage.removeItem("zm_pwd");
+  forgetDevice();
+  location.reload();
+}
 
 /* ══════════════ FACE ID ══════════════
    A passkey: the phone keeps a private key that only unlocks after Face ID,
@@ -3413,6 +3450,16 @@ async function maybeOfferFaceId(){
 function closeFaceIdOffer(){ const b = document.getElementById('faceid-offer'); if(b) b.remove(); }
 function faceIdLater(){ try{ localStorage.setItem('zm_faceid_later', String(Date.now())); }catch(_){} closeFaceIdOffer(); }
 
+function stayRow(){
+  const on = keepWanted() && !!keptPassword();
+  return '<div class="fid-row"><div style="flex:1"><b>Stay signed in on this device</b><br>'
+    + '<span>' + (on
+        ? 'Opening Studio Manager takes you straight in — no password, no Face ID.'
+        : 'You will be asked for your password each time you open it.') + '</span></div>'
+    + '<button class="btn btn-ghost btn-sm" onclick="setStaySignedIn(' + (on ? 'false' : 'true') + ')">'
+    + (on ? 'Turn off' : 'Turn on') + '</button></div>';
+}
+
 async function loadFaceIdSettings(){
   const el = document.getElementById('faceid-set');
   if(!el) return;
@@ -3420,7 +3467,7 @@ async function loadFaceIdSettings(){
   let keys = [];
   try{ keys = ((await (await api('/api/passkey?action=list')).json()).keys) || []; }catch(_){}
   const w = fidWord();
-  el.innerHTML = (keys.length
+  el.innerHTML = stayRow() + (keys.length
       ? '<div style="margin-bottom:0.8rem">' + keys.map(k => '<div class="fid-row"><div style="flex:1"><b>' + esc(k.name || 'Device') + '</b><br><span>Set up ' + new Date(k.created_ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
           + (k.last_used_ts ? ' · last used ' + new Date(k.last_used_ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ' · not used yet') + '</span></div>'
           + '<button class="btn btn-ghost btn-sm" onclick="removeFaceId(\'' + esc(k.id) + '\')">Remove</button></div>').join('') + '</div>'
@@ -3448,6 +3495,8 @@ async function removeFaceId(id){
    ID key itself lives in iCloud Keychain and is shared by her iPhone, iPad
    and Mac — so on Apple devices the button shows whenever a key exists. */
 (async function(){
+  // Already signed in on this device: no button, no prompt, nothing to do.
+  if(keptPassword()) return;
   if(!(await fidCapable())) return;
   const here = fidOnThisDevice();
   if(!here){
@@ -11077,7 +11126,17 @@ async function fixPaymentGaps(n){
   }catch(err){ toast(err.message); }
 }
 
-(function(){const saved=sessionStorage.getItem('zm_pwd');if(saved){document.getElementById('pwd').value=saved;login();}})();
+/* Straight in. The password box is never shown to somebody this device
+   already knows — and the Face ID prompt is not raised either, which is
+   what used to stack passkey sheets on top of each other. */
+(function(){
+  const saved = sessionStorage.getItem('zm_pwd') || keptPassword();
+  if(!saved) return;
+  const note = document.getElementById('login-err');
+  if(note) note.textContent = 'Opening your studio…';
+  document.getElementById('pwd').value = saved;
+  login();
+})();
 </script>
 <script src="js/client-profile.js?v=4"></script>
 <script src="js/qrcode.min.js"></script>
