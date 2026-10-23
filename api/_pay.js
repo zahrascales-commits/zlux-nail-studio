@@ -413,7 +413,7 @@ module.exports = async function (req, res) {
          item — it belongs to the person, not to what they picked. */
       let ownRate = 0;
       try {
-        ownRate = await require('./_client-rates').percentFor({ email: customer_email, member_id });
+        ownRate = await require('./_client-rates').percentFor({ email: customer_email, member_id, phone: (req.body || {}).customer_phone });
       } catch (_) {}
       const lines = [];
       for (const it of items.slice(0, 10)) {

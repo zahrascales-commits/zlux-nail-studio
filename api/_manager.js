@@ -2114,11 +2114,14 @@ module.exports = async function (req, res) {
       // Written now so the till asks for the right money from the start
       // rather than falling back to one service off the menu.
       const agreedCents = Math.max(0, Math.round(Number((req.body || {}).price_cents) || 0));
+      // Already paid another way, or simply not being asked: no deposit
+      // link and no reminders chasing money she already has.
+      const waived = Number((req.body || {}).deposit_waived) === 1 ? 1 : 0;
       const r = await execute(
-        `INSERT INTO team_appointments (team_member_id, client_name, client_phone, client_email, service, date, time, notes, status, chat_token, price_cents)
-         VALUES (?,?,?,?,?,?,?,?, 'scheduled', ?, ?)`,
+        `INSERT INTO team_appointments (team_member_id, client_name, client_phone, client_email, service, date, time, notes, status, chat_token, price_cents, deposit_waived)
+         VALUES (?,?,?,?,?,?,?,?, 'scheduled', ?, ?, ?)`,
         [team_member_id ? Number(team_member_id) : null, client_name || '', client_phone || '',
-         String(client_email || '').trim().toLowerCase(), service || '', date, time, notes || '', tok, agreedCents]
+         String(client_email || '').trim().toLowerCase(), service || '', date, time, notes || '', tok, agreedCents, waived]
       ).catch(async () => execute(
         `INSERT INTO team_appointments (team_member_id, client_name, client_phone, client_email, service, date, time, notes, status, chat_token)
          VALUES (?,?,?,?,?,?,?,?, 'scheduled', ?)`,
@@ -2210,6 +2213,7 @@ module.exports = async function (req, res) {
       // The price actually agreed, when it is not simply the menu price.
       take('price_cents', v => Math.max(0, Math.round(Number(v) || 0)));
       take('deposit_cents', v => Math.max(0, Math.round(Number(v) || 0)));
+      take('deposit_waived', v => (Number(v) === 1 || v === true) ? 1 : 0);
       take('deposit_paid', v => (v ? 1 : 0));
       take('paid_cents', v => Math.max(0, Math.round(Number(v) || 0)));
       take('tip_cents', v => Math.max(0, Math.round(Number(v) || 0)));

@@ -616,7 +616,8 @@ async function depositStates(from, to) {
   await ensureTables();
   const rows = await query(
     `SELECT id, client_name, client_email, client_phone, service, date, time, status, price_cents,
-            deposit_cents, deposit_paid, paid_cents, checked_out_ts, team_member_id
+            deposit_cents, deposit_paid, paid_cents, checked_out_ts, team_member_id,
+            COALESCE(deposit_waived,0) AS deposit_waived
        FROM team_appointments WHERE date >= ? AND date <= ?`, [from, to]);
   const visit = require('./_visit');
   const out = {};
@@ -627,6 +628,11 @@ async function depositStates(from, to) {
       const id = String(a.id);
       if (Number(a.checked_out_ts) > 0 || /complete/i.test(String(a.status || ''))) {
         out[id] = { state: 'done', deposit_cents: Math.round(Number(a.deposit_cents) || 0), paid_cents: Math.round(Number(a.paid_cents) || 0), deposit_paid: Number(a.deposit_paid) === 1 };
+        return;
+      }
+      // She has said this one needs no deposit.
+      if (Number(a.deposit_waived) === 1 && Number(a.deposit_paid) !== 1) {
+        out[id] = { state: 'waived' };
         return;
       }
       if (Number(a.deposit_paid) === 1) {

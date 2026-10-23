@@ -2959,6 +2959,11 @@
             oninput="apptPriceTouched=true;renderApptTotal()" style="flex:1" />
         </div>
         <div id="a-price-hint" style="font-size:0.68rem;color:var(--muted);margin-top:0.3rem"></div>
+        <label class="ntf-row" style="margin-top:0.5rem;cursor:pointer">
+          <input type="checkbox" id="a-nodep" onchange="renderApptTotal()" />
+          <span>No deposit due — paid another way, or not being asked for one.
+            <i style="display:block;font-style:normal;font-size:0.72rem;color:var(--muted)">They get no deposit link and no reminders about it.</i></span>
+        </label>
       </div>
       <div>
         <label class="fld-label">What they'll owe at checkout</label>
@@ -4674,6 +4679,7 @@ function depLine(a){
   if (s.state === 'short') return wrap('#B54708', '#FFFAEB', '⚠ Deposit short — ' + depMoney(s.deposit_cents) + ' paid of ' + depMoney(s.should_cents) + ' · ' + depMoney(s.due_cents) + ' still owed');
   if (s.state === 'unpaid') return wrap('#B42318', '#FEF3F2', '✗ Deposit not paid — ' + depMoney(s.due_cents) + ' due');
   if (s.state === 'none_due') return wrap('#344054', '#F2F4F7', 'No deposit needed — covered by membership');
+  if (s.state === 'waived') return wrap('#344054', '#F2F4F7', 'No deposit due — paid another way or waived');
   if (s.state === 'done') return wrap('#344054', '#F2F4F7', 'Checked out' + (s.deposit_paid && s.deposit_cents ? ' · deposit ' + depMoney(s.deposit_cents) : '') + (s.paid_cents ? ' · paid ' + depMoney(s.paid_cents) + ' at the desk' : ''));
   if (s.state === 'loading') return wrap('#667085', '#F9FAFB', 'Checking deposit…');
   if (s.state === 'past') return wrap('#667085', '#F9FAFB', 'Past visit — no deposit recorded');
@@ -5437,6 +5443,7 @@ function parseTimeInput(raw){
   return String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0');
 }
 function openApptModal(){
+  const nd = document.getElementById('a-nodep'); if(nd) nd.checked = false;
   { const depBox=document.getElementById('a-deposit'); if(depBox){ depBox.innerHTML=''; depBox.style.display='none'; } }
   document.getElementById('appt-modal-title').textContent='New Appointment';
   document.getElementById('a-id').value='';
@@ -5554,11 +5561,14 @@ function renderApptTotal(){
   const a = id ? appts.find(x=>Number(x.id)===Number(id)) : null;
   const total = Math.max(0, Math.round(Number(priceEl.value)*100) || 0);
   const dep = a && Number(a.deposit_paid) ? (Number(a.deposit_cents)||0) : 0;
+  const waived = (document.getElementById('a-nodep')||{}).checked;
   const owed = Math.max(0, total - dep);
   const owedEl = document.getElementById('a-owed');
   const owedHint = document.getElementById('a-owed-hint');
   if(owedEl) owedEl.textContent = total ? ('$'+(owed/100).toFixed(2)) : '—';
-  if(owedHint) owedHint.textContent = dep
+  if(owedHint && waived){ owedHint.textContent = total
+    ? 'No deposit — the whole ' + '$'+(total/100).toFixed(2) + ' is settled at the desk, or already has been.' : 'No deposit due'; }
+  else if(owedHint) owedHint.textContent = dep
     ? ('$'+(total/100).toFixed(2)+' less the $'+(dep/100).toFixed(2)+' deposit already paid')
     : (total ? 'No deposit paid yet' : '');
 }
@@ -5568,6 +5578,7 @@ function editAppt(id){
   document.getElementById('appt-modal-title').textContent='Edit Appointment';
   document.getElementById('a-id').value=a.id;
   document.getElementById('a-client').value=a.client_name||'';
+  document.getElementById('a-nodep').checked = Number(a.deposit_waived) === 1;
   document.getElementById('a-phone').value=a.client_phone||'';
   // Was never filled in, so opening an appointment and saving it wiped
   // whatever email was on it.
@@ -5633,6 +5644,7 @@ async function saveAppt(){
       const el=document.getElementById('a-price');
       return Math.max(0, Math.round(Number(el && el.value)*100) || 0);
     })(),
+    deposit_waived:document.getElementById('a-nodep').checked ? 1 : 0,
     date:document.getElementById('a-date').value,
     time:parseTimeInput(document.getElementById('a-time').value),
     notes:document.getElementById('a-notes').value.trim(),

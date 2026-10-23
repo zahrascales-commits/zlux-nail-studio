@@ -25,6 +25,8 @@ async function ensureColumns() {
   for (const sql of [
     // What was quoted and what has been paid, on the appointment itself.
     'ALTER TABLE team_appointments ADD COLUMN deposit_cents INTEGER DEFAULT 0',
+    // Paid another way, or simply not being asked for one.
+    'ALTER TABLE team_appointments ADD COLUMN deposit_waived INTEGER DEFAULT 0',
     'ALTER TABLE team_appointments ADD COLUMN deposit_paid INTEGER DEFAULT 0',
     'ALTER TABLE team_appointments ADD COLUMN client_email TEXT DEFAULT \'\'',
     // When the confirmation with these links was last sent, so the backfill
@@ -154,6 +156,11 @@ async function depositFor(appt) {
    taken. Used to notice a deposit that came up short — a multi-service
    appointment that was charged for one service. */
 async function correctDepositFor(appt) {
+  /* Waived: she has the money another way, or is not asking for it.
+     Said once here, so the link, the reminders, the calendar and the
+     checkout all agree without each one having to remember. */
+  if (Number(appt.deposit_waived) === 1) return 0;
+
   const { member, tier } = await memberInfoFor(appt);
 
   /* Essential and Elite promise no deposit in as many words. The retired
@@ -173,6 +180,7 @@ async function correctDepositFor(appt) {
     try {
       ownRate = await require('./_client-rates').percentFor({
         email: appt.client_email,
+        phone: appt.client_phone,
         member_id: member && member.member_id,
       });
     } catch (_) {}

@@ -255,7 +255,7 @@ module.exports = async (req, res) => {
     let ownRate = 0;
     try {
       ownRate = await require('./_client-rates').percentFor({
-        email: customer_email, member_id,
+        email: customer_email, member_id, phone: customer_phone,
       });
     } catch (_) {}
 

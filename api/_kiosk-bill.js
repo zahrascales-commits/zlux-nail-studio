@@ -77,6 +77,7 @@ async function billFor(appt) {
   try {
     ownRate = await require('./_client-rates').percentFor({
       email: appt.email || appt.client_email,
+      phone: appt.phone || appt.client_phone,
       member_id: member && member.member_id,
     });
   } catch (_) {}
