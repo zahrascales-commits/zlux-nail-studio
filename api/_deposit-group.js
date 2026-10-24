@@ -129,31 +129,23 @@ function parseShares(s) {
    Refuses when the shares do not add up to what was actually received:
    marking three services paid off a payment that covered two is how a
    deposit quietly goes missing. */
-async function recordShares(shares, receivedCents) {
+async function recordShares(shares, receivedCents, paymentId) {
   const received = Math.round(Number(receivedCents) || 0);
   const sum = shares.reduce((s, x) => s + x.cents, 0);
   if (!shares.length || sum !== received) return { matched: false, recorded: 0, sum, received };
 
   let recorded = 0;
+  const ledger = require("./_deposit-ledger");
   for (const s of shares) {
     try {
-      /* Topping up a deposit that was short adds to what was already taken;
-         a first payment sets it. Written as two statements rather than one
-         sum, so a row that was never paid cannot double-count a figure that
-         was only ever an estimate of what was owed. */
-      const row = await queryOne(
-        'SELECT COALESCE(deposit_paid,0) AS paid FROM team_appointments WHERE chat_token = ?', [s.token]);
-      if (row && Number(row.paid)) {
-        await execute(
-          'UPDATE team_appointments SET deposit_cents = COALESCE(deposit_cents,0) + ? WHERE chat_token = ?',
-          [s.cents, s.token]);
-      } else {
-        await execute(
-          'UPDATE team_appointments SET deposit_paid = 1, deposit_cents = ? ' +
-          'WHERE chat_token = ? AND COALESCE(deposit_paid,0) = 0',
-          [s.cents, s.token]);
-      }
-      recorded++;
+      /* One row per Stripe payment. The page records it and the webhook
+         records it again a moment later — the same id twice is the same
+         payment, and it is only ever counted once. */
+      const out = await ledger.record({
+        payment_id: paymentId ? paymentId + ":" + s.token : "",
+        chat_token: s.token, cents: s.cents, kind: "deposit",
+      });
+      if (out.ok) recorded++;
     } catch (_) {}
   }
   return { matched: true, recorded, sum, received };

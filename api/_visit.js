@@ -126,7 +126,7 @@ async function restInfo(group) {
 }
 
 /* Records a "pay the rest" payment against every appointment it covered. */
-async function recordRest(md, received) {
+async function recordRest(md, received, paymentId) {
   const parts = String(md.rest_shares || '').split(',').map(p => {
     const [t, from, to] = p.split(':');
     return { t, from: Number(from), to: Number(to) };
@@ -139,9 +139,14 @@ async function recordRest(md, received) {
     } catch (_) {}
     return { matched: false };
   }
+  const ledger = require("./_deposit-ledger");
   for (const p of parts) {
-    await execute('UPDATE team_appointments SET deposit_paid = 1, deposit_cents = ? WHERE chat_token = ? AND COALESCE(deposit_cents,0) < ?',
-      [p.to, p.t, p.to]);
+    /* The share is the difference this payment covered, written against
+       the payment that covered it rather than set as a new total. */
+    await ledger.record({
+      payment_id: paymentId ? paymentId + ":" + p.t : "",
+      chat_token: p.t, cents: p.to - p.from, kind: "rest",
+    });
   }
   return { matched: true, rows: parts.length };
 }
@@ -427,7 +432,7 @@ module.exports = async function (req, res) {
       // The rest of the appointment, paid ahead.
       if (md.kind === 'rest') {
         if (md.appt_token !== token) return res.status(400).json({ error: 'That payment is not for this appointment — message the studio.' });
-        const done = await recordRest(md, received);
+        const done = await recordRest(md, received, pi.id);
         try {
           await require('./_notify').notifyInApp('owner', null,
             '💳 ' + (appt.client_name || 'A client') + ' paid the rest of their appointment',
@@ -446,12 +451,13 @@ module.exports = async function (req, res) {
       }
 
       let out = null;
-      if (shares.length) out = await grp.recordShares(shares, received);
+      if (shares.length) out = await grp.recordShares(shares, received, pi.id);
 
       if (!out || !out.matched) {
         // A payment made before deposits were grouped: this service, the amount taken.
-        await execute('UPDATE team_appointments SET deposit_paid=1, deposit_cents=? WHERE chat_token=? AND COALESCE(deposit_paid,0)=0',
-          [received, token]);
+        await require("./_deposit-ledger").record({
+          payment_id: pi.id, chat_token: token, cents: received, kind: "deposit",
+        });
         if (shares.length) {
           try {
             await require('./_notify').notifyInApp('owner', null,

@@ -53,7 +53,7 @@ module.exports = async (req, res) => {
 
         // The rest of an appointment, paid ahead from its page.
         if (md.kind === 'rest') {
-          try { const out = await require('./_visit').recordRest(md, cents); placed = !!out.matched; } catch (_) {}
+          try { const out = await require('./_visit').recordRest(md, cents, pi.id); placed = !!out.matched; } catch (_) {}
           if (placed) break;
         }
 
@@ -64,7 +64,7 @@ module.exports = async (req, res) => {
         if (md.appt_group) {
           try {
             const grp = require('./_deposit-group');
-            const out = await grp.recordShares(grp.parseShares(md.appt_group), cents);
+            const out = await grp.recordShares(grp.parseShares(md.appt_group), cents, pi.id);
             if (out.matched) placed = true;
           } catch (_) {}
         }
@@ -72,9 +72,9 @@ module.exports = async (req, res) => {
         // The appointment link stamps its token on the payment.
         if (!placed && md.appt_token) {
           try {
-            await team.execute(
-              'UPDATE team_appointments SET deposit_paid = 1, deposit_cents = ? WHERE chat_token = ? AND COALESCE(deposit_cents,0) < ?',
-              [cents, md.appt_token, cents]);
+            await require('./_deposit-ledger').record({
+              payment_id: pi.id, chat_token: md.appt_token, cents, kind: 'deposit',
+            });
             placed = true;
           } catch (_) {}
         }
