@@ -177,11 +177,31 @@ module.exports = async (req, res) => {
     }
   } catch (_) {}
 
+  /* ── DOES THE BOOK AGREE WITH STRIPE? ──
+     A deposit written onto an appointment is a claim about money; Stripe is
+     the money. Once, a payment recorded twice credited a client $255
+     against $175 of charges, and the only reason anybody noticed was that
+     Zahra read her own Stripe account. Checked here every day instead. */
+  let depositAudit = null;
+  try {
+    const audit = await require('./_stripe-hygiene').depositAudit();
+    depositAudit = { checked: audit.checked, over: audit.over.length };
+    for (const o of audit.over.slice(0, 5)) {
+      if (await fresh('overcredit:' + o.id)) {
+        await toOwner('⚠️ A deposit says more was paid than Stripe took',
+          (o.client || 'A client') + ' on ' + o.date + ': the appointment is credited $'
+          + (o.recorded / 100).toFixed(2) + ' but Stripe shows $' + (o.charged / 100).toFixed(2)
+          + '. They would be undercharged $' + ((o.recorded - o.charged) / 100).toFixed(2)
+          + ' at the desk. Studio Manager → Deposits.');
+      }
+    }
+  } catch (_) {}
+
   // ── ANYTHING BROKEN ──
   // The same list as the dashboard's "Needs attention", but only the things
   // worth a text, and each at most once every three days.
   let alerts = [];
   try { alerts = await require('./_dashboard').notifyOwner(toOwner, fresh); } catch (_) {}
 
-  return res.json({ ok: true, sent, deposit_chase: depositChase, alerts, stripe_sweep: stripeSweep, at: new Date().toISOString() });
+  return res.json({ ok: true, sent, deposit_chase: depositChase, alerts, stripe_sweep: stripeSweep, deposit_audit: depositAudit, at: new Date().toISOString() });
 };

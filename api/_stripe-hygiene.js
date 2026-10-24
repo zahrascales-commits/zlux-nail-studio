@@ -193,4 +193,74 @@ async function wallets() {
   };
 }
 
-module.exports = { report, sweep, cancelIds, orphans, wallets };
+/* ── THE BOOK AGAINST THE MONEY ───────────────────────────────────────
+   Every upcoming appointment that says a deposit was paid, checked against
+   what Stripe actually took for it. A record that credits MORE than was
+   taken is the dangerous direction: the client is undercharged at the desk
+   and nobody finds out until the month does not add up. It happened once,
+   and the only reason it was caught is that Zahra read her own Stripe
+   account.
+
+   Matched on the appointment token stamped on each payment — the same
+   thing the recording code uses. */
+async function depositAudit(days = 90) {
+  const sk = await secret();
+  if (!sk) return { checked: 0, over: [], why: 'no stripe key' };
+
+  const today = new Date(Date.now() - 7 * HOUR).toISOString().slice(0, 10);
+  let rows = [];
+  try {
+    rows = await query(
+      `SELECT id, client_name, date, chat_token, COALESCE(deposit_cents,0) AS deposit_cents
+         FROM team_appointments
+        WHERE date >= ? AND COALESCE(deposit_paid,0) = 1 AND COALESCE(deposit_cents,0) > 0
+          AND LOWER(COALESCE(status,'scheduled')) <> 'cancelled'
+          AND COALESCE(checked_out_ts,0) = 0`, [today]);
+  } catch (_) { return { checked: 0, over: [] }; }
+  if (!rows.length) return { checked: 0, over: [] };
+
+  /* What Stripe took, per appointment. A payment that names one appointment
+     counts in full; one split across several carries each share in its own
+     metadata, and those are counted share by share. */
+  const intents = (await listIntents(sk, days)).filter(pi => pi.status === 'succeeded');
+  const byToken = new Map();
+  const add = (t, c) => { if (t && c > 0) byToken.set(t, (byToken.get(t) || 0) + c); };
+
+  for (const pi of intents) {
+    const md = pi.metadata || {};
+    const amount = Number(pi.amount_received || pi.amount) || 0;
+    if (!amount) continue;
+
+    const groupParts = String(md.appt_group || '').split(',').filter(Boolean);
+    const restParts = String(md.rest_shares || '').split(',').filter(Boolean);
+
+    if (groupParts.length) {
+      for (const p of groupParts) {
+        const bits = p.split(':');
+        add(bits[0].trim(), Math.round(Number(bits[1]) || 0));
+      }
+    } else if (restParts.length) {
+      for (const p of restParts) {
+        const bits = p.split(':');
+        if (bits.length >= 3) add(bits[0].trim(), Math.round((Number(bits[2]) || 0) - (Number(bits[1]) || 0)));
+      }
+    } else if (md.appt_token) {
+      add(String(md.appt_token).trim(), amount);
+    }
+  }
+
+  const over = [];
+  for (const r of rows) {
+    const charged = Math.round(byToken.get(r.chat_token) || 0);
+    /* Nothing found means the payment is older than the window being read,
+       not that it never happened — only a real gap is worth a message. */
+    if (!charged) continue;
+    const recorded = Math.round(Number(r.deposit_cents) || 0);
+    if (recorded - charged >= 100) {
+      over.push({ id: r.id, client: r.client_name, date: r.date, recorded, charged });
+    }
+  }
+  return { checked: rows.length, over };
+}
+
+module.exports = { report, sweep, cancelIds, orphans, wallets, depositAudit };

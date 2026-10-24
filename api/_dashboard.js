@@ -702,6 +702,8 @@ module.exports = async function (req, res) {
       if (act === 'stripe_cancel' && req.method === 'POST') return res.json(await hy.cancelIds((req.body || {}).ids || []));
       if (act === 'stripe_orphans') return res.json({ orphans: await hy.orphans(Math.min(240, Number(req.query.hours) || 72)) });
       if (act === 'stripe_wallets' && req.method === 'POST') return res.json(await hy.wallets());
+      // Reads only: does the book agree with the money?
+      if (act === 'deposit_audit') return res.json(await hy.depositAudit(Math.min(180, Number(req.query.days) || 90)));
     } catch (err) { return res.status(500).json({ error: String(err.message || err) }); }
   }
   if ((req.query.action || '') === 'pay_check') {
