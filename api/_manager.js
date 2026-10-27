@@ -2096,6 +2096,143 @@ module.exports = async function (req, res) {
       return res.json({ appointments: rows });
     }
 
+    /* ── CANCELLING A MEMBERSHIP, FROM HER SIDE ────────────────────────
+       A member asks her directly and she does it here: the subscription
+       stops, and she chooses how much of what they have paid goes back.
+
+       Nothing moves without confirm: true. The preview is the same
+       arithmetic as the commit, read off Stripe rather than the book, so
+       the figure she approves is the figure that leaves the account. */
+    if (method === 'POST' && action === 'cancel_membership') {
+      const b = req.body || {};
+      const memberId = String(b.member_id || '').trim().toUpperCase();
+      if (!memberId) return res.status(400).json({ error: 'Which member?' });
+
+      const main = require('./_db');
+      const mm = await main.queryOne('SELECT * FROM members WHERE member_id = ?', [memberId]);
+      if (!mm) return res.status(404).json({ error: 'No member with that ID.' });
+
+      const Stripe = require('stripe');
+      const sk = await require('./_pay').getStripeSecret();
+      if (!sk) return res.status(400).json({ error: 'Payments are not configured.' });
+      const stripe = Stripe(sk);
+
+      const money = c => '$' + (Math.round(Number(c) || 0) / 100).toFixed(2);
+
+      // What Stripe says about the subscription itself.
+      let sub = null;
+      if (mm.stripe_subscription_id) {
+        try { sub = await stripe.subscriptions.retrieve(mm.stripe_subscription_id); } catch (_) {}
+      }
+
+      /* Membership money only. Deposits and balances for appointments are
+         not the membership and are never handed back with it. */
+      let charges = [];
+      try {
+        const list = await stripe.charges.list({ limit: 100, customer: mm.stripe_customer_id });
+        charges = (list.data || []).filter(c =>
+          c.paid && c.status === 'succeeded' && !c.refunded
+          && /subscription|membership/i.test(String(c.description || '')));
+      } catch (_) {}
+      charges.sort((x, y) => y.created - x.created);
+
+      const left = c => Math.max(0, Number(c.amount || 0) - Number(c.amount_refunded || 0));
+      const scope = ['last', 'all', 'none'].includes(String(b.scope)) ? String(b.scope) : 'last';
+      const pool = scope === 'none' ? [] : (scope === 'last' ? charges.slice(0, 1) : charges);
+      const poolCents = pool.reduce((s, c) => s + left(c), 0);
+
+      // She keeps this much of it; the rest goes back.
+      const keepPct = Math.max(0, Math.min(100, Number(b.keep_percent === undefined ? 15 : b.keep_percent)));
+      const keepCents = Math.round(poolCents * keepPct / 100);
+      const refundCents = Math.max(0, poolCents - keepCents);
+
+      const started = String(mm.membership_started_at || '').slice(0, 10);
+      const monthsIn = started
+        ? Math.floor((Date.now() - Date.parse(started + 'T12:00:00')) / (30.44 * 86400000))
+        : null;
+
+      const preview = {
+        member_id: memberId,
+        name: mm.full_name,
+        email: mm.email,
+        tier: mm.tier,
+        started,
+        months_in: monthsIn,
+        subscription: mm.stripe_subscription_id || '',
+        subscription_status: sub ? sub.status : 'unknown',
+        per_payment_cents: sub && sub.items && sub.items.data[0] ? Number(sub.items.data[0].price.unit_amount) || 0 : 0,
+        next_charge: sub && sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString().slice(0, 10) : '',
+        scope,
+        considered: pool.map(c => ({
+          id: c.id, cents: left(c),
+          on: new Date(c.created * 1000).toISOString().slice(0, 10),
+          what: c.description || '',
+        })),
+        considered_cents: poolCents,
+        keep_percent: keepPct,
+        keep_cents: keepCents,
+        refund_cents: refundCents,
+        summary: 'Stop the subscription. Of ' + money(poolCents) + ' considered, keep '
+          + money(keepCents) + ' (' + keepPct + '%) and refund ' + money(refundCents) + '.',
+      };
+
+      if (b.confirm !== true) return res.json({ ok: true, committed: false, dry_run: true, preview });
+
+      const steps = [];
+
+      // ── 1. stop the billing ──
+      if (mm.stripe_subscription_id) {
+        try {
+          await stripe.subscriptions.cancel(mm.stripe_subscription_id, { prorate: false });
+          steps.push('subscription ended');
+        } catch (e) {
+          if (/No such subscription|already canceled/i.test(String(e.message || ''))) steps.push('subscription was already ended');
+          else return res.status(400).json({ error: 'Stripe would not end the subscription: ' + (e.message || e), steps });
+        }
+      } else steps.push('no subscription on file to end');
+
+      // ── 2. give back what she said to give back ──
+      let refunded = 0;
+      let want = refundCents;
+      for (const c of pool) {
+        if (want <= 0) break;
+        const take = Math.min(want, left(c));
+        if (take <= 0) continue;
+        try {
+          const r = await stripe.refunds.create({ charge: c.id, amount: take, reason: 'requested_by_customer' });
+          refunded += take;
+          want -= take;
+          steps.push('refunded ' + money(take) + ' of ' + c.id + ' (' + r.id + ')');
+        } catch (e) {
+          steps.push('could not refund ' + c.id + ': ' + (e.message || e));
+        }
+      }
+      if (!pool.length) steps.push('nothing refunded');
+
+      // ── 3. the book says so too ──
+      try {
+        for (const sql of [
+          "ALTER TABLE members ADD COLUMN cancelled_at TEXT DEFAULT ''",
+          "ALTER TABLE members ADD COLUMN cancel_effective TEXT DEFAULT ''",
+          "ALTER TABLE members ADD COLUMN status TEXT DEFAULT 'active'",
+        ]) { try { await main.execute(sql); } catch (_) {} }
+        const today = new Date().toISOString().slice(0, 10);
+        await main.execute(
+          "UPDATE members SET status='cancelled', cancelled_at=?, cancel_effective=? WHERE member_id=?",
+          [today, today, memberId]);
+        steps.push('membership marked cancelled');
+      } catch (e) { steps.push('could not update the record: ' + (e.message || e)); }
+
+      // ── 4. and she can see it happened ──
+      try {
+        await require('./_notify').notifyInApp('owner', null,
+          '✖ ' + (mm.full_name || memberId) + ' membership cancelled',
+          preview.summary + (refunded ? ' Refunded ' + money(refunded) + '.' : ''));
+      } catch (_) {}
+
+      return res.json({ ok: true, committed: true, refunded_cents: refunded, kept_cents: keepCents, steps, preview });
+    }
+
     if (method === 'POST' && action === 'add_appt') {
       const { team_member_id, client_name, client_phone, client_email, service, date, time, notes } = req.body || {};
       /* Create the booking without telling anybody. For a test row or a
