@@ -753,6 +753,23 @@ module.exports = async function (req, res) {
       return res.json({ ok: true, minutes: Math.round(n) });
     }
 
+    /* Who every booking lands on when the client did not pick anybody.
+       Nominating an artist is what lets the confirmation go out with the
+       booking instead of after somebody taps Confirm; 0 puts it back to
+       first-to-confirm. Only an artist on the books can be nominated, so a
+       stale id cannot quietly send every booking to a deleted account. */
+    if (method === 'PUT' && action === 'default_artist') {
+      const id = Number((req.body || {}).member_id) || 0;
+      if (id) {
+        const who = await queryOne('SELECT id, name FROM team_members WHERE id=? AND active=1', [id]);
+        if (!who) return res.status(400).json({ error: 'That artist is not on the team.' });
+        await execute("INSERT INTO site_settings (key,value) VALUES ('default_artist_id',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", [String(id)]);
+        return res.json({ ok: true, member_id: id, name: who.name });
+      }
+      await execute("DELETE FROM site_settings WHERE key='default_artist_id'");
+      return res.json({ ok: true, member_id: 0, name: '' });
+    }
+
     // Who deals with a booking nobody confirmed. Default is 'owner' — she
     // asked to make that call herself rather than have a timer put a client
     // in front of an artist who never accepted them.

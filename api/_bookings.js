@@ -435,6 +435,21 @@ module.exports = async (req, res) => {
       const visitToken = teamDb.token();
       let m = null;
       if (worker) m = await teamDb.queryOne('SELECT id, name, phone, email FROM team_members WHERE name=? AND active=1', [worker]).catch(() => null);
+
+      /* ── SOMEBODY IS ALWAYS ON IT ──────────────────────────────────────
+         Nobody picked an artist. This used to go out to the whole team and
+         wait for one of them to claim it, and until somebody did, the
+         client held a "we are assigning your artist" email and nothing
+         else. It now goes straight to the studio's first artist, so the
+         confirmation naming her leaves with the booking itself. Who that
+         is lives in Settings, because the answer changes as the team does,
+         and she can still move an appointment afterwards in a tap. */
+      if (!m) {
+        try {
+          m = await require('./_claims').firstArtistFor(
+            date, time_slot, bookedService, promo_trainee_only);
+        } catch (_) { /* nobody free, or not set: the race below takes it */ }
+      }
       /* The studio's copy carries the money too. It never did, so the front
          desk had to re-derive a price from today's menu — and a booking
          whose price had since moved got quoted a different number at the

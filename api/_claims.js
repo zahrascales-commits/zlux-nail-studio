@@ -505,6 +505,7 @@ async function claimsOverview() {
   return {
     hold_minutes: await holdMinutes(),
     unclaimed_action: await unclaimedAction(),
+    default_artist_id: await defaultArtist(),
     rows: out,
   };
 }
@@ -521,7 +522,67 @@ async function assignManually(confirmation, memberId) {
   return { ok: true };
 }
 
+/* ── THE STUDIO'S FIRST ARTIST ─────────────────────────────────────── */
+
+// Nobody picked an artist. The race above is the fallback now, not the
+// first move: a client who books is told "we are assigning your artist"
+// and then waits for somebody to pick up a phone, and Zahra wants them
+// confirmed while they are still on the page. So the booking goes to the
+// artist she has nominated, and the real confirmation naming that artist
+// goes out in the same second.
+//
+// The nomination does not override the three tests at the top of this
+// file. A clash is a clash and an artist who is off is off; a setting
+// cannot put two clients in one chair. When the nominated artist cannot
+// take it, it goes to whoever genuinely can — a confirmed client with the
+// second-choice artist beats an unconfirmed one, and Zahra moves it in a
+// tap if she wants it elsewhere. Only an empty studio falls back to the
+// race.
+//
+// Returns the artist's contact row, or null to leave it to the race.
+async function firstArtistFor(date, time, service, traineeOnly) {
+  await ensureClaimTables();
+
+  const wanted = await defaultArtist();
+  if (!wanted) return null;  // she has turned this off: back to the race
+
+  let free = [];
+  try { free = await eligibleFor(date, time, service, traineeOnly); } catch (_) { return null; }
+  if (!free.length) return null;
+
+  let pick = free.some(c => Number(c.id) === Number(wanted)) ? Number(wanted) : 0;
+
+  /* She is booked, off, or not the one for this job — a trainee-code
+     booking is only ever a trainee's. Spread the overflow by who has the
+     lightest day so it does not all land on one person. */
+  if (!pick) {
+    let counts = [];
+    try {
+      counts = await query(
+        "SELECT team_member_id, COUNT(*) AS n FROM team_appointments WHERE date=? AND LOWER(COALESCE(status,'scheduled'))<>'cancelled' GROUP BY team_member_id",
+        [date]);
+    } catch (_) {}
+    const load = {};
+    for (const c of counts) load[Number(c.team_member_id)] = Number(c.n) || 0;
+    pick = Number(free.slice().sort((a, b) => (load[Number(a.id)] || 0) - (load[Number(b.id)] || 0))[0].id);
+  }
+
+  const row = await queryOne(
+    'SELECT id, name, phone, email FROM team_members WHERE id=? AND active=1', [pick]).catch(() => null);
+  if (!row) return null;
+  return { ...row, auto: true, was_default: Number(pick) === Number(wanted) };
+}
+
+// Who she has nominated. 0 means nobody, which is the old behaviour.
+async function defaultArtist() {
+  try {
+    const row = await queryOne("SELECT value FROM site_settings WHERE key='default_artist_id'");
+    return Number(row && row.value) || 0;
+  } catch (_) { return 0; }
+}
+
 module.exports = {
   ensureClaimTables, eligibleFor, openClaim, claim, sweep,
   openJobsFor, claimsOverview, assignManually, holdMinutes, unclaimedAction,
+  firstArtistFor, defaultArtist,
 };

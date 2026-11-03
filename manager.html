@@ -2082,8 +2082,16 @@
           <p class="set-note">Your artists turn theirs on the same way, at the top of their own Team Portal.</p>
         </div>
         <div class="site-card">
-          <h3>First To Confirm ✦</h3>
-          <p>A booking with no artist chosen goes out to everyone who can actually take it — trained on that service, rostered in for those hours, nothing else booked. The first to confirm gets it, and only then does the client get their confirmation naming her.</p>
+          <h3>Who New Bookings Go To ✦</h3>
+          <p>When a client books without choosing an artist, the appointment goes straight to this person and the client gets their real confirmation — naming her — the second they book. Nobody waits on you to hand it out. You can still move any appointment afterwards from the calendar.</p>
+          <label class="fld-label">Send every unassigned booking to</label>
+          <select id="default-artist">
+            <option value="0">Nobody — send it out to the team instead</option>
+          </select>
+          <p class="set-note">If she is already booked at that hour, or off, or the client used a trainee code, it goes to whoever is genuinely free so the client is still confirmed straight away — and the confirmation names whoever got it.</p>
+          <div style="border-top:1px solid var(--border);margin:1.1rem 0 0.9rem;"></div>
+          <h3 style="font-size:0.95rem;">If nobody is free ✦</h3>
+          <p>Only when the whole studio is booked or off does a booking go out to the team to be claimed. The first to confirm gets it, and until then the client holds a "we are assigning your artist" email.</p>
           <label class="fld-label">Give them this long to confirm</label>
           <div style="display:flex;gap:0.6rem;align-items:center;">
             <input id="claim-hold" type="number" min="1" max="240" style="max-width:120px;" />
@@ -6721,14 +6729,23 @@ async function saveClaimHold(){
   const v = Number((document.getElementById('claim-hold')||{}).value);
   const mode = (document.getElementById('claim-mode')||{}).value || 'owner';
   const phone = (document.getElementById('owner-phone')||{}).value || '';
+  const artist = Number((document.getElementById('default-artist')||{}).value) || 0;
   try{
+    // Who bookings go to first, saved before the rest: it is the setting on
+    // this card that changes what a client sees.
+    const who = await (await api('/api/manager?action=default_artist',{method:'PUT',
+      body:JSON.stringify({action:'default_artist',member_id:artist})})).json();
     const a = await (await api('/api/manager?action=claim_hold',{method:'PUT',
       body:JSON.stringify({action:'claim_hold',minutes:v})})).json();
     await api('/api/manager?action=claim_mode',{method:'PUT',
       body:JSON.stringify({action:'claim_mode',mode:mode})});
     await api('/api/manager?action=owner_phone',{method:'PUT',
       body:JSON.stringify({action:'owner_phone',phone:phone})});
-    toast(a.ok ? 'Saved ✦' : (a.error || 'Could not save'));
+    if(who && who.error) toast(who.error);
+    else if(!a.ok) toast(a.error || 'Could not save');
+    else toast(who && who.name
+      ? 'Saved ✦ New bookings go to ' + who.name
+      : 'Saved ✦ New bookings go out to the team');
   }catch(_){ toast('Could not save'); }
 }
 
@@ -6755,6 +6772,19 @@ function mountOwnerPush(){
       .catch(function(){});
     const mode = document.getElementById('claim-mode');
     if(mode && d && d.unclaimed_action) mode.value = d.unclaimed_action;
+    /* Who new bookings go to. Built from the team as it stands rather than
+       a fixed list, so somebody hired tomorrow can be nominated without a
+       code change — and somebody who leaves stops being an option. */
+    const who = document.getElementById('default-artist');
+    if(who){
+      who.innerHTML = '<option value="0">Nobody — send it out to the team instead</option>'
+        + (members||[]).filter(function(mm){ return Number(mm.active); })
+          .map(function(mm){
+            return '<option value="' + mm.id + '">' + esc(mm.name)
+              + (Number(mm.trainee) ? ' (in training)' : '') + '</option>';
+          }).join('');
+      who.value = String((d && d.default_artist_id) || 0);
+    }
   }).catch(function(){});
   api('/api/site-settings').then(function(r){ return r.json(); }).then(function(d){
     const el = document.getElementById('owner-phone');
