@@ -433,8 +433,62 @@ async function openJobsFor(memberId) {
 }
 
 // The owner's view: everything still open, plus what happened to the rest.
+/* ── CLAIMS THAT HAVE QUIETLY SORTED THEMSELVES OUT ────────────────── */
+
+// A claim row only ever closed when somebody tapped Confirm here. Assigning
+// the appointment on the calendar instead — which is how she actually does
+// it — left the claim open, so "Leftover Appointments" kept asking her to
+// deal with twelve bookings that all had an artist already. A banner that
+// cries wolf is worse than no banner.
+//
+// The calendar is the truth: if the appointment has an artist, nobody is
+// waiting. Closed quietly, with no email — the client was dealt with
+// whenever she assigned it, and re-confirming them now would be news to
+// nobody.
+async function reconcile() {
+  let open = [];
+  try {
+    open = await query(
+      "SELECT confirmation, team_appointment_id, client_name, date, time FROM booking_claims "
+      + "WHERE status IN ('open','leftover','none')");
+  } catch (_) { return 0; }
+  if (!open.length) return 0;
+
+  // One read for the whole set rather than one per claim.
+  const dates = [...new Set(open.map(r => r.date).filter(Boolean))];
+  let appts = [];
+  if (dates.length) {
+    try {
+      appts = await query(
+        'SELECT id, team_member_id, client_name, date, time FROM team_appointments WHERE date IN ('
+        + dates.map(() => '?').join(',') + ')', dates);
+    } catch (_) { return 0; }
+  }
+  const firstName = s => String(s || '').trim().toLowerCase().split(/\s+/)[0] || '';
+  const byId = {}, byKey = {};
+  for (const a of appts) {
+    byId[Number(a.id)] = a;
+    byKey[firstName(a.client_name) + '|' + a.date + '|' + String(a.time || '').slice(0, 5)] = a;
+  }
+
+  let closed = 0;
+  for (const r of open) {
+    const a = byId[Number(r.team_appointment_id)]
+      || byKey[firstName(r.client_name) + '|' + r.date + '|' + String(r.time || '').slice(0, 5)];
+    if (!a || !a.team_member_id) continue;
+    try {
+      await execute(
+        "UPDATE booking_claims SET claimed_by=?, claimed_ts=COALESCE(claimed_ts,?), status='claimed', how='calendar' WHERE confirmation=?",
+        [Number(a.team_member_id), Date.now(), r.confirmation]);
+      closed++;
+    } catch (_) {}
+  }
+  return closed;
+}
+
 async function claimsOverview() {
   await ensureClaimTables();
+  await reconcile();
   await sweep();
   const rows = await query('SELECT * FROM booking_claims ORDER BY created_ts DESC LIMIT 60');
   const names = {};
