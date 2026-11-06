@@ -80,9 +80,12 @@ function html({ client, service, artist, datePretty, timePretty, link, depositCe
       </div>` : ''}
 
       <div style="border-top:1px solid #eee5d8;margin-top:24px;padding-top:18px">
-        <p style="font-size:13px;line-height:1.8;color:#8C7A5E;margin:0 0 10px">
+        ${depositPaid || !depositCents ? `<p style="font-size:13px;line-height:1.8;color:#8C7A5E;margin:0 0 10px">
           <strong style="color:#3a3027">Where:</strong> 2037 W Linda Vista Ave #D, Porterville, CA
-        </p>
+        </p>` : `<p style="font-size:13px;line-height:1.8;color:#8C7A5E;margin:0 0 10px">
+          <strong style="color:#3a3027">Where:</strong> Porterville, California. The studio is tucked behind a house, so
+          the full address, the way in and your artist's number come through as soon as your deposit is in.
+        </p>`}
         <p style="font-size:13px;line-height:1.8;color:#8C7A5E;margin:0 0 10px">
           <strong style="color:#3a3027">Before you come:</strong> no lotion or oils for 24 hours, and please arrive with clean hands.
         </p>

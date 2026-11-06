@@ -731,6 +731,56 @@ module.exports = async function (req, res) {
       return res.json({ ok: true, domain: body.domain_name, live: !!body.livemode });
     }
 
+    /* The arrival email — directions, the way in, and the artist's number.
+       Preview first, always: these words go to a client who is about to
+       drive somewhere, and a wrong landmark wastes their afternoon. */
+    if (action === 'arrival_preview') {
+      const id = Number((req.query || {}).id || (req.body || {}).id) || 0;
+      if (!id) return res.status(400).json({ error: 'Which appointment?' });
+      const appt = await queryOne(
+        'SELECT a.*, m.name AS artist_name FROM team_appointments a '
+        + 'LEFT JOIN team_members m ON m.id = a.team_member_id WHERE a.id=?', [id]);
+      if (!appt) return res.status(404).json({ error: 'No appointment with that id.' });
+      const out = await require('./_arrival-mail').sendFor(appt, { preview: true });
+      return res.json({ ok: true, appointment: {
+        id: appt.id, client: appt.client_name, date: appt.date, time: appt.time,
+        service: appt.service, artist: appt.artist_name || '',
+        deposit_paid: Number(appt.deposit_paid) || 0,
+        deposit_waived: Number(appt.deposit_waived) || 0,
+        already_sent: Number(appt.arrival_sent_ts) || 0,
+      }, ...out });
+    }
+
+    // Sends it for real. Never without confirm, and force re-sends a copy
+    // to somebody who has had one — which is a thing she will want when a
+    // client says they cannot find the place.
+    if (method === 'POST' && action === 'arrival_send') {
+      const b = req.body || {};
+      const id = Number(b.id) || 0;
+      if (!id) return res.status(400).json({ error: 'Which appointment?' });
+      const appt = await queryOne(
+        'SELECT a.*, m.name AS artist_name FROM team_appointments a '
+        + 'LEFT JOIN team_members m ON m.id = a.team_member_id WHERE a.id=?', [id]);
+      if (!appt) return res.status(404).json({ error: 'No appointment with that id.' });
+      if (b.confirm !== true) {
+        const pre = await require('./_arrival-mail').sendFor(appt, { preview: true });
+        return res.json({ ok: true, committed: false, dry_run: true, ...pre });
+      }
+      const out = await require('./_arrival-mail').sendFor(appt, { force: !!b.force });
+      return res.json({ ok: true, committed: !!out.sent, ...out });
+    }
+
+    /* Switching it on. Everything already settled is marked as predating
+       the email first, so turning it on cannot mail a backlog — then the
+       twice-daily sweep starts catching new ones. */
+    if (method === 'POST' && action === 'arrival_setup') {
+      const arrival = require('./_arrival-mail');
+      const marked = await arrival.markPredating();
+      const on = (req.body || {}).on === false ? '0' : '1';
+      await execute("INSERT INTO site_settings (key,value) VALUES ('arrival_sweep_on',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", [on]);
+      return res.json({ ok: true, sweep: on === '1', ...marked });
+    }
+
     if (method === 'GET' && action === 'claims') {
       return res.json(await require('./_claims').claimsOverview());
     }
@@ -1085,7 +1135,13 @@ module.exports = async function (req, res) {
       // counters — writing to the wrong one would mark a different client.
       if (team) {
         await execute('UPDATE team_appointments SET deposit_paid=? WHERE id=?', [paid ? 1 : 0, Number(id)]);
-        return res.json({ ok: true });
+        /* Cash and Venmo clients paid too, so they get the directions and
+           the number to text, exactly like the ones who paid on the site. */
+        let arrival = null;
+        if (paid) {
+          try { arrival = await require('./_arrival-mail').maybeSendFor(Number(id)); } catch (_) {}
+        }
+        return res.json({ ok: true, arrival });
       }
       const { execute: mainExec } = require('./_db');
       try { await mainExec('ALTER TABLE appointments ADD COLUMN deposit_paid INTEGER DEFAULT 0'); } catch (_) {}
@@ -2375,9 +2431,17 @@ module.exports = async function (req, res) {
 
       if (!sets.length) return res.json({ ok: true, changed: 0 });
 
+      /* Settling it on the form counts as settling it. Checked after the
+         write, against the row as it then stands, so a tick that did not
+         actually save cannot send somebody the address. */
+      const mightSettle = sets.some(s => /deposit_paid|deposit_waived|team_member_id/.test(s));
+
       vals.push(id);
       try {
         await execute('UPDATE team_appointments SET ' + sets.join(', ') + ' WHERE id=?', vals);
+        if (mightSettle) {
+          try { await require('./_arrival-mail').maybeSendFor(Number(id)); } catch (_) {}
+        }
       } catch (_) {
         // An older database may not have every column named here. Write the
         // ones that fit rather than losing the whole edit.
@@ -2394,6 +2458,13 @@ module.exports = async function (req, res) {
       const { id, team_member_id } = req.body || {};
       await execute('UPDATE team_appointments SET team_member_id=? WHERE id=?',
         [team_member_id ? Number(team_member_id) : null, Number(id)]);
+
+      /* An appointment that was already settled and is only now getting an
+         artist has nobody's number and no way in. The arrival email names
+         whoever it has just been given to, so it waits for this moment. */
+      if (team_member_id) {
+        try { await require('./_arrival-mail').maybeSendFor(Number(id)); } catch (_) {}
+      }
 
       // Somebody who has just been given an artist should hear about it, and
       // that is the moment the deposit and inspiration links are worth

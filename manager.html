@@ -2935,6 +2935,7 @@
   <div class="modal">
     <div class="modal-title" id="appt-modal-title">New Appointment</div>
     <div id="a-deposit" style="display:none;margin:-0.4rem 0 0.9rem"></div>
+    <div id="a-arrival" style="display:none;margin:-0.2rem 0 0.9rem"></div>
     <input type="hidden" id="a-id" />
     <div class="field"><label class="fld-label">Assign To</label><select id="a-member"></select></div>
     <div class="field two">
@@ -4693,6 +4694,71 @@ function depLine(a){
   if (s.state === 'past') return wrap('#667085', '#F9FAFB', 'Past visit — no deposit recorded');
   return '';
 }
+/* Where the arrival email stands on this appointment — the one with the
+   address, the way in, and the artist's number. It only goes once the
+   deposit is settled, so the line doubles as a reminder of why it has not
+   gone yet. */
+function arrivalLine(a){
+  const sent = Number(a.arrival_sent_ts)||0;
+  const note = String(a.arrival_sent_note||'');
+  const settled = Number(a.deposit_paid)===1 || Number(a.deposit_waived)===1;
+  const hasArtist = !!(a.team_member_id);
+
+  let color='#344054', bg='#F2F4F7', text='';
+  if(sent && note && note.indexOf('@')>0){
+    color='#067647'; bg='#ECFDF3';
+    text='✓ Directions sent to ' + esc(note) + ' · ' + new Date(sent).toLocaleDateString();
+  } else if(sent){
+    text='Directions not sent — this one predates the email';
+  } else if(!settled){
+    color='#B54708'; bg='#FFFAEB';
+    text='Directions waiting — they go the moment the deposit is in';
+  } else if(!hasArtist){
+    color='#B54708'; bg='#FFFAEB';
+    text='Directions waiting — give it to an artist first';
+  } else {
+    color='#B54708'; bg='#FFFAEB';
+    text='Directions not sent yet';
+  }
+
+  const btn = (label, fn, gold) => '<button class="btn ' + (gold?'btn-gold':'btn-ghost')
+    + ' btn-sm" style="margin:0.45rem 0.35rem 0 0" onclick="' + fn + '">' + label + '</button>';
+
+  return '<div class="dep-line" style="color:' + color + ';background:' + bg + '">' + text + '</div>'
+    + btn('Preview directions', 'previewArrival(' + Number(a.id) + ')')
+    + (settled && hasArtist
+        ? btn(sent && note.indexOf('@')>0 ? 'Send again' : 'Send directions',
+              'sendArrival(' + Number(a.id) + ',' + (sent?'true':'false') + ')', true)
+        : '');
+}
+
+// The email in a window, exactly as the client gets it. Nothing is sent.
+async function previewArrival(id){
+  try{
+    const d = await (await api('/api/manager?action=arrival_preview&id=' + id)).json();
+    if(d.error){ toast(d.error); return; }
+    if(!d.html){ toast(d.why || 'Nothing to preview yet'); return; }
+    const w = window.open('', '_blank');
+    if(!w){ toast('Allow pop-ups to see the preview'); return; }
+    w.document.write('<title>' + (d.subject||'Directions') + '</title>'
+      + '<div style="font:13px Helvetica,Arial;padding:10px 14px;background:#111;color:#eee">'
+      + 'To: ' + (d.to||'—') + '<br>Subject: ' + (d.subject||'—') + '</div>' + d.html);
+    w.document.close();
+  }catch(_){ toast('Could not build the preview'); }
+}
+
+async function sendArrival(id, again){
+  if(!confirm(again
+    ? 'Send the directions email again to this client?'
+    : 'Send this client the address, the directions and their artist\'s number?')) return;
+  try{
+    const d = await (await api('/api/manager?action=arrival_send',{method:'POST',
+      body:JSON.stringify({action:'arrival_send',id:id,confirm:true,force:!!again})})).json();
+    toast(d.sent ? 'Directions sent to ' + d.to : (d.error || d.why || 'Not sent'));
+    if(d.sent) refreshCurrent();
+  }catch(_){ toast('Could not send it'); }
+}
+
 function depMark(a){
   const s = depInfo(a).state;
   return s === 'paid' || s === 'none_due' || s === 'done' ? '✓ ' : s === 'unpaid' ? '✗ ' : '';
@@ -5453,6 +5519,7 @@ function parseTimeInput(raw){
 function openApptModal(){
   const nd = document.getElementById('a-nodep'); if(nd) nd.checked = false;
   { const depBox=document.getElementById('a-deposit'); if(depBox){ depBox.innerHTML=''; depBox.style.display='none'; } }
+  { const arr=document.getElementById('a-arrival'); if(arr){ arr.innerHTML=''; arr.style.display='none'; } }
   document.getElementById('appt-modal-title').textContent='New Appointment';
   document.getElementById('a-id').value='';
   document.getElementById('a-client').value='';
@@ -5607,6 +5674,8 @@ function editAppt(id){
   document.getElementById('a-delete').style.display='inline-flex';
   const depBox=document.getElementById('a-deposit');
   if(depBox){ depBox.innerHTML=depLine(a); depBox.style.display='block'; }
+  const arrBox=document.getElementById('a-arrival');
+  if(arrBox){ arrBox.innerHTML=arrivalLine(a); arrBox.style.display='block'; }
 
   /* Extras are kept on the row as "Main + Removal + Russian Manicure", so
      reopening shows them as lines again instead of one long service name. */

@@ -750,7 +750,8 @@ function renderToday(){
       return '<div class="today-row">'
         + '<div class="today-time">' + fmtTime(a.time) + '</div>'
         + '<div style="flex:1"><div class="today-who">' + clientLink(a.client_name||'Client',{phone:a.client_phone||''}) + '</div>'
-        + '<div class="today-what">' + esc(a.service||'—') + '</div></div></div>';
+        + '<div class="today-what">' + esc(a.service||'—') + '</div>'
+        + phoneBtns(a.client_phone, {small:true}) + '</div></div>';
     }).join('') + '</div>';
   }
 
@@ -1141,6 +1142,7 @@ function wcRenderDay(){
         + '<div style="flex:1">'
           + '<div style="font-size:0.88rem;color:var(--cream)">'+clientLink(a.client_name||'Client',{phone:a.client_phone||''})+'</div>'
           + '<div style="font-size:0.73rem;color:var(--muted)">'+esc(a.service||'—')+'</div>'
+          + phoneBtns(a.client_phone, {small:true})
         + '</div></div>').join('')
     : (sh ? '<div style="font-size:0.78rem;color:var(--muted)">No clients booked yet — your hours are still yours.</div>' : '');
 
@@ -1213,7 +1215,7 @@ function renderSchedule(){
       <div class="appt-b">
         <div class="appt-c">${a.client_name?clientLink(a.client_name,{phone:a.client_phone||''}):'Client'}</div>
         <div class="appt-s">${esc(a.service||'')}</div>
-        ${a.client_phone?`<div class="appt-p">${esc(a.client_phone)}</div>`:''}
+        ${phoneBtns(a.client_phone)}
         ${a.notes?`<div class="appt-note">${esc(a.notes)}</div>`:''}
         ${a.status!=='scheduled'?`<span class="st st-${a.status}">${a.status.replace('_',' ')}</span>`:''}
         <div class="row-btns">
@@ -1284,6 +1286,28 @@ function openClient(who){
   // Same reason as Studio Manager: say who is asking at the moment of asking.
   window.ZolaClient.init({ member_id: MID, pin: PIN });
   window.ZolaClient.open(who);
+}
+/* A client's number, ready to use. Text first because that is what an
+   artist actually does — a photo of the building, a running-late note —
+   and Call second. Nothing is rendered when there is no number on file,
+   rather than a dead button. */
+function phoneBtns(phone, opts){
+  const raw = String(phone||'').trim();
+  const d = raw.replace(/[^0-9]/g,'');
+  if(d.length < 10) return '';
+  const ten = (d.length===11 && d[0]==='1') ? d.slice(1) : d;
+  const dial = ten.length===10 ? '+1'+ten : '+'+d;
+  const shown = ten.length===10
+    ? '('+ten.slice(0,3)+') '+ten.slice(3,6)+'-'+ten.slice(6)
+    : raw;
+  const small = opts && opts.small;
+  const chip = 'display:inline-block;text-decoration:none;border:1px solid var(--gold);color:var(--gold);'
+    + 'border-radius:999px;padding:'+(small?'2px 9px':'4px 11px')+';font-size:'+(small?'0.68rem':'0.74rem')+';'
+    + 'letter-spacing:0.04em;white-space:nowrap';
+  return '<div style="display:flex;gap:0.35rem;align-items:center;flex-wrap:wrap;margin-top:0.35rem">'
+    + '<a href="sms:'+dial+'" onclick="event.stopPropagation()" style="'+chip+'">💬 Text ' + esc(shown) + '</a>'
+    + '<a href="tel:'+dial+'" onclick="event.stopPropagation()" style="'+chip+'">Call</a>'
+    + '</div>';
 }
 function clientLink(name, extra){
   if(!name) return 'Client';

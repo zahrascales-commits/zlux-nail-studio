@@ -61,7 +61,15 @@ async function record({ payment_id, chat_token, cents, kind }) {
     'INSERT OR IGNORE INTO deposit_payments (payment_id, chat_token, cents, kind, ts) VALUES (?,?,?,?,?)',
     [id, token, amount, String(kind || 'deposit'), Date.now()]);
 
-  return { ok: true, total: await applyTotal(token) };
+  const total = await applyTotal(token);
+
+  /* Directions and the number to text, now that money has actually landed.
+     Awaited rather than fired and forgotten — a serverless function can be
+     frozen the moment it responds — but it can never fail the payment, and
+     the twice-daily sweep picks up anything that did not go. */
+  try { await require('./_arrival-mail').maybeSendFor(token); } catch (_) {}
+
+  return { ok: true, total };
 }
 
 // The appointment's deposit is whatever the ledger adds up to. Never more.

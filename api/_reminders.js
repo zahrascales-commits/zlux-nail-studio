@@ -197,11 +197,19 @@ module.exports = async (req, res) => {
     }
   } catch (_) {}
 
+  /* ── ANYBODY WHO STILL HAS NO DIRECTIONS ──
+     The arrival email is sent the moment a deposit lands, but a deposit can
+     also be settled by a correction or by a card on file at rebooking. This
+     catches those, so nobody drives out to a studio behind a house with no
+     address and nobody's number. */
+  let arrivalMail = null;
+  try { arrivalMail = await require('./_arrival-mail').sweep({ limit: 25 }); } catch (_) {}
+
   // ── ANYTHING BROKEN ──
   // The same list as the dashboard's "Needs attention", but only the things
   // worth a text, and each at most once every three days.
   let alerts = [];
   try { alerts = await require('./_dashboard').notifyOwner(toOwner, fresh); } catch (_) {}
 
-  return res.json({ ok: true, sent, deposit_chase: depositChase, alerts, stripe_sweep: stripeSweep, deposit_audit: depositAudit, at: new Date().toISOString() });
+  return res.json({ ok: true, sent, deposit_chase: depositChase, alerts, stripe_sweep: stripeSweep, deposit_audit: depositAudit, arrival_mail: arrivalMail, at: new Date().toISOString() });
 };
