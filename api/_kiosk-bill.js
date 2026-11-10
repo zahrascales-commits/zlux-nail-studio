@@ -13,32 +13,87 @@ const { query, queryOne } = require('./_team-db');
 
 const money = c => Math.round(Number(c) || 0);
 
-/* Whether this person is a member, and on what. Matched on email first
-   because that is the thing they type at the desk, then on name. */
+const COLS = 'member_id, full_name, email, phone, tier, stripe_customer_id, status, cancelled_at';
+
+/* Written on an appointment to mean "I have checked, and this is not a
+   member" — so a phone or name that happens to look like somebody's does
+   not quietly hand out a free service after she has said otherwise. */
+const NOT_A_MEMBER = '-';
+
+// Last ten digits, which is what matches a number typed any of the six ways
+// people type one.
+const tenDigits = p => String(p || '').replace(/[^0-9]/g, '').slice(-10);
+
+/* A name, reduced to the part that is actually the name. "  elizabeth
+   BANUELOS " and "Elizabeth Banuelos" are the same person; "Elizabeth B"
+   is not, and is deliberately still a miss. */
+const nameKey = n => String(n || '')
+  .toLowerCase()
+  .replace(/[^a-z0-9 ]+/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+/* Whether this person is a member, and on what.
+ *
+ * In order of how much each way of matching can be trusted. The first one
+ * that answers wins, and nothing falls through to a weaker match after a
+ * stronger one has already identified somebody.
+ *
+ *   member_id  she picked them, or it is already on the row. Final.
+ *   email      what they type at the desk and what their membership is under.
+ *   phone      what she types when she books by hand. Only when it names
+ *              exactly one member — a number two members share is
+ *              ambiguous, and a free service given to the wrong person is
+ *              worse than a deposit asked of the right one.
+ *   name       exact once case and spacing are set aside.
+ *
+ * The field matched_by comes back on the row so Studio Manager can show her how it
+ * was decided rather than asking her to trust it. */
 async function memberFor(appt) {
   const main = require('./_db');
+  const mark = (m, how) => (m ? Object.assign(m, { matched_by: how }) : null);
+
+  // She has said this person is not a member. That is an answer.
+  if (String(appt.member_id || '') === NOT_A_MEMBER) return null;
+
   if (appt.member_id) {
     try {
       const m = await main.queryOne(
-        'SELECT member_id, full_name, email, tier, stripe_customer_id, status, cancelled_at FROM members WHERE member_id = ?',
-        [appt.member_id]);
-      if (m) return m;
+        'SELECT ' + COLS + ' FROM members WHERE member_id = ?', [appt.member_id]);
+      if (m) return mark(m, 'member_id');
     } catch (_) {}
   }
-  if (appt.email) {
+
+  const email = String(appt.email || '').trim().toLowerCase();
+  if (email) {
     try {
       const m = await main.queryOne(
-        'SELECT member_id, full_name, email, tier, stripe_customer_id, status, cancelled_at FROM members WHERE lower(email) = ?',
-        [String(appt.email).toLowerCase()]);
-      if (m) return m;
+        'SELECT ' + COLS + ' FROM members WHERE lower(email) = ?', [email]);
+      if (m) return mark(m, 'email');
     } catch (_) {}
   }
-  if (appt.name) {
+
+  /* The phone. Matched in here rather than in SQL because the column holds
+     every format anybody has ever typed — 5595551234, (559) 555-1234,
+     +1 559 555 1234 — and the last ten digits are the only part that is
+     reliably the same number. */
+  const phone = tenDigits(appt.phone);
+  if (phone.length === 10) {
     try {
-      const m = await main.queryOne(
-        'SELECT member_id, full_name, email, tier, stripe_customer_id, status, cancelled_at FROM members WHERE lower(full_name) = lower(?)',
-        [String(appt.name).trim()]);
-      if (m) return m;
+      const rows = await main.query(
+        'SELECT ' + COLS + ' FROM members WHERE phone IS NOT NULL AND phone <> \'\'');
+      const hits = (rows || []).filter(r => tenDigits(r.phone) === phone);
+      // Exactly one, or it is not an answer.
+      if (hits.length === 1) return mark(hits[0], 'phone');
+    } catch (_) {}
+  }
+
+  const key = nameKey(appt.name);
+  if (key) {
+    try {
+      const rows = await main.query('SELECT ' + COLS + ' FROM members');
+      const hits = (rows || []).filter(r => nameKey(r.full_name) === key);
+      if (hits.length === 1) return mark(hits[0], 'name');
     } catch (_) {}
   }
   return null;
@@ -186,4 +241,7 @@ async function cardOnFile(sk, customerId) {
   } catch (_) { return null; }
 }
 
-module.exports = { billFor, memberFor, memberTierOf, cardOnFile, freeLeftFor, customerIdFor };
+module.exports = {
+  billFor, memberFor, memberTierOf, cardOnFile, freeLeftFor, customerIdFor,
+  NOT_A_MEMBER, tenDigits, nameKey,
+};

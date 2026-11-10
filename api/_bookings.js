@@ -460,19 +460,33 @@ module.exports = async (req, res) => {
         'ALTER TABLE team_appointments ADD COLUMN deposit_paid INTEGER DEFAULT 0',
         "ALTER TABLE team_appointments ADD COLUMN client_email TEXT DEFAULT ''",
         "ALTER TABLE team_appointments ADD COLUMN payment_intent_id TEXT DEFAULT ''",
+        // Which membership this booking belongs to. Signed in, so it is
+        // known for certain here rather than matched on a name later.
+        "ALTER TABLE team_appointments ADD COLUMN member_id TEXT DEFAULT ''",
       ]) { try { await teamDb.execute(sql); } catch (_) {} }
 
+      const bookingNote = 'Booked online · ' + confirmation
+        + (for_name && for_name.trim() && for_name.trim() !== customer_name ? ' · for ' + for_name.trim() + ' (booked by ' + customer_name + ')' : '')
+        + (dealAddons.length ? ' · +' + dealAddons.join(', ') : '');
+
       const teamRow = await teamDb.execute(
+        `INSERT INTO team_appointments (team_member_id, client_name, client_phone, client_email, service,
+           date, time, notes, status, chat_token, price_cents, deposit_cents, deposit_paid, payment_intent_id, member_id)
+         VALUES (?,?,?,?,?,?,?,?, 'scheduled', ?,?,?,?,?,?)`,
+        [m ? m.id : null, (for_name && for_name.trim()) || customer_name, customer_phone || '',
+         customer_email || '', bookedService, date, time_slot, bookingNote, visitToken,
+         total_cents, deposit_cents, depositPaid ? 1 : 0, depositPaid ? String(payment_intent_id || '') : '',
+         member_id ? String(member_id) : '']
+      ).catch(async () => teamDb.execute(
+        // An older book without the membership column still takes a booking.
         `INSERT INTO team_appointments (team_member_id, client_name, client_phone, client_email, service,
            date, time, notes, status, chat_token, price_cents, deposit_cents, deposit_paid, payment_intent_id)
          VALUES (?,?,?,?,?,?,?,?, 'scheduled', ?,?,?,?,?)`,
         [m ? m.id : null, (for_name && for_name.trim()) || customer_name, customer_phone || '',
-         customer_email || '', bookedService, date, time_slot,
-         'Booked online · ' + confirmation
-           + (for_name && for_name.trim() && for_name.trim() !== customer_name ? ' · for ' + for_name.trim() + ' (booked by ' + customer_name + ')' : '')
-           + (dealAddons.length ? ' · +' + dealAddons.join(', ') : ''), visitToken,
+         customer_email || '', bookedService, date, time_slot, bookingNote, visitToken,
          total_cents, deposit_cents, depositPaid ? 1 : 0, depositPaid ? String(payment_intent_id || '') : '']
-      );
+      ));
+
       // Skip duplicate client email/SMS if the legacy SendGrid path is active
       const legacyActive = !!process.env.SENDGRID_API_KEY;
       // Nobody picked an artist, so this goes out to everyone who could take
@@ -502,6 +516,19 @@ module.exports = async (req, res) => {
         } catch (_) {}
       }
       await upsertClient({ name: customer_name, email: customer_email, phone: customer_phone, service: bookedService, date });
+
+      /* ── THE ADDRESS, WHEN THERE IS NOTHING TO WAIT FOR ───────────────
+         Normally the directions follow the deposit landing. A member who
+         owes no deposit has no payment for them to follow, so until now
+         they were never sent at all — booked online, confirmed, and left
+         with no address and nobody to text.
+
+         After the confirmation on purpose: "here is how to get in" read
+         before "you're booked" is the wrong way round.
+
+         settled() still decides. Anybody who owes a deposit gets their
+         link and nothing else, exactly as before. */
+      try { await require('./_arrival-mail').maybeSendFor(visitToken); } catch (_) {}
 
       /* Any email she has written for somebody booking. Fired here rather
          than nowhere, which is where it fired before: the trigger existed

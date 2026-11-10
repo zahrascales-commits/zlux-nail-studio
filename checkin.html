@@ -599,10 +599,20 @@ async function submitSignature(){
   try{
     const r = await fetch('/api/kiosk?action=pay_on_file', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q: KNAME, ref: KREF, tip_cents: TIP, signature: sig })
+      /* refs, not just ref. Somebody with two services booked that
+         afternoon signs for the total of both, and until this was sent the
+         charge only covered the first one. */
+      body: JSON.stringify({ q: KNAME, ref: KREF, refs: KREFS, tip_cents: TIP, signature: sig })
     });
     const d = await r.json();
-    if(!r.ok || d.error){ err.textContent = d.error || 'That card was declined ✦'; return; }
+    if(!r.ok || d.error){
+      err.textContent = d.error || 'That card was declined ✦';
+      /* Their bank wants them to approve it in person. The card screen does
+         exactly that, so go there rather than leaving them stuck on an
+         error they cannot act on. */
+      if(d.use_card){ setTimeout(function(){ show('s-balance'); payCard(); }, 1400); }
+      return;
+    }
     offerRebook();
   }catch(_){ err.textContent = 'Connection hiccup — try again ✦'; }
   finally{ btn.disabled = false; btn.textContent = 'Authorise & pay'; }

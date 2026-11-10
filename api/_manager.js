@@ -6,14 +6,34 @@ const { upsertClient } = require('./_clients');
 
 const CEO_PASSWORD = process.env.CEO_PASSWORD || 'ZOLA2026';
 
+/* The number clients are given, which is not always the number the artist
+   gets her own booking texts on. Added once, here, because every screen
+   that shows a team member goes through membersWithSkills. */
+let clientPhoneReady = null;
+async function ensureClientPhone() {
+  if (clientPhoneReady) return clientPhoneReady;
+  clientPhoneReady = (async () => {
+    try { await execute("ALTER TABLE team_members ADD COLUMN client_phone TEXT DEFAULT ''"); } catch (_) {}
+  })().catch(e => { clientPhoneReady = null; throw e; });
+  return clientPhoneReady;
+}
+
 async function membersWithSkills() {
-  const BASE = 'id, name, role, pin, color, active, phone, email, restricted, bio, show_on_site, title, photo, trainee';
+  try { await ensureClientPhone(); } catch (_) {}
+  const BASE = 'id, name, role, pin, color, active, phone, email, restricted, bio, show_on_site, title, photo, trainee, client_phone';
   let members;
   try {
     members = await query('SELECT ' + BASE + ', commission_pct FROM team_members ORDER BY id');
   } catch (_) {
     // An older database without the rate column still has a team.
-    members = await query('SELECT ' + BASE + ' FROM team_members ORDER BY id');
+    try {
+      members = await query('SELECT ' + BASE + ' FROM team_members ORDER BY id');
+    } catch (_) {
+      // Or without the client-facing number either.
+      members = await query(
+        'SELECT id, name, role, pin, color, active, phone, email, restricted, bio, show_on_site, title, photo, trainee'
+        + ' FROM team_members ORDER BY id');
+    }
   }
   const skillRows = await query('SELECT team_member_id, service_name FROM worker_skills');
   const skillsByMember = {};
@@ -734,6 +754,124 @@ module.exports = async function (req, res) {
     /* The arrival email — directions, the way in, and the artist's number.
        Preview first, always: these words go to a client who is about to
        drive somewhere, and a wrong landmark wastes their afternoon. */
+    /* ── IS THIS PERSON A MEMBER? ──────────────────────────────────────
+       Asked while she is still typing the booking, and answered by the
+       same code that prices the deposit link and the till — so what the
+       booking screen says is what the client will actually be asked for.
+
+       Reads only. It never writes a membership onto anything and never
+       charges or emails anybody; the booking itself decides that. */
+    if (action === 'member_check') {
+      const q = Object.assign({}, req.query, req.body || {});
+      const bill = require('./_kiosk-bill');
+      const visit = require('./_visit');
+
+      const member = await bill.memberFor({
+        member_id: q.member_id || null,
+        email: String(q.email || '').trim().toLowerCase(),
+        phone: String(q.phone || '').trim(),
+        name: String(q.name || '').trim(),
+      }).catch(() => null);
+      const tier = bill.memberTierOf(member);
+
+      if (!member || !tier) {
+        /* Not a member — but still worth saying what the deposit will be,
+           because that is the other half of the question she is asking. */
+        let due = 0;
+        try {
+          due = Math.round(Number(await visit.depositFor({
+            service: q.service || '', client_email: String(q.email || ''),
+            client_phone: String(q.phone || ''), client_name: String(q.name || ''),
+            deposit_cents: 0,
+            price_cents: Math.max(0, Math.round(Number(q.price_cents) || 0)),
+            total_cents: Math.max(0, Math.round(Number(q.price_cents) || 0)),
+          })) || 0);
+        } catch (_) {}
+        return res.json({
+          is_member: false,
+          // A cancelled membership is worth naming: it explains why
+          // somebody she thinks of as a member is being asked for money.
+          lapsed: !!(member && !tier),
+          lapsed_name: member ? (member.full_name || '') : '',
+          deposit_cents: due,
+          why: member && !tier
+            ? (member.full_name || 'They') + '\u2019s membership has been cancelled, so the usual deposit applies.'
+            : '',
+        });
+      }
+
+      const perks = require('./_perks');
+      let neverDeposits = false;
+      try { neverDeposits = (perks.tierPerks(tier) || []).some(p => p.kind === 'deposit'); } catch (_) {}
+      let freeLeft = 0;
+      try { freeLeft = await bill.freeLeftFor(member); } catch (_) {}
+
+      let label = tier;
+      try { const p = require('./_plans').byKey(tier); if (p) label = p.name; } catch (_) {}
+
+      /* What they will actually be asked for, from the real rule rather
+         than from a second copy of it written here. */
+      let due = 0;
+      try {
+        due = Math.round(Number(await visit.depositFor({
+          service: q.service || '',
+          client_email: member.email || String(q.email || ''),
+          client_phone: String(q.phone || ''),
+          client_name: member.full_name || String(q.name || ''),
+          member_id: member.member_id,
+          deposit_cents: 0,
+          price_cents: Math.max(0, Math.round(Number(q.price_cents) || 0)),
+          total_cents: Math.max(0, Math.round(Number(q.price_cents) || 0)),
+        })) || 0);
+      } catch (_) {}
+
+      const why = neverDeposits
+        ? label + ' \u2014 no deposit, ever.'
+        : (freeLeft > 0
+            ? label + ' \u2014 ' + freeLeft + ' included service' + (freeLeft === 1 ? '' : 's')
+              + ' left, so no deposit.'
+            : (due > 0
+                ? label + ' \u2014 included services all used this cycle, so the usual deposit applies.'
+                : label + ' \u2014 nothing to pay up front.'));
+
+      /* And what the desk will ask for, from the till's own bill. An
+         included service is covered, so this is often zero where the price
+         she typed is not. */
+      let checkout = null;
+      try {
+        const b = await bill.billFor({
+          name: member.full_name || String(q.name || ''),
+          email: member.email || String(q.email || ''),
+          phone: String(q.phone || ''),
+          member_id: member.member_id,
+          service: q.service || '',
+          total_cents: Math.max(0, Math.round(Number(q.price_cents) || 0)),
+          deposit_cents: 0, deposit_paid: 0,
+        });
+        checkout = {
+          covered_cents: Math.round(Number(b.covered_by_membership) || 0),
+          due_cents: Math.round(Number(b.due_cents) || 0),
+          list_cents: Math.round(Number(b.list_cents) || 0),
+        };
+      } catch (_) {}
+
+      return res.json({
+        is_member: true,
+        member_id: member.member_id,
+        full_name: member.full_name || '',
+        email: member.email || '',
+        tier, tier_label: label,
+        checkout,
+        // How it was decided, so she can see it was not a guess — and
+        // overrule it when it was the wrong Maria.
+        matched_by: member.matched_by || '',
+        no_deposit_ever: neverDeposits,
+        free_left: freeLeft,
+        deposit_cents: due,
+        why,
+      });
+    }
+
     /* Taking a deposit off a card on file. Asking costs nothing and
        charges nothing: it reports the amount owed, the card, and what the
        client was told when they saved it. */
@@ -1835,7 +1973,8 @@ module.exports = async function (req, res) {
       const clean = v => String(v || '').trim().slice(0, 60);
       const pairs = [
         ['venmo_handle', clean(b.venmo_handle).replace(/^@/, '')],
-        ['cashapp_tag', clean(b.cashapp_tag).replace(/^$/, '')],
+        // Written without the sigil, and the checkout screen puts it back.
+        ['cashapp_tag', clean(b.cashapp_tag).replace(/^\$/, '')],
         ['applepay_phone', clean(b.applepay_phone)],
       ];
       for (const [k, v] of pairs) {
@@ -2107,6 +2246,7 @@ module.exports = async function (req, res) {
     }
 
     if (method === 'POST' && action === 'add_member') {
+      try { await ensureClientPhone(); } catch (_) {}
       const { name, role, color, phone, email, bio, title, show_on_site, photo, trainee } = req.body || {};
       if (!name) return res.status(400).json({ error: 'Name required' });
       const pin = await uniquePin();
@@ -2121,6 +2261,7 @@ module.exports = async function (req, res) {
       const { id, photo, trainee, commission_pct } = req.body || {};
       const body = req.body || {};
       if (!id) return res.status(400).json({ error: 'Which team member?' });
+      try { await ensureClientPhone(); } catch (_) {}
 
       /* Only the fields actually sent. This used to write all nine columns
          on every call, so a request carrying one of them blanked the other
@@ -2138,6 +2279,8 @@ module.exports = async function (req, res) {
       take('color', v => v || '#C4A882');
       take('active', v => (v ? 1 : 0));
       take('phone', v => v || '');
+      // What clients are told to text. Blank means "use her own number".
+      take('client_phone', v => String(v == null ? '' : v).trim());
       take('email', v => String(v || '').trim().toLowerCase());
       take('bio', v => v || '');
       take('title', v => v || '');
@@ -2345,12 +2488,38 @@ module.exports = async function (req, res) {
       // Already paid another way, or simply not being asked: no deposit
       // link and no reminders chasing money she already has.
       const waived = Number((req.body || {}).deposit_waived) === 1 ? 1 : 0;
+
+      /* ── THE MEMBERSHIP, SETTLED NOW ──────────────────────────────────
+         Whichever membership this booking belongs to is decided here and
+         written on the row, rather than re-guessed from the name by every
+         screen that reads it afterwards. A member who paid for no deposits
+         then keeps them through a rename, a typo or a second email.
+
+         She can send member_id herself — including "-" for somebody the
+         screen matched but she knows is not that person. */
+      let memberIdOnRow = String((req.body || {}).member_id || '').trim();
+      if (!memberIdOnRow) {
+        try {
+          const found = await require('./_kiosk-bill').memberFor({
+            email: String(client_email || '').trim().toLowerCase(),
+            phone: client_phone || '', name: client_name || '',
+          });
+          memberIdOnRow = found && found.member_id ? String(found.member_id) : '';
+        } catch (_) { memberIdOnRow = ''; }
+      }
+
       const r = await execute(
+        `INSERT INTO team_appointments (team_member_id, client_name, client_phone, client_email, service, date, time, notes, status, chat_token, price_cents, deposit_waived, member_id)
+         VALUES (?,?,?,?,?,?,?,?, 'scheduled', ?, ?, ?, ?)`,
+        [team_member_id ? Number(team_member_id) : null, client_name || '', client_phone || '',
+         String(client_email || '').trim().toLowerCase(), service || '', date, time, notes || '', tok, agreedCents, waived,
+         memberIdOnRow]
+      ).catch(async () => execute(
         `INSERT INTO team_appointments (team_member_id, client_name, client_phone, client_email, service, date, time, notes, status, chat_token, price_cents, deposit_waived)
          VALUES (?,?,?,?,?,?,?,?, 'scheduled', ?, ?, ?)`,
         [team_member_id ? Number(team_member_id) : null, client_name || '', client_phone || '',
          String(client_email || '').trim().toLowerCase(), service || '', date, time, notes || '', tok, agreedCents, waived]
-      ).catch(async () => execute(
+      )).catch(async () => execute(
         `INSERT INTO team_appointments (team_member_id, client_name, client_phone, client_email, service, date, time, notes, status, chat_token)
          VALUES (?,?,?,?,?,?,?,?, 'scheduled', ?)`,
         [team_member_id ? Number(team_member_id) : null, client_name || '', client_phone || '',
@@ -2389,6 +2558,20 @@ module.exports = async function (req, res) {
         } catch (_) { /* never let an email rule take a booking down */ }
       }
 
+      /* ── THE ADDRESS AND THEIR ARTIST'S NUMBER ────────────────────────
+         Sent here as well as on payment, because a member with nothing to
+         pay has no payment for it to wait on. Before this, a booking that
+         owed nothing simply never triggered it, and the client arrived at
+         a building behind a house with no address and nobody to text.
+
+         settled() still decides. Somebody who owes a deposit gets the
+         booking email and the link, and the directions follow their
+         payment exactly as before. */
+      let arrivalMail = null;
+      if (!QUIET) {
+        try { arrivalMail = await require('./_arrival-mail').maybeSendFor(tok); } catch (_) {}
+      }
+
       if (QUIET) return res.json({ ok: true, id: r.lastInsertRowid, chat_token: tok, quiet: true, notify: null });
 
       // instant notifications (client confirmation + booked-artist alert) + client memory
@@ -2405,7 +2588,7 @@ module.exports = async function (req, res) {
         });
         await upsertClient({ name: client_name, email: client_email, phone: client_phone, service, date });
       } catch (_) {}
-      return res.json({ ok: true, id: r.lastInsertRowid, chat_token: tok, notify });
+      return res.json({ ok: true, id: r.lastInsertRowid, chat_token: tok, notify, arrival: arrivalMail });
     }
 
     if (method === 'PUT' && action === 'update_appt') {
@@ -2437,6 +2620,9 @@ module.exports = async function (req, res) {
       take('time');
       take('notes');
       take('status', v => v || 'scheduled');
+      // Which membership this booking belongs to, or "-" for "I have
+      // checked, they are not a member".
+      take('member_id', v => String(v == null ? '' : v).trim());
       // What was taken up front, so the till knows what is left.
       // The price actually agreed, when it is not simply the menu price.
       take('price_cents', v => Math.max(0, Math.round(Number(v) || 0)));
@@ -2452,7 +2638,7 @@ module.exports = async function (req, res) {
       /* Settling it on the form counts as settling it. Checked after the
          write, against the row as it then stands, so a tick that did not
          actually save cannot send somebody the address. */
-      const mightSettle = sets.some(s => /deposit_paid|deposit_waived|team_member_id/.test(s));
+      const mightSettle = sets.some(s => /deposit_paid|deposit_waived|team_member_id|member_id/.test(s));
 
       vals.push(id);
       try {
@@ -2500,7 +2686,13 @@ module.exports = async function (req, res) {
           const a = await queryOne('SELECT * FROM team_appointments WHERE id=?', [Number(id)]);
           const m = await queryOne('SELECT id, name, phone, email FROM team_members WHERE id=?', [Number(team_member_id)]);
           if (a && m) await notifyNewAppointment({
-            clientName: a.client_name, service: a.service, date: a.date, time: a.time,
+            clientName: a.client_name,
+            /* The client's own number and address, which this call left out
+               — so the artist was told she had a client and not how to
+               reach them. It is the first thing she needs. */
+            clientPhone: a.client_phone || '',
+            clientEmail: a.client_email || '',
+            service: a.service, date: a.date, time: a.time,
             memberId: m.id, memberName: m.name, memberPhone: m.phone, memberEmail: m.email,
           });
         }

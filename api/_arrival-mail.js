@@ -47,7 +47,35 @@ const dialable = p => {
   return d.length === 10 ? '+1' + d : (d.length === 11 ? '+' + d : d);
 };
 
-function html({ client, artist, artistPhone, service, datePretty, timePretty }) {
+/* Has this person been here before?
+ *
+ * It changes what they are asked to do at the door, so it is worth knowing
+ * rather than guessing: a returning client told to photograph the building
+ * reads as a form letter, and a first-timer told to "just say you're here"
+ * is left standing outside a house with no sign on it.
+ *
+ * Matched on email or phone only. A name is not enough to tell two Marias
+ * apart, and "you know where we are" sent to the wrong one is the version
+ * that leaves somebody lost.
+ */
+async function beenBeforeFor(appt) {
+  const email = String(appt.client_email || '').trim().toLowerCase();
+  const ph = digits(appt.client_phone).slice(-10);
+  if (!email && ph.length < 10) return false;
+  try {
+    const rows = await query(
+      'SELECT client_email, client_phone FROM team_appointments '
+      + 'WHERE COALESCE(checked_out_ts,0) > 0 AND id <> ? LIMIT 400', [Number(appt.id) || 0]);
+    return (rows || []).some(r => {
+      const re = String(r.client_email || '').trim().toLowerCase();
+      if (email && re && re === email) return true;
+      const rp = digits(r.client_phone).slice(-10);
+      return ph.length === 10 && rp === ph;
+    });
+  } catch (_) { return false; }
+}
+
+function html({ client, artist, artistPhone, service, datePretty, timePretty, beenBefore }) {
   const first = String(client || '').trim().split(/\s+/)[0] || 'there';
   const who = esc(artist);
   const shown = esc(prettyPhone(artistPhone));
@@ -104,9 +132,14 @@ function html({ client, artist, artistPhone, service, datePretty, timePretty }) 
 
       ${rule}
       ${head('When you arrive')}
-      ${p('Before entering the property, text ' + who + ' a photo of the building at '
-        + '<a href="sms:' + dial + '" style="color:#8B6A3E;text-decoration:none;font-weight:bold">' + shown + '</a>. '
-        + 'Once ' + who + ' confirms you are in the right place, they will help you enter and walk you in.')}
+      ${beenBefore
+        ? p('You have been here before, so there is nothing to work out. Text ' + who + ' at '
+            + '<a href="sms:' + dial + '" style="color:#8B6A3E;text-decoration:none;font-weight:bold">' + shown + '</a> '
+            + 'to say you have arrived, and ' + who + ' will come and let you in.')
+        : p('Before entering the property, text ' + who + ' a photo of the building at '
+            + '<a href="sms:' + dial + '" style="color:#8B6A3E;text-decoration:none;font-weight:bold">' + shown + '</a>. '
+            + 'Once ' + who + ' confirms you are in the right place, they will help you enter and walk you in. '
+            + 'Next time you come, a text to say you have arrived is all it takes.')}
 
       ${head('Where to park')}
       ${p("Once you're inside, park all the way on the right, closest to the smaller second building.")}
@@ -140,6 +173,12 @@ async function ensureColumns() {
     for (const sql of [
       'ALTER TABLE team_appointments ADD COLUMN arrival_sent_ts INTEGER DEFAULT 0',
       "ALTER TABLE team_appointments ADD COLUMN arrival_sent_note TEXT DEFAULT ''",
+      /* The number clients are told to text, which is not always the one
+         the artist gets her own booking texts on. Made here as well as in
+         Studio Manager, because the cron can run first. */
+      "ALTER TABLE team_members ADD COLUMN client_phone TEXT DEFAULT ''",
+      // Which membership the booking belongs to — the sweep reads it.
+      "ALTER TABLE team_appointments ADD COLUMN member_id TEXT DEFAULT ''",
     ]) { try { await execute(sql); } catch (_) { /* already there */ } }
   })().catch(e => { ready = null; throw e; });
   return ready;
@@ -184,10 +223,24 @@ async function prepare(appt) {
   let artist = String(appt.artist_name || '').trim();
   let phone = '';
   if (appt.team_member_id) {
+    /* The number clients are given comes first, and the artist's own number
+       is the fallback. They are not always the same: an artist can want her
+       booking texts on one phone and her clients on another, and sending a
+       client to the wrong one means somebody standing outside a building
+       nobody is answering for. */
     try {
-      const m = await queryOne('SELECT name, phone FROM team_members WHERE id=?', [appt.team_member_id]);
-      if (m) { artist = artist || String(m.name || '').trim(); phone = String(m.phone || '').trim(); }
-    } catch (_) {}
+      const m = await queryOne(
+        'SELECT name, phone, client_phone FROM team_members WHERE id=?', [appt.team_member_id]);
+      if (m) {
+        artist = artist || String(m.name || '').trim();
+        phone = String(m.client_phone || '').trim() || String(m.phone || '').trim();
+      }
+    } catch (_) {
+      try {
+        const m = await queryOne('SELECT name, phone FROM team_members WHERE id=?', [appt.team_member_id]);
+        if (m) { artist = artist || String(m.name || '').trim(); phone = String(m.phone || '').trim(); }
+      } catch (__) {}
+    }
   }
   if (!artist) return { ok: false, why: 'no artist on it yet' };
   if (!digits(phone)) return { ok: false, why: 'no phone on file for ' + artist, needsPhone: artist };
@@ -211,11 +264,13 @@ async function prepare(appt) {
   const earliest = group.slice().sort((a, b) =>
     String(a.time || '').localeCompare(String(b.time || '')))[0] || appt;
 
+  const beenBefore = await beenBeforeFor(appt);
+
   return {
-    ok: true, to, artist, phone, how: st.how, group,
+    ok: true, to, artist, phone, how: st.how, group, been_before: beenBefore,
     subject: "You're booked with " + artist + ' at ZOLA 🤍',
     body: html({
-      client: appt.client_name, artist, artistPhone: phone, service,
+      client: appt.client_name, artist, artistPhone: phone, service, beenBefore,
       datePretty: visit.pretty(appt.date), timePretty: visit.time12(earliest.time),
     }),
   };
@@ -304,15 +359,37 @@ async function sweep({ limit = 25, force } = {}) {
   }
   let rows = [];
   try {
+    /* Three ways to be settled, and the third one was missing. A member
+       on a tier that promises no deposit has neither flag set, so a query
+       that only looked at the flags never saw them, and the email with
+       their artist's number was never sent.
+
+       Whether they are REALLY settled is still settled() to decide: a
+       member whose included services are spent owes the usual deposit and
+       is skipped exactly like anybody else. Membership here only buys a
+       look. */
     rows = await query(
       'SELECT a.*, m.name AS artist_name FROM team_appointments a '
       + 'LEFT JOIN team_members m ON m.id = a.team_member_id '
       + 'WHERE a.date >= ? AND COALESCE(a.arrival_sent_ts,0)=0 '
       + "AND LOWER(COALESCE(a.status,'scheduled'))<>'cancelled' "
       + 'AND a.team_member_id IS NOT NULL '
-      + 'AND (COALESCE(a.deposit_paid,0)=1 OR COALESCE(a.deposit_waived,0)=1) '
+      + "AND (COALESCE(a.deposit_paid,0)=1 OR COALESCE(a.deposit_waived,0)=1 "
+      + "     OR (COALESCE(a.member_id,'') <> '' AND COALESCE(a.member_id,'') <> '-')) "
       + 'ORDER BY a.date LIMIT ?', [todayLA(), Math.max(1, Math.min(100, Number(limit) || 25))]);
-  } catch (_) { return { looked: 0, sent: 0, results: [] }; }
+  } catch (_) {
+    // An older book with no member_id column at all: the flags on their own.
+    try {
+      rows = await query(
+        'SELECT a.*, m.name AS artist_name FROM team_appointments a '
+        + 'LEFT JOIN team_members m ON m.id = a.team_member_id '
+        + 'WHERE a.date >= ? AND COALESCE(a.arrival_sent_ts,0)=0 '
+        + "AND LOWER(COALESCE(a.status,'scheduled'))<>'cancelled' "
+        + 'AND a.team_member_id IS NOT NULL '
+        + 'AND (COALESCE(a.deposit_paid,0)=1 OR COALESCE(a.deposit_waived,0)=1) '
+        + 'ORDER BY a.date LIMIT ?', [todayLA(), Math.max(1, Math.min(100, Number(limit) || 25))]);
+    } catch (__) { return { looked: 0, sent: 0, results: [] }; }
+  }
 
   const results = [];
   for (const r of rows) {
@@ -341,4 +418,5 @@ async function markPredating() {
 module.exports = {
   html, prettyPhone, dialable, STEPS, ADDRESS_LINE1, ADDRESS_LINE2, MAPS,
   ensureColumns, settled, prepare, sendFor, maybeSendFor, sweep, markPredating,
+  beenBeforeFor,
 };

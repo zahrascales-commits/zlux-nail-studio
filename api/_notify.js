@@ -323,6 +323,105 @@ async function notifyClientConfirmed(a) {
   return out;
 }
 
+/* ── THE ARTIST'S OWN EMAIL ───────────────────────────────────────────
+   Her client's name and number, tappable, and the message to send them.
+
+   Written out in full rather than left to each artist to invent, because
+   the arrival instructions only work if the client gets the same ones every
+   time: photograph the building the first time so somebody can confirm you
+   are in the right place, and after that just say you have arrived. */
+const _d = p => String(p || '').replace(/\D/g, '');
+function _pretty(p) {
+  const d = _d(p);
+  const ten = d.length === 11 && d[0] === '1' ? d.slice(1) : d;
+  if (ten.length !== 10) return String(p || '').trim();
+  return '(' + ten.slice(0, 3) + ') ' + ten.slice(3, 6) + '-' + ten.slice(6);
+}
+const _dial = p => {
+  const d = _d(p);
+  return d.length === 10 ? '+1' + d : (d.length === 11 ? '+' + d : d);
+};
+const _esc = v => String(v == null ? '' : v)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+function artistScript({ clientName, artistName, when }) {
+  const first = String(clientName || '').trim().split(/\s+/)[0] || 'there';
+  return 'Hi ' + first + ', this is ' + (artistName || 'your artist')
+    + ' from ZOLA \u2014 I have you booked for ' + (when || 'your appointment') + '. '
+    + 'If you have any trouble finding us, text or FaceTime me on this number and I will guide you in. '
+    + 'When you get here, send me a photo of the building so I know you are in the right place '
+    + 'and I will come and let you in. If you have been before, just text me that you are here '
+    + 'and I will let you in.';
+}
+
+function artistEmailHtml({ clientName, clientPhone, clientEmail, service, when, link, artistName }) {
+  const shown = _pretty(clientPhone);
+  const dial = _dial(clientPhone);
+  const script = artistScript({ clientName, artistName, when });
+
+  const btn = (href, label) =>
+    '<a href="' + href + '" style="display:inline-block;background:#0D0D0D;color:#C4A882;'
+    + 'text-decoration:none;padding:11px 18px;font-size:12px;font-weight:bold;letter-spacing:1.4px;'
+    + 'text-transform:uppercase;margin:0 6px 8px 0">' + label + '</a>';
+
+  return '<div style="font-family:Helvetica,Arial,sans-serif;background:#faf7f4;padding:26px 14px">'
+  + '<div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #eee5d8">'
+
+  + '<div style="background:#0D0D0D;padding:22px 24px;text-align:center">'
+    + '<div style="font-family:Georgia,serif;font-size:19px;letter-spacing:6px;color:#F5EEE8">ZOLA</div>'
+    + '<div style="font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#8B6A3E;margin-top:5px">New appointment</div>'
+  + '</div>'
+
+  + '<div style="padding:26px 24px">'
+    + '<div style="background:#faf7f4;border:1px solid #eee5d8;padding:16px 18px;margin:0 0 20px">'
+      + '<div style="font-family:Georgia,serif;font-size:19px;color:#0D0D0D;margin-bottom:4px">'
+        + _esc(clientName || 'Client') + '</div>'
+      + '<div style="font-size:14px;color:#3a3027;margin-bottom:3px">' + _esc(service || 'Appointment') + '</div>'
+      + '<div style="font-size:14px;color:#8B6A3E">' + _esc(when || '') + '</div>'
+    + '</div>'
+
+    /* Their number, as something to press. It was previously printed after
+       a dot at the end of a sentence, which on a phone is not a number you
+       can do anything with. */
+    + (_d(clientPhone).length >= 10
+        ? '<p style="font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:#8B6A3E;margin:0 0 10px">'
+            + 'Their number</p>'
+          + '<p style="font-size:17px;color:#0D0D0D;margin:0 0 12px;font-weight:bold">' + _esc(shown) + '</p>'
+          + '<div>'
+            + btn('sms:' + dial, 'Text them')
+            + btn('tel:' + dial, 'Call')
+            + btn('facetime:' + dial, 'FaceTime')
+          + '</div>'
+        : '<p style="font-size:15px;line-height:1.7;color:#B54708;margin:0 0 14px">'
+            + 'No phone number on this booking \u2014 ask Zahra for it before the day.</p>')
+
+    + (clientEmail
+        ? '<p style="font-size:13px;color:#8C7A5E;margin:4px 0 18px">'
+          + '<a href="mailto:' + _esc(clientEmail) + '" style="color:#8B6A3E">' + _esc(clientEmail) + '</a></p>'
+        : '')
+
+    + '<div style="border-top:1px solid #eee5d8;margin:18px 0;padding-top:18px">'
+      + '<p style="font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:#8B6A3E;margin:0 0 10px">'
+        + 'Message to send them</p>'
+      + '<div style="background:#faf7f4;border-left:3px solid #C4A882;padding:14px 16px;'
+        + 'font-size:14px;line-height:1.75;color:#3a3027">' + _esc(script) + '</div>'
+      + '<p style="font-size:12px;line-height:1.7;color:#8C7A5E;margin:10px 0 0">'
+        + 'Copy it as it is, or say it your own way \u2014 just keep the three things in it: '
+        + 'FaceTime if they cannot find us, a photo of the building on a first visit, '
+        + 'and a text to say they have arrived after that.</p>'
+    + '</div>'
+
+    + (link
+        ? '<a href="' + link + '" style="display:block;background:#B6A588;color:#0D0D0D;text-decoration:none;'
+          + 'text-align:center;padding:14px 18px;font-size:12px;font-weight:bold;letter-spacing:1.6px;'
+          + 'text-transform:uppercase;margin-top:6px">Open my schedule</a>'
+          + '<p style="font-size:11px;color:#8C7A5E;margin-top:14px;text-align:center">'
+          + 'This link signs you in automatically \u2014 keep it private.</p>'
+        : '')
+  + '</div>'
+  + '</div></div>';
+}
+
 async function notifyNewAppointment(a) {
   const results = { client_email: null, client_sms: null, artist: null };
   const { when } = await bookingContext(a);
@@ -360,20 +459,19 @@ async function notifyNewAppointment(a) {
     let link = '';
     try { link = await require('./_worker-link').linkFor(a.memberId); } catch (_) {}
     if (a.memberPhone) {
+      /* Their number in the text as well. A text is what she reads at a
+         glance, and reaching the client is the thing she is being asked to
+         do — so it should not need the email open as well. */
       await sendSMS(a.memberPhone,
         `ZOLA: new appointment — ${a.clientName || 'Client'}, ${a.service || ''}, ${when}.` +
+        (a.clientPhone ? ` Text them on ${_pretty(a.clientPhone)}.` : '') +
         (link ? ` Your full schedule: ${link}` : ' Check your Team Portal.'));
     }
     if (a.memberEmail) {
-      await sendEmail(a.memberEmail, title,
-        `<div style="font-family:Helvetica,Arial,sans-serif;background:#faf7f4;padding:26px">
-          <div style="max-width:500px;margin:0 auto;background:#fff;padding:28px 26px;border:1px solid #eee5d8">
-            <div style="font-family:Georgia,serif;font-size:20px;letter-spacing:3px;margin-bottom:18px">ZOLA</div>
-            <p style="font-size:15px;color:#3a3027;margin:0 0 12px"><b>${title}</b></p>
-            <p style="font-size:15px;color:#3a3027;line-height:1.7;margin:0 0 20px">${body}</p>
-            ${link ? `<a href="${link}" style="display:inline-block;background:#B6A588;color:#0D0D0D;text-decoration:none;padding:13px 26px;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;font-weight:bold">Open My Schedule</a>
-            <p style="font-size:11px;color:#8C7A5E;margin-top:18px">This link signs you in automatically — keep it private.</p>` : ''}
-          </div></div>`);
+      await sendEmail(a.memberEmail, title, artistEmailHtml({
+        clientName: a.clientName, clientPhone: a.clientPhone, clientEmail: a.clientEmail,
+        service: a.service, when, link, artistName: a.memberName,
+      }));
     }
     // The one that lands on a locked phone. Text is the backstop for anyone
     // who never set this up.
@@ -403,6 +501,7 @@ async function notifyNewAppointment(a) {
 
 module.exports = {
   sendEmail, sendSMS, notifyInApp, notifyNewAppointment,
+  artistEmailHtml, artistScript,
   notifyClientPending, notifyClientConfirmed, bookingContext,
   e164, providerStatus, clearKeyCache,
 };

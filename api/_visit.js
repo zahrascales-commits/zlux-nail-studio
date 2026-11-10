@@ -25,6 +25,12 @@ async function ensureColumns() {
   for (const sql of [
     // What was quoted and what has been paid, on the appointment itself.
     'ALTER TABLE team_appointments ADD COLUMN deposit_cents INTEGER DEFAULT 0',
+    /* Which membership this booking belongs to, settled when it was taken.
+       Worked out again on every screen, a membership could be found one
+       moment and missed the next — rename the client on the row and their
+       free service silently became a deposit. Decided once, here, and
+       "-" means she has checked and they are not a member. */
+    "ALTER TABLE team_appointments ADD COLUMN member_id TEXT DEFAULT ''",
     // Paid another way, or simply not being asked for one.
     'ALTER TABLE team_appointments ADD COLUMN deposit_waived INTEGER DEFAULT 0',
     'ALTER TABLE team_appointments ADD COLUMN deposit_paid INTEGER DEFAULT 0',
@@ -90,6 +96,10 @@ async function memberInfoFor(appt) {
     const member = await bill.memberFor({
       member_id: appt.member_id || null,
       email: appt.client_email || appt.email || '',
+      // The number she types when she books by hand. Without it a member
+      // booked as "Elizabeth B" matched nothing and was asked for a deposit
+      // she does not owe.
+      phone: appt.client_phone || appt.phone || '',
       name: appt.client_name || appt.name || '',
     });
     const tier = bill.memberTierOf(member);
@@ -111,8 +121,12 @@ async function restInfo(group) {
     try {
       const b = await bill.billFor({
         src: 't', id: Number(r.id), name: r.client_name || '', email: String(r.client_email || '').toLowerCase(),
+        phone: r.client_phone || '',
         service: r.service || '', time: r.time || '', deposit_cents: Number(r.deposit_cents) || 0,
-        deposit_paid: 1, total_cents: Number(r.price_cents) > 0 ? Number(r.price_cents) : null, member_id: null,
+        deposit_paid: 1, total_cents: Number(r.price_cents) > 0 ? Number(r.price_cents) : null,
+        // Whatever was decided when the appointment was taken, rather than
+        // working it out again from the name on the row.
+        member_id: r.member_id || null,
       });
       const left = Math.max(0, Math.round(Number(b.remainder_cents) || 0));
       if (left > 0 && r.chat_token) {

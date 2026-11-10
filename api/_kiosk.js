@@ -504,28 +504,46 @@ module.exports = async function (req, res) {
 
       const b = await bill.billFor(appt);
       const tip = Math.max(0, Math.round(Number(body.tip_cents) || 0));
-      // The amount is recomputed here. What the iPad believes is a display.
-      const amount = b.remainder_cents + tip;
+
+      /* Everything they are paying for, priced here rather than taken from
+         the iPad. One appointment is the ordinary case; two services booked
+         on one afternoon were being signed for as a total and charged as a
+         single service, which left the second one unpaid and the money
+         uncollected. */
+      const paying = (await resolveVisits(body))
+        || { visits: [{ appt, remainder: Math.max(0, Number(b.remainder_cents) || 0) }] };
+      const balance = paying.visits.reduce((t, v) => t + v.remainder, 0);
+      const amount = balance + tip;
       if (amount < 50) return res.status(400).json({ error: 'There is nothing to charge.' });
 
       const pay = require('./_pay');
       const sk = await pay.getStripeSecret();
       if (!sk) return res.status(400).json({ error: 'Card payments are not set up.' });
-      // A drop-in has no membership to hold a customer id; the card is
-      // found by the email they paid the deposit with instead.
 
-      const card = await bill.cardOnFile(sk, await bill.customerIdFor(sk, b.stripe_customer_id, appt.email || ''));
+      /* ── THE ONE CUSTOMER, RESOLVED ONCE ──────────────────────────────
+         This used to find the card under the right customer and then send
+         the charge under b.stripe_customer_id, which billFor fills in only
+         for members — so for everybody else it was an empty string and
+         Stripe refused the request outright. The desk saw it as a decline
+         and the client ended up sending money by phone instead.
+
+         A drop-in has no membership to hold a customer id; the card is
+         found by the email they paid their deposit with. Whichever way it
+         was found, that is the customer the charge goes to. */
+      const customerId = await bill.customerIdFor(sk, b.stripe_customer_id, appt.email || '');
+      const card = customerId ? await bill.cardOnFile(sk, customerId) : null;
       if (!card) return res.status(400).json({ error: 'No usable card on file — take payment another way.' });
 
       const out = await charge.chargeOnFile({
         sk,
-        customerId: b.stripe_customer_id,
+        customerId,
         paymentMethodId: card.id,
         amountCents: amount,
         description: 'ZOLA checkout — ' + (b.name || 'client') + ' (' + (b.service || '') + ')',
         metadata: {
           ref: appt.src + appt.id,
-          remainder_cents: String(b.remainder_cents),
+          refs: paying.visits.map(v => v.appt.src + v.appt.id).join(','),
+          remainder_cents: String(balance),
           tip_cents: String(tip),
         },
       });
@@ -537,7 +555,7 @@ module.exports = async function (req, res) {
         client_name: b.name,
         client_email: appt.email || '',
         amount_cents: amount,
-        remainder_cents: b.remainder_cents,
+        remainder_cents: balance,
         tip_cents: tip,
         method: 'card_on_file',
         card_brand: card.brand,
@@ -547,16 +565,33 @@ module.exports = async function (req, res) {
         outcome: out.ok ? 'paid' : ('failed: ' + (out.why || '')).slice(0, 200),
       });
 
-      if (!out.ok) return res.status(402).json({ error: out.why || 'The card was declined.' });
+      if (!out.ok) {
+        return res.status(402).json({
+          error: out.why || 'The card was declined.',
+          // A decline is theirs to solve with another card. Anything else
+          // is ours, and the screen says so rather than blaming their bank.
+          declined: out.declined === true,
+          // Their bank wants them present: the card screen handles that,
+          // a saved card cannot.
+          use_card: out.needsCard === true,
+        });
+      }
 
-      await stampAppointment(appt, {
-        checked_out_ts: Date.now(),
-        paid_cents: amount,
-        tip_cents: tip,
-        pay_method: 'card_on_file',
-        status: 'COMPLETED',
-        deposit_paid: 1,
-      });
+      const paidAt = Date.now();
+      for (let i = 0; i < paying.visits.length; i++) {
+        const v = paying.visits[i];
+        await stampAppointment(v.appt, {
+          checked_out_ts: paidAt,
+          // Their own share, so no appointment claims money that went on
+          // another one. The tip belongs to the visit, so it sits on the
+          // first row rather than being split or counted twice.
+          paid_cents: v.remainder + (i === 0 ? tip : 0),
+          tip_cents: i === 0 ? tip : 0,
+          pay_method: 'card_on_file',
+          status: 'COMPLETED',
+          deposit_paid: 1,
+        });
+      }
       await execute('INSERT INTO kiosk_log (type, name, method, amount_cents, detail, ts) VALUES (?,?,?,?,?,?)',
         ['checkout', String(b.name || '').slice(0, 80), 'card_on_file', amount,
          'card on file · signed' + (tip ? ' · tip $' + (tip / 100).toFixed(2) : ''), Date.now()]);
@@ -735,9 +770,17 @@ module.exports = async function (req, res) {
       const amt = '$' + (amount / 100).toFixed(2);
       const tipNote = tip ? (' · includes a $' + (tip / 100).toFixed(2) + ' tip 💛') : '';
       try {
+        const APPLABEL = { venmo: 'Venmo', cashapp: 'Cash App', applepay: 'Apple Cash' };
+        const appName = APPLABEL[PAY_METHOD];
         await notify.notifyInApp('owner', null,
-          payMethod === 'card' ? ('💳 ' + name + ' paid ' + amt + ' by card') : ('💵 Collect ' + amt + ' cash from ' + name),
-          'Checked out at the kiosk.' + tipNote);
+          PAY_METHOD === 'card' ? ('💳 ' + name + ' paid ' + amt + ' by card')
+            : appName ? ('📲 ' + name + ' says they sent ' + amt + ' by ' + appName)
+            : ('💵 Collect ' + amt + ' cash from ' + name),
+          appName
+            /* Said as a claim, because that is all it is until she looks.
+               It stays out of every total until she confirms it. */
+            ? 'Check your ' + appName + ' and confirm it on your Overview under "Said they paid".' + tipNote
+            : 'Checked out at the kiosk.' + tipNote);
       } catch (_) {}
       return res.json({ ok: true });
     }

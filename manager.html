@@ -2108,6 +2108,45 @@
           <p class="set-note">Leftovers show up at the top of your Overview under <strong>Leftover Appointments</strong>, and you get a notification. Keep the wait short — a client is sitting unconfirmed the whole time.</p>
         </div>
         <div class="site-card">
+          <h3>Venmo, Cash App &amp; Apple Pay ✦</h3>
+          <p>Fill these in and the checkout screen offers them. A client taps the one they want and
+             gets a QR code with the exact amount already in it — they scan it off the iPad with
+             their own phone camera and pay. No typing your handle, no texting you first.</p>
+          <label class="fld-label">Venmo username</label>
+          <div style="display:flex;gap:0.5rem;align-items:center;">
+            <span style="font-size:1rem;color:var(--muted)">@</span>
+            <input id="ph-venmo" placeholder="zahra-rayani" style="flex:1" />
+          </div>
+          <p class="set-note" style="margin-top:0.3rem">
+            The name in your Venmo profile link, without the @. Open Venmo → You → tap your name → Share your profile.
+          </p>
+          <label class="fld-label" style="margin-top:0.9rem;">Cash App $Cashtag</label>
+          <div style="display:flex;gap:0.5rem;align-items:center;">
+            <span style="font-size:1rem;color:var(--muted)">$</span>
+            <input id="ph-cashapp" placeholder="zolanailstudio" style="flex:1" />
+          </div>
+          <p class="set-note" style="margin-top:0.3rem">
+            Without the $. Open Cash App → your profile picture → it is under your name.
+          </p>
+          <label class="fld-label" style="margin-top:0.9rem;">Apple Pay / Apple Cash number</label>
+          <input id="ph-applepay" type="tel" placeholder="(559) 555-0000" />
+          <p class="set-note" style="margin-top:0.3rem">
+            Apple Cash is person-to-person over iMessage, so there is no code to scan — the screen shows
+            this number and tells them to send it in Messages.
+          </p>
+          <button class="btn btn-gold btn-sm" style="margin-top:0.9rem;" onclick="savePayHandles()">Save</button>
+          <span id="ph-msg" style="font-size:0.8rem;color:var(--muted);margin-left:0.6rem"></span>
+          <div style="border-top:1px solid var(--border);margin:1.1rem 0 0.9rem;"></div>
+          <p class="set-note" style="margin:0">
+            <strong>One thing these cannot do.</strong> Venmo and Cash App do not let a business
+            check its own incoming payments automatically — there is no connection to make, by
+            anybody. So a client saying they sent it is recorded as exactly that, under its own name,
+            and never counted as money in until you say it arrived. Anyone who has said they sent one
+            shows up on your Overview under <strong>Said they paid</strong>, where one tap confirms it.
+            That is the honest version of not having to text them.
+          </p>
+        </div>
+        <div class="site-card">
           <h3>How Far Ahead People Can Book ✦</h3>
           <p>Guests can book this many days out. Members see further — Signature +3, Luxe +13, Black Card +20 — and that gap is the calendar perk they are paying for.</p>
           <label class="fld-label">Guests can book</label>
@@ -2768,6 +2807,18 @@
       <div><label class="fld-label">Phone (gets booking texts)</label><input id="m-phone" placeholder="(555) 000-0000" /></div>
       <div><label class="fld-label">Email (gets booking emails)</label><input id="m-email" placeholder="artist@email.com" /></div>
     </div>
+    <!-- Two numbers, on purpose. One is where she wants to hear about her
+         own bookings; the other is what a client is told to text when they
+         are outside trying to find the door. They are often the same, and
+         when they are, this stays empty. -->
+    <div class="field">
+      <label class="fld-label">Number clients are given</label>
+      <input id="m-client-phone" placeholder="Leave empty to use the number above" />
+      <div style="font-size:0.7rem;color:var(--muted);margin-top:0.3rem">
+        Goes in the directions email after a deposit is paid: the number to text on arrival,
+        and to FaceTime if they cannot find the place. Leave it empty and her own number is used.
+      </div>
+    </div>
     <div class="field"><label class="fld-label">Accent Color</label>
       <select id="m-color">
         <option value="#B6A588">Champagne</option>
@@ -2942,13 +2993,17 @@
     <div class="field two">
       <div style="position:relative"><label class="fld-label">Client Name</label>
         <input id="a-client" placeholder="Start typing, or tap for your clients" autocomplete="off"
-          oninput="acFilter()" onfocus="acFilter()" onkeydown="acKey(event)" />
+          oninput="acFilter();memCheckSoon()" onfocus="acFilter()" onkeydown="acKey(event)" />
         <div id="ac-list"></div>
         <button type="button" onclick="openTypedClient()" class="btn btn-ghost btn-sm"
           style="margin-top:0.4rem;padding:0.3rem 0.6rem;font-size:0.62rem">View their profile</button></div>
-      <div><label class="fld-label">Client Phone</label><input id="a-phone" placeholder="(555) 000-0000" /></div>
+      <div><label class="fld-label">Client Phone</label><input id="a-phone" placeholder="(555) 000-0000" oninput="memCheckSoon()" /></div>
     </div>
-    <div class="field"><label class="fld-label">Client Email (for instant confirmation)</label><input id="a-email" placeholder="client@email.com" /></div>
+    <div class="field"><label class="fld-label">Client Email (for instant confirmation)</label><input id="a-email" placeholder="client@email.com" oninput="memCheckSoon()" /></div>
+    <!-- Whether this person is a member, checked against the membership
+         list as she types, and shown before she saves rather than found
+         out afterwards by the client. -->
+    <div id="a-memcheck" style="margin:-0.35rem 0 0.9rem;font-size:0.8rem"></div>
     <div class="field"><label class="fld-label">Service or task</label><select id="a-service"></select><input id="a-service-other" placeholder="Type what they are doing" style="display:none;margin-top:0.5rem" /></div>
 
     <!-- Add-ons and the agreed price. She books people herself, so she needs
@@ -3571,7 +3626,7 @@ const TAB_LOADERS = {
   maillog:    () => loadMailLog(),
   paymath:    () => loadPayMath(),
   clients:    () => loadClients(),
-  settings:   () => { loadSettings(); mountOwnerPush(); loadFaceIdSettings(); },
+  settings:   () => { loadSettings(); mountOwnerPush(); loadFaceIdSettings(); loadPayHandles(); },
 };
 
 function currentTab(){
@@ -5039,6 +5094,7 @@ function renderMembers(){
 }
 function openMemberModal(){
   document.getElementById('member-modal-title').textContent='Add Team Member';
+  { const cp=document.getElementById('m-client-phone'); if(cp) cp.value=''; }
   document.getElementById('m-id').value='';
   document.getElementById('m-name').value='';
   document.getElementById('m-role').value='Nail Artist';
@@ -5056,10 +5112,13 @@ function openMemberModal(){
 function editMember(id){
   const m=members.find(x=>String(x.id)===String(id));if(!m)return;
   document.getElementById('member-modal-title').textContent='Edit Team Member';
+  // Cleared first, so a blank one is blank rather than whoever was open last.
+  { const cp=document.getElementById('m-client-phone'); if(cp) cp.value=''; }
   document.getElementById('m-id').value=m.id;
   document.getElementById('m-name').value=m.name;
   document.getElementById('m-role').value=m.role||'Nail Artist';
   document.getElementById('m-phone').value=m.phone||'';
+  { const cp=document.getElementById('m-client-phone'); if(cp) cp.value=m.client_phone||''; }
   document.getElementById('m-email').value=m.email||'';
   document.getElementById('m-color').value=m.color||'#B6A588';
   document.getElementById('m-bio').value=m.bio||'';
@@ -5104,6 +5163,7 @@ async function saveMember(){
   const role=document.getElementById('m-role').value.trim();
   const color=document.getElementById('m-color').value;
   const phone=document.getElementById('m-phone').value.trim();
+  const client_phone=(document.getElementById('m-client-phone')||{value:''}).value.trim();
   const email=document.getElementById('m-email').value.trim();
   const bio=document.getElementById('m-bio').value.trim();
   const show_on_site=document.getElementById('m-show-site').checked;
@@ -5113,7 +5173,7 @@ async function saveMember(){
   if(!name){toast('Enter a name');return;}
   if(id){
     const active=document.getElementById('m-active').value;
-    await api('/api/manager',{method:'PUT',body:JSON.stringify({action:'update_member',id,name,role,color,phone,email,bio,photo,trainee,show_on_site,commission_pct,active:Number(active)})});
+    await api('/api/manager',{method:'PUT',body:JSON.stringify({action:'update_member',id,name,role,color,phone,client_phone,email,bio,photo,trainee,show_on_site,commission_pct,active:Number(active)})});
     toast('Team member updated');
   }else{
     const r=await api('/api/manager',{method:'POST',body:JSON.stringify({action:'add_member',name,role,color,phone,email,bio,photo,trainee,show_on_site})});
@@ -5598,6 +5658,10 @@ function openApptModal(){
   { const depBox=document.getElementById('a-deposit'); if(depBox){ depBox.innerHTML=''; depBox.style.display='none'; } }
   { const arr=document.getElementById('a-arrival'); if(arr){ arr.innerHTML=''; arr.style.display='none'; } }
   { const ch=document.getElementById('a-charge'); if(ch){ ch.innerHTML=''; ch.style.display='none'; } }
+  // Last person's membership, cleared. It would otherwise still be on
+  // screen while she types the next client's name.
+  MEMCHECK = null; MEMOVERRIDE = ''; MEMROWID = '';
+  { const mc=document.getElementById('a-memcheck'); if(mc) mc.innerHTML=''; }
   document.getElementById('appt-modal-title').textContent='New Appointment';
   document.getElementById('a-id').value='';
   document.getElementById('a-client').value='';
@@ -5695,6 +5759,147 @@ function suggestedTotalCents(){
   return base + apptLines.reduce((s,l) => s + (Number(l.cents)||0), 0);
 }
 
+/* ── WHERE MONEY THAT IS NOT A CARD GOES ──────────────────────────────
+   Three handles, read and written through the API that already existed for
+   them. Nothing is validated into a particular shape: people write their
+   own Venmo name with and without the @, and refusing one of those is a
+   worse outcome than accepting both. */
+async function loadPayHandles(){
+  try{
+    const d = await (await api('/api/manager?action=pay_handles')).json();
+    const set = function(id, v){ const el=document.getElementById(id); if(el) el.value = v || ''; };
+    set('ph-venmo', d.venmo_handle);
+    set('ph-cashapp', d.cashapp_tag);
+    set('ph-applepay', d.applepay_phone);
+  }catch(_){ /* the rest of settings still works */ }
+}
+
+async function savePayHandles(){
+  const msg = document.getElementById('ph-msg');
+  const val = function(id){ const el=document.getElementById(id); return el ? el.value.trim() : ''; };
+  if(msg) msg.textContent = 'Saving…';
+  try{
+    await api('/api/manager',{method:'PUT',body:JSON.stringify({
+      action:'pay_handles',
+      venmo_handle: val('ph-venmo').replace(/^@/,''),
+      cashapp_tag: val('ph-cashapp').replace(/^\$/,''),
+      applepay_phone: val('ph-applepay'),
+    })});
+    if(msg) msg.textContent = 'Saved — the checkout screen offers them now ✦';
+    toast('Saved ✦');
+  }catch(_){ if(msg) msg.textContent = 'Could not save that.'; }
+}
+
+/* ── MEMBERSHIP, CHECKED WHILE SHE TYPES ──────────────────────────────
+   One answer, from the server, from the same code that prices the deposit
+   link and the till. Nothing about membership is worked out in the browser:
+   two copies of a pricing rule is how the booking screen and the client's
+   email came to disagree in the first place. */
+let MEMCHECK = null;          // what came back for whoever is in the form
+let MEMOVERRIDE = '';         // '-' once she has said they are not a member
+let MEMROWID = '';            // the membership already written on this row
+let memTimer = null;
+
+function memFields(){
+  return {
+    // Settled when the booking was taken. A renamed client keeps their
+    // membership; it is not looked for again by whatever the name says now.
+    member_id: MEMROWID && MEMROWID !== '-' ? MEMROWID : '',
+    name:  (document.getElementById('a-client')||{}).value || '',
+    phone: (document.getElementById('a-phone')||{}).value || '',
+    email: (document.getElementById('a-email')||{}).value || '',
+    service: currentServiceName(),
+    price_cents: Math.max(0, Math.round(Number((document.getElementById('a-price')||{}).value)*100) || 0),
+  };
+}
+
+// Typing is not a request. Waits until she has stopped.
+function memCheckSoon(){
+  if(memTimer) clearTimeout(memTimer);
+  memTimer = setTimeout(memCheck, 450);
+}
+
+async function memCheck(){
+  const box = document.getElementById('a-memcheck');
+  if(!box) return;
+  const f = memFields();
+
+  // Nothing to go on yet.
+  if(!f.name.trim() && !f.phone.trim() && !f.email.trim()){
+    MEMCHECK = null; box.innerHTML = ''; renderApptTotal(); return;
+  }
+
+  if(MEMOVERRIDE === '-'){
+    MEMCHECK = { is_member:false, overridden:true };
+    box.innerHTML = '<span style="color:var(--muted)">Not a member \u2014 you said so. '
+      + '<a href="#" onclick="clearMemOverride();return false" style="color:var(--gold)">Check again</a></span>';
+    renderApptTotal();
+    return;
+  }
+
+  const qs = (f.member_id ? '&member_id=' + encodeURIComponent(f.member_id) : '')
+    + '&name=' + encodeURIComponent(f.name) + '&phone=' + encodeURIComponent(f.phone)
+    + '&email=' + encodeURIComponent(f.email) + '&service=' + encodeURIComponent(f.service)
+    + '&price_cents=' + f.price_cents;
+
+  box.innerHTML = '<span style="color:var(--muted)">Checking the membership list\u2026</span>';
+  let d = null;
+  try{ d = await (await api('/api/manager?action=member_check' + qs)).json(); }
+  catch(_){ box.innerHTML = '<span style="color:var(--muted)">Could not check the membership list \u2014 '
+    + 'the deposit rule still applies when they are booked.</span>'; return; }
+
+  MEMCHECK = d;
+  box.innerHTML = memCheckLine(d);
+  renderApptTotal();
+}
+
+const HOWMATCHED = {
+  member_id: 'you picked them',
+  email: 'matched on their email',
+  phone: 'matched on their phone number',
+  name: 'matched on their name',
+};
+
+function memCheckLine(d){
+  if(!d || d.error) return '';
+
+  if(d.is_member){
+    const how = HOWMATCHED[d.matched_by] || '';
+    // A match on a name or a number is a judgement. She gets to overrule it.
+    const soft = d.matched_by === 'phone' || d.matched_by === 'name';
+    return '<div style="border:1px solid rgba(196,168,130,0.55);background:rgba(196,168,130,0.09);'
+      + 'border-radius:10px;padding:0.6rem 0.75rem">'
+      + '<div style="font-weight:700;color:var(--gold);letter-spacing:0.04em">\u2726 MEMBER \u00b7 '
+        + esc(d.tier_label || d.tier) + '</div>'
+      + '<div style="margin-top:0.2rem">' + esc(d.full_name || '') + (how ? ' \u00b7 <i style="font-style:normal;color:var(--muted)">' + how + '</i>' : '') + '</div>'
+      + '<div style="margin-top:0.3rem">' + esc(d.why || '') + '</div>'
+      + (d.deposit_cents > 0
+          ? '<div style="margin-top:0.25rem;color:#B54708">Deposit ' + depMoney(d.deposit_cents) + '</div>'
+          : '<div style="margin-top:0.25rem;color:#067647;font-weight:600">No deposit \u2014 nothing is asked for up front</div>')
+      + (soft ? '<div style="margin-top:0.4rem"><a href="#" onclick="setMemOverride();return false" '
+          + 'style="color:var(--muted);font-size:0.74rem">Not them? Book this as a non-member</a></div>' : '')
+      + '</div>';
+  }
+
+  if(d.lapsed){
+    return '<div style="border:1px solid rgba(181,71,8,0.5);background:rgba(181,71,8,0.08);'
+      + 'border-radius:10px;padding:0.6rem 0.75rem;color:#B54708">'
+      + '<b>Membership cancelled</b> \u2014 ' + esc(d.why || '') + '</div>';
+  }
+
+  return '<span style="color:var(--muted)">Not a member'
+    + (d.deposit_cents > 0 ? ' \u00b7 deposit ' + depMoney(d.deposit_cents) : '') + '</span>';
+}
+
+function setMemOverride(){
+  MEMOVERRIDE = '-';
+  memCheck();
+}
+function clearMemOverride(){
+  MEMOVERRIDE = '';
+  memCheck();
+}
+
 function renderApptTotal(){
   const priceEl = document.getElementById('a-price'); if(!priceEl) return;
   const suggested = suggestedTotalCents();
@@ -5718,8 +5923,20 @@ function renderApptTotal(){
   const owed = Math.max(0, total - dep);
   const owedEl = document.getElementById('a-owed');
   const owedHint = document.getElementById('a-owed-hint');
-  if(owedEl) owedEl.textContent = total ? ('$'+(owed/100).toFixed(2)) : '—';
-  if(owedHint && waived){ owedHint.textContent = total
+  /* What a MEMBER owes is not the price she typed. An included service is
+     covered, so the till will ask for nothing — and this box used to show
+     the full price, which is either believed or ignored, and both are bad. */
+  const cov = (MEMCHECK && MEMCHECK.is_member && MEMCHECK.checkout)
+    ? Math.round(Number(MEMCHECK.checkout.covered_cents) || 0) : 0;
+  const memberOwed = Math.max(0, owed - cov);
+
+  if(owedEl) owedEl.textContent = total ? ('$'+(memberOwed/100).toFixed(2)) : '—';
+  if(owedHint && cov > 0){
+    owedHint.textContent = depMoney(cov) + ' of this is covered by their '
+      + ((MEMCHECK.tier_label || MEMCHECK.tier || 'membership')) + ' membership'
+      + (dep ? ', and ' + depMoney(dep) + ' deposit is already paid' : '');
+  }
+  else if(owedHint && waived){ owedHint.textContent = total
     ? 'No deposit — the whole ' + '$'+(total/100).toFixed(2) + ' is settled at the desk, or already has been.' : 'No deposit due'; }
   else if(owedHint) owedHint.textContent = dep
     ? ('$'+(total/100).toFixed(2)+' less the $'+(dep/100).toFixed(2)+' deposit already paid')
@@ -5728,6 +5945,13 @@ function renderApptTotal(){
 
 function editAppt(id){
   const a=appts.find(x=>Number(x.id)===Number(id));if(!a)return;
+  /* Whatever was decided when this booking was taken, rather than working
+     it out again — including her having said they are not a member. */
+  MEMCHECK = null;
+  MEMROWID = String(a.member_id || '');
+  MEMOVERRIDE = MEMROWID === '-' ? '-' : '';
+  { const mc=document.getElementById('a-memcheck'); if(mc) mc.innerHTML=''; }
+  setTimeout(memCheck, 30);
   document.getElementById('appt-modal-title').textContent='Edit Appointment';
   document.getElementById('a-id').value=a.id;
   document.getElementById('a-client').value=a.client_name||'';
@@ -5802,6 +6026,12 @@ async function saveAppt(){
       return Math.max(0, Math.round(Number(el && el.value)*100) || 0);
     })(),
     deposit_waived:document.getElementById('a-nodep').checked ? 1 : 0,
+    /* Which membership this booking belongs to, settled now rather than
+       re-guessed later from whatever the name on the row says by then.
+       '-' is her saying she has checked and they are not a member. */
+    member_id: MEMOVERRIDE === '-' ? '-'
+      : ((MEMCHECK && MEMCHECK.is_member && MEMCHECK.member_id) ? MEMCHECK.member_id
+        : (MEMROWID && MEMROWID !== '-' ? MEMROWID : '')),
     date:document.getElementById('a-date').value,
     time:parseTimeInput(document.getElementById('a-time').value),
     notes:document.getElementById('a-notes').value.trim(),
@@ -7115,6 +7345,20 @@ async function loadMoneyNow(){
         : '')
     + '</div>';
 }
+/* She has seen it on her phone. Until this moment the payment is a claim
+   and is kept out of every total; after it, it is money in. Nothing about
+   the amount changes — only whether the studio believes it. */
+async function confirmAppPayment(id){
+  const row = document.getElementById('sp-' + id);
+  try{
+    await api('/api/manager',{method:'PUT',
+      body:JSON.stringify({action:'update_appt',id:id,paid_verified:1})});
+    if(row) row.style.opacity = '0.35';
+    toast('Confirmed — it counts now ✦');
+    loadNeedsYou();
+  }catch(_){ toast('Could not confirm that'); }
+}
+
 async function loadNeedsYou(){
   const el = document.getElementById('needs-you');
   if(!el) return;
@@ -7168,6 +7412,60 @@ async function loadNeedsYou(){
         + 'Copies the days and hours each artist already works. It never changes a day you have already set.'
       + '</div>'
     + '</div>';
+  }
+
+  /* ── MONEY THAT HAS NOT LANDED ───────────────────────────────────────
+     Two different problems in one list, and they read differently:
+
+       said they paid   a visit settled by Venmo, Cash App or Apple Cash.
+                        Somebody's word. One tap once she has seen it on
+                        her phone, and it becomes real money in the books.
+       nothing at all   a finished visit with no payment recorded by any
+                        method. The work is done and the product is gone. */
+  const cashIssues = NEEDS.unpaid || {};
+  const moneyRows = cashIssues.rows || [];
+  if(moneyRows.length){
+    const claimed = moneyRows.filter(function(r){ return r.unverified; });
+    const nothing = moneyRows.filter(function(r){ return !r.unverified; });
+    const APPNAME = { venmo:'Venmo', cashapp:'Cash App', applepay:'Apple Cash' };
+
+    if(claimed.length){
+      html += '<div class="ny" style="border-color:rgba(196,168,130,0.5)">'
+        + '<div class="ny-h"><div class="ny-t">Said they paid</div>'
+          + '<div class="ny-n">' + claimed.length + '</div></div>'
+        + '<div class="ny-sub">Sent by Venmo, Cash App or Apple Cash, so all the studio has is '
+          + 'their word for it. Check your phone, then confirm — until you do, none of this is '
+          + 'counted in your totals.</div>'
+        + claimed.map(function(r){
+            return '<div class="ny-row" id="sp-' + r.id + '">'
+              + '<div class="ny-when">' + esc(niceDay(r.date)) + '<i>' + esc(time12(r.time)) + '</i></div>'
+              + '<div class="ny-who" style="flex:1"><b>'
+                + (r.name ? clientLink(r.name, { phone: r.phone || '' }) : 'Client') + '</b>'
+                + '<i>' + esc(r.service || '') + ' · said ' + esc(APPNAME[r.method] || r.method || 'an app')
+                + (r.collected_cents ? ' · ' + depMoney(r.collected_cents) : '') + '</i></div>'
+              + '<button class="btn btn-sm" onclick="confirmAppPayment(' + r.id + ')">It arrived ✓</button>'
+              + '</div>';
+          }).join('')
+        + '</div>';
+    }
+
+    if(nothing.length){
+      html += '<div class="ny" style="border-color:rgba(224,138,138,0.5)">'
+        + '<div class="ny-h"><div class="ny-t">Left without paying</div>'
+          + '<div class="ny-n" style="color:#B42318">' + nothing.length + '</div></div>'
+        + '<div class="ny-sub">A visit that has happened with nothing collected against it. '
+          + 'If they paid you another way, open the appointment and record it there.</div>'
+        + nothing.map(function(r){
+            return '<div class="ny-row">'
+              + '<div class="ny-when">' + esc(niceDay(r.date)) + '<i>' + esc(time12(r.time)) + '</i></div>'
+              + '<div class="ny-who" style="flex:1"><b>'
+                + (r.name ? clientLink(r.name, { phone: r.phone || '' }) : 'Client') + '</b>'
+                + '<i>' + esc(r.service || '') + (r.phone ? ' · ' + esc(r.phone) : '') + '</i></div>'
+              + '<button class="btn btn-ghost btn-sm" onclick="editAppt(' + r.id + ')">Open</button>'
+              + '</div>';
+          }).join('')
+        + '</div>';
+    }
   }
 
   if(un.length){

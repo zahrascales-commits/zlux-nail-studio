@@ -255,7 +255,26 @@ async function assign(row, memberId, how) {
         (how === 'auto'
           ? `ZOLA: this one is yours — nobody claimed it in time. `
           : `ZOLA: confirmed, this one is yours. `) +
-        `${row.client_name || 'Client'}, ${row.service || ''}, ${when}. ${mine}`);
+        `${row.client_name || 'Client'}, ${row.service || ''}, ${when}.` +
+        // Their number, so she can message them without opening anything.
+        (row.client_phone ? ` Text them on ${row.client_phone}.` : '') +
+        ` ${mine}`);
+    }
+
+    /* And the full thing by email: the client's name, a number she can tap,
+       and the message to send them. Dispatch never sent this at all, so an
+       artist who claimed a booking got a text and was left to work the rest
+       out herself. */
+    if (member.email) {
+      try {
+        await notify.sendEmail(member.email,
+          'New appointment ✦ ' + (row.client_name || 'Client'),
+          notify.artistEmailHtml({
+            clientName: row.client_name, clientPhone: row.client_phone,
+            clientEmail: row.client_email, service: row.service,
+            when, link: mine, artistName: member.name,
+          }));
+      } catch (_) { /* a notification must never undo a claim */ }
     }
   }
 
