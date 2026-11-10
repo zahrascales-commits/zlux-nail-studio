@@ -782,6 +782,10 @@ module.exports = async function (req, res) {
           due = Math.round(Number(await visit.depositFor({
             service: q.service || '', client_email: String(q.email || ''),
             client_phone: String(q.phone || ''), client_name: String(q.name || ''),
+            // Carried through, so "-" prices them as the non-member she
+            // has just said they are rather than matching them all over
+            // again on the phone number.
+            member_id: q.member_id || null,
             deposit_cents: 0,
             price_cents: Math.max(0, Math.round(Number(q.price_cents) || 0)),
             total_cents: Math.max(0, Math.round(Number(q.price_cents) || 0)),
