@@ -86,8 +86,10 @@ async function load(){
     + already
     + '<p>Add your card once and checking out takes a single tap — no card to '
     + 'dig out while you are drying.</p>'
-    + '<p><strong style="color:#F2ECE1">Nothing is charged now.</strong> And nothing is ever '
-    + 'charged to it without your signature at the desk.</p>'
+    + '<p><strong style="color:#F2ECE1">Nothing is charged now.</strong> Later, it covers the '
+    + 'deposit on appointments you book, so you never have to remember it — and you get a '
+    + 'receipt by email the moment anything is taken. Your balance at the studio always '
+    + 'needs your signature.</p>'
     + '<div id="pay-el"></div>'
     + '<div class="err" id="err"></div>'
     + '<button id="go" onclick="save()">Save my card</button>';
@@ -126,8 +128,9 @@ async function save(){
     + '<div class="ok"><div class="tick">✓</div>'
     + '<h1 style="margin-top:0.6rem">You are all set</h1>'
     + '<p>Your card is on file. Next time, checking out is one tap.</p>'
-    + '<p class="note">Nothing has been charged. Nothing will be, without your '
-    + 'signature at the desk.</p></div>';
+    + '<p class="note">Nothing has been charged. From here it covers the deposit on '
+    + 'appointments you book — you get a receipt by email each time — and your balance '
+    + 'at the studio still needs your signature.</p></div>';
 }
 
 load();

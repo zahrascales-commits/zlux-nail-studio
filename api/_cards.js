@@ -6,8 +6,9 @@
 // had one, and no way to ask the people who did not.
 //
 // This lists every client with their card status and sends the ones without
-// a link to add one. Nothing is charged by that link, and nothing is ever
-// charged to a saved card without a signature at the desk.
+// a link to add one. Nothing is charged by that link. A saved card covers
+// the deposit on appointments they book; everything else at the desk needs
+// a signature.
 const { query, queryOne } = require('./_team-db');
 
 const CEO_PASSWORD = process.env.CEO_PASSWORD || 'ZOLA2026';
@@ -117,8 +118,10 @@ module.exports = async function (req, res) {
         Add it once below and it is there for next time.
       </p>
       <p style="font-size:15px;line-height:1.7;color:#3a3027;margin:0 0 22px">
-        <strong>Nothing is charged now</strong> — and nothing is ever charged to it
-        without your signature at the desk.
+        <strong>Nothing is charged now.</strong> Later, it covers the deposit on
+        appointments you book, so you never have to remember it — and we email you a
+        receipt the moment anything is taken. Your balance at the studio always needs
+        your signature.
       </p>
       <a href="${link}" style="display:block;background:#0D0D0D;color:#B6A588;text-align:center;
         padding:16px 18px;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:2px;

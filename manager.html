@@ -2936,6 +2936,7 @@
     <div class="modal-title" id="appt-modal-title">New Appointment</div>
     <div id="a-deposit" style="display:none;margin:-0.4rem 0 0.9rem"></div>
     <div id="a-arrival" style="display:none;margin:-0.2rem 0 0.9rem"></div>
+    <div id="a-charge" style="display:none;margin:-0.2rem 0 0.9rem"></div>
     <input type="hidden" id="a-id" />
     <div class="field"><label class="fld-label">Assign To</label><select id="a-member"></select></div>
     <div class="field two">
@@ -4698,6 +4699,82 @@ function depLine(a){
    address, the way in, and the artist's number. It only goes once the
    deposit is settled, so the line doubles as a reminder of why it has not
    gone yet. */
+/* Taking the deposit off a card on file. Only shown where there is a
+   deposit still outstanding — a paid or waived appointment has no button,
+   which is also the answer to "keep the ones who already paid as they
+   are". */
+function chargeLine(a){
+  if(Number(a.deposit_paid)===1 || Number(a.deposit_waived)===1) return '';
+  const s = depInfo(a).state;
+  if(s==='none_due' || s==='done' || s==='past' || s==='loading') return '';
+  return '<div id="chg-box">'
+    + '<button class="btn btn-gold btn-sm" style="margin:0.1rem 0.35rem 0 0" '
+    + 'onclick="chargeDeposit(' + Number(a.id) + ')">💳 Charge deposit to card on file</button>'
+    + '<span id="chg-note" style="font-size:0.78rem;color:var(--muted)"></span>'
+    + '</div>';
+}
+
+/* First tap asks Stripe what is owed and which card is there; nothing is
+   charged by asking. Second tap takes it. */
+async function chargeDeposit(id){
+  const note = document.getElementById('chg-note');
+  if(note) note.textContent = ' checking their card…';
+  let q;
+  try{
+    q = await (await api('/api/manager?action=deposit_card&id=' + id)).json();
+  }catch(_){ if(note) note.textContent=''; toast('Could not reach Stripe'); return; }
+  if(note) note.textContent='';
+
+  if(q.error){ toast(q.error); return; }
+
+  // No card, or their bank will want them. Either way the deposit link is
+  // the way through, so offer it rather than leaving her at a dead end.
+  if(!q.can_charge){
+    const msg = q.message || q.why || 'Cannot charge this one.';
+    if(q.why==='no_card' || q.why==='no_customer'){
+      if(confirm(msg + '\n\nSend them the deposit link now?')) sendDepositLink(id);
+      return;
+    }
+    toast(msg);
+    return;
+  }
+
+  const m = q.mandate || {};
+  const lines = [
+    'Charge ' + depMoney(q.owed_cents) + ' to ' + q.card.brand + ' ····' + q.card.last4 + '?',
+    '',
+    q.appointment.client + ' · ' + q.appointment.service,
+    (q.covers||[]).length>1 ? 'Covers ' + q.covers.length + ' services booked that day.' : '',
+    '',
+    m.note || '',
+    '',
+    'They get a receipt by email straight away.',
+  ].filter(function(x){ return x!==''; }).join('\n');
+
+  if(!confirm(lines)) return;
+
+  try{
+    const r = await api('/api/manager?action=deposit_charge',{method:'POST',
+      body:JSON.stringify({action:'deposit_charge',id:id,confirm:true})});
+    const d = await r.json();
+    if(d.ok && d.committed){
+      toast('Charged ' + depMoney(d.charged_cents) + ' — receipt sent');
+      refreshCurrent();
+    } else {
+      toast(d.message || d.why || d.error || 'The charge did not go through');
+    }
+  }catch(_){ toast('The charge did not go through'); }
+}
+
+// The client pays it themselves, one tap on their phone.
+async function sendDepositLink(id){
+  try{
+    const d = await (await api('/api/manager?action=send_deposit_balance',{method:'POST',
+      body:JSON.stringify({action:'send_deposit_balance',appointment_id:id,confirm:true})})).json();
+    toast(d.sent ? 'Deposit link sent' : (d.why || d.error || 'Not sent'));
+  }catch(_){ toast('Could not send the link'); }
+}
+
 function arrivalLine(a){
   const sent = Number(a.arrival_sent_ts)||0;
   const note = String(a.arrival_sent_note||'');
@@ -5520,6 +5597,7 @@ function openApptModal(){
   const nd = document.getElementById('a-nodep'); if(nd) nd.checked = false;
   { const depBox=document.getElementById('a-deposit'); if(depBox){ depBox.innerHTML=''; depBox.style.display='none'; } }
   { const arr=document.getElementById('a-arrival'); if(arr){ arr.innerHTML=''; arr.style.display='none'; } }
+  { const ch=document.getElementById('a-charge'); if(ch){ ch.innerHTML=''; ch.style.display='none'; } }
   document.getElementById('appt-modal-title').textContent='New Appointment';
   document.getElementById('a-id').value='';
   document.getElementById('a-client').value='';
@@ -5676,6 +5754,8 @@ function editAppt(id){
   if(depBox){ depBox.innerHTML=depLine(a); depBox.style.display='block'; }
   const arrBox=document.getElementById('a-arrival');
   if(arrBox){ arrBox.innerHTML=arrivalLine(a); arrBox.style.display='block'; }
+  const chBox=document.getElementById('a-charge');
+  if(chBox){ chBox.innerHTML=chargeLine(a); chBox.style.display='block'; }
 
   /* Extras are kept on the row as "Main + Removal + Russian Manicure", so
      reopening shows them as lines again instead of one long service name. */
@@ -6726,8 +6806,8 @@ function claimCard(r, urgent){
   const deposit = '<div style="margin-top:0.35rem;font-size:0.8rem;'
     + (paid ? 'color:#067647' : 'color:#B54708') + '">'
     + (paid
-        ? '✓ Deposit paid — ' + cmoney(amount)
-        : ('No deposit yet' + (owed ? ' — ' + cmoney(owed) + ' to pay' : '')))
+        ? '✓ Deposit paid — ' + depMoney(amount)
+        : ('No deposit yet' + (owed ? ' — ' + depMoney(owed) + ' to pay' : '')))
     + '</div>';
 
   return '<div class="member-card" style="--mc:' + (urgent ? '#D92D20' : '#B6A588') + '">'

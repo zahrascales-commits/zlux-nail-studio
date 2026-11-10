@@ -734,6 +734,24 @@ module.exports = async function (req, res) {
     /* The arrival email — directions, the way in, and the artist's number.
        Preview first, always: these words go to a client who is about to
        drive somewhere, and a wrong landmark wastes their afternoon. */
+    /* Taking a deposit off a card on file. Asking costs nothing and
+       charges nothing: it reports the amount owed, the card, and what the
+       client was told when they saved it. */
+    if (action === 'deposit_card') {
+      const id = Number((req.query || {}).id || (req.body || {}).id) || 0;
+      if (!id) return res.status(400).json({ error: 'Which appointment?' });
+      return res.json(await require('./_deposit-charge').quoteFor(id));
+    }
+
+    // And taking it. Never without confirm: true.
+    if (method === 'POST' && action === 'deposit_charge') {
+      const b = req.body || {};
+      const id = Number(b.id) || 0;
+      if (!id) return res.status(400).json({ error: 'Which appointment?' });
+      const out = await require('./_deposit-charge').charge(id, { confirm: b.confirm === true, note: b.note });
+      return res.status(out.ok ? 200 : 400).json(out);
+    }
+
     if (action === 'arrival_preview') {
       const id = Number((req.query || {}).id || (req.body || {}).id) || 0;
       if (!id) return res.status(400).json({ error: 'Which appointment?' });
