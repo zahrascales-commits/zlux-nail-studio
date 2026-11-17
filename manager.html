@@ -9907,6 +9907,40 @@ function chgDetailHtml(p){
         : '');
 }
 
+/* A visit from the settle list: the same thing as a visit inside somebody's
+   panel, but it has to carry the name, and it has to know whether there is
+   a card behind it at all. */
+function chgSettleRow(v){
+  const who = (CHG.people || []).find(p =>
+    String(p.email || '').toLowerCase() === String(v.email || '').toLowerCase());
+  const id = 'chgs-' + v.id;
+  return '<div class="member-card" id="' + id + '" style="--mc:' + (who ? '#8B6A3E' : '#B42318') + '">'
+    + '<div class="mc-top">'
+      + '<div style="flex:1;min-width:0">'
+        + '<div class="mc-name">' + esc(v.client || 'Someone') + '</div>'
+        + '<div style="font-size:0.76rem;color:var(--muted);margin-top:0.15rem">'
+          + esc(v.service || 'Visit') + ' · ' + esc(chgDay(v.date))
+          + (v.time ? ' at ' + esc(v.time) : '')
+          + (v.artist ? ' · ' + esc(v.artist) : '')
+          + (v.past ? '' : ' · still to come')
+          + (v.deposit_taken_cents ? ' · ' + chgMoney(v.deposit_taken_cents) + ' deposit in' : '')
+          + (v.covered_by_membership ? ' · ' + chgMoney(v.covered_by_membership) + ' on their membership' : '')
+        + '</div>'
+        + (who && who.on_membership_of
+            ? '<div style="font-size:0.73rem;color:#93370D;margin-top:0.2rem">Pays '
+              + esc(who.on_membership_of) + '\u2019s card.</div>'
+            : '')
+      + '</div>'
+      + (who
+          ? '<button class="btn btn-gold btn-sm" onclick="chargeVisit(' + v.id + ',this)">'
+            + 'Charge ' + chgMoney(v.outstanding_cents) + '</button>'
+          : '<div style="text-align:right">'
+            + '<div style="font-size:0.84rem;color:var(--ink)">' + chgMoney(v.outstanding_cents) + '</div>'
+            + '<div style="font-size:0.72rem;color:#B42318">no card on file</div>'
+          + '</div>')
+    + '</div></div>';
+}
+
 function chgVisitRow(v, email){
   const id = 'chgv-' + v.id;
   return '<div id="' + id + '" style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;'

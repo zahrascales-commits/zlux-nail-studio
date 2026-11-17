@@ -244,6 +244,19 @@ async function peopleList() {
 
   const nameKey = require('./_kiosk-bill').nameKey;
 
+  /* One person, written two ways. A client record is often a first name, or
+     a first name with an emoji on it, where the membership carries the full
+     one — so "Ramille" is Ramille Wong and must not be warned about
+     herself. The shorter name has to be the START of the longer one, so
+     "Monica Robles" and "Justin Driggers" are still two people. */
+  const samePerson = (a, b) => {
+    const x = nameKey(a), y = nameKey(b);
+    if (!x || !y) return false;
+    if (x === y) return true;
+    const [short, long] = x.length <= y.length ? [x, y] : [y, x];
+    return long.indexOf(short + ' ') === 0;
+  };
+
   const people = [];
   for (const c of clients) {
     const key = lower(c.email);
@@ -253,7 +266,7 @@ async function peopleList() {
     /* The membership was found under this email — but the name on it may
        not be the name on this row. Monica's record carries her husband's
        address, so the membership behind it is his. */
-    const ownMembership = !!mem && nameKey(c.name) === nameKey(mem.holder);
+    const ownMembership = !!mem && samePerson(c.name, mem.holder);
     people.push({
       id: Number(c.id),
       name: c.name || '',
@@ -269,7 +282,7 @@ async function peopleList() {
       // this row is the named second person or is simply using their
       // address. Either way the money is coming off their card.
       on_membership_of: mem && !ownMembership ? mem.holder : '',
-      shared_with: (housemates[key] || []).filter(n => nameKey(n) !== nameKey(c.name)),
+      shared_with: (housemates[key] || []).filter(n => !samePerson(n, c.name)),
       unpaid_visits: unpaid[key] || 0,
     });
   }
