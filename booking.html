@@ -771,6 +771,7 @@
           <div class="tip-row" id="tip-row"></div>
         </div>
 
+        <p id="pay-total-note" style="display:none;font-family:'Josefin Sans',sans-serif;font-size:0.8rem;color:var(--latte);margin:0.4rem 0 0;line-height:1.6;"></p>
         <div class="pay-total" id="pay-total"></div>
 
         <label class="luxury-label" style="margin-top:1.25rem;">Card or Apple Pay</label>
@@ -2689,8 +2690,28 @@ function renderPayTotal(){
   const el = document.getElementById('pay-total');
   if(!el) return;
   const due = (payFull ? _payTotals.total : _payTotals.deposit) + (payFull ? tipCents : 0);
-  el.innerHTML = '<span>Charged today</span><b>' + bkMoney(due) + '</b>';
   const btn = document.querySelector('[onclick="submitBooking()"]');
+
+  /* Nothing is taken to make this booking — a membership that includes the
+     visit, or one that promises no deposit ever. Stripe will not accept a
+     charge under 50c anyway, so there is no card form on screen; a button
+     offering to take a deposit is offering something that cannot happen. */
+  if(due < 50){
+    const owed = Number(_payTotals.total) || 0;
+    el.innerHTML = '<span>Due today</span><b>Nothing</b>';
+    if(btn) btn.textContent = 'Confirm Appointment';
+    const foot = document.getElementById('pay-total-note');
+    if(foot){
+      foot.textContent = owed > 0
+        ? bkMoney(owed) + ' is settled at the end of your visit.'
+        : 'Your membership covers this visit in full.';
+      foot.style.display = 'block';
+    }
+    return;
+  }
+
+  el.innerHTML = '<span>Charged today</span><b>' + bkMoney(due) + '</b>';
+  { const foot = document.getElementById('pay-total-note'); if(foot) foot.style.display = 'none'; }
   if(btn) btn.textContent = (payFull ? 'Pay ' + bkMoney(due) : 'Pay Deposit') + ' & Confirm';
 }
 
