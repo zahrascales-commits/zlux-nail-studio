@@ -9,10 +9,13 @@
 // Four rules this is built around, all of them learned the hard way in this
 // codebase:
 //
-//   · A visit's amount is NEVER taken from the browser. It is re-priced
-//     here, by the same code the booking page and the till use, at the
-//     moment of charging. A screen left open for an hour cannot charge a
-//     stale number.
+//   · A visit's amount is calculated here, by the same code the booking
+//     page and the till use, at the moment of charging — so a screen left
+//     open for an hour cannot charge a stale number. She can type over it,
+//     because a set that gained a repair or lost its art is a different
+//     price; but then the number is one she has just read and typed, not
+//     one the page was holding from an hour ago. A typed amount far above
+//     the visit's own price is the one thing that stops and asks.
 //
 //   · A double tap is one charge. The key is the person, the amount, the
 //     visit and the day, held UNIQUE in our own table and handed to Stripe
@@ -402,9 +405,21 @@ async function applyToAppointment(apptId) {
   if (!rows || !rows.length) return null;
 
   const first = rows[0];
-  const live = rows.filter(r => !(money(r.refunded_cents) > 0));
-  const paid = money(first.prior_paid_cents) + live.reduce((s, r) => s + money(r.base_cents), 0);
-  const tip = money(first.prior_tip_cents) + live.reduce((s, r) => s + money(r.tip_cents), 0);
+
+  /* What is still standing on each charge. A refund used to mean the whole
+     row stopped counting; now $20 can come back off $95 and $75 keeps
+     counting, so every row is worth what was taken minus what went back.
+     Money off the service first, then the tip — a correction is almost
+     always to the price of the work. */
+  const standing = r => {
+    const back = money(r.refunded_cents);
+    const b = Math.max(0, money(r.base_cents) - back);
+    const t = Math.max(0, money(r.tip_cents) - Math.max(0, back - money(r.base_cents)));
+    return { b, t };
+  };
+  const live = rows.map(standing).filter(x => x.b + x.t > 0);
+  const paid = money(first.prior_paid_cents) + rows.reduce((s, r) => s + standing(r).b, 0);
+  const tip = money(first.prior_tip_cents) + rows.reduce((s, r) => s + standing(r).t, 0);
 
   const fields = { paid_cents: paid, tip_cents: tip };
 
@@ -451,6 +466,8 @@ async function doCharge(opts) {
   let name = String(o.name || '').trim();
   let base = 0;
   let label = '';
+  let visitCeiling = 0;
+  let visitList = 0;
   let appt = null;
   let memberId = '';
 
@@ -460,11 +477,28 @@ async function doCharge(opts) {
     if (/cancel/i.test(String(appt.status || ''))) {
       return { ok: false, why: 'cancelled', message: 'That appointment is cancelled.' };
     }
-    /* Re-priced here, not taken from the screen. This is the guard against
-       a tab left open while the client paid, the price changed, or her
-       membership covered it after all. */
+    /* Re-priced here, so the figure on the row is never a stale one: the
+       guard against a tab left open while the client paid, the price
+       changed, or her membership covered it after all. */
     const v = await priceVisit(appt);
-    base = v.outstanding_cents;
+
+    /* She has typed over it. They added a repair, or skipped the art and
+       kept them nude — the visit's price and what they owe for it are two
+       different things, and only one of them is in the database. */
+    const asked = money(o.amount_cents);
+    base = asked || v.outstanding_cents;
+
+    /* A typed amount is not compared against what is outstanding, so a
+       visit that looks settled can still take the add-on she just did. */
+    if (asked) {
+      const list = money(v.list_cents) || money(v.outstanding_cents);
+      visitList = list;
+      /* Nothing under $200 ever asks, and nor does anything within a few
+         hundred of the visit's own price. What this catches is $950 typed
+         for a $95 set — the slipped decimal the thousand-dollar ceiling is
+         too high to see. */
+      visitCeiling = Math.max(list * 4, list + 30000, 20000);
+    }
     if (!base) {
       /* The ordinary way a second tap lands here: the first one already
          took the money, so there is nothing left owing. Worth saying as
@@ -513,14 +547,17 @@ async function doCharge(opts) {
     return { ok: false, why: 'too_small', message: 'A card charge has to be at least 50¢.' };
   }
 
-  /* The only thing that stops and asks. At her prices an amount over a
-     thousand dollars is a decimal that slipped, and there is no confirm
-     dialog behind this to catch it. */
-  if (total > TYPO_CEILING && o.allow_large !== true) {
+  /* The only thing that stops and asks. There is no confirm dialog behind
+     this, so this is the whole defence against a decimal in the wrong
+     place — and it never asks twice. */
+  const ceiling = visitCeiling ? Math.min(TYPO_CEILING, visitCeiling) : TYPO_CEILING;
+  if (total > ceiling && o.allow_large !== true) {
     return {
       ok: false, why: 'too_big',
-      message: 'That is ' + dollars(total) + '. If you meant it, charge it again and it will go — '
-        + 'this only asks once, in case a decimal slipped.',
+      message: 'That is ' + dollars(total)
+        + (visitList ? ' on a visit priced ' + dollars(visitList) : '')
+        + '. If you meant it, press it again and it will go — this only asks once, '
+        + 'in case a decimal slipped.',
     };
   }
 
@@ -673,19 +710,31 @@ async function recordRow(x) {
 
 /* ── UNDOING IT ─────────────────────────────────────────────────────── */
 
-/* A full refund, and the books put back. This is what stands in for a
-   confirm dialog: the charge goes instantly, and a wrong one is one tap
-   from never having happened. */
-async function doRefund(chargeId, { reason } = {}) {
+/* Sending money back — all of it, or part of it. This is what stands in
+   for a confirm dialog: the charge goes instantly, and a wrong one is one
+   tap from never having happened. Partly wrong is the commoner kind — $95
+   taken where $75 was right — so the amount is hers to set here too, and
+   leaving it alone sends back everything. */
+async function doRefund(chargeId, { reason, amount_cents } = {}) {
   await ensure();
   const row = await queryOne('SELECT * FROM card_charges WHERE id = ?', [Number(chargeId)]);
   if (!row) return { ok: false, why: 'No charge with that id.' };
   if (row.outcome !== 'paid') return { ok: false, why: 'That one never went through, so there is nothing to send back.' };
-  if (money(row.refunded_cents) > 0) {
-    return { ok: true, already: true, refunded_cents: money(row.refunded_cents),
-      message: 'That was already sent back.' };
-  }
   if (!row.payment_intent) return { ok: false, why: 'No Stripe payment recorded against it.' };
+
+  const took = money(row.amount_cents);
+  const gone = money(row.refunded_cents);
+  const left = Math.max(0, took - gone);
+  if (!left) {
+    return { ok: true, already: true, refunded_cents: gone, kept_cents: 0,
+      message: 'All ' + dollars(took) + ' of that one has already gone back.' };
+  }
+
+  let want = money(amount_cents) || left;
+  if (want > left) want = left;          // never more than is there
+  const back = gone + want;              // what will have gone back in total
+  const kept = took - back;
+  const partial = kept > 0;
 
   const key = await require('./_pay').getStripeSecret();
   if (!key) return { ok: false, why: 'Payments are not switched on.' };
@@ -694,16 +743,20 @@ async function doRefund(chargeId, { reason } = {}) {
   try {
     refund = await sapi(key, 'refunds', {
       payment_intent: row.payment_intent,
-      'metadata[kind]': 'undone_by_owner',
+      amount: String(want),
+      'metadata[kind]': partial ? 'adjusted_by_owner' : 'undone_by_owner',
       'metadata[charge_row]': String(row.id),
-    }, { 'Idempotency-Key': 'zola-rf-' + row.id });
+    /* Keyed on the running total, not the row. Two taps of "send $20 back"
+       in the same moment compute the same total and so are one refund;
+       a genuine second $20 later is a different total and goes. */
+    }, { 'Idempotency-Key': 'zola-rf-' + row.id + '-' + back });
   } catch (err) {
     return { ok: false, why: 'Stripe would not send it back: ' + (err.message || 'unknown') };
   }
 
   await execute(
     'UPDATE card_charges SET refunded_cents = ?, refund_id = ?, refunded_ts = ? WHERE id = ?',
-    [money(row.amount_cents), refund.id || '', Date.now(), row.id]);
+    [back, [row.refund_id, refund.id].filter(Boolean).join(' ').slice(0, 300), Date.now(), row.id]);
 
   const applied = row.appointment_id ? await applyToAppointment(row.appointment_id) : null;
 
@@ -714,19 +767,23 @@ async function doRefund(chargeId, { reason } = {}) {
   try {
     note = await sendRefundNote({
       email: row.client_email, name: row.client_name,
-      cents: money(row.amount_cents), label: row.reason || '',
+      cents: want, took: took, kept: kept, label: row.reason || '',
       card: { brand: row.card_brand, last4: row.card_last4 },
-      ourMistake: quick, reason: String(reason || '').trim(),
+      ourMistake: quick && !partial, reason: String(reason || '').trim(),
     });
   } catch (_) {}
 
   try {
     await require('./_notify').notifyInApp('owner', null,
-      '↩︎ ' + dollars(row.amount_cents) + ' sent back to ' + (row.client_name || row.client_email),
-      'Undone' + (quick ? ' straight away' : '') + ' · ' + (row.reason || ''));
+      '↩︎ ' + dollars(want) + ' sent back to ' + (row.client_name || row.client_email),
+      (partial ? 'They paid ' + dollars(kept) + ' in the end' : 'Undone' + (quick ? ' straight away' : ''))
+        + ' · ' + (row.reason || ''));
   } catch (_) {}
 
-  return { ok: true, refunded_cents: money(row.amount_cents), refund_id: refund.id || '', applied, note };
+  return {
+    ok: true, refunded_cents: want, total_refunded_cents: back, kept_cents: kept,
+    partial, refund_id: refund.id || '', applied, note,
+  };
 }
 
 /* ── THE RECORD ─────────────────────────────────────────────────────── */
@@ -756,16 +813,17 @@ async function history({ from, to, limit }) {
     mandate: r.mandate || '',
     paid: r.outcome === 'paid',
     outcome: r.outcome || '',
-    refunded: money(r.refunded_cents) > 0,
+    refunded: money(r.refunded_cents) >= money(r.amount_cents) && money(r.refunded_cents) > 0,
     refunded_cents: money(r.refunded_cents),
+    refundable_cents: Math.max(0, money(r.amount_cents) - money(r.refunded_cents)),
     refunded_ts: Number(r.refunded_ts) || 0,
     ts: Number(r.ts) || 0,
   }));
 
-  const live = charges.filter(c => c.paid && !c.refunded);
+  const live = charges.filter(c => c.paid && c.refundable_cents > 0);
   return {
     charges,
-    taken_cents: live.reduce((s, c) => s + c.amount_cents, 0),
+    taken_cents: live.reduce((s, c) => s + c.refundable_cents, 0),
     taken_count: live.length,
   };
 }
@@ -827,16 +885,24 @@ async function sendReceipt({ email, name, base, tip, total, label, appt, card, w
 
 /* When a charge is undone. Never written as though they did something: a
    charge the studio made and took back is the studio's to explain. */
-async function sendRefundNote({ email, name, cents, label, card, ourMistake, reason }) {
+async function sendRefundNote({ email, name, cents, took, kept, label, card, ourMistake, reason }) {
   const to = String(email || '').trim();
   if (!to || !/@/.test(to)) return { sent: false, why: 'no email' };
   const first = String(name || '').trim().split(/\s+/)[0] || 'there';
 
+  /* Three different things, and they must not be worded the same. Part of
+     it back is an adjustment — the price changed, nobody did anything
+     wrong, and an apology for a "muddle" would invent a problem. All of it
+     back straight away is ours to own. All of it back later is just a
+     refund. None of the three ever reads as though the client did it. */
+  const partial = money(kept) > 0;
   const why = reason
     ? esc(reason)
-    : (ourMistake
-        ? 'That charge was a mistake at our end, caught straight away.'
-        : 'We have sent that one back.');
+    : (partial
+        ? 'We have adjusted what we took for your visit.'
+        : (ourMistake
+            ? 'That charge was a mistake at our end, caught straight away.'
+            : 'We have sent that one back.'));
 
   const body = SHELL(
     '<p style="font-size:15px;line-height:1.75;color:#3a3027;margin:0 0 16px">Hi ' + esc(first) + ',</p>'
@@ -844,13 +910,24 @@ async function sendRefundNote({ email, name, cents, label, card, ourMistake, rea
     + why + ' ' + dollars(cents) + ' is on its way back to your '
     + esc((card && card.brand) || 'card') + ' ····' + esc((card && card.last4) || '')
     + ' — banks usually show it within a few working days.</p>'
-    + (label ? '<div style="background:#faf7f4;border:1px solid #eee5d8;padding:14px 18px;margin:0 0 20px">'
-        + LINE(esc(label), '&minus;' + dollars(cents)) + '</div>' : '')
+    + (label || partial
+        ? '<div style="background:#faf7f4;border:1px solid #eee5d8;padding:14px 18px;margin:0 0 20px">'
+          + (partial
+              ? LINE(esc(label || 'Charged'), dollars(took))
+                + LINE('Sent back', '&minus;' + dollars(cents))
+                + LINE('What you paid', dollars(kept), true)
+              : LINE(esc(label), '&minus;' + dollars(cents)))
+          + '</div>'
+        : '')
     + '<p style="font-size:14px;line-height:1.7;color:#8C7A5E;margin:0">'
-    + 'Nothing for you to do, and sorry for the muddle.</p>');
+    + (partial
+        ? 'Nothing for you to do — your receipt for ' + dollars(kept) + ' still stands.'
+        : 'Nothing for you to do, and sorry for the muddle.') + '</p>');
 
   return require('./_notify').sendEmail(
-    to, 'Sent back ✦ ' + dollars(cents) + ' — ZOLA', body, { kind: 'charge_refund' });
+    to,
+    (partial ? 'Adjusted ✦ ' + dollars(cents) + ' back' : 'Sent back ✦ ' + dollars(cents)) + ' — ZOLA',
+    body, { kind: 'charge_refund' });
 }
 
 /* ── THE DOOR ───────────────────────────────────────────────────────── */
@@ -889,7 +966,8 @@ module.exports = async function (req, res) {
     }
 
     if (req.method === 'POST' && action === 'refund') {
-      const out = await doRefund(body.charge_id, { reason: body.reason });
+      const out = await doRefund(body.charge_id,
+        { reason: body.reason, amount_cents: body.amount_cents });
       return res.status(out.ok ? 200 : 400).json(out);
     }
 

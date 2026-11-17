@@ -9711,9 +9711,58 @@ let AE = { rules: [], triggers: [], audiences: [], fields: [], editing: null };
    pressed, and anything charged can be sent back in one tap. */
 let CHG = { people: [], settle: [], charges: [], taken: 0, open: '', detail: null, q: '' };
 
+/* The one place anything asks twice: an amount far above what the visit
+   costs. Holding the exact key here is what makes the second press mean
+   "yes, I meant it" without a dialog ever appearing. */
+let CHGBIG = '';
+
 // Cents, to the cent. The money() helper above rounds to whole dollars,
 // which is fine for a revenue chart and wrong for a receipt.
 function chgMoney(c){ return '$' + (Math.round(Number(c)||0)/100).toFixed(2); }
+
+/* Cents out of whatever she typed. Blank, letters, a stray dollar sign and
+   "75." all have to mean something sensible, because this number is the
+   charge. */
+function chgCents(v){
+  const n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.]/g, ''));
+  return isFinite(n) && n > 0 ? Math.round(n * 100) : 0;
+}
+function chgDollars(c){ return (Math.round(Number(c)||0)/100).toFixed(2); }
+
+/* An amount she can change, and the button that takes it. The button is
+   written from the box every time it changes, so what she presses is
+   always what she just read. */
+function chgTake(cents, call, label){
+  return '<div class="chg-take" style="display:flex;align-items:center;gap:0.4rem">'
+    + '<span style="font-size:0.85rem;color:var(--muted)">$</span>'
+    + '<input class="chg-amt-in" inputmode="decimal" value="' + chgDollars(cents) + '" '
+      + 'oninput="chgSync(this)" onfocus="this.select()" '
+      + 'style="width:72px;padding:0.3rem 0.4rem;border:1px solid var(--line);border-radius:6px;'
+      + 'font-size:0.85rem;text-align:right" />'
+    + '<button class="btn ' + (label === 'ghost' ? 'btn-ghost' : 'btn-gold') + ' btn-sm" '
+      + 'data-verb="' + (label === 'back' ? 'Send back' : 'Charge') + '" '
+      + 'onclick="' + call + '">'
+      + (label === 'back' ? 'Send back ' : 'Charge ') + chgMoney(cents) + '</button>'
+  + '</div>';
+}
+
+/* Typing in the box rewrites the button beside it. Nothing else happens —
+   no request, no saving — so she can try a figure, see it, and change it. */
+function chgSync(input){
+  const wrap = input && input.parentNode;
+  const btn = wrap && wrap.querySelector('button');
+  if(!btn || btn.disabled) return;
+  const c = chgCents(input.value);
+  const verb = btn.getAttribute('data-verb') || 'Charge';
+  btn.textContent = c ? verb + ' ' + chgMoney(c) : verb;
+}
+
+/* The amount standing beside a button at the moment it is pressed. */
+function chgAmountBy(btn){
+  const wrap = btn && btn.parentNode;
+  const input = wrap && wrap.querySelector('input.chg-amt-in');
+  return input ? chgCents(input.value) : 0;
+}
 
 function chgDay(ymd){
   if(!ymd) return '';
@@ -9769,7 +9818,8 @@ function renderCharge(){
         + '<div class="page-title" style="font-size:1.05rem">Today and coming up</div>'
         + '<div class="page-desc">Priced the same way the booking page and the front desk price them, '
           + 'with any deposit already taken knocked off. These have not happened yet, so nothing has '
-          + 'been paid at the desk &mdash; the amount on the button is what gets taken.</div>'
+          + 'been paid at the desk. <b>Change the amount if the visit changed</b> &mdash; a repair added, '
+          + 'the art skipped &mdash; and the button takes whatever is in the box.</div>'
         + '</div></div>'
         + CHG.settle.map(chgSettleRow).join('')
       ) : '')
@@ -9777,7 +9827,8 @@ function renderCharge(){
     // ── everybody ──
     + '<div class="page-head" style="margin-top:2rem"><div>'
       + '<div class="page-title" style="font-size:1.05rem">Everyone with a card on file</div>'
-      + '<div class="page-desc">Tap somebody to see their visits, or to charge any amount.</div>'
+      + '<div class="page-desc">Tap somebody to see their visits. Every amount can be edited before '
+        + 'you take it, and anything that is not a visit can be charged on its own.</div>'
     + '</div></div>'
     + '<div class="field" style="max-width:340px">'
       + '<input id="chg-q" placeholder="Search a name, email or number" '
@@ -9788,8 +9839,9 @@ function renderCharge(){
     // ── the record ──
     + '<div class="page-head" style="margin-top:2rem"><div>'
       + '<div class="page-title" style="font-size:1.05rem">Charged from here</div>'
-      + '<div class="page-desc">Every one of these can be sent back in full. '
-        + 'Undo also puts the visit back exactly as it was.</div>'
+      + '<div class="page-desc">Send any of it back &mdash; all of it, or part of it if you took too much. '
+        + 'The box starts at the full amount. Sending all of it back also puts the visit '
+        + 'exactly as it was.</div>'
     + '</div></div>'
     + (CHG.charges.length ? CHG.charges.map(chgHistoryRow).join('')
         : '<div class="empty">Nothing charged from here yet.</div>');
@@ -9943,8 +9995,7 @@ function chgSettleRow(v){
             : '')
       + '</div>'
       + (who
-          ? '<button class="btn btn-gold btn-sm" onclick="chargeVisit(' + v.id + ',this)">'
-            + 'Charge ' + chgMoney(v.outstanding_cents) + '</button>'
+          ? chgTake(v.outstanding_cents, 'chargeVisit(' + v.id + ',this)')
           : '<div style="text-align:right">'
             + '<div style="font-size:0.84rem;color:var(--ink)">' + chgMoney(v.outstanding_cents) + '</div>'
             + '<div style="font-size:0.72rem;color:#B42318">no card on file</div>'
@@ -9975,9 +10026,8 @@ function chgVisitRow(v, email){
             + 'No balance recorded here \u2014 check it was not paid at the desk.</div>'
           : '')
     + '</div>'
-    + '<button class="btn ' + (v.past && !v.balance_recorded ? 'btn-ghost' : 'btn-gold') + ' btn-sm" '
-      + 'data-appt="' + v.id + '" '
-      + 'onclick="chargeVisit(' + v.id + ',this)">Charge ' + chgMoney(v.outstanding_cents) + '</button>'
+    + chgTake(v.outstanding_cents, 'chargeVisit(' + v.id + ',this)',
+        v.past && !v.balance_recorded ? 'ghost' : '')
   + '</div>';
 }
 
@@ -9994,13 +10044,19 @@ function chgHistoryRow(c){
         + esc(c.reason || 'Studio charge') + ' · ' + esc(c.card) + ' · ' + esc(when)
         + (c.tip_cents ? ' · includes a ' + chgMoney(c.tip_cents) + ' tip' : '')
       + '</div>'
+      + (!c.refunded && c.refunded_cents
+          ? '<div style="font-size:0.74rem;color:#8B7355;margin-top:0.2rem">'
+            + chgMoney(c.refunded_cents) + ' sent back \u2014 they paid '
+            + chgMoney(c.refundable_cents) + '.</div>'
+          : '')
       + (bad ? '<div style="font-size:0.74rem;color:#B42318;margin-top:0.2rem">'
           + esc(c.outcome) + '</div>' : '')
     + '</div>'
     + (c.refunded
         ? '<span class="status-pill" style="background:#F2F4F7;color:#475467">sent back</span>'
         : (c.paid
-            ? '<button class="btn btn-ghost btn-sm" onclick="undoCharge(' + c.id + ',this)">Undo</button>'
+            ? chgTake(c.refundable_cents || c.amount_cents,
+                'undoCharge(' + c.id + ',this)', 'back')
             : ''))
     + '</div></div>';
 }
@@ -10011,11 +10067,28 @@ function chgHistoryRow(c){
 async function chargeVisit(apptId, btn){
   if(!btn || btn.disabled) return;
   const was = btn.textContent;
+
+  /* Whatever is in the box beside it. She may have changed it because they
+     added a repair or skipped the art — the server takes the number it is
+     given here, and works one out itself only if there is none. */
+  const cents = chgAmountBy(btn);
+  if(!cents){ toast('How much?'); return; }
+
+  const key = 'v' + apptId + '|' + cents;
+  const payload = { action:'charge', appointment_id: apptId, amount_cents: cents };
+  if(CHGBIG === key) payload.allow_large = true;
+
   btn.disabled = true; btn.textContent = 'Charging…';
   try{
     const d = await (await api('/api/charge?action=charge', { method:'POST',
-      body: JSON.stringify({ action:'charge', appointment_id: apptId }) })).json();
-    if(!d.ok){ btn.disabled = false; btn.textContent = was; toast(d.message || d.error || 'That did not go through'); return; }
+      body: JSON.stringify(payload) })).json();
+    if(!d.ok){
+      btn.disabled = false; btn.textContent = was;
+      if(d.why === 'too_big') CHGBIG = key;
+      toast(d.message || d.error || 'That did not go through');
+      return;
+    }
+    CHGBIG = '';
     btn.textContent = d.already ? 'Already charged' : 'Charged ' + chgMoney(d.amount_cents) + ' ✦';
     toast(d.already ? d.message : (d.receipt && d.receipt.sent
       ? chgMoney(d.amount_cents) + ' taken · receipt emailed'
@@ -10027,10 +10100,8 @@ async function chargeVisit(apptId, btn){
   }
 }
 
-/* Anything that is not a visit. The only place a typed number becomes a
-   charge, so it is also the only place the thousand-dollar question is
-   asked. */
-let CHGBIG = '';
+/* Anything that is not a visit at all — a repair between appointments, a
+   set she did as a favour, a product. */
 async function chargeFree(email){
   const btn  = document.getElementById('chg-free-btn');
   const amtI = document.getElementById('chg-amt');
@@ -10072,15 +10143,20 @@ async function chargeFree(email){
 /* This is what stands in for a confirm screen. */
 async function undoCharge(id, btn){
   if(!btn || btn.disabled) return;
+  const was = btn.textContent;
+  const cents = chgAmountBy(btn);
+  if(!cents){ toast('How much should go back?'); return; }
+
   btn.disabled = true; btn.textContent = 'Sending back…';
   try{
     const d = await (await api('/api/charge?action=refund', { method:'POST',
-      body: JSON.stringify({ action:'refund', charge_id: id }) })).json();
-    if(!d.ok){ btn.disabled = false; btn.textContent = 'Undo'; toast(d.why || 'Could not send it back'); return; }
-    toast(chgMoney(d.refunded_cents) + ' sent back');
+      body: JSON.stringify({ action:'refund', charge_id: id, amount_cents: cents }) })).json();
+    if(!d.ok){ btn.disabled = false; btn.textContent = was; toast(d.why || 'Could not send it back'); return; }
+    toast(chgMoney(d.refunded_cents) + ' sent back'
+      + (d.kept_cents ? ' \u2014 they paid ' + chgMoney(d.kept_cents) : ''));
     setTimeout(loadCharge, 900);
   }catch(err){
-    btn.disabled = false; btn.textContent = 'Undo';
+    btn.disabled = false; btn.textContent = was;
     toast('Could not send it back: ' + err.message);
   }
 }
