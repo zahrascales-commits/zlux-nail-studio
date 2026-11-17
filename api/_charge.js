@@ -232,12 +232,28 @@ async function peopleList() {
     for (const r of rows || []) unpaid[r.e] = Number(r.n) || 0;
   } catch (_) {}
 
+  /* Who else is on each address. A card lives under an email, not under a
+     person, so two client records sharing one address share one card — and
+     the row has to say so before she takes money off it. */
+  const housemates = {};
+  for (const c of clients) {
+    const k = lower(c.email);
+    if (!k) continue;
+    (housemates[k] = housemates[k] || []).push(c.name || '');
+  }
+
+  const nameKey = require('./_kiosk-bill').nameKey;
+
   const people = [];
   for (const c of clients) {
     const key = lower(c.email);
     const hit = cards[key];
     if (!hit || !hit.card) continue;             // nothing to charge
     const mem = memberByEmail[key];
+    /* The membership was found under this email — but the name on it may
+       not be the name on this row. Monica's record carries her husband's
+       address, so the membership behind it is his. */
+    const ownMembership = !!mem && nameKey(c.name) === nameKey(mem.holder);
     people.push({
       id: Number(c.id),
       name: c.name || '',
@@ -249,7 +265,11 @@ async function peopleList() {
       card_exp: hit.card.exp || '',
       is_member: !!mem,
       tier: (mem && mem.tier) || '',
-      on_membership_of: mem && !mem.self ? mem.holder : '',
+      // Said whenever the membership is in somebody else's name, whether
+      // this row is the named second person or is simply using their
+      // address. Either way the money is coming off their card.
+      on_membership_of: mem && !ownMembership ? mem.holder : '',
+      shared_with: (housemates[key] || []).filter(n => nameKey(n) !== nameKey(c.name)),
       unpaid_visits: unpaid[key] || 0,
     });
   }

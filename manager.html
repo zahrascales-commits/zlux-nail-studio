@@ -9827,9 +9827,16 @@ function chgPersonRow(p){
         + '<div style="font-size:0.78rem;color:var(--muted);margin-top:0.15rem">'
           + esc(p.card)
           + (p.tier ? ' · ' + esc(p.tier === 'BLACK_CARD' ? 'Black Card' : p.tier.charAt(0) + p.tier.slice(1).toLowerCase()) : '')
-          + (p.on_membership_of ? ' · on ' + esc(p.on_membership_of) + '\u2019s membership' : '')
           + ' · ' + esc(p.email)
         + '</div>'
+        + (p.on_membership_of || (p.shared_with && p.shared_with.length)
+            ? '<div style="font-size:0.73rem;color:#93370D;margin-top:0.2rem">'
+              + (p.on_membership_of
+                  ? 'This card and membership are ' + esc(p.on_membership_of) + '\u2019s'
+                  : 'This card is under an address shared with ' + esc(p.shared_with.join(', ')))
+              + ' \u2014 charging here takes it from them.'
+            + '</div>'
+            : '')
       + '</div>'
       + (p.unpaid_visits
           ? '<span class="status-pill" style="background:#FEF0C7;color:#93370D">'
