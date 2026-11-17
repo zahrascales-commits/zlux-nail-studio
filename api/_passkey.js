@@ -231,3 +231,13 @@ module.exports = async function (req, res) {
   }
 };
 module.exports._test = { cbor, parseAuthData, coseToJwk, b64u, unb64u, RP_ID };
+
+/* The same primitives, for members' own passkeys (_member-passkey.js).
+   Exported rather than copied: a second implementation of WebAuthn
+   verification is a second place for a signature check to be subtly wrong,
+   and this one is already in daily use for her Face ID. Nothing here reads
+   or writes the owner's keys. */
+module.exports._core = {
+  b64u, unb64u, sha256, cbor, coseToJwk, parseAuthData, checkClient,
+  RP_ID, ORIGINS, CHALLENGE_MS, SITE,
+};

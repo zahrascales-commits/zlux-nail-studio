@@ -1367,6 +1367,7 @@
       <button class="nav-head" onclick="toggleNavGroup('sales')"><span class="ni" data-i="dollar"></span><span class="nl">Sales</span><span class="gdot"></span><span class="chev" data-i="chev"></span></button>
       <div class="nav-kids">
         <button class="tab" data-tab="sales" onclick="showTab('sales')"><span class="nl">Membership sales</span></button>
+        <button class="tab" data-tab="memberships" onclick="showTab('memberships')"><span class="nl">Memberships</span></button>
         <button class="tab" data-tab="payouts" onclick="showTab('payouts')"><span class="nl">Payouts</span></button>
         <button class="tab" data-tab="records" onclick="showTab('records')"><span class="nl">Records</span></button>
         <button class="tab" data-tab="goals" onclick="showTab('goals')"><span class="nl">Goals</span></button>
@@ -1520,6 +1521,18 @@
         <div class="mix-bar" id="mix-bar"></div>
         <div class="mix-legend" id="mix-legend"></div>
       </div>
+    </section>
+
+    <!-- MEMBERSHIPS — who they are, not how many -->
+    <section class="panel" id="panel-memberships">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Memberships</div>
+          <div class="page-desc">Everyone on a membership: what they pay, what is left this cycle, and who else is on it. Booking from here draws the visit from their membership, so it is recorded against what they already paid for.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="mb-billing-btn" onclick="loadMemberships(true)">Check payments with Stripe</button>
+      </div>
+      <div id="mb-list"><div class="ny-sub" style="padding:1rem;">Loading…</div></div>
     </section>
 
     <!-- DEPOSITS -->
@@ -2797,6 +2810,34 @@
 </div>
 
 <!-- MEMBER MODAL -->
+<!-- A membership can cover two people. Justin bought his for his wife as
+     well as himself; with nowhere to say so, the only way she could use it
+     was to book under his email, and then the studio could not tell them
+     apart and her visit spent his included service. -->
+<div class="overlay" id="modal-partner">
+  <div class="modal">
+    <div class="modal-title">Second Name On This Membership</div>
+    <input type="hidden" id="pt-member-id" />
+    <p class="set-note" id="pt-who" style="margin-top:0;"></p>
+    <div class="field"><label class="fld-label">Their name</label><input id="pt-name" placeholder="e.g. Monica Robles" /></div>
+    <div class="field two">
+      <div><label class="fld-label">Their email</label><input id="pt-email" placeholder="them@email.com" /></div>
+      <div><label class="fld-label">Their phone</label><input id="pt-phone" placeholder="(559) 000-0000" /></div>
+    </div>
+    <p class="set-note">
+      They get everything the membership gives — no deposit, member pricing, the same calendar —
+      and they can sign in with the same Member ID and set up their own Face ID on their own phone.
+      <strong>The included visits are shared:</strong> whoever books first uses it, and the other
+      pays the ordinary price with nothing taken up front.
+    </p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-partner')">Cancel</button>
+      <button class="btn btn-ghost" onclick="clearPartner()">Remove</button>
+      <button class="btn btn-gold" onclick="savePartner()">Save</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="modal-member">
   <div class="modal">
     <div class="modal-title" id="member-modal-title">Add Team Member</div>
@@ -3612,6 +3653,7 @@ const TAB_LOADERS = {
   faq:        () => loadFaq(),
   schedule:   () => { renderCal(); loadBlocks(); loadDayHours(); renderPaydayCard(); },
   sales:      () => loadShowcaseCfg().then(loadSales),
+  memberships: () => loadMemberships(false),
   deposits:   () => loadDeposits(),
   inventory:  () => loadInventory(),
   messages:   () => loadThreads(),
@@ -4510,6 +4552,224 @@ async function saveShowcaseCfg(cfg){
 }
 
 let salesToken = 0;
+/* ── MEMBERSHIPS ───────────────────────────────────────────────────────
+   The roster. Stripe is only read when she asks, because it is a
+   subscription lookup and an invoice list per member and she should get the
+   list immediately rather than waiting on eight round trips to find out
+   who Justin is. */
+let MBROWS = [];
+
+async function loadMemberships(withBilling){
+  const box = document.getElementById('mb-list');
+  const btn = document.getElementById('mb-billing-btn');
+  if(!box) return;
+  if(withBilling && btn){ btn.textContent = 'Checking with Stripe…'; btn.disabled = true; }
+  try{
+    const r = await api('/api/manager?action=membership_roster' + (withBilling ? '&billing=1' : ''));
+    const d = await r.json();
+    MBROWS = d.members || [];
+    renderMemberships(d);
+  }catch(_){
+    box.innerHTML = '<div class="ny-sub" style="padding:1rem;">Could not load the memberships just now.</div>';
+  }finally{
+    if(btn){ btn.textContent = 'Check payments with Stripe'; btn.disabled = false; }
+  }
+}
+
+function renderMemberships(d){
+  const box = document.getElementById('mb-list');
+  const rows = d.members || [];
+  if(!rows.length){
+    box.innerHTML = '<div class="ny-sub" style="padding:1rem;">Nobody has a membership yet.</div>';
+    return;
+  }
+
+  const active = rows.filter(function(r){ return !r.cancelled; });
+  const paying = rows.filter(function(r){ return r.billing && r.billing.live; });
+
+  let html = '<div class="sales-hero" style="margin-bottom:1.1rem;">'
+    + '<div class="metric-card metric-primary"><div class="metric-label">Memberships</div>'
+      + '<div class="metric-value">' + active.length + '</div>'
+      + '<div class="metric-foot">active right now</div></div>'
+    + '<div class="metric-card"><div class="metric-label">Visits Left</div>'
+      + '<div class="metric-value">' + active.reduce(function(s,r){ return s + (Number(r.free_left)||0); },0) + '</div>'
+      + '<div class="metric-foot">included, across everyone</div></div>'
+    + '<div class="metric-card"><div class="metric-label">Second Names</div>'
+      + '<div class="metric-value">' + rows.filter(function(r){ return r.partner_name; }).length + '</div>'
+      + '<div class="metric-foot">people sharing a membership</div></div>'
+    + (d.billing_read
+        ? '<div class="metric-card"><div class="metric-label">Stripe Collecting</div>'
+          + '<div class="metric-value">' + paying.length + '</div>'
+          + '<div class="metric-foot">of ' + rows.length + ' on file</div></div>'
+        : '<div class="metric-card"><div class="metric-label">Payments</div>'
+          + '<div class="metric-value" style="font-size:1.1rem;">Not checked</div>'
+          + '<div class="metric-foot">tap Check payments above</div></div>')
+    + '</div>';
+
+  html += rows.map(renderMembershipRow).join('');
+  box.innerHTML = html;
+}
+
+function renderMembershipRow(r){
+  const dead = !!r.cancelled;
+
+  /* What the allowance is doing. Three states and they read differently:
+     visits left, all used (with the date it comes back), or a tier that
+     never included any. */
+  let allowance;
+  if(dead){
+    allowance = '<span style="color:#B42318;">Cancelled — nothing is covered</span>';
+  }else if(Number(r.free_left) > 0){
+    allowance = '<span style="color:#067647;font-weight:600;">'
+      + r.free_left + ' included visit' + (Number(r.free_left)===1?'':'s') + ' left</span>'
+      + (r.renews_on_pretty ? '<span style="color:var(--muted)"> · cycle turns ' + esc(r.renews_on_pretty) + '</span>' : '');
+  }else if(Number(r.free_total) > 0){
+    allowance = '<span style="color:#B54708;font-weight:600;">Included visit used</span>'
+      + (r.renews_on_pretty ? '<span style="color:var(--muted)"> · back on ' + esc(r.renews_on_pretty) + '</span>' : '')
+      + '<div class="ny-sub" style="margin:0.25rem 0 0;">A visit now is full price — and still nothing up front.</div>';
+  }else{
+    allowance = '<span style="color:var(--muted)">No included visits on this tier</span>';
+  }
+
+  /* Is money actually arriving. Only shown once Stripe has been read,
+     because "no subscription" and "not looked" are different facts and
+     showing one as the other is how she ends up chasing the wrong person. */
+  let billing = '';
+  if(r.billing){
+    const b = r.billing;
+    if(b.problem){
+      billing = '<div class="ny-sub" style="color:#B42318;">Stripe could not be read: ' + esc(b.problem) + '</div>';
+    }else{
+      const good = b.live;
+      billing = '<div class="ny-sub">'
+        + '<span style="color:' + (good ? '#067647' : '#B42318') + ';font-weight:600;">'
+          + (good ? 'Paying' : esc(b.status || 'not collecting')) + '</span>'
+        + (b.charge_cents ? ' · ' + money(b.charge_cents) + ' ' + esc(b.every) : '')
+        + (b.paid_count ? ' · <strong>' + b.paid_count + ' payment' + (b.paid_count===1?'':'s')
+            + ' in</strong> (' + money(b.paid_cents) + ' total)' : '')
+        + (b.next_charge ? ' · next ' + esc(b.next_charge) : '')
+        + (b.coupon ? ' · coupon ' + esc(b.coupon) : '')
+        + '</div>';
+    }
+  }else if(!r.subscription && !dead){
+    billing = '<div class="ny-sub" style="color:#B54708;">No subscription on this record — nothing is being charged.</div>';
+  }
+
+  const partner = r.partner_name
+    ? '<div class="ny-sub">Also on this membership: <strong>' + esc(r.partner_name) + '</strong>'
+      + (r.partner_phone ? ' · ' + esc(r.partner_phone) : '')
+      + (r.partner_email ? ' · ' + esc(r.partner_email) : '') + '</div>'
+    : '';
+
+  return '<div class="site-card" style="margin-bottom:0.8rem;' + (dead ? 'opacity:0.6;' : '') + '">'
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.8rem;flex-wrap:wrap;">'
+      + '<div style="min-width:0;flex:1;">'
+        + '<div style="display:flex;align-items:baseline;gap:0.5rem;flex-wrap:wrap;">'
+          + '<span class="mc-name" style="font-size:1.05rem;">' + esc(r.name) + '</span>'
+          + '<span class="member-tier-tag" style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);">'
+            + esc(r.tier_label) + (r.price ? ' · $' + r.price : '') + '</span>'
+        + '</div>'
+        + '<div class="ny-sub" style="margin-top:0.2rem;">'
+          + '<a href="#" onclick="copy(\'' + esc(r.member_id) + '\',\'Member ID copied\');return false;" style="color:var(--gold);font-family:monospace;">'
+            + esc(r.member_id) + '</a>'
+          + (r.email ? ' · ' + esc(r.email) : '')
+          + (r.phone ? ' · ' + esc(r.phone) : '')
+          + (r.joined ? ' · joined ' + esc(r.joined) : '')
+        + '</div>'
+        + '<div style="margin-top:0.5rem;font-size:0.84rem;">' + allowance + '</div>'
+        + billing
+        + partner
+      + '</div>'
+      + '<div style="display:flex;flex-direction:column;gap:0.35rem;flex-shrink:0;">'
+        + (dead ? ''
+            : '<button class="btn btn-gold btn-sm" onclick="bookForMember(\'' + esc(r.member_id) + '\')">Book this visit</button>')
+        + '<button class="btn btn-ghost btn-sm" onclick="editPartner(\'' + esc(r.member_id) + '\')">'
+          + (r.partner_name ? 'Second name' : 'Add second name') + '</button>'
+        + (!dead && Number(r.free_used) > 0
+            ? '<button class="btn btn-ghost btn-sm" onclick="giveVisitBack(\'' + esc(r.member_id) + '\')">Give a visit back</button>'
+            : '')
+      + '</div>'
+    + '</div>'
+  + '</div>';
+}
+
+/* Booking THROUGH the membership. The appointment form opens with their
+   details already in it and the membership locked onto the row, so the
+   booking cannot be saved as somebody who merely looks like them — and
+   when it saves, the included visit is drawn down against it. */
+function bookForMember(memberId){
+  const r = MBROWS.find(function(x){ return x.member_id === memberId; });
+  if(!r) return;
+  showTab('schedule');
+  openApptModal();
+  document.getElementById('appt-modal-title').textContent = 'Book ' + r.name + ' · ' + r.tier_label;
+  document.getElementById('a-client').value = r.name || '';
+  document.getElementById('a-phone').value = r.phone || '';
+  document.getElementById('a-email').value = r.email || '';
+  // The membership, decided here rather than guessed from the name later.
+  MEMROWID = r.member_id;
+  MEMOVERRIDE = '';
+  setTimeout(memCheck, 30);
+  toast(Number(r.free_left) > 0
+    ? 'Booking on ' + r.tier_label + ' — this visit is included'
+    : 'Booking on ' + r.tier_label + ' — included visit already used this cycle');
+}
+
+function editPartner(memberId){
+  const r = MBROWS.find(function(x){ return x.member_id === memberId; });
+  if(!r) return;
+  document.getElementById('pt-member-id').value = r.member_id;
+  document.getElementById('pt-who').textContent =
+    'This membership is in ' + r.name + '\u2019s name (' + r.tier_label + '). '
+    + 'Anyone named here is covered by it too.';
+  document.getElementById('pt-name').value = r.partner_name || '';
+  document.getElementById('pt-email').value = r.partner_email || '';
+  document.getElementById('pt-phone').value = r.partner_phone || '';
+  openModal('modal-partner');
+}
+
+async function savePartner(){
+  const id = document.getElementById('pt-member-id').value;
+  try{
+    const r = await api('/api/manager',{method:'POST',body:JSON.stringify({
+      action:'membership_partner', member_id:id,
+      partner_name: document.getElementById('pt-name').value.trim(),
+      partner_email: document.getElementById('pt-email').value.trim(),
+      partner_phone: document.getElementById('pt-phone').value.trim(),
+    })});
+    const d = await r.json();
+    if(!r.ok) return toast(d.error || 'Could not save that');
+    closeModal('modal-partner');
+    toast(d.cleared ? 'Second name removed' : d.partner_name + ' is on this membership now');
+    loadMemberships(false);
+  }catch(_){ toast('Could not save that'); }
+}
+
+async function clearPartner(){
+  document.getElementById('pt-name').value = '';
+  document.getElementById('pt-email').value = '';
+  document.getElementById('pt-phone').value = '';
+  await savePartner();
+}
+
+/* A correction, not a giveaway: one visit, back onto the cycle it was taken
+   from. For a visit spent by the wrong person, or a booking that never
+   happened. */
+async function giveVisitBack(memberId){
+  const r = MBROWS.find(function(x){ return x.member_id === memberId; });
+  if(!r) return;
+  if(!confirm('Give ' + r.name + ' their included visit back for this cycle?\n\n'
+    + 'Use this when a visit was spent by mistake. Their next visit is covered again.')) return;
+  try{
+    const res = await api('/api/manager',{method:'POST',body:JSON.stringify({
+      action:'membership_give_visit', member_id:memberId })});
+    const d = await res.json();
+    if(!res.ok) return toast(d.error || 'Could not do that');
+    toast(d.name + ' has ' + d.free_left + ' included visit' + (d.free_left===1?'':'s') + ' again');
+    loadMemberships(false);
+  }catch(_){ toast('Could not do that'); }
+}
+
 async function loadSales(){
   initShowcaseEditor();
   const my = ++salesToken; // last call wins — a late live fetch can't clobber a newer showcase render

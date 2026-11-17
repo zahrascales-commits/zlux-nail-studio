@@ -209,6 +209,43 @@ function usageKey(member, when) {
   return new Date(t).toISOString().slice(0, 7);
 }
 
+/* The day the current allowance period ends, which is the day the next one
+   begins. Derived from usageKey so that what refills and what is spent can
+   never be worked out two different ways.
+
+   Returned as a plain YYYY-MM-DD, because every caller either formats it
+   for a person or compares it to another date. */
+function cycleEnd(member, when) {
+  const w = Number(member && member.cadence_weeks) || 0;
+  const start = Date.parse((member && member.membership_started_at) || '');
+  const now = when ? new Date(when).getTime() : Date.now();
+
+  if (w >= 2 && w <= 5 && !isNaN(start)) {
+    const day = ms => Date.parse(new Date(ms).toISOString().slice(0, 10) + 'T00:00:00Z');
+    const len = w * 7 * 86400000;
+    const s0 = day(start);
+    const n = Math.max(0, Math.floor((day(now) - s0) / len));
+    // The start of the cycle after this one.
+    return new Date(s0 + (n + 1) * len).toISOString().slice(0, 10);
+  }
+  // No rhythm: the calendar month, so the first of next month.
+  const d = new Date(now);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1))
+    .toISOString().slice(0, 10);
+}
+
+/* A date a client can read. "November 26", and the year too when it is not
+   this one — a renewal in January should not look like it already happened. */
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'];
+function prettyDay(ymd) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || ''));
+  if (!m) return '';
+  const y = Number(m[1]), mo = Number(m[2]) - 1, d = Number(m[3]);
+  const thisYear = new Date().getUTCFullYear();
+  return MONTHS[mo] + ' ' + d + (y === thisYear ? '' : ', ' + y);
+}
+
 // The same, looked up by member ID. `apptDate` places a rhythm member's
 // visit in its cycle; `legacyWhen` is whatever the calendar-month code used
 // before (the booking moment, or the appointment's month on a cancel), so
@@ -267,6 +304,17 @@ async function walletFor(memberId) {
   if (!cfg) return null;
 
   const mk = await usageKeyFor(member.member_id, null, null);
+
+  /* When the included services refill. Worked out from their rhythm rather
+     than read off next_billing_at, which is written once at signup and has
+     been showing members a date in the past ever since. */
+  let cadence = 0;
+  try {
+    const c = await queryOne('SELECT cadence_weeks FROM members WHERE member_id = ?', [member.member_id]);
+    cadence = Number(c && c.cadence_weeks) || 0;
+  } catch (_) {}
+  const backOn = cycleEnd({ cadence_weeks: cadence, membership_started_at: member.membership_started_at }, null);
+  const backOnPretty = prettyDay(backOn);
   let usage = null;
   try {
     usage = await queryOne('SELECT * FROM service_usage WHERE member_id = ? AND month_year = ?', [member.member_id, mk]);
@@ -293,9 +341,15 @@ async function walletFor(memberId) {
     if (p.kind === 'free_service') {
       item.standing = false;
       item.available = freeLeft > 0;
+      /* "this month" is wrong for anyone on a rhythm — Justin pays every
+         four weeks, so his is a cycle, not a month. And the date it comes
+         back is a date, written the way a person writes one. */
+      const period = cadence >= 2 ? 'this cycle' : 'this month';
       item.status = freeLeft > 0
-        ? freeLeft + ' left this month'
-        : 'All used this month — back on ' + (member.next_billing_at || 'your renewal');
+        ? freeLeft + ' left ' + period
+        : (backOnPretty
+            ? 'All used ' + period + ' — back on ' + backOnPretty
+            : 'All used ' + period);
     }
     if (p.kind === 'discount') item.status = p.value === 100 ? 'Applied automatically' : p.value + '% off, applied automatically';
     if (p.kind === 'calendar') item.status = p.value + ' days further than guests';
@@ -320,7 +374,13 @@ async function walletFor(memberId) {
     price: cfg.price,
     month: mk,
     next_billing_at: member.next_billing_at || '',
-    free_services: { total: freeTotal, used, left: freeLeft },
+    /* When the allowance refills, and the rhythm it refills on. Carried so
+       the member portal and Studio Manager both read one answer instead of
+       each deriving a date from a column that has gone stale. */
+    cadence_weeks: cadence || 0,
+    renews_on: backOn,
+    renews_on_pretty: backOnPretty,
+    free_services: { total: freeTotal, used, left: freeLeft, renews_on: backOn, renews_on_pretty: backOnPretty },
     addon_discount_pct: (cfg.perks.find(p => p.kind === 'discount') || {}).value || 0,
     window: await windowFor(member.tier),
     can_pick_artist: cfg.perks.some(p => p.kind === 'artist'),
@@ -435,6 +495,8 @@ module.exports.TIERS = TIERS;
 module.exports.walletFor = walletFor;
 module.exports.includedCount = includedCount;
 module.exports.usageKey = usageKey;
+module.exports.cycleEnd = cycleEnd;
+module.exports.prettyDay = prettyDay;
 module.exports.usageKeyFor = usageKeyFor;
 module.exports.windowFor = windowFor;
 module.exports.tierConfig = tierConfig;

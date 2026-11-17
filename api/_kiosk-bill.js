@@ -15,6 +15,27 @@ const money = c => Math.round(Number(c) || 0);
 
 const COLS = 'member_id, full_name, email, phone, tier, stripe_customer_id, status, cancelled_at';
 
+/* The same row plus the second person on it. Kept apart from COLS so a
+   database that has not got these columns yet still answers every ordinary
+   membership question. */
+const PCOLS = COLS
+  + ", COALESCE(partner_name,'') AS partner_name"
+  + ", COALESCE(partner_email,'') AS partner_email"
+  + ", COALESCE(partner_phone,'') AS partner_phone";
+
+/* Added once per cold start, like every other column in this codebase.
+   A membership is one subscription; the second name is a person it covers,
+   not a second membership, so it lives on the same row. */
+let _partnerReady = false;
+async function ensurePartnerColumns() {
+  if (_partnerReady) return;
+  const main = require('./_db');
+  for (const col of ['partner_name', 'partner_email', 'partner_phone']) {
+    try { await main.execute("ALTER TABLE members ADD COLUMN " + col + " TEXT DEFAULT ''"); } catch (_) {}
+  }
+  _partnerReady = true;
+}
+
 /* Written on an appointment to mean "I have checked, and this is not a
    member" — so a phone or name that happens to look like somebody's does
    not quietly hand out a free service after she has said otherwise. */
@@ -32,6 +53,57 @@ const nameKey = n => String(n || '')
   .replace(/[^a-z0-9 ]+/g, ' ')
   .replace(/\s+/g, ' ')
   .trim();
+
+/* The second person on somebody's membership.
+ *
+ * Deliberately weaker than every match against the member themselves: a
+ * membership is identified by its holder first, and only then by who else
+ * it covers. Returns the membership row with partner_matched set, so the
+ * caller can say "Monica, on Justin's Elite" rather than calling her Justin.
+ */
+async function partnerMatch(appt) {
+  const main = require('./_db');
+  let rows = [];
+  try {
+    rows = await main.query(
+      'SELECT ' + PCOLS + ' FROM members '
+      + "WHERE COALESCE(partner_name,'') <> '' OR COALESCE(partner_email,'') <> '' "
+      + "   OR COALESCE(partner_phone,'') <> ''");
+  } catch (_) {
+    return null;            // no such columns yet — nobody has a partner
+  }
+  if (!rows || !rows.length) return null;
+
+  const take = (hits, how) => {
+    // Exactly one, exactly as everywhere else: an ambiguous match is not an
+    // answer, because a free service given to the wrong person is worse
+    // than a deposit asked of the right one.
+    if (hits.length !== 1) return null;
+    const m = hits[0];
+    return Object.assign(m, {
+      matched_by: how,
+      partner_matched: true,
+      matched_name: m.partner_name || '',
+    });
+  };
+
+  const email = String(appt.email || '').trim().toLowerCase();
+  if (email) {
+    const hit = take(rows.filter(r => String(r.partner_email || '').trim().toLowerCase() === email), 'partner_email');
+    if (hit) return hit;
+  }
+  const phone = tenDigits(appt.phone);
+  if (phone.length === 10) {
+    const hit = take(rows.filter(r => tenDigits(r.partner_phone) === phone), 'partner_phone');
+    if (hit) return hit;
+  }
+  const key = nameKey(appt.name);
+  if (key) {
+    const hit = take(rows.filter(r => nameKey(r.partner_name) === key), 'partner_name');
+    if (hit) return hit;
+  }
+  return null;
+}
 
 /* Whether this person is a member, and on what.
  *
@@ -51,7 +123,12 @@ const nameKey = n => String(n || '')
  * was decided rather than asking her to trust it. */
 async function memberFor(appt) {
   const main = require('./_db');
-  const mark = (m, how) => (m ? Object.assign(m, { matched_by: how }) : null);
+  // The person the membership is in the name of, unless a partner match
+  // says otherwise and sets its own.
+  const mark = (m, how) => (m ? Object.assign(m, {
+    matched_by: how, partner_matched: false, matched_name: m.full_name || '',
+  }) : null);
+  await ensurePartnerColumns();
 
   // She has said this person is not a member. That is an answer.
   if (String(appt.member_id || '') === NOT_A_MEMBER) return null;
@@ -71,6 +148,10 @@ async function memberFor(appt) {
         'SELECT ' + COLS + ' FROM members WHERE lower(email) = ?', [email]);
       if (m) return mark(m, 'email');
     } catch (_) {}
+    // Nobody's membership is under that address — but it may be the second
+    // name on somebody else's.
+    const p = await partnerMatch({ email });
+    if (p) return p;
   }
 
   /* The phone. Matched in here rather than in SQL because the column holds
@@ -86,6 +167,8 @@ async function memberFor(appt) {
       // Exactly one, or it is not an answer.
       if (hits.length === 1) return mark(hits[0], 'phone');
     } catch (_) {}
+    const p = await partnerMatch({ phone: appt.phone });
+    if (p) return p;
   }
 
   const key = nameKey(appt.name);
@@ -95,6 +178,8 @@ async function memberFor(appt) {
       const hits = (rows || []).filter(r => nameKey(r.full_name) === key);
       if (hits.length === 1) return mark(hits[0], 'name');
     } catch (_) {}
+    const p = await partnerMatch({ name: appt.name });
+    if (p) return p;
   }
   return null;
 }
@@ -243,5 +328,5 @@ async function cardOnFile(sk, customerId) {
 
 module.exports = {
   billFor, memberFor, memberTierOf, cardOnFile, freeLeftFor, customerIdFor,
-  NOT_A_MEMBER, tenDigits, nameKey,
+  NOT_A_MEMBER, tenDigits, nameKey, partnerMatch, ensurePartnerColumns, PCOLS,
 };

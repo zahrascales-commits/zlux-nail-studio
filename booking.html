@@ -728,9 +728,9 @@
 
       <!-- Deposit box -->
       <div class="deposit-box" style="margin-bottom:1.25rem;">
-        <div class="section-label" style="font-size:0.6rem;">Deposit Due Today (50%)</div>
+        <div class="section-label" style="font-size:0.6rem;" id="deposit-label">Deposit Due Today (50%)</div>
         <div class="deposit-amount" id="deposit-amount">$0</div>
-        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);margin-top:0.5rem;line-height:1.6;">
+        <p id="deposit-terms" style="font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);margin-top:0.5rem;line-height:1.6;">
           This deposit is <strong>non-refundable</strong>. With 48+ hours notice, it may be applied to a rescheduled appointment. No-shows forfeit the deposit in full.
         </p>
       </div>
@@ -882,6 +882,9 @@ const TIER_RULES = {
     lockedAddonNames: ['Russian Manicure Technique'],
     // Short and medium. Long is the reason to move up.
     lockedServiceNames: ['Long Gel X', 'Long Acrylic Set'],
+    // "No deposit, ever" — the perk itself, not a side effect of the visit
+    // being covered. It holds on a second visit in the same cycle too.
+    noDeposit: true,
     upgradeTo: 'ELITE',
     upgradeLabel: 'Elite',
     reminderText: 'Essential: your service is included this visit, and any design is free.',
@@ -899,6 +902,7 @@ const TIER_RULES = {
     addonDiscountPct: 0,
     lockedAddonNames: [],
     lockedServiceNames: [],
+    noDeposit: true,
     reminderText: 'Elite: your service is included, with a Russian manicure and removal every visit.',
     priorityText: '✦  Elite members book a week ahead of everyone else.'
   },
@@ -2300,7 +2304,34 @@ function loadSummary() {
   }
 
   document.getElementById('summary-total').textContent = '$' + total;
-  document.getElementById('deposit-amount').textContent = '$' + Math.ceil(total * 0.5);
+
+  /* ── WHAT IS ACTUALLY TAKEN TO MAKE THE BOOKING ────────────────────
+     A membership that promises no deposit owes none, even on a visit it
+     does not cover — there is still a full price, it is just settled at
+     the end of the visit the way it would be for anyone paying in person.
+     Printing "50%" at a member who was promised otherwise is how a paying
+     member concludes the website is broken.
+
+     _pay.js decides the real figure; this is only what is printed. */
+  const depRules = booking.memberTier ? TIER_RULES[booking.memberTier] : null;
+  const noDep = !!(depRules && depRules.noDeposit);
+  const depEl = document.getElementById('deposit-amount');
+  const labEl = document.getElementById('deposit-label');
+  const termsEl = document.getElementById('deposit-terms');
+  if (noDep) {
+    depEl.textContent = '$0';
+    if (labEl) labEl.textContent = 'Due Today';
+    if (termsEl) termsEl.innerHTML = total > 0
+      ? 'Your membership takes <strong>nothing up front</strong> — you book, you come in. '
+        + 'The $' + total + ' is settled at the end of your visit.'
+      : 'Your membership covers this visit in full. <strong>Nothing to pay</strong>, today or after.';
+  } else {
+    depEl.textContent = '$' + Math.ceil(total * 0.5);
+    if (labEl) labEl.textContent = 'Deposit Due Today (50%)';
+    if (termsEl) termsEl.innerHTML = 'This deposit is <strong>non-refundable</strong>. '
+      + 'With 48+ hours notice, it may be applied to a rescheduled appointment. '
+      + 'No-shows forfeit the deposit in full.';
+  }
 }
 
 function buildLine(name, fullPrice, charged, note, removeName) {

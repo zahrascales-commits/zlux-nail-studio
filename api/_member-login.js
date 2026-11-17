@@ -74,12 +74,19 @@ module.exports = async (req, res) => {
     }
 
     const token = crypto.randomBytes(32).toString('hex');
-    const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    /* A year, not a week. See the note at the top of this file: the member
+       ID is not memorable, so an expiring session means a locked-out
+       member and a message to the studio. _member-profile slides this
+       forward on every use, so an active member is never signed out. */
+    const expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
     await execute('INSERT INTO sessions (token, role, user_id, expires_at) VALUES (?,?,?,?)', [token, 'CLIENT', member.member_id, expires]);
     await execute('INSERT INTO security_log (event, details) VALUES (?,?)', ['MEMBER_LOGIN', JSON.stringify({ memberId: member.member_id })]);
 
     return res.status(200).json({
       token,
+      /* So the portal can offer "continue as Justin" rather than an empty
+         box, and can offer to set up Face ID on this device. */
+      remember_id: member.member_id,
       member: {
         memberId:    member.member_id,
         fullName:    member.full_name,

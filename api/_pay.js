@@ -248,6 +248,11 @@ function computeDeposit({ service_name, addon_names = [], member_tier, free_serv
     : [];
   const perks = member_tier ? perksFor(member_tier) : [];
   const designFree = perks.some(p => p.kind === 'discount' && p.on === 'design' && Number(p.value) >= 100);
+  /* A membership that promises nothing is taken up front. Essential and
+     Elite both carry it, and it is not conditional on the included visit
+     being unspent — "ever" is the word the member paid for. A deal day is
+     not a membership benefit, so it keeps its own deposit. */
+  const neverDeposits = !deal && perks.some(p => p.kind === 'deposit');
 
   /* Charged even when the service itself is covered by a membership: the
      included service is the service, not the extra design work on top. The
@@ -322,7 +327,15 @@ function computeDeposit({ service_name, addon_names = [], member_tier, free_serv
     // Stripe will not take a smaller charge — applying it to a visit the
     // membership already covers would bill someone 50c for something they
     // were just told was free.
-    deposit_cents: total <= 0 ? 0 : Math.max(50, Math.ceil(total * 0.5)),
+    //
+    // And a membership that says no deposit ever owes none whatever the
+    // total is. There is still a full price to settle at the end of the
+    // visit; what this says is that none of it is taken to make the booking.
+    deposit_cents: (total <= 0 || neverDeposits) ? 0 : Math.max(50, Math.ceil(total * 0.5)),
+    /* Why it is zero, so a caller can tell "this visit is free" apart from
+       "this visit is paid for afterwards". The booking gate needs the
+       difference: one is nothing owed, the other is nothing owed YET. */
+    never_deposits: neverDeposits,
     // What the membership just took off — shown to the member and recorded,
     // rather than silently disappearing into a smaller number.
     service_list_cents: listCents,
@@ -354,6 +367,76 @@ async function freeServicesLeft(member_id, member_tier) {
     const row = await queryOne('SELECT services_used FROM service_usage WHERE member_id = ? AND month_year = ?', [member_id, monthYear]);
     return Math.max(0, limit - Number((row && row.services_used) || 0));
   } catch (_) { return 0; }
+}
+
+/* ── SPEND ONE INCLUDED VISIT, IF THIS VISIT ACTUALLY USES ONE ──────────
+   Returns what it did and why, because a caller that cannot tell "spent"
+   from "there was nothing to spend" ends up reporting one as the other.
+
+   Never throws. A booking must not fail because a counter would not move;
+   the visit still happens and the worst case is an allowance that reads
+   one too high, which Studio Manager now shows her. */
+async function spendIncluded({ member_id, member_tier, service_name, addon_names = [],
+                               design_tier = null, appt_date = null, percent_off = 0 }) {
+  if (!member_id || member_id === '-' || !member_tier) {
+    return { spent: false, why: 'not a member' };
+  }
+  try {
+    const left = await freeServicesLeft(member_id, member_tier);
+    if (left <= 0) return { spent: false, why: 'none left this cycle', left: 0 };
+
+    // Priced as though the allowance were being used; used_included says
+    // whether it would actually have been.
+    const calc = computeDeposit({
+      service_name, addon_names, member_tier,
+      free_service: true, design_tier, percent_off,
+    });
+    if (!calc) return { spent: false, why: 'not on the menu', left };
+    if (!calc.used_included) {
+      return { spent: false, why: 'this visit does not use an included service', left };
+    }
+
+    const perks = require('./_perks');
+    const monthYear = await perks.usageKeyFor(member_id, appt_date, null);
+    const { execute } = require('./_db');
+    await execute(
+      `INSERT INTO service_usage (member_id, month_year, services_used) VALUES (?,?,1)
+         ON CONFLICT(member_id,month_year) DO UPDATE SET services_used = services_used + 1`,
+      [member_id, monthYear]);
+
+    return {
+      spent: true, left: left - 1, cycle: monthYear,
+      covered_cents: calc.covered_cents || 0,
+    };
+  } catch (err) {
+    return { spent: false, why: 'could not record it: ' + String(err.message || err).slice(0, 80) };
+  }
+}
+
+/* And handing it back. A cancelled or deleted booking that spent a visit
+   has to return it — otherwise cancelling an appointment quietly costs the
+   member the thing they are paying for. Floored at zero so a double
+   cancel cannot put the allowance above the tier. */
+async function refundIncluded({ member_id, member_tier, service_name, addon_names = [],
+                                design_tier = null, appt_date = null, percent_off = 0 }) {
+  if (!member_id || member_id === '-' || !member_tier) return { refunded: false, why: 'not a member' };
+  try {
+    const calc = computeDeposit({
+      service_name, addon_names, member_tier,
+      free_service: true, design_tier, percent_off,
+    });
+    if (!calc || !calc.used_included) {
+      return { refunded: false, why: 'this visit never used one' };
+    }
+    const monthYear = await require('./_perks').usageKeyFor(member_id, appt_date, null);
+    const { execute } = require('./_db');
+    await execute(
+      'UPDATE service_usage SET services_used = MAX(0, services_used - 1) WHERE member_id = ? AND month_year = ?',
+      [member_id, monthYear]);
+    return { refunded: true, cycle: monthYear };
+  } catch (err) {
+    return { refunded: false, why: String(err.message || err).slice(0, 80) };
+  }
 }
 
 module.exports = async function (req, res) {
@@ -564,6 +647,8 @@ module.exports = async function (req, res) {
 };
 
 module.exports.computeDeposit = computeDeposit;
+module.exports.spendIncluded = spendIncluded;
+module.exports.refundIncluded = refundIncluded;
 module.exports.clearStripeKeyCache = clearStripeKeyCache;
 // Shared key accessors so every Stripe caller (classes, membership signup,
 // owner utilities) uses the SAME account as the booking flow + publishable key.

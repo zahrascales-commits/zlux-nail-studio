@@ -39,6 +39,7 @@ app.all('/api/addons',           require('./_addons'));
 app.all('/api/member-signup',    require('./_member-signup'));
 app.all('/api/member-login',     require('./_member-login'));
 app.all('/api/member-profile',   require('./_member-profile'));
+app.all('/api/member-passkey',   require('./_member-passkey'));
 app.all('/api/booking-windows',  require('./_booking-windows'));
 app.all('/api/qr-generate',      require('./_qr-generate'));
 app.all('/api/qr-verify',        require('./_qr-verify'));

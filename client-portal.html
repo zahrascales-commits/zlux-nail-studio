@@ -161,8 +161,24 @@
       <h1 class="portal-heading">Client Portal</h1>
       <p class="portal-sub">Enter your Member ID to access your account.</p>
       <div class="login-err" id="login-err"></div>
+
+      <!-- One tap, nothing typed. Hidden unless this browser can do it and
+           somebody has actually set one up. -->
+      <div id="faceid-box" style="display:none;margin-bottom:1.1rem;">
+        <button class="btn-login" onclick="loginWithFace()" style="margin-bottom:0.6rem;">
+          Sign in with Face ID
+        </button>
+        <div style="text-align:center;font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:var(--latte);letter-spacing:0.08em;">
+          OR USE YOUR MEMBER ID
+        </div>
+      </div>
+
       <div class="pf"><label>Member ID</label><input type="text" id="login-id" placeholder="ZL-XXXXXX" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')doLogin()" /></div>
       <button class="btn-login" onclick="doLogin()">Sign In</button>
+      <p id="login-hint" style="display:none;font-family:'Josefin Sans',sans-serif;font-size:0.76rem;color:var(--latte);margin-top:0.7rem;text-align:center;line-height:1.6;">
+        Can't find your Member ID? It is in your welcome email — or
+        <a href="contact.html" style="color:var(--champagne);">message the studio</a> and we will look you up.
+      </p>
       <div style="margin-top:1.25rem;text-align:center;">
         <span style="font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--latte);">Not a member yet?</span>
         <a href="memberships.html" style="font-family:'Josefin Sans',sans-serif;font-size:0.78rem;color:var(--champagne);margin-left:0.4rem;">View Memberships</a>
@@ -413,15 +429,23 @@ async function doLogin() {
       body: JSON.stringify({ memberId: id }),
     });
     const data = await res.json();
-    if (!res.ok) return showError(data.error || 'Member ID not found.');
+    if (!res.ok) { showError(data.error || 'Member ID not found.'); showIdHint(); return; }
     authToken = data.token;
     localStorage.setItem('zlux_token', authToken);
+    /* Remembered on this device so a lost session is a tap, not a hunt
+       through old email. It is an account number, not a password — it
+       already sits in their welcome email and on their booking screen. */
+    try { localStorage.setItem('zlux_member_id', data.remember_id || id); } catch (_) {}
     loadDashboard(data.member);
+    offerFaceId();
   } catch { showError('Network error. Try again.'); }
 }
 
 function doLogout() {
   localStorage.removeItem('zlux_token');
+  /* The member ID stays. Signing out should not mean hunting for an account
+     number — Face ID and the remembered ID are both still offered, and
+     neither gets anybody in without the phone's own owner. */
   authToken = '';
   profileData = {};
   document.getElementById('portal-login').style.display = '';
@@ -1017,6 +1041,172 @@ async function rescheduleBooking(bookingId, memberId) {
   } catch { alert('Connection error. Try again.'); }
 }
 
+/* ── FACE ID ───────────────────────────────────────────────────────────
+   The browser half of a passkey. Everything that decides anything happens
+   on the server; this moves bytes between the phone and that, and base64url
+   is the only translation it does. */
+const _b64u = {
+  dec: s => Uint8Array.from(atob(String(s).replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0)),
+  enc: b => btoa(String.fromCharCode.apply(null, new Uint8Array(b)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+};
+const canFaceId = () => !!(window.PublicKeyCredential && navigator.credentials);
+
+function showIdHint() {
+  const el = document.getElementById('login-hint');
+  if (el) el.style.display = 'block';
+}
+
+/* Is it worth offering? Only when this browser can do it and at least one
+   passkey exists — otherwise the button is a dead end. */
+async function faceIdAvailable() {
+  if (!canFaceId()) return false;
+  try {
+    const d = await (await fetch('/api/member-passkey?action=status')).json();
+    return !!d.any;
+  } catch (_) { return false; }
+}
+
+async function paintLogin() {
+  // The ID they used last, ready to go.
+  try {
+    const last = localStorage.getItem('zlux_member_id');
+    const box = document.getElementById('login-id');
+    if (last && box && !box.value) box.value = last;
+  } catch (_) {}
+  if (await faceIdAvailable()) {
+    const el = document.getElementById('faceid-box');
+    if (el) el.style.display = 'block';
+  }
+}
+
+async function loginWithFace() {
+  showError('');
+  try {
+    const opt = await (await fetch('/api/member-passkey?action=login_options')).json();
+    if (!opt.any) return showError('No Face ID is set up yet — sign in with your Member ID once, and we will offer it after that.');
+
+    const cred = await navigator.credentials.get({
+      publicKey: {
+        challenge: _b64u.dec(opt.challenge),
+        rpId: opt.rpId,
+        // Deliberately empty: the phone offers whatever it holds for this
+        // site, so there is no member ID to know first.
+        allowCredentials: [],
+        userVerification: 'required',
+        timeout: opt.timeout || 60000,
+      },
+    });
+    if (!cred) return showError('Face ID was cancelled.');
+
+    const r = await fetch('/api/member-passkey?action=login_verify', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: cred.id,
+        response: {
+          clientDataJSON: _b64u.enc(cred.response.clientDataJSON),
+          authenticatorData: _b64u.enc(cred.response.authenticatorData),
+          signature: _b64u.enc(cred.response.signature),
+        },
+      }),
+    });
+    const d = await r.json();
+    if (!r.ok) return showError(d.error || 'Face ID could not be checked.');
+
+    authToken = d.token;
+    localStorage.setItem('zlux_token', authToken);
+    try { localStorage.setItem('zlux_member_id', d.member.memberId); } catch (_) {}
+    loadDashboard(d.member);
+    try {
+      const prof = await (await fetch('/api/member-profile', { headers: { Authorization: 'Bearer ' + authToken } })).json();
+      populatePortal(prof);
+    } catch (_) {}
+  } catch (err) {
+    // A cancelled Face ID prompt throws; it is not an error worth shouting about.
+    const m = String((err && err.name) || '');
+    if (m === 'NotAllowedError' || m === 'AbortError') return showError('');
+    showError('Face ID is not available on this device.');
+  }
+}
+
+/* Offer to set it up, once, after signing in the hard way. Declining is
+   remembered on this device — asking every visit is how people learn to
+   dismiss it without reading. */
+async function offerFaceId() {
+  if (!canFaceId() || !authToken) return;
+  let asked = '';
+  try { asked = localStorage.getItem('zlux_faceid_asked') || ''; } catch (_) {}
+  if (asked === 'no') return;
+  try {
+    // Already set up on this device? Then there is nothing to offer.
+    const mine = await (await fetch('/api/member-passkey?action=list',
+      { headers: { Authorization: 'Bearer ' + authToken } })).json();
+    if (mine.keys && mine.keys.length && asked === 'yes') return;
+  } catch (_) {}
+
+  const want = confirm(
+    'Set up Face ID for your membership?\n\n'
+    + 'Next time, you tap once and you are in — no Member ID to find. '
+    + 'It works on this device only, so anyone else on your membership sets up their own.');
+  if (!want) { try { localStorage.setItem('zlux_faceid_asked', 'no'); } catch (_) {} return; }
+  await setupFaceId();
+}
+
+async function setupFaceId() {
+  if (!authToken) return alert('Sign in first.');
+  try {
+    const r0 = await fetch('/api/member-passkey?action=register_options',
+      { headers: { Authorization: 'Bearer ' + authToken } });
+    const opt = await r0.json();
+    if (!r0.ok) return alert(opt.error || 'Could not start setup.');
+
+    const cred = await navigator.credentials.create({
+      publicKey: {
+        challenge: _b64u.dec(opt.challenge),
+        rp: opt.rp,
+        user: {
+          id: _b64u.dec(opt.user.id),
+          name: opt.user.name,
+          displayName: opt.user.displayName,
+        },
+        pubKeyCredParams: opt.pubKeyCredParams,
+        authenticatorSelection: opt.authenticatorSelection,
+        excludeCredentials: (opt.excludeCredentials || []).map(c => ({
+          type: 'public-key', id: _b64u.dec(c.id),
+        })),
+        attestation: opt.attestation,
+        timeout: opt.timeout || 60000,
+      },
+    });
+    if (!cred) return;
+
+    const who = (prompt('What should we call this device?', 'My phone') || 'My phone').slice(0, 60);
+    const r = await fetch('/api/member-passkey?action=register_verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken },
+      body: JSON.stringify({
+        name: who,
+        response: {
+          clientDataJSON: _b64u.enc(cred.response.clientDataJSON),
+          attestationObject: _b64u.enc(cred.response.attestationObject),
+        },
+      }),
+    });
+    const d = await r.json();
+    if (!r.ok) return alert(d.error || 'Could not finish setup.');
+    try { localStorage.setItem('zlux_faceid_asked', 'yes'); } catch (_) {}
+    alert('Done. Next time, just tap Sign in with Face ID.');
+  } catch (err) {
+    const n = String((err && err.name) || '');
+    if (n === 'NotAllowedError' || n === 'AbortError') return;   // they cancelled
+    if (n === 'InvalidStateError') {
+      try { localStorage.setItem('zlux_faceid_asked', 'yes'); } catch (_) {}
+      return alert('Face ID is already set up on this device.');
+    }
+    alert('Could not set up Face ID on this device.');
+  }
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   const saved = localStorage.getItem('zlux_token');
   if (saved) {
@@ -1027,8 +1217,14 @@ window.addEventListener('DOMContentLoaded', async () => {
         const d = await r.json();
         loadDashboard(d.member);
         populatePortal(d);
-      } else { localStorage.removeItem('zlux_token'); }
-    } catch (_) {}
+      } else {
+        localStorage.removeItem('zlux_token');
+        authToken = '';
+        await paintLogin();
+      }
+    } catch (_) { await paintLogin(); }
+  } else {
+    await paintLogin();
   }
 });
 

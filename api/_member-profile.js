@@ -3,7 +3,25 @@ const { queryOne, query, execute } = require('./_db');
 async function authMember(req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
   if (!token) return null;
-  return queryOne('SELECT * FROM sessions WHERE token = ? AND role = ? AND expires_at > CURRENT_TIMESTAMP', [token, 'CLIENT']);
+  const s = await queryOne(
+    'SELECT * FROM sessions WHERE token = ? AND role = ? AND expires_at > CURRENT_TIMESTAMP',
+    [token, 'CLIENT']);
+  if (!s) return null;
+
+  /* Keep it alive. A member who uses the portal is a member who should not
+     be asked for a member ID they do not have to hand. Only written when
+     the expiry would move by a day or more, so an ordinary page load is
+     still just reads. */
+  try {
+    const want = Date.now() + 365 * 24 * 60 * 60 * 1000;
+    const have = Date.parse(s.expires_at + (/[Z+]/.test(String(s.expires_at)) ? '' : 'Z'));
+    if (!isFinite(have) || want - have > 86400000) {
+      await execute('UPDATE sessions SET expires_at = ? WHERE token = ?',
+        [new Date(want).toISOString(), token]);
+    }
+  } catch (_) { /* a session that cannot be extended still works today */ }
+
+  return s;
 }
 
 module.exports = async (req, res) => {

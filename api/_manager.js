@@ -1889,6 +1889,241 @@ module.exports = async function (req, res) {
       });
     }
 
+    /* ── WHO THE MEMBERS ARE ───────────────────────────────────────────
+       The roster. Everything about one membership on one row: the record,
+       the subscription behind it, the allowance, and the second person it
+       covers. Read-only. */
+    if (method === 'GET' && action === 'membership_roster') {
+      const main = require('./_db');
+      const perks = require('./_perks');
+      const kb = require('./_kiosk-bill');
+
+      // The second-name columns may not exist on an older database; the
+      // roster must still list everybody if they do not.
+      try { await kb.ensurePartnerColumns(); } catch (_) {}
+
+      let rows = [];
+      const BASE = 'member_id, full_name, email, phone, tier, status, cancelled_at, '
+        + 'membership_started_at, next_billing_at, stripe_subscription_id, paid_cents, demo';
+      try {
+        rows = await main.query('SELECT ' + BASE
+          + ", COALESCE(partner_name,'') AS partner_name"
+          + ", COALESCE(partner_email,'') AS partner_email"
+          + ", COALESCE(partner_phone,'') AS partner_phone"
+          + ' FROM members ORDER BY membership_started_at DESC');
+      } catch (_) {
+        try {
+          rows = await main.query('SELECT ' + BASE + ' FROM members ORDER BY membership_started_at DESC');
+        } catch (_) { rows = []; }
+      }
+
+      /* Stripe, if she has asked for it. One subscription read and one
+         invoice list per member, so it is the slower answer and she gets
+         the list first and the money a moment later. */
+      const wantBilling = String(req.query.billing || '') === '1';
+      let stripe = null;
+      if (wantBilling) {
+        try {
+          const srows = await query("SELECT key, value FROM site_settings WHERE key = 'stripe_secret'");
+          const secret = (srows[0] && srows[0].value) || process.env.STRIPE_SECRET_KEY || '';
+          if (secret) stripe = require('stripe')(secret);
+        } catch (_) {}
+      }
+
+      const out = [];
+      for (const m of rows) {
+        if (Number(m.demo)) continue;
+
+        const cancelled = !!(m.cancelled_at || /cancel/i.test(String(m.status || '')));
+        const row = {
+          member_id: m.member_id,
+          name: m.full_name || '',
+          email: m.email || '',
+          phone: m.phone || '',
+          tier: m.tier || '',
+          tier_label: (perks.tierConfig(m.tier) || {}).label || m.tier || '',
+          price: (perks.tierConfig(m.tier) || {}).price || 0,
+          joined: String(m.membership_started_at || '').slice(0, 10),
+          cancelled,
+          cancelled_at: m.cancelled_at || '',
+          // The second person this membership covers, if there is one.
+          partner_name: m.partner_name || '',
+          partner_email: m.partner_email || '',
+          partner_phone: m.partner_phone || '',
+          // Filled in below.
+          free_total: 0, free_used: 0, free_left: 0,
+          cycle: '', renews_on: '', renews_on_pretty: '', cadence_weeks: 0,
+          subscription: m.stripe_subscription_id || '',
+          recorded_cents: Number(m.paid_cents) || 0,
+          billing: null,
+        };
+
+        /* The allowance, read from the wallet so the roster, the booking
+           screen and the member's own portal cannot disagree about how
+           many visits are left. A cancelled membership has no wallet. */
+        try {
+          const w = await perks.walletFor(m.member_id);
+          if (w) {
+            row.free_total = w.free_services.total;
+            row.free_used = w.free_services.used;
+            row.free_left = w.free_services.left;
+            row.cycle = w.month || '';
+            row.renews_on = w.renews_on || '';
+            row.renews_on_pretty = w.renews_on_pretty || '';
+            row.cadence_weeks = Number(w.cadence_weeks) || 0;
+          }
+        } catch (_) {}
+
+        if (stripe && m.stripe_subscription_id) {
+          const b = { status: '', live: false, charge_cents: 0, every: '', next_charge: '',
+                      paid_count: 0, paid_cents: 0, coupon: '', problem: '' };
+          try {
+            const sub = await stripe.subscriptions.retrieve(m.stripe_subscription_id, { expand: ['discount'] });
+            const item = sub.items && sub.items.data && sub.items.data[0];
+            const price = item && item.price;
+            let cents = price ? (Number(price.unit_amount) || 0) : 0;
+            const d = sub.discount && sub.discount.coupon;
+            if (d) {
+              if (d.amount_off) cents = Math.max(0, cents - Number(d.amount_off));
+              else if (d.percent_off) cents = Math.round(cents * (1 - Number(d.percent_off) / 100));
+            }
+            const rec = price && price.recurring;
+            b.every = rec
+              ? (rec.interval === 'week' && Number(rec.interval_count) === 4 ? 'every 4 weeks'
+                : rec.interval === 'year' ? 'a year' : 'a ' + rec.interval)
+              : '';
+            b.status = sub.status;
+            b.live = sub.status === 'active' || sub.status === 'trialing';
+            b.charge_cents = cents;
+            b.coupon = d ? (d.name || d.id) : '';
+            b.next_charge = sub.current_period_end
+              ? new Date(sub.current_period_end * 1000).toISOString().slice(0, 10) : '';
+
+            /* What has actually arrived. "Two months paid" is a fact about
+               invoices, not about the record — and the record has drifted:
+               paid_cents says one payment for members Stripe has charged
+               twice. So the invoices are counted. */
+            try {
+              const inv = await stripe.invoices.list({
+                subscription: m.stripe_subscription_id, status: 'paid', limit: 100 });
+              b.paid_count = (inv.data || []).length;
+              b.paid_cents = (inv.data || []).reduce((s, i) => s + (Number(i.amount_paid) || 0), 0);
+            } catch (_) {}
+          } catch (err) {
+            b.problem = String(err.message || err).slice(0, 110);
+          }
+          row.billing = b;
+        }
+
+        /* One line she can read without arithmetic, and the reason a
+           booking would or would not be covered. */
+        if (cancelled) {
+          row.why = 'Cancelled — nothing is covered.';
+        } else if (row.free_left > 0) {
+          row.why = row.free_left + ' included '
+            + (row.free_left === 1 ? 'visit' : 'visits') + ' left this cycle.';
+        } else if (row.free_total > 0) {
+          row.why = 'Included visit used' + (row.renews_on_pretty ? ' — back on ' + row.renews_on_pretty : '')
+            + '. A visit now is full price, with nothing up front.';
+        } else {
+          row.why = 'No included visits on this tier.';
+        }
+        out.push(row);
+      }
+
+      return res.json({
+        members: out,
+        billing_read: !!stripe,
+        collecting: out.filter(r => r.billing && r.billing.live).length,
+      });
+    }
+
+    /* ── THE SECOND NAME ON A MEMBERSHIP ───────────────────────────────
+       Justin bought his Elite membership and his wife uses it. With
+       nowhere to say so, the only way she could get the benefits was to
+       book under his email — and then the studio could not tell them
+       apart, her visit spent his one included service, and he was locked
+       out of the membership he pays for.
+
+       Naming her here keeps them separate people on one membership. They
+       share the one included visit per cycle, which is what Zahra chose:
+       whoever books first uses it and the other pays the ordinary price
+       with nothing taken up front. */
+    if (method === 'POST' && action === 'membership_partner') {
+      const b = req.body || {};
+      const id = String(b.member_id || '').trim();
+      if (!id) return res.status(400).json({ error: 'Which membership?' });
+
+      const main = require('./_db');
+      try { await require('./_kiosk-bill').ensurePartnerColumns(); } catch (_) {}
+
+      const name = String(b.partner_name || '').trim().slice(0, 120);
+      const email = String(b.partner_email || '').trim().toLowerCase().slice(0, 160);
+      const phone = String(b.partner_phone || '').trim().slice(0, 40);
+
+      /* An address already on somebody's own membership cannot become the
+         second name on another — that is the ambiguity that started all of
+         this, and it would quietly move their benefits. */
+      if (email) {
+        const clash = await main.queryOne(
+          'SELECT member_id, full_name FROM members WHERE lower(email)=? AND member_id<>?', [email, id]);
+        if (clash) {
+          return res.status(400).json({
+            error: 'That email already has its own membership (' + clash.full_name
+              + '). Two memberships cannot share one address.' });
+        }
+      }
+
+      const m = await main.queryOne('SELECT member_id, full_name FROM members WHERE member_id=?', [id]);
+      if (!m) return res.status(404).json({ error: 'No membership with that ID.' });
+
+      await main.execute(
+        'UPDATE members SET partner_name=?, partner_email=?, partner_phone=? WHERE member_id=?',
+        [name, email, phone, id]);
+
+      return res.json({
+        ok: true, member_id: id, holder: m.full_name,
+        partner_name: name, partner_email: email, partner_phone: phone,
+        cleared: !name && !email && !phone,
+      });
+    }
+
+    /* ── GIVING AN INCLUDED VISIT BACK ─────────────────────────────────
+       For when the studio owes somebody one: a visit spent by the wrong
+       person, a booking that never happened, a make-good. It moves the
+       same counter the booking flow moves, so the member's own portal
+       shows it immediately.
+
+       Deliberately one at a time and never below zero or above the tier's
+       allowance — this is a correction, not a way to hand out services. */
+    if (method === 'POST' && action === 'membership_give_visit') {
+      const b = req.body || {};
+      const id = String(b.member_id || '').trim();
+      if (!id) return res.status(400).json({ error: 'Which membership?' });
+
+      const main = require('./_db');
+      const perks = require('./_perks');
+      const m = await main.queryOne(
+        'SELECT member_id, full_name, tier FROM members WHERE member_id=?', [id]);
+      if (!m) return res.status(404).json({ error: 'No membership with that ID.' });
+
+      const cycle = await perks.usageKeyFor(id, null, null);
+      const row = await main.queryOne(
+        'SELECT services_used FROM service_usage WHERE member_id=? AND month_year=?', [id, cycle]);
+      const used = Number((row && row.services_used) || 0);
+      if (used <= 0) {
+        return res.status(400).json({
+          error: 'Nothing is spent this cycle — they already have their full allowance.' });
+      }
+
+      await main.execute(
+        'UPDATE service_usage SET services_used = MAX(0, services_used - 1) WHERE member_id=? AND month_year=?',
+        [id, cycle]);
+
+      const left = Math.max(0, perks.includedCount(m.tier) - (used - 1));
+      return res.json({ ok: true, name: m.full_name, cycle, free_left: left });
+    }
+
     /* ── SEND SOMEBODY THEIR CONFIRMATION AGAIN ──
        The bulk send deliberately skips anyone who has had one, so there was
        no way to send a single client theirs a second time — after a detail
@@ -2529,6 +2764,32 @@ module.exports = async function (req, res) {
         [team_member_id ? Number(team_member_id) : null, client_name || '', client_phone || '',
          String(client_email || '').trim().toLowerCase(), service || '', date, time, notes || '', tok]
       ));
+      /* ── THE VISIT, DRAWN FROM THEIR MEMBERSHIP ───────────────────────
+         Booked through the membership, so it is recorded against it: the
+         included visit is spent exactly as it would be if they had booked
+         online. Before this, the website spent it and Studio Manager did
+         not, so the same member got a different answer depending on which
+         door they came in by.
+
+         Whether this particular visit uses one is not decided here — a
+         pedicure on a manicure tier, a removal, a deal day and a size the
+         tier does not cover all deliberately leave the allowance alone.
+         That judgement lives in computeDeposit and is read, not repeated. */
+      let spent = null;
+      if (memberIdOnRow && memberIdOnRow !== '-') {
+        try {
+          const mem = await require('./_kiosk-bill').memberFor({ member_id: memberIdOnRow });
+          const tier = require('./_kiosk-bill').memberTierOf(mem);
+          if (tier) {
+            spent = await require('./_pay').spendIncluded({
+              member_id: memberIdOnRow, member_tier: tier,
+              service_name: service || '', addon_names: [],
+              appt_date: date,
+            });
+          }
+        } catch (_) { /* a counter must never cost her the booking */ }
+      }
+
       /* The confirmation with both links — pay the deposit, send your
          inspiration. Sent here so an appointment Zahra takes by hand
          arrives exactly like one booked online, rather than with no money
@@ -2706,9 +2967,31 @@ module.exports = async function (req, res) {
 
     if (method === 'DELETE' && action === 'appt') {
       const { id } = req.body || {};
+
+      /* An included visit this booking spent goes back to the member before
+         the row is gone. Read first, because once the row is deleted there
+         is nothing left to say whose membership it drew on — and a member
+         silently losing a visit to a cancellation is the kind of thing
+         nobody notices until they are owed three. */
+      let gaveBack = null;
+      try {
+        const a = await queryOne(
+          'SELECT member_id, service, date FROM team_appointments WHERE id=?', [Number(id)]);
+        if (a && a.member_id && a.member_id !== '-') {
+          const kb = require('./_kiosk-bill');
+          const tier = kb.memberTierOf(await kb.memberFor({ member_id: a.member_id }));
+          if (tier) {
+            gaveBack = await require('./_pay').refundIncluded({
+              member_id: a.member_id, member_tier: tier,
+              service_name: a.service || '', addon_names: [], appt_date: a.date,
+            });
+          }
+        }
+      } catch (_) {}
+
       await execute('DELETE FROM team_appointments WHERE id=?', [Number(id)]);
       await execute('DELETE FROM team_chat WHERE appointment_id=?', [Number(id)]);
-      return res.json({ ok: true });
+      return res.json({ ok: true, included_returned: !!(gaveBack && gaveBack.refunded) });
     }
 
     // ── CHAT (owner oversight — read any thread, post as owner) ──
