@@ -154,13 +154,40 @@ async function apptRow(id) {
     + 'LEFT JOIN team_members m ON m.id = a.team_member_id WHERE a.id = ?', [Number(id)]);
 }
 
+/* Money she sent back against a visit while the rest of that charge still
+   stands. It is her saying the price was something else — they skipped the
+   art, she knocked something off — so it comes off what the visit is worth
+   and not just off what has been collected. A charge sent back in its
+   entirety is excluded: that one never happened, and the visit is owed in
+   full again. */
+async function adjustmentsFor(apptIds) {
+  const ids = Array.from(new Set((apptIds || []).map(Number).filter(Boolean)));
+  if (!ids.length) return {};
+  let rows = [];
+  try {
+    rows = await query(
+      'SELECT appointment_id, amount_cents, refunded_cents FROM card_charges '
+      + "WHERE outcome = 'paid' AND COALESCE(refunded_cents,0) > 0 "
+      + 'AND appointment_id IN (' + ids.map(() => '?').join(',') + ')', ids);
+  } catch (_) { return {}; }
+  const out = {};
+  for (const r of rows || []) {
+    const back = money(r.refunded_cents);
+    if (back >= money(r.amount_cents)) continue;   // undone entirely — it never happened
+    const k = String(r.appointment_id);
+    out[k] = (out[k] || 0) + back;
+  }
+  return out;
+}
+
 /* What one visit is worth, what has landed against it, and what is left. */
-async function priceVisit(r) {
+async function priceVisit(r, adjust) {
   const bill = require('./_kiosk-bill');
   let b = null;
   try { b = await bill.billFor(apptShape(r)); } catch (_) {}
   const paid = money(r.paid_cents);
-  const outstanding = Math.max(0, money(b && b.remainder_cents) - paid);
+  const adjusted = money(adjust);
+  const outstanding = Math.max(0, money(b && b.remainder_cents) - paid - adjusted);
   return {
     id: Number(r.id),
     date: r.date || '',
@@ -182,6 +209,8 @@ async function priceVisit(r) {
        a number here on a past visit usually means it was settled at the
        desk and never written down. */
     outstanding_cents: outstanding,
+    // What she knocked off by sending part of a charge back.
+    adjusted_cents: adjusted,
     // Whether anything at all is known about money on this visit.
     payment_recorded: !!(paid || money(b && b.deposit_taken_cents)),
     balance_recorded: paid > 0,
@@ -362,8 +391,9 @@ async function personDetail({ email, phone }) {
     } catch (_) {}
   }
 
+  const adj = await adjustmentsFor((rows || []).map(r => r.id));
   const visits = [];
-  for (const r of rows || []) visits.push(await priceVisit(r));
+  for (const r of rows || []) visits.push(await priceVisit(r, adj[String(r.id)]));
 
   let memberId = '';
   try {
@@ -480,7 +510,8 @@ async function doCharge(opts) {
     /* Re-priced here, so the figure on the row is never a stale one: the
        guard against a tab left open while the client paid, the price
        changed, or her membership covered it after all. */
-    const v = await priceVisit(appt);
+    const adj = await adjustmentsFor([apptId]);
+    const v = await priceVisit(appt, adj[String(apptId)]);
 
     /* She has typed over it. They added a repair, or skipped the art and
        kept them nude — the visit's price and what they owe for it are two
@@ -985,5 +1016,6 @@ module.exports.doRefund = doRefund;
 module.exports.history = history;
 module.exports.applyToAppointment = applyToAppointment;
 module.exports.priceVisit = priceVisit;
+module.exports.adjustmentsFor = adjustmentsFor;
 module.exports.apptShape = apptShape;
 module.exports.TYPO_CEILING = TYPO_CEILING;

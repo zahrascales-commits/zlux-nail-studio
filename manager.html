@@ -9966,7 +9966,10 @@ function chgDetailHtml(p){
 
     + (settled.length
         ? '<div style="font-size:0.72rem;color:var(--muted);margin-top:0.7rem">Settled: '
-          + settled.map(v => esc(chgDay(v.date)) + ' ' + esc(v.service)).join(' · ') + '</div>'
+          + settled.map(v => esc(chgDay(v.date)) + ' ' + esc(v.service)
+              + (v.paid_cents ? ' ' + chgMoney(v.paid_cents) : '')
+              + (v.adjusted_cents ? ' (' + chgMoney(v.adjusted_cents) + ' sent back)' : ''))
+            .join(' · ') + '</div>'
         : '');
 }
 
@@ -10015,6 +10018,7 @@ function chgVisitRow(v, email){
         + (v.past ? '' : ' · still to come')
         + (v.deposit_taken_cents ? ' · ' + chgMoney(v.deposit_taken_cents) + ' deposit in' : '')
         + (v.covered_by_membership ? ' · ' + chgMoney(v.covered_by_membership) + ' on their membership' : '')
+        + (v.adjusted_cents ? ' · ' + chgMoney(v.adjusted_cents) + ' sent back' : '')
       + '</div>'
       /* The studio takes the balance at the desk and almost never writes it
          down, so on a visit that has already happened this figure means
