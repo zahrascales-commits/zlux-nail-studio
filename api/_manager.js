@@ -869,6 +869,12 @@ module.exports = async function (req, res) {
         // How it was decided, so she can see it was not a guess — and
         // overrule it when it was the wrong Maria.
         matched_by: member.matched_by || '',
+        /* Who this actually is. On a membership covering two people the
+           holder's name is not the name of the person booking, and showing
+           one as the other reads as a mismatch. */
+        matched_name: member.matched_name || member.full_name || '',
+        partner_matched: !!member.partner_matched,
+        holder_name: member.full_name || '',
         no_deposit_ever: neverDeposits,
         free_left: freeLeft,
         deposit_cents: due,

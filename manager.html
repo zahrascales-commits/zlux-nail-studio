@@ -6114,6 +6114,11 @@ async function memCheck(){
 }
 
 const HOWMATCHED = {
+  // A membership that covers two people: matched on the second person's
+  // own details, not the holder's.
+  partner_email: 'their own email, on a shared membership',
+  partner_phone: 'their own number, on a shared membership',
+  partner_name:  'their name, on a shared membership',
   member_id: 'you picked them',
   email: 'matched on their email',
   phone: 'matched on their phone number',
@@ -6126,12 +6131,20 @@ function memCheckLine(d){
   if(d.is_member){
     const how = HOWMATCHED[d.matched_by] || '';
     // A match on a name or a number is a judgement. She gets to overrule it.
-    const soft = d.matched_by === 'phone' || d.matched_by === 'name';
+    const soft = d.matched_by === 'phone' || d.matched_by === 'name'
+      || d.matched_by === 'partner_phone' || d.matched_by === 'partner_name';
     return '<div style="border:1px solid rgba(196,168,130,0.55);background:rgba(196,168,130,0.09);'
       + 'border-radius:10px;padding:0.6rem 0.75rem">'
       + '<div style="font-weight:700;color:var(--gold);letter-spacing:0.04em">\u2726 MEMBER \u00b7 '
         + esc(d.tier_label || d.tier) + '</div>'
-      + '<div style="margin-top:0.2rem">' + esc(d.full_name || '') + (how ? ' \u00b7 <i style="font-style:normal;color:var(--muted)">' + how + '</i>' : '') + '</div>'
+      + '<div style="margin-top:0.2rem">' + esc(d.matched_name || d.full_name || '')
+        + (how ? ' \u00b7 <i style="font-style:normal;color:var(--muted)">' + how + '</i>' : '') + '</div>'
+      /* Two people on one membership: say whose it is, so the holder's name
+         appearing is explained rather than looking like the wrong match. */
+      + (d.partner_matched && d.holder_name
+          ? '<div style="margin-top:0.15rem;color:var(--muted);font-size:0.78rem">on '
+            + esc(d.holder_name) + '\u2019s membership</div>'
+          : '')
       + '<div style="margin-top:0.3rem">' + esc(d.why || '') + '</div>'
       + (d.deposit_cents > 0
           ? '<div style="margin-top:0.25rem;color:#B54708">Deposit ' + depMoney(d.deposit_cents) + '</div>'
