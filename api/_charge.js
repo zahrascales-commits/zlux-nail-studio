@@ -173,7 +173,15 @@ async function priceVisit(r) {
     paid_cents: paid,
     tip_cents: money(r.tip_cents),
     pay_method: r.pay_method || '',
+    /* What is left on the menu price after a deposit and anything recorded.
+       Named for what it is: a figure to charge if she wants to, NOT a debt.
+       The studio records deposits and almost never records the balance, so
+       a number here on a past visit usually means it was settled at the
+       desk and never written down. */
     outstanding_cents: outstanding,
+    // Whether anything at all is known about money on this visit.
+    payment_recorded: !!(paid || money(b && b.deposit_taken_cents)),
+    balance_recorded: paid > 0,
     is_member: !!(b && b.is_member),
     tier_label: (b && b.tier_label) || '',
     past: String(r.date || '') <= todayLA(),
@@ -228,7 +236,7 @@ async function peopleList() {
           AND COALESCE(paid_cents,0) = 0
           AND LOWER(COALESCE(status,'scheduled')) <> 'cancelled'
         GROUP BY lower(COALESCE(client_email,''))`,
-      [shiftDay(todayLA(), -60), shiftDay(todayLA(), 60)]);
+      [todayLA(), shiftDay(todayLA(), 45)]);
     for (const r of rows || []) unpaid[r.e] = Number(r.n) || 0;
   } catch (_) {}
 
@@ -308,8 +316,8 @@ async function toSettle(limit) {
       + "  AND COALESCE(a.paid_cents,0) = 0 "
       + "  AND LOWER(COALESCE(a.status,'scheduled')) <> 'cancelled' "
       + "  AND COALESCE(a.client_email,'') <> '' "
-      + 'ORDER BY a.date DESC, a.time DESC LIMIT ?',
-      [shiftDay(todayLA(), -21), shiftDay(todayLA(), 21), cap]);
+      + 'ORDER BY a.date, a.time LIMIT ?',
+      [todayLA(), shiftDay(todayLA(), 45), cap]);
   } catch (_) { return { visits: [] }; }
 
   const out = [];

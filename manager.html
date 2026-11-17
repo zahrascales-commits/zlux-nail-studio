@@ -1531,9 +1531,12 @@
         <div>
           <div class="page-title">Charge A Card</div>
           <div class="page-desc">
-            Everyone with a card saved. Tap somebody to see their visits and what is still owed on each,
-            or charge any amount for anything. They get a receipt the moment it goes through, and every
-            charge here can be undone in full.
+            Everyone with a card saved. Tap somebody for their visits and the price of each, or charge any
+            amount for anything. They get a receipt the moment it goes through, and every charge can be
+            undone in full.
+            <br><b>One thing to know:</b> the studio records deposits but almost never records the balance,
+            because you take that at the desk. So a figure on a past visit means <i>nothing is written down
+            here</i> &mdash; not that they still owe it. Check before charging anything older than today.
           </div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="loadCharge()">↻ Refresh</button>
@@ -9757,15 +9760,16 @@ function renderCharge(){
     '<div class="cards">'
       + statCard(CHG.people.length, 'People you can charge')
       + statCard(chgMoney(CHG.taken), 'Taken this way, last 60 days')
-      + statCard(CHG.settle.length, 'Visits waiting to be settled')
+      + statCard(CHG.settle.length, 'Balances due today or ahead')
     + '</div>'
 
     // ── the one-tap charges ──
     + (CHG.settle.length ? (
         '<div class="page-head" style="margin-top:2rem"><div>'
-        + '<div class="page-title" style="font-size:1.05rem">Waiting to be settled</div>'
-        + '<div class="page-desc">Priced the same way the booking page and the front desk price them. '
-          + 'The amount on the button is what gets taken.</div>'
+        + '<div class="page-title" style="font-size:1.05rem">Today and coming up</div>'
+        + '<div class="page-desc">Priced the same way the booking page and the front desk price them, '
+          + 'with any deposit already taken knocked off. These have not happened yet, so nothing has '
+          + 'been paid at the desk &mdash; the amount on the button is what gets taken.</div>'
         + '</div></div>'
         + CHG.settle.map(chgSettleRow).join('')
       ) : '')
@@ -9871,6 +9875,7 @@ function chgDetailHtml(p){
   }
 
   const owing = (d.visits || []).filter(v => !v.cancelled && v.outstanding_cents > 0);
+  const older = owing.filter(v => v.past && !v.balance_recorded).length;
   const settled = (d.visits || []).filter(v => !v.cancelled && !v.outstanding_cents).slice(0, 4);
 
   /* What they were told when the card was saved. She should be able to see
@@ -9886,7 +9891,13 @@ function chgDetailHtml(p){
   return mandate
     + (owing.length
         ? owing.map(v => chgVisitRow(v, d.email)).join('')
-        : '<div class="ny-sub" style="padding:0.3rem 0 0.6rem">Nothing outstanding on their visits.</div>')
+          + (older
+              ? '<div style="font-size:0.72rem;color:var(--muted);margin-top:0.45rem">'
+                + older + ' of these already happened. The balance on a past visit is almost always '
+                + 'taken at the desk and not written down here, so treat the figure as a price, '
+                + 'not a bill.</div>'
+              : '')
+        : '<div class="ny-sub" style="padding:0.3rem 0 0.6rem">Nothing left on their visits.</div>')
 
     // ── anything else ──
     + '<div style="border-top:1px solid var(--line);margin-top:0.5rem;padding-top:0.7rem">'
@@ -9922,7 +9933,7 @@ function chgSettleRow(v){
           + esc(v.service || 'Visit') + ' · ' + esc(chgDay(v.date))
           + (v.time ? ' at ' + esc(v.time) : '')
           + (v.artist ? ' · ' + esc(v.artist) : '')
-          + (v.past ? '' : ' · still to come')
+          + (v.past ? ' · today' : ' · still to come')
           + (v.deposit_taken_cents ? ' · ' + chgMoney(v.deposit_taken_cents) + ' deposit in' : '')
           + (v.covered_by_membership ? ' · ' + chgMoney(v.covered_by_membership) + ' on their membership' : '')
         + '</div>'
@@ -9954,8 +9965,18 @@ function chgVisitRow(v, email){
         + (v.deposit_taken_cents ? ' · ' + chgMoney(v.deposit_taken_cents) + ' deposit in' : '')
         + (v.covered_by_membership ? ' · ' + chgMoney(v.covered_by_membership) + ' on their membership' : '')
       + '</div>'
+      /* The studio takes the balance at the desk and almost never writes it
+         down, so on a visit that has already happened this figure means
+         "nothing recorded", which is not the same as "not paid". Saying so
+         is the difference between collecting a balance and charging
+         somebody twice. */
+      + (v.past && !v.balance_recorded
+          ? '<div style="font-size:0.72rem;color:#93370D;margin-top:0.15rem">'
+            + 'No balance recorded here \u2014 check it was not paid at the desk.</div>'
+          : '')
     + '</div>'
-    + '<button class="btn btn-gold btn-sm" data-appt="' + v.id + '" '
+    + '<button class="btn ' + (v.past && !v.balance_recorded ? 'btn-ghost' : 'btn-gold') + ' btn-sm" '
+      + 'data-appt="' + v.id + '" '
       + 'onclick="chargeVisit(' + v.id + ',this)">Charge ' + chgMoney(v.outstanding_cents) + '</button>'
   + '</div>';
 }
