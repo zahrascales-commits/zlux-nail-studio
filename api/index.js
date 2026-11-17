@@ -99,6 +99,7 @@ app.all('/api/money',            require('./_money'));
 app.all('/api/pay-handles',      require('./_pay-handles'));
 app.all('/api/save-card',        require('./_save-card'));
 app.all('/api/cards',            require('./_cards'));
+app.all('/api/charge',           require('./_charge'));
 app.all('/api/reconcile',        require('./_reconcile'));
 
 /* Anything her rules have queued and is now due. Runs at most once a

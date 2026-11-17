@@ -166,6 +166,11 @@ async function owing() {
          LEFT JOIN team_members m ON m.id = a.team_member_id
         WHERE a.date >= ?
           AND COALESCE(a.deposit_paid,0) = 0
+          /* Somebody whose card has already been charged is not somebody
+             to chase for a deposit. The balance can be taken from a card on
+             file now, which leaves paid_cents set and deposit_paid at zero
+             — and this would have gone on emailing them "last chance". */
+          AND COALESCE(a.paid_cents,0) = 0
           AND COALESCE(a.checked_out_ts,0) = 0
           AND LOWER(COALESCE(a.status,'scheduled')) <> 'cancelled'
         ORDER BY a.date, a.time`, [today]);

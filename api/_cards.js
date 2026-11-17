@@ -51,8 +51,12 @@ async function cardsByEmail(sk) {
   /* A customer is not the same as a card. Somebody can have a customer
      record from a one-off payment and nothing saved on it, which is exactly
      the state that made this necessary. */
+  /* Ten at a time rather than one after another. Serially, four hundred
+     clients meant four hundred round trips to Stripe in a row, which is
+     most of the "this takes a few seconds" — and two screens now wait on
+     it. Stripe's own rate limit is comfortably above this. */
   const emails = Object.keys(out);
-  for (const email of emails) {
+  const lookup = async (email) => {
     try {
       const r = await fetch(
         'https://api.stripe.com/v1/payment_methods?type=card&limit=1&customer=' + out[email].customer,
@@ -67,6 +71,9 @@ async function cardsByEmail(sk) {
         };
       }
     } catch (_) {}
+  };
+  for (let i = 0; i < emails.length; i += 10) {
+    await Promise.all(emails.slice(i, i + 10).map(lookup));
   }
 
   return out;
@@ -118,10 +125,11 @@ module.exports = async function (req, res) {
         Add it once below and it is there for next time.
       </p>
       <p style="font-size:15px;line-height:1.7;color:#3a3027;margin:0 0 22px">
-        <strong>Nothing is charged now.</strong> Later, it covers the deposit on
-        appointments you book, so you never have to remember it — and we email you a
-        receipt the moment anything is taken. Your balance at the studio always needs
-        your signature.
+        <strong>Nothing is charged now.</strong> From then on it covers the deposit when you
+        book, and the balance of your visit if we settle it after you have left — so you never
+        have to remember it. We email you a receipt every single time, naming exactly what it
+        was for. Anything you pay at the desk you still sign for, and you can ask us to take
+        your card off at any time.
       </p>
       <a href="${link}" style="display:block;background:#0D0D0D;color:#B6A588;text-align:center;
         padding:16px 18px;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:2px;
@@ -182,3 +190,8 @@ module.exports = async function (req, res) {
     return res.status(500).json({ error: String(err.message || err) });
   }
 };
+
+/* The charge screen needs the same answer to "who has a card we can take
+   money from" as this one does, and asking Stripe twice in two different
+   ways is how two screens come to disagree about somebody's card. */
+module.exports.cardsByEmail = cardsByEmail;

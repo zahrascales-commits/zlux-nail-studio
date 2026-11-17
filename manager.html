@@ -1358,6 +1358,7 @@
         <button class="tab" data-tab="clients" onclick="showTab('clients')"><span class="nl">Clients</span></button>
         <button class="tab" data-tab="people" onclick="showTab('people')"><span class="nl">Members</span></button>
         <button class="tab" data-tab="cards" onclick="showTab('cards')"><span class="nl">Cards on file</span></button>
+        <button class="tab" data-tab="charge" onclick="showTab('charge')"><span class="nl">Charge a card</span><span class="nav-new">New</span></button>
         <button class="tab" data-tab="giftcards" onclick="showTab('giftcards')"><span class="nl">Gift cards</span></button>
         <button class="tab" data-tab="journeys" onclick="showTab('journeys')"><span class="nl">Nail journeys</span></button>
       </div>
@@ -1524,6 +1525,22 @@
     </section>
 
     <!-- MEMBERSHIPS — who they are, not how many -->
+    <!-- CHARGE A CARD ON FILE -->
+    <section class="panel" id="panel-charge">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Charge A Card</div>
+          <div class="page-desc">
+            Everyone with a card saved. Tap somebody to see their visits and what is still owed on each,
+            or charge any amount for anything. They get a receipt the moment it goes through, and every
+            charge here can be undone in full.
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadCharge()">↻ Refresh</button>
+      </div>
+      <div id="chg-body"><div class="ny-sub" style="padding:1rem;">Loading…</div></div>
+    </section>
+
     <section class="panel" id="panel-memberships">
       <div class="page-head">
         <div>
@@ -2032,7 +2049,7 @@
                 <section class="panel" id="panel-cards">
       <div class="page-head"><div>
         <div class="page-title">Cards on File</div>
-        <div class="page-desc">A saved card means checkout is one tap instead of digging through a bag with wet nails. Send anyone without one a link — nothing is charged, and nothing ever is without their signature at the desk.</div>
+        <div class="page-desc">A saved card means checkout is one tap instead of digging through a bag with wet nails. Send anyone without one a link &mdash; nothing is charged by it. To take money from a card that is already here, use <b>Charge a card</b>.</div>
       </div>
       <button class="btn btn-sm" onclick="loadCards()">↻ Refresh</button>
       </div>
@@ -3654,6 +3671,7 @@ const TAB_LOADERS = {
   schedule:   () => { renderCal(); loadBlocks(); loadDayHours(); renderPaydayCard(); },
   sales:      () => loadShowcaseCfg().then(loadSales),
   memberships: () => loadMemberships(false),
+  charge:     () => loadCharge(),
   deposits:   () => loadDeposits(),
   inventory:  () => loadInventory(),
   messages:   () => loadThreads(),
@@ -9682,6 +9700,328 @@ let MAILLOG = [];
    membership" reaches every future member automatically; a list of names
    only ever reaches the names already on it. */
 let AE = { rules: [], triggers: [], audiences: [], fields: [], editing: null };
+
+
+/* ── CHARGING A CARD ON FILE ─────────────────────────────────────────────
+   There is no confirm dialog here, by her choice. What stands in its place:
+   the amount is written on the button, the button dies the instant it is
+   pressed, and anything charged can be sent back in one tap. */
+let CHG = { people: [], settle: [], charges: [], taken: 0, open: '', detail: null, q: '' };
+
+// Cents, to the cent. The money() helper above rounds to whole dollars,
+// which is fine for a revenue chart and wrong for a receipt.
+function chgMoney(c){ return '$' + (Math.round(Number(c)||0)/100).toFixed(2); }
+
+function chgDay(ymd){
+  if(!ymd) return '';
+  const d = new Date(ymd + 'T12:00:00');
+  if(isNaN(d)) return ymd;
+  return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+}
+
+async function loadCharge(){
+  const el = document.getElementById('chg-body');
+  if(!el) return;
+  el.innerHTML = '<div class="empty">Checking with Stripe — this takes a few seconds…</div>';
+  try{
+    const [p, s, h] = await Promise.all([
+      api('/api/charge?action=people').then(r => r.json()),
+      api('/api/charge?action=settle').then(r => r.json()),
+      api('/api/charge?action=history&limit=40').then(r => r.json()),
+    ]);
+    if(p.error) throw new Error(p.error);
+    CHG.people  = p.people || [];
+    CHG.stripe  = p.stripe_ok !== false;
+    CHG.settle  = (s && s.visits) || [];
+    CHG.charges = (h && h.charges) || [];
+    CHG.taken   = (h && h.taken_cents) || 0;
+  }catch(err){
+    el.innerHTML = emptyBox('⚠️','Could not load: ' + esc(err.message));
+    return;
+  }
+  renderCharge();
+}
+
+function renderCharge(){
+  const el = document.getElementById('chg-body');
+  if(!el) return;
+
+  if(!CHG.stripe){
+    el.innerHTML = emptyBox('🔒','Card payments are not switched on, so there is nothing to charge.');
+    return;
+  }
+
+  const today = CHG.charges.filter(c => c.paid && !c.refunded);
+
+  el.innerHTML =
+    '<div class="cards">'
+      + statCard(CHG.people.length, 'People you can charge')
+      + statCard(chgMoney(CHG.taken), 'Taken this way, last 60 days')
+      + statCard(CHG.settle.length, 'Visits waiting to be settled')
+    + '</div>'
+
+    // ── the one-tap charges ──
+    + (CHG.settle.length ? (
+        '<div class="page-head" style="margin-top:2rem"><div>'
+        + '<div class="page-title" style="font-size:1.05rem">Waiting to be settled</div>'
+        + '<div class="page-desc">Priced the same way the booking page and the front desk price them. '
+          + 'The amount on the button is what gets taken.</div>'
+        + '</div></div>'
+        + CHG.settle.map(chgSettleRow).join('')
+      ) : '')
+
+    // ── everybody ──
+    + '<div class="page-head" style="margin-top:2rem"><div>'
+      + '<div class="page-title" style="font-size:1.05rem">Everyone with a card on file</div>'
+      + '<div class="page-desc">Tap somebody to see their visits, or to charge any amount.</div>'
+    + '</div></div>'
+    + '<div class="field" style="max-width:340px">'
+      + '<input id="chg-q" placeholder="Search a name, email or number" '
+      + 'value="' + esc(CHG.q || '') + '" oninput="chgFilter(this.value)" />'
+    + '</div>'
+    + '<div id="chg-people">' + chgPeopleHtml() + '</div>'
+
+    // ── the record ──
+    + '<div class="page-head" style="margin-top:2rem"><div>'
+      + '<div class="page-title" style="font-size:1.05rem">Charged from here</div>'
+      + '<div class="page-desc">Every one of these can be sent back in full. '
+        + 'Undo also puts the visit back exactly as it was.</div>'
+    + '</div></div>'
+    + (CHG.charges.length ? CHG.charges.map(chgHistoryRow).join('')
+        : '<div class="empty">Nothing charged from here yet.</div>');
+}
+
+function chgFilter(v){
+  CHG.q = v || '';
+  const box = document.getElementById('chg-people');
+  if(box) box.innerHTML = chgPeopleHtml();
+}
+
+function chgPeopleHtml(){
+  const q = String(CHG.q || '').trim().toLowerCase();
+  const digits = s => String(s||'').replace(/[^0-9]/g,'');
+  let list = CHG.people;
+  if(q){
+    const qd = digits(q);
+    list = list.filter(p =>
+      String(p.name||'').toLowerCase().indexOf(q) >= 0
+      || String(p.email||'').toLowerCase().indexOf(q) >= 0
+      || (qd.length >= 3 && digits(p.phone).indexOf(qd) >= 0));
+  }
+  if(!list.length) return '<div class="empty">' + (q ? 'Nobody by that name with a card on file.' : 'Nobody has a card saved yet.') + '</div>';
+
+  const shown = q ? list : list.slice(0, 40);
+  return shown.map(chgPersonRow).join('')
+    + (!q && list.length > shown.length
+        ? '<div class="ny-sub" style="padding:0.6rem 0">' + (list.length - shown.length)
+          + ' more — search to find them.</div>'
+        : '');
+}
+
+function chgPersonRow(p){
+  const isOpen = CHG.open === p.email;
+  return '<div class="member-card" id="chgp-' + esc(p.email) + '" style="--mc:' + (isOpen ? '#8B6A3E' : '#067647') + '">'
+    + '<div class="mc-top" style="cursor:pointer" onclick="chgOpen(\'' + esc(p.email) + '\')">'
+      + '<div style="flex:1;min-width:0">'
+        + '<div class="mc-name">' + esc(p.name || '(no name)') + '</div>'
+        + '<div style="font-size:0.78rem;color:var(--muted);margin-top:0.15rem">'
+          + esc(p.card)
+          + (p.tier ? ' · ' + esc(p.tier === 'BLACK_CARD' ? 'Black Card' : p.tier.charAt(0) + p.tier.slice(1).toLowerCase()) : '')
+          + (p.on_membership_of ? ' · on ' + esc(p.on_membership_of) + '\u2019s membership' : '')
+          + ' · ' + esc(p.email)
+        + '</div>'
+      + '</div>'
+      + (p.unpaid_visits
+          ? '<span class="status-pill" style="background:#FEF0C7;color:#93370D">'
+            + p.unpaid_visits + ' to settle</span>'
+          : '')
+      + '<span style="color:var(--muted);margin-left:0.6rem">' + (isOpen ? '\u2212' : '+') + '</span>'
+    + '</div>'
+    + (isOpen ? '<div style="padding:0.2rem 0 0.4rem">' + chgDetailHtml(p) + '</div>' : '')
+  + '</div>';
+}
+
+async function chgOpen(email){
+  if(CHG.open === email){ CHG.open = ''; CHG.detail = null; renderCharge(); return; }
+  CHG.open = email; CHG.detail = { loading: true };
+  renderCharge();
+  try{
+    const d = await (await api('/api/charge?action=person&email=' + encodeURIComponent(email))).json();
+    CHG.detail = d;
+  }catch(err){ CHG.detail = { error: err.message }; }
+  renderCharge();
+}
+
+function chgDetailHtml(p){
+  const d = CHG.detail;
+  if(!d || d.loading) return '<div class="ny-sub" style="padding:0.5rem 0">Looking up their visits…</div>';
+  if(d.error) return '<div class="ny-sub" style="padding:0.5rem 0">Could not load: ' + esc(d.error) + '</div>';
+
+  if(!d.can_charge){
+    return '<div class="ny-sub" style="padding:0.5rem 0">'
+      + 'No card we can charge for them right now'
+      + (d.why ? ' (' + esc(d.why) + ')' : '') + '.</div>';
+  }
+
+  const owing = (d.visits || []).filter(v => !v.cancelled && v.outstanding_cents > 0);
+  const settled = (d.visits || []).filter(v => !v.cancelled && !v.outstanding_cents).slice(0, 4);
+
+  /* What they were told when the card was saved. She should be able to see
+     it before she decides, which is the same thing the deposit dialog
+     does. */
+  const mandate = d.mandate && d.mandate.kind === 'saved_by_link'
+    ? '<div style="background:#FFFAEB;border:1px solid #FEDF89;padding:0.55rem 0.7rem;border-radius:6px;'
+      + 'font-size:0.74rem;color:#93370D;margin:0 0 0.6rem">'
+      + 'They added this card through the "save my card" link. Worth a word first for anything '
+      + 'they are not expecting.</div>'
+    : '';
+
+  return mandate
+    + (owing.length
+        ? owing.map(v => chgVisitRow(v, d.email)).join('')
+        : '<div class="ny-sub" style="padding:0.3rem 0 0.6rem">Nothing outstanding on their visits.</div>')
+
+    // ── anything else ──
+    + '<div style="border-top:1px solid var(--line);margin-top:0.5rem;padding-top:0.7rem">'
+      + '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.45rem">Charge something else</div>'
+      + '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:flex-end">'
+        + '<div class="field" style="margin:0;width:110px"><label class="fld-label">Amount</label>'
+          + '<input id="chg-amt" placeholder="0.00" inputmode="decimal" /></div>'
+        + '<div class="field" style="margin:0;flex:1;min-width:160px"><label class="fld-label">What for</label>'
+          + '<input id="chg-why" placeholder="e.g. Repair on two nails" /></div>'
+        + '<button class="btn btn-gold" id="chg-free-btn" onclick="chargeFree(\'' + esc(d.email) + '\')">Charge</button>'
+      + '</div>'
+      + '<div id="chg-free-msg" style="font-size:0.74rem;color:var(--muted);margin-top:0.4rem"></div>'
+    + '</div>'
+
+    + (settled.length
+        ? '<div style="font-size:0.72rem;color:var(--muted);margin-top:0.7rem">Settled: '
+          + settled.map(v => esc(chgDay(v.date)) + ' ' + esc(v.service)).join(' · ') + '</div>'
+        : '');
+}
+
+function chgVisitRow(v, email){
+  const id = 'chgv-' + v.id;
+  return '<div id="' + id + '" style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;'
+    + 'padding:0.5rem 0;border-bottom:1px solid var(--line)">'
+    + '<div style="flex:1;min-width:150px">'
+      + '<div style="font-size:0.85rem;color:var(--ink)">' + esc(v.service || 'Visit') + '</div>'
+      + '<div style="font-size:0.72rem;color:var(--muted)">'
+        + esc(chgDay(v.date)) + (v.time ? ' · ' + esc(v.time) : '')
+        + (v.artist ? ' · ' + esc(v.artist) : '')
+        + (v.past ? '' : ' · still to come')
+        + (v.deposit_taken_cents ? ' · ' + chgMoney(v.deposit_taken_cents) + ' deposit in' : '')
+        + (v.covered_by_membership ? ' · ' + chgMoney(v.covered_by_membership) + ' on their membership' : '')
+      + '</div>'
+    + '</div>'
+    + '<button class="btn btn-gold btn-sm" data-appt="' + v.id + '" '
+      + 'onclick="chargeVisit(' + v.id + ',this)">Charge ' + chgMoney(v.outstanding_cents) + '</button>'
+  + '</div>';
+}
+
+function chgHistoryRow(c){
+  const when = c.ts ? new Date(c.ts).toLocaleString('en-US',
+    { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) : '';
+  const bad = !c.paid;
+  return '<div class="member-card" id="chgh-' + c.id + '" style="--mc:'
+    + (bad ? '#B42318' : (c.refunded ? '#8B7355' : '#067647')) + '">'
+    + '<div class="mc-top"><div style="flex:1;min-width:0">'
+      + '<div class="mc-name">' + esc(c.name || c.email || 'Someone')
+        + ' · ' + chgMoney(c.amount_cents) + '</div>'
+      + '<div style="font-size:0.76rem;color:var(--muted);margin-top:0.15rem">'
+        + esc(c.reason || 'Studio charge') + ' · ' + esc(c.card) + ' · ' + esc(when)
+        + (c.tip_cents ? ' · includes a ' + chgMoney(c.tip_cents) + ' tip' : '')
+      + '</div>'
+      + (bad ? '<div style="font-size:0.74rem;color:#B42318;margin-top:0.2rem">'
+          + esc(c.outcome) + '</div>' : '')
+    + '</div>'
+    + (c.refunded
+        ? '<span class="status-pill" style="background:#F2F4F7;color:#475467">sent back</span>'
+        : (c.paid
+            ? '<button class="btn btn-ghost btn-sm" onclick="undoCharge(' + c.id + ',this)">Undo</button>'
+            : ''))
+    + '</div></div>';
+}
+
+/* ── TAKING IT ──────────────────────────────────────────────────────────
+   One press, one charge. The button is disabled before the request leaves,
+   and the server will not take the same charge twice even if it does. */
+async function chargeVisit(apptId, btn){
+  if(!btn || btn.disabled) return;
+  const was = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Charging…';
+  try{
+    const d = await (await api('/api/charge?action=charge', { method:'POST',
+      body: JSON.stringify({ action:'charge', appointment_id: apptId }) })).json();
+    if(!d.ok){ btn.disabled = false; btn.textContent = was; toast(d.message || d.error || 'That did not go through'); return; }
+    btn.textContent = d.already ? 'Already charged' : 'Charged ' + chgMoney(d.amount_cents) + ' ✦';
+    toast(d.already ? d.message : (d.receipt && d.receipt.sent
+      ? chgMoney(d.amount_cents) + ' taken · receipt emailed'
+      : chgMoney(d.amount_cents) + ' taken'));
+    setTimeout(loadCharge, 900);
+  }catch(err){
+    btn.disabled = false; btn.textContent = was;
+    toast('Could not charge: ' + err.message);
+  }
+}
+
+/* Anything that is not a visit. The only place a typed number becomes a
+   charge, so it is also the only place the thousand-dollar question is
+   asked. */
+let CHGBIG = '';
+async function chargeFree(email){
+  const btn  = document.getElementById('chg-free-btn');
+  const amtI = document.getElementById('chg-amt');
+  const whyI = document.getElementById('chg-why');
+  const msg  = document.getElementById('chg-free-msg');
+  if(!btn || btn.disabled) return;
+
+  const cents = Math.round(parseFloat(String(amtI && amtI.value || '').replace(/[^0-9.]/g,'')) * 100);
+  const why = String(whyI && whyI.value || '').trim();
+  if(!(cents > 0)){ if(msg) msg.textContent = 'How much?'; return; }
+  if(!why){ if(msg) msg.textContent = 'Say what it is for — it goes on their receipt.'; return; }
+
+  const key = email + '|' + cents + '|' + why;
+  const payload = { action:'charge', email: email, amount_cents: cents, reason: why };
+  if(CHGBIG === key) payload.allow_large = true;
+
+  btn.disabled = true; btn.textContent = 'Charging…';
+  if(msg) msg.textContent = '';
+  try{
+    const d = await (await api('/api/charge?action=charge', { method:'POST',
+      body: JSON.stringify(payload) })).json();
+    if(!d.ok){
+      btn.disabled = false; btn.textContent = 'Charge';
+      if(d.why === 'too_big'){ CHGBIG = key; if(msg) msg.textContent = d.message; }
+      else { if(msg) msg.textContent = d.message || d.error || 'That did not go through'; }
+      return;
+    }
+    CHGBIG = '';
+    btn.textContent = 'Charged ✦';
+    toast(chgMoney(d.amount_cents) + ' taken'
+      + (d.receipt && d.receipt.sent ? ' · receipt emailed' : ''));
+    setTimeout(loadCharge, 900);
+  }catch(err){
+    btn.disabled = false; btn.textContent = 'Charge';
+    if(msg) msg.textContent = 'Could not charge: ' + err.message;
+  }
+}
+
+/* This is what stands in for a confirm screen. */
+async function undoCharge(id, btn){
+  if(!btn || btn.disabled) return;
+  btn.disabled = true; btn.textContent = 'Sending back…';
+  try{
+    const d = await (await api('/api/charge?action=refund', { method:'POST',
+      body: JSON.stringify({ action:'refund', charge_id: id }) })).json();
+    if(!d.ok){ btn.disabled = false; btn.textContent = 'Undo'; toast(d.why || 'Could not send it back'); return; }
+    toast(chgMoney(d.refunded_cents) + ' sent back');
+    setTimeout(loadCharge, 900);
+  }catch(err){
+    btn.disabled = false; btn.textContent = 'Undo';
+    toast('Could not send it back: ' + err.message);
+  }
+}
 
 
 /* ── CARDS ON FILE ───────────────────────────────────────────────────────
