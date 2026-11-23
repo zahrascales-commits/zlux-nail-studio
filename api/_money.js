@@ -84,25 +84,49 @@ async function stripeCollected(sk, sinceSec, LIST) {
   return { gross, refunded, net: gross - refunded, count, byMonth, bySource };
 }
 
-/* Cash rung up at the front desk. Never in Stripe, so it would otherwise be
-   invisible — and it is real money she is holding. */
+/* Money that never went through Stripe: cash, Zelle, Venmo, Cash App, her
+   card reader. Real money she is holding, invisible to the card totals.
+
+   Two places write it. kiosk_log is the client-facing till, used with the
+   client standing at the iPad. desk_payments is the one-tap button in
+   Studio Manager, which is the one she actually uses, because she is the
+   one who knows the money arrived. Counting only the first is how a month
+   of real cash reads as zero. */
 async function cashCollected(sinceMs) {
+  const byMonth = {};
+  const byMethod = {};
+  let total = 0, count = 0;
+
+  const add = (cents, ts, method) => {
+    const c = money(cents);
+    if (c <= 0) return;
+    total += c; count++;
+    const when = new Date(Number(ts));
+    const key = when.getFullYear() + '-' + pad(when.getMonth() + 1);
+    byMonth[key] = (byMonth[key] || 0) + c;
+    const m = String(method || 'cash').toLowerCase();
+    byMethod[m] = (byMethod[m] || 0) + c;
+  };
+
   try {
     const rows = await query(
       "SELECT amount_cents, ts FROM kiosk_log WHERE type='checkout' AND method='cash' AND ts >= ?",
       [sinceMs]);
-    const byMonth = {};
-    let total = 0;
-    for (const r of rows) {
-      const c = money(r.amount_cents);
-      if (c <= 0) continue;
-      total += c;
-      const when = new Date(Number(r.ts));
-      const key = when.getFullYear() + '-' + pad(when.getMonth() + 1);
-      byMonth[key] = (byMonth[key] || 0) + c;
-    }
-    return { total, byMonth, count: rows.length };
-  } catch (_) { return { total: 0, byMonth: {}, count: 0 }; }
+    for (const r of rows) add(r.amount_cents, r.ts, 'cash');
+  } catch (_) {}
+
+  /* The one-tap button. A voided payment stops counting, and the card
+     reader is excluded here because Stripe already counted it — adding it
+     again would double every card payment taken at the desk. */
+  try {
+    const rows = await query(
+      'SELECT amount_cents, tip_cents, method, ts FROM desk_payments '
+      + "WHERE ts >= ? AND COALESCE(voided_ts,0) = 0 AND LOWER(COALESCE(method,'cash')) <> 'card'",
+      [sinceMs]);
+    for (const r of rows) add(money(r.amount_cents) + money(r.tip_cents), r.ts, r.method);
+  } catch (_) {}
+
+  return { total, byMonth, byMethod, count };
 }
 
 /* Booked but not paid for. Deliberately reported on its own and never added
@@ -222,3 +246,10 @@ module.exports = async function (req, res) {
     return res.status(500).json({ error: String(err.message || err) });
   }
 };
+
+/* The monthly recap is built on exactly these figures, so the headline on
+   the dashboard and the headline in her inbox can never disagree. */
+module.exports.stripeCollected = stripeCollected;
+module.exports.cashCollected = cashCollected;
+module.exports.outstanding = outstanding;
+module.exports.studioNow = studioNow;

@@ -459,3 +459,10 @@ module.exports = async function (req, res) {
     return res.status(500).json({ error: String(err.message || err) });
   }
 };
+
+/* The monthly recap counts visits and people from exactly this data, so a
+   report she downloads and a recap she is emailed can never disagree about
+   what the month held. */
+module.exports.loadRange = loadRange;
+module.exports.withoutMirrors = withoutMirrors;
+module.exports.sameApptKey = sameApptKey;

@@ -419,11 +419,27 @@ async function personDetail({ email, phone }) {
 
 /* ── WRITING THE MONEY ONTO THE VISIT ───────────────────────────────── */
 
-/* The appointment's money is the sum of the charges standing against it,
-   on top of whatever was already there before this tool first touched it.
-   Re-summed every time, so a refund is simply a charge that stopped
-   counting, and nothing is ever added twice. */
+/* The appointment's money is the sum of everything still standing against
+   it — card charges here, and cash, Zelle or card-reader payments in
+   desk_payments — on top of whatever was there before either tool first
+   touched it.
+
+   That sum lives in _settle.settleVisit and nowhere else. It used to live
+   here and count card charges alone, which was right while a card was the
+   only thing that could write money. The moment she could also write down
+   the cash she took at the desk, re-summing from card_charges alone meant
+   undoing a card charge would silently erase a cash payment on the same
+   visit. One book cannot re-sum a visit that two books can pay for. */
 async function applyToAppointment(apptId) {
+  const id = Number(apptId) || 0;
+  if (!id) return null;
+  return require('./_settle').settleVisit(id);
+}
+
+/* The old single-book sum, kept only so its tests keep guarding the card
+   arithmetic itself: what is still standing after a part refund, and the
+   order money comes off (the service first, then the tip). */
+async function applyCardChargesOnly(apptId) {
   const id = Number(apptId) || 0;
   if (!id) return null;
 
@@ -1015,6 +1031,7 @@ module.exports.doCharge = doCharge;
 module.exports.doRefund = doRefund;
 module.exports.history = history;
 module.exports.applyToAppointment = applyToAppointment;
+module.exports.applyCardChargesOnly = applyCardChargesOnly;
 module.exports.priceVisit = priceVisit;
 module.exports.adjustmentsFor = adjustmentsFor;
 module.exports.apptShape = apptShape;
