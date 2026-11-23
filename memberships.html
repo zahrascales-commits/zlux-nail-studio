@@ -186,6 +186,53 @@
   .rq{text-align:center;margin-bottom:2rem}
   .rq-t{font-family:'Cinzel',serif;font-size:clamp(1.3rem,4vw,1.7rem);color:var(--espresso);margin-bottom:0.3rem}
   .rq-s{font-family:'Josefin Sans',sans-serif;font-size:0.88rem;color:var(--latte);margin-bottom:1.1rem}
+  /* ── BLACK FRIDAY ──
+     Espresso and gold rather than the usual retail red: it still reads as
+     a sale, and it still reads as her studio. */
+  .bf-band{background:#0D0D0D;color:#F5EEE8;padding:1.6rem 1.2rem;text-align:center;position:relative;overflow:hidden}
+  .bf-band::after{content:'';position:absolute;inset:0;background:
+    radial-gradient(circle at 20% 0%,rgba(182,165,136,0.22),transparent 55%),
+    radial-gradient(circle at 85% 100%,rgba(182,165,136,0.16),transparent 55%);pointer-events:none}
+  .bf-band .bf-k{font-family:'Josefin Sans',sans-serif;font-size:0.66rem;letter-spacing:0.42em;
+    text-transform:uppercase;color:var(--champagne);margin-bottom:0.5rem}
+  .bf-band .bf-h{font-family:'Cinzel',serif;font-size:clamp(1.5rem,5vw,2.3rem);line-height:1.15;margin:0 0 0.5rem}
+  .bf-band .bf-p{font-family:'Josefin Sans',sans-serif;font-size:0.9rem;line-height:1.7;
+    color:rgba(245,238,232,0.84);max-width:560px;margin:0 auto}
+  .bf-band .bf-when{font-family:'Josefin Sans',sans-serif;font-size:0.72rem;letter-spacing:0.18em;
+    text-transform:uppercase;color:var(--champagne);margin-top:0.8rem}
+
+  /* The two tabs: pay each visit, or pay for the year. */
+  .pm{display:flex;justify-content:center;margin:0 auto 1.4rem;max-width:560px}
+  .pm-row{display:inline-flex;border:1px solid rgba(182,165,136,0.45);border-radius:999px;
+    overflow:hidden;background:#fff;width:100%}
+  .pm-b{flex:1;background:transparent;border:0;padding:0.75rem 0.8rem;cursor:pointer;font:inherit;
+    font-family:'Josefin Sans',sans-serif;font-size:0.82rem;letter-spacing:0.06em;color:var(--espresso);
+    display:flex;flex-direction:column;align-items:center;gap:0.15rem;transition:background 0.18s,color 0.18s}
+  .pm-b+.pm-b{border-left:1px solid rgba(182,165,136,0.35)}
+  .pm-b.on{background:#0D0D0D;color:#F5EEE8}
+  .pm-b .pm-n{font-weight:600}
+  .pm-b .pm-s{font-size:0.66rem;letter-spacing:0.1em;text-transform:uppercase;opacity:0.72}
+  .pm-b.on .pm-s{color:var(--champagne);opacity:1}
+
+  /* The mark on a rhythm that has a deal behind it in this tab. */
+  .rq-bf{display:inline-block;margin-top:0.3rem;font-family:'Josefin Sans',sans-serif;
+    font-size:0.6rem;letter-spacing:0.16em;text-transform:uppercase;
+    background:#0D0D0D;color:var(--champagne);padding:0.16rem 0.44rem;border-radius:3px}
+
+  /* A card that is on sale. */
+  .pl-card.onsale{border-color:#0D0D0D;border-width:2px;box-shadow:0 10px 34px rgba(13,13,13,0.1)}
+  .pl-bf-flag{display:inline-block;background:#0D0D0D;color:var(--champagne);
+    font-family:'Josefin Sans',sans-serif;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;
+    padding:0.26rem 0.6rem;margin-bottom:0.7rem}
+  .pl-bf-off{font-family:'Cinzel',serif;font-size:1.05rem;color:#0D0D0D;margin:0 0 0.2rem}
+  .pl-bf-save{font-family:'Josefin Sans',sans-serif;font-size:0.84rem;line-height:1.6;
+    color:var(--espresso);background:rgba(182,165,136,0.16);border-left:2px solid var(--champagne);
+    padding:0.55rem 0.7rem;margin:0.5rem 0 0.2rem}
+  .pl-bf-save b{font-weight:600}
+  .pl-bf-then{font-family:'Josefin Sans',sans-serif;font-size:0.73rem;color:#8C7A5E;margin-top:0.35rem;line-height:1.55}
+  .pl-reg{font-family:'Josefin Sans',sans-serif;font-size:0.68rem;letter-spacing:0.16em;
+    text-transform:uppercase;color:#A89C86;margin-bottom:0.7rem}
+
   .rq-row{display:grid;grid-template-columns:repeat(2,1fr);gap:0.6rem;max-width:640px;margin:0 auto}
   @media(min-width:640px){ .rq-row{grid-template-columns:repeat(4,1fr)} }
   .rq-b{position:relative;background:#fff;border:1px solid rgba(182,165,136,0.4);padding:0.95rem 0.5rem 0.8rem;cursor:pointer;
@@ -216,8 +263,12 @@
 </div>
 
 
+<div id="bf-band"></div>
+
 <section class="pl-wrap" id="tiers">
   <div class="pl-in">
+
+    <div class="pm" id="pm"></div>
 
     <div class="rq">
       <div class="rq-t">How often do you want your nails done?</div>
@@ -348,7 +399,19 @@ let PL = null;
 // How often she wants to come. Four weeks is the regular price; the rhythm
 // bar above the cards changes every price on the page at once.
 let RQ = 4;
-try { const w = Number(new URLSearchParams(location.search).get('rhythm')); if ([2, 3, 4, 5].includes(w)) RQ = w; } catch (_) {}
+/* Each visit, or the whole year. The year is the better thing for both
+   sides — she gets the cash and cannot be churned out of it, and the
+   client pays less per visit — so when the sale is on, the page opens on
+   the tab that has the biggest deal in it. */
+let PM = 'cycle';
+try {
+  const q = new URLSearchParams(location.search);
+  const w = Number(q.get('rhythm'));
+  if ([2, 3, 4, 5].includes(w)) RQ = w;
+  const t = String(q.get('term') || '').toLowerCase();
+  if (t === 'annual' || t === 'year' || t === 'yearly') PM = 'annual';
+  if (t === 'cycle' || t === 'visit') PM = 'cycle';
+} catch (_) {}
 
 // Exact to the cent — $76.50 must never read as $77 on the page when the
 // authorisation and Stripe say $76.50.
@@ -363,6 +426,100 @@ function plAt(p){
 }
 function plPer(p){ return (p.services || 1) > 1 ? ' for ' + p.services + ' services' : ' a visit'; }
 
+/* Is the sale running, and is there a deal on this rhythm in this tab?
+   Asked of the server's own figures rather than worked out here, so the
+   page can never disagree with the price. */
+function plBfLive(){ return !!(PL && PL.black_friday && PL.black_friday.live); }
+function plSaleAt(p, weeks, mode){
+  if(!plBfLive()) return null;
+  const r = (p.rhythms || []).find(function(x){ return x.weeks === weeks; });
+  if(!r) return null;
+  return (mode === 'annual' ? r.annual_sale : r.sale) || null;
+}
+/* Any deal at all on this rhythm, on either tier, in this tab. */
+function plAnySaleAt(weeks, mode){
+  return (PL && PL.plans || []).some(function(p){ return !!plSaleAt(p, weeks, mode); });
+}
+
+function plRenderBand(){
+  const el = document.getElementById('bf-band');
+  if(!el || !PL) return;
+  if(!plBfLive()){ el.innerHTML = ''; return; }
+
+  /* The two deals are different shapes and must not be averaged into one
+     claim. The recurring one is deeper — 48% — but it runs for about two
+     months; the yearly one is 30% and runs for a year. "Up to 48% off
+     memberships" would be technically derivable and still a bait, which
+     is exactly what her own copy rules forbid. So the band makes two
+     claims, each true, each with its duration attached. Two hooks also
+     persuade better than one. */
+  let bestCyclePct = 0, bestCycleSaved = 0, bestCycleWeeks = 0;
+  let bestYearPct = 0, bestYearSaved = 0;
+  (PL.plans || []).forEach(function(p){
+    (p.rhythms || []).forEach(function(r){
+      if(r.sale && r.sale.pct_off > bestCyclePct){
+        bestCyclePct = r.sale.pct_off;
+        bestCycleWeeks = r.sale.intro_weeks;
+      }
+      if(r.sale) bestCycleSaved = Math.max(bestCycleSaved, r.sale.intro_saved_cents || 0);
+      if(r.annual_sale && r.annual_sale.pct_off_monthly > bestYearPct){
+        bestYearPct = r.annual_sale.pct_off_monthly;
+      }
+      if(r.annual_sale) bestYearSaved = Math.max(bestYearSaved, r.annual_sale.saved_vs_monthly_cents || 0);
+    });
+  });
+
+  const claims = [];
+  if(bestYearPct) claims.push('<b>' + Math.round(bestYearPct) + '% off a whole year</b>');
+  if(bestCyclePct) claims.push('<b>' + Math.round(bestCyclePct) + '% off your first '
+    + bestCycleWeeks + ' weeks</b>');
+
+  el.innerHTML = '<div class="bf-band">'
+    + '<div class="bf-k">Black Friday</div>'
+    + '<div class="bf-h">' + (claims.length ? claims.join(', or ') : 'Black Friday') + '</div>'
+    + '<div class="bf-p">'
+      + (bestYearSaved
+          ? 'The biggest saves <b>' + plMoney(bestYearSaved) + '</b> on a year of nails. '
+          : '')
+      + 'Four deals, and the rhythm buttons below show you which ones. '
+      + 'The price you see is the price you are charged.'
+    + '</div>'
+    + '<div class="bf-when">Ends ' + plEsc(plPrettyDate(PL.black_friday.to)) + '</div>'
+  + '</div>';
+}
+
+function plPrettyDate(ymd){
+  try{
+    const b = String(ymd).split('-');
+    return new Date(+b[0], +b[1] - 1, +b[2]).toLocaleDateString('en-US',
+      { weekday: 'long', month: 'long', day: 'numeric' });
+  }catch(_){ return String(ymd || ''); }
+}
+
+function plRenderModes(){
+  const el = document.getElementById('pm');
+  if(!el || !PL) return;
+  const bf = plBfLive();
+  const dealsIn = function(mode){
+    return [2,3,4,5].filter(function(w){ return plAnySaleAt(w, mode); }).length;
+  };
+  const tabs = [
+    { key: 'cycle', name: 'Pay each visit', sub: bf && dealsIn('cycle')
+        ? dealsIn('cycle') + ' Black Friday deals' : 'Billed on your rhythm' },
+    { key: 'annual', name: 'Pay for the year', sub: bf && dealsIn('annual')
+        ? dealsIn('annual') + ' Black Friday deals' : 'One payment, visits free' },
+  ];
+  el.innerHTML = '<div class="pm-row" role="tablist">'
+    + tabs.map(function(t){
+        return '<button type="button" role="tab" class="pm-b' + (PM === t.key ? ' on' : '') + '" '
+          + 'aria-selected="' + (PM === t.key) + '" onclick="plMode(\'' + t.key + '\')">'
+          + '<span class="pm-n">' + t.name + '</span>'
+          + '<span class="pm-s">' + t.sub + '</span>'
+        + '</button>';
+      }).join('')
+    + '</div>';
+}
+
 function plRenderRhythms(){
   const row = document.getElementById('rq-row');
   if(!row || !PL) return;
@@ -370,12 +527,20 @@ function plRenderRhythms(){
   row.innerHTML = rs.map(function(r){
     const tag = r.pct_off ? '<span class="rq-d">Save ' + r.pct_off + '%</span>'
       : '<span class="rq-d plain">' + (r.weeks === 4 ? 'Regular price' : '+' + plMoney(r.add_cents)) + '</span>';
+    /* The whole point of the mark: she can see which rhythm the deal is
+       on without opening all four. */
+    const deal = plAnySaleAt(r.weeks, PM) ? '<span class="rq-bf">Black Friday</span>' : '';
     return '<button type="button" class="rq-b' + (r.weeks === RQ ? ' on' : '') + '" aria-pressed="' + (r.weeks === RQ) + '" onclick="plPick(' + r.weeks + ')">'
-      + '<div class="rq-w">Every ' + r.weeks + ' weeks</div>' + tag + '</button>';
+      + '<div class="rq-w">Every ' + r.weeks + ' weeks</div>' + tag + deal + '</button>';
   }).join('');
 }
 function plPick(w){ RQ = w; plRenderRhythms(); plRender(); plRenderLegacy(); }
+function plMode(m){
+  PM = (m === 'annual') ? 'annual' : 'cycle';
+  plRenderModes(); plRenderRhythms(); plRender(); plRenderLegacy();
+}
 window.plPick = plPick;
+window.plMode = plMode;
 
 function plRender(){
   const grid = document.getElementById('pl-grid');
@@ -386,19 +551,76 @@ function plRender(){
     const r = plAt(p);
     const pct = p.capacity ? Math.round(100 * p.joined / p.capacity) : 0;
 
-    return '<div class="pl-card' + (elite ? ' elite' : '') + '">'
+    const sale = plSaleAt(p, RQ, PM);
+    const year = PM === 'annual';
+
+    /* ── the price block ── */
+    let priceBlock;
+    if(sale && year){
+      priceBlock =
+        '<div class="pl-bf-flag">Black Friday</div>'
+        + '<div class="pl-price"><span class="pl-amt">' + plMoney(sale.now_cents) + '</span>'
+          + '<span class="pl-per"> for the year</span>'
+          + ' <span class="pl-was">' + plMoney(sale.was_cents) + '</span></div>'
+        + '<div class="pl-bf-off">' + sale.pct_off_monthly + '% off paying month by month</div>'
+        + '<div class="pl-bf-save"><b>' + plMoney(sale.saved_vs_monthly_cents) + ' less</b> than paying '
+          + plMoney(r.cents) + ' every ' + r.weeks + ' weeks for a year'
+          + ' <span style="opacity:0.75">(' + plMoney(sale.vs_monthly_cents) + ')</span>.<br>'
+          + sale.visits + ' visits, paid once, nothing to think about again.</div>'
+        + '<div class="pl-billed">One payment of ' + plMoney(sale.now_cents)
+          + ' · ' + sale.visits + ' visits across the year, one every ' + r.weeks + ' weeks</div>';
+    } else if(year){
+      priceBlock =
+        '<div class="pl-reg">Regular price</div>'
+        + '<div class="pl-price"><span class="pl-amt">' + plMoney(r.annual_cents) + '</span>'
+          + '<span class="pl-per"> for the year</span>'
+          + ' <span class="pl-was">' + plMoney(r.annual_full_cents) + '</span></div>'
+        + (r.annual_free_visits
+            ? '<div class="pl-bf-save">' + r.annual_free_visits + ' visit'
+              + (r.annual_free_visits === 1 ? '' : 's') + ' free \u2014 '
+              + plMoney(r.annual_saved_cents) + ' less than paying every ' + r.weeks + ' weeks.</div>'
+            : '')
+        + '<div class="pl-billed">One payment of ' + plMoney(r.annual_cents)
+          + ' · ' + r.cycles_per_year + ' visits across the year, one every ' + r.weeks + ' weeks</div>'
+        + (plBfLive() && !sale
+            ? '<div class="pl-bf-then">The Black Friday deal on the year is at four and five weeks.</div>'
+            : '');
+    } else if(sale){
+      priceBlock =
+        '<div class="pl-bf-flag">Black Friday</div>'
+        + '<div class="pl-price"><span class="pl-amt">' + plMoney(sale.now_cents) + '</span>'
+          + '<span class="pl-per">' + plPer(p) + '</span>'
+          + ' <span class="pl-was">' + plMoney(sale.was_cents) + '</span></div>'
+        + '<div class="pl-bf-off">' + sale.pct_off + '% off every visit</div>'
+        + '<div class="pl-bf-save"><b>' + plMoney(sale.intro_saved_cents) + ' less</b> over your first '
+          + sale.intro_weeks + ' weeks \u2014 that is ' + sale.intro_cycles
+          + ' visits at ' + plMoney(sale.now_cents) + ' instead of ' + plMoney(sale.was_cents) + '.</div>'
+        + '<div class="pl-billed">' + plMoney(sale.now_cents) + ' every ' + r.weeks + ' weeks</div>'
+        /* Said plainly and up front, because a price that quietly rises
+           after two months is the thing that makes people cancel. */
+        + '<div class="pl-bf-then">Then ' + plMoney(sale.was_cents) + ' every ' + r.weeks
+          + ' weeks from your ' + (sale.intro_cycles + 1) + 'th visit on. Cancel any time.</div>';
+    } else {
+      priceBlock =
+        (r.pct_off ? '<div><span class="pl-savechip">Save ' + r.pct_off + '% every visit</span></div>'
+          : (plBfLive() ? '<div class="pl-reg">Regular price</div>' : ''))
+        + '<div class="pl-price"><span class="pl-amt">' + plMoney(r.cents) + '</span>'
+          + '<span class="pl-per">' + plPer(p) + '</span>'
+          + (r.pct_off ? ' <span class="pl-was">' + plMoney(p.cycle_cents) + '</span>' : '') + '</div>'
+        + '<div class="pl-billed">Your nails every ' + r.weeks + ' weeks \u00b7 billed '
+          + plMoney(r.cents) + ' every ' + r.weeks + ' weeks</div>'
+        + '<div class="pl-free">Or ' + plMoney(r.annual_cents) + ' for the year'
+          + (r.annual_free_visits ? ' \u2014 ' + r.annual_free_visits + ' visit'
+              + (r.annual_free_visits === 1 ? '' : 's') + ' free' : '') + '</div>'
+        + (plBfLive()
+            ? '<div class="pl-bf-then">The Black Friday deal on visits is at two and three weeks.</div>'
+            : '');
+    }
+
+    return '<div class="pl-card' + (elite ? ' elite' : '') + (sale ? ' onsale' : '') + '">'
       + '<div class="pl-name">' + plEsc(p.name) + '</div>'
       + '<div class="pl-line">' + plEsc(p.line) + '</div>'
-      + (r.pct_off ? '<div><span class="pl-savechip">Save ' + r.pct_off + '% every visit</span></div>' : '')
-      + '<div class="pl-price"><span class="pl-amt">' + plMoney(r.cents) + '</span>'
-        + '<span class="pl-per">' + plPer(p) + '</span>'
-        + (r.pct_off ? ' <span class="pl-was">' + plMoney(p.cycle_cents) + '</span>' : '') + '</div>'
-      // What she is billed, and how often — said, but quietly.
-      + '<div class="pl-billed">Your nails every ' + r.weeks + ' weeks · billed ' + plMoney(r.cents) + ' every ' + r.weeks + ' weeks</div>'
-      // Never a percentage. Visits are a thing you can picture.
-      + '<div class="pl-free">' + (RQ === 4 && p.annual_free_visits
-          ? 'Or ' + plMoney(p.annual_cents) + ' for the year — ' + p.annual_free_visits + ' visits free'
-          : '') + '</div>'
+      + priceBlock
 
       + '<ul class="pl-list">'
         + p.includes.map(function(i){ return '<li>' + plEsc(i) + '</li>'; }).join('')
@@ -409,8 +631,9 @@ function plRender(){
 
       + (p.full
           ? '<span class="pl-cta" style="opacity:0.5;cursor:not-allowed">Fully booked</span>'
-          : '<a class="pl-cta' + (elite ? ' gold' : '') + '" href="signup.html?tier=' + p.key + '&rhythm=' + RQ
-            + '">Join ' + plEsc(p.name) + '</a>')
+          : '<a class="pl-cta' + (elite ? ' gold' : '') + '" href="signup.html?tier=' + p.key
+            + '&rhythm=' + RQ + '&term=' + PM + '">'
+            + (sale ? 'Get this deal' : 'Join ' + plEsc(p.name)) + '</a>')
 
       // The size of the open door matters as much as the people walking in.
       + '<div class="pl-bar"><i style="width:' + pct + '%"></i></div>'
@@ -424,6 +647,8 @@ function plRender(){
 function plRenderLegacy(){
   const grid = document.getElementById('pl-legacy');
   if(!grid || !PL || !PL.legacy) return;
+  /* These three are not in the sale, by her choice. Nothing on their
+     cards pretends otherwise. */
   grid.innerHTML = PL.legacy.map(function(p){
     const r = plAt(p);
     return '<div class="pl-old-card">'
@@ -449,6 +674,30 @@ function plRenderLegacy(){
   try{
     PL = await (await fetch('/api/plans')).json();
   }catch(_){ return; }
+
+  /* When the sale is on, open on the tab holding the deepest deal rather
+     than making her find it, and land on the rhythm that carries it. The
+     yearly deals are worth the most to both sides, so it is usually the
+     year. A ?term= in the link always wins, because that means she came
+     from somewhere that already promised her a particular price. */
+  try{
+    if(plBfLive() && !new URLSearchParams(location.search).get('term')){
+      let bestCycle = 0, bestYear = 0, bestYearWeeks = RQ;
+      (PL.plans || []).forEach(function(p){
+        (p.rhythms || []).forEach(function(r){
+          if(r.sale) bestCycle = Math.max(bestCycle, r.sale.intro_saved_cents || 0);
+          if(r.annual_sale && (r.annual_sale.saved_vs_monthly_cents || 0) > bestYear){
+            bestYear = r.annual_sale.saved_vs_monthly_cents;
+            bestYearWeeks = r.weeks;
+          }
+        });
+      });
+      if(bestYear > bestCycle){ PM = 'annual'; RQ = bestYearWeeks; }
+    }
+  }catch(_){}
+
+  plRenderBand();
+  plRenderModes();
   plRenderRhythms();
   plRender();
   plRenderLegacy();
