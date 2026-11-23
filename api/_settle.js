@@ -397,18 +397,33 @@ async function unsettled({ days, limit } = {}) {
   } catch (_) {}
 
   const visits = [];
-  let covered = 0, unknownPrice = 0;
+  let covered = 0, prepaid = 0, unknownPrice = 0;
   for (const r of rows || []) {
     const b = await billOf(r);
 
-    /* Their membership already paid for this one, through Stripe, and the
-       recap counts that payment. Offering to write a second payment
-       against it is offering to count the same visit twice. */
-    const list = money(b && b.list_cents);
+    /* Two ways a visit can already be paid for in full, both ending with
+       nothing left to collect at the desk, and both already counted by the
+       recap because the money went through Stripe. Offering to write a
+       second payment against either is offering to count the same visit
+       twice:
+
+         · their membership covered it
+         · they prepaid the whole price online, so the "deposit" IS the
+           bill — Ceadra's $120 Medium Gel X, Greenley's $65 Wednesday
+
+       Neither is a judgement call: the remainder is zero and something
+       verifiable accounts for the whole amount. */
     const remainder = money(b && b.remainder_cents);
     const byMembership = money(b && b.covered_by_membership);
-    if (byMembership > 0 && remainder === 0) { covered++; continue; }
-    if (!list) unknownPrice++;
+    const depositTaken = money(b && b.deposit_taken_cents);
+    if (remainder === 0 && byMembership > 0) { covered++; continue; }
+    if (remainder === 0 && depositTaken > 0) { prepaid++; continue; }
+
+    /* What is left either has a balance to record, or is a visit whose
+       service is not on the price list at all. The second kind still
+       belongs here — she did the work and took money for it — it just has
+       no figure to suggest, so she types what she took. */
+    if (!remainder) unknownPrice++;
 
     visits.push({
       id: Number(r.id),
@@ -433,6 +448,7 @@ async function unsettled({ days, limit } = {}) {
     /* Said out loud rather than quietly dropped. A list that silently
        hides rows is a list she cannot trust the length of. */
     covered_by_membership: covered,
+    prepaid_in_full: prepaid,
     /* Visits whose service is not on the price list, so there is no figure
        to suggest and she has to type what she took. */
     price_unknown: unknownPrice,

@@ -10402,14 +10402,18 @@ function rcUnsettledHtml(){
     + (u.capped ? '+' : '') + ' visits in the last ' + u.days + ' days with nothing recorded. '
     + 'At the prices on the menu they add up to ' + rcMoney(u.total_suggested_cents)
     + ' — which is a guess, not a figure. Only what you type is real.'
-    + (u.covered_by_membership
-        ? ' <b>' + u.covered_by_membership + ' more</b> were covered by a membership and are not '
-          + 'listed — that money already came in through Stripe, so writing it down again '
-          + 'would count the same visit twice.'
+    + (u.covered_by_membership || u.prepaid_in_full
+        ? ' <b>' + ((u.covered_by_membership || 0) + (u.prepaid_in_full || 0)) + ' more</b> are not '
+          + 'listed because they were already paid for in full — '
+          + [u.covered_by_membership ? u.covered_by_membership + ' by a membership' : '',
+             u.prepaid_in_full ? u.prepaid_in_full + ' prepaid online' : '']
+            .filter(Boolean).join(' and ')
+          + '. That money already came in through Stripe, so writing it down again would count '
+          + 'the same visit twice.'
         : '')
     + (u.price_unknown
-        ? ' ' + u.price_unknown + ' of these have a service that is not on the price list, so their '
-          + 'box starts empty — type what you took.'
+        ? ' ' + u.price_unknown + ' of these have no price on file, so the box starts empty — '
+          + 'type what you took.'
         : '')
     + '</div>'
     + u.visits.map(rcSettleRow).join('');
@@ -10427,9 +10431,9 @@ function rcSettleRow(v){
           + (v.deposit_taken_cents ? ' · ' + rcMoney(v.deposit_taken_cents) + ' deposit in' : '')
           + (v.covered_by_membership ? ' · ' + rcMoney(v.covered_by_membership) + ' on their membership' : '')
         + '</div>'
-        + (!v.list_cents
+        + (!v.suggested_cents
             ? '<div style="font-size:0.72rem;color:#B54708;margin-top:0.15rem">'
-              + 'This service is not on the price list, so there is no figure to suggest '
+              + 'No price on file for this one, so there is no figure to suggest '
               + '— type what you took.</div>'
             : '')
       + '</div>'
