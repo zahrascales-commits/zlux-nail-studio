@@ -851,7 +851,24 @@ async function recapEmailHtml(month) {
   const a = await actions({});
   const rev = r.revenue, cl = r.clients;
 
-  const todo = a.actions.filter(x => !x.complete).slice(0, 6);
+  /* Six things, balanced across the three lists rather than whichever
+     scope happens to sort first. Taking the first six of a list ordered by
+     scope sent her an email entirely about clients and nothing about
+     money, which is the opposite of what she asked for. Inside each list,
+     the ones with a measured figure come first. */
+  const incomplete = a.actions.filter(x => !x.complete);
+  const todo = [];
+  for (const scope of ['revenue', 'clients', 'social']) {
+    incomplete.filter(x => x.scope === scope)
+      .sort((x, y) => y.worth_cents - x.worth_cents)
+      .slice(0, 2)
+      .forEach(x => todo.push(x));
+  }
+  /* And if one list is short, fill up from whatever is left over. */
+  for (const x of incomplete.sort((p, q) => q.worth_cents - p.worth_cents)) {
+    if (todo.length >= 6) break;
+    if (todo.indexOf(x) < 0) todo.push(x);
+  }
 
   const body =
     '<p style="font-size:15px;line-height:1.7;color:#3a3027;margin:0 0 18px">'
@@ -875,7 +892,8 @@ async function recapEmailHtml(month) {
           + '<div style="font-size:13px;color:#93370D;line-height:1.6">'
           + '<b>' + rev.recorded.missing + ' of ' + rev.recorded.kept_visits + ' visits</b> have no payment '
           + 'written down, so the figure above is lower than what you actually took. '
-          + 'Studio Manager → Charge a card → the Paid button.</div></div>'
+          + 'The list is at the bottom of Studio Manager → Monthly recap, under '
+          + '“Write down what you took” — one tap each.</div></div>'
         : '')
 
     + (todo.length
