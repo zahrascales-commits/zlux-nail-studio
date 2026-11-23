@@ -10399,9 +10399,19 @@ function rcUnsettledHtml(){
       + 'That is the number this whole page depends on.</div>';
   }
   return '<div class="ny-sub" style="padding:0 0 0.7rem">' + u.visits.length
-    + ' visits in the last ' + u.days + ' days with nothing recorded. '
+    + (u.capped ? '+' : '') + ' visits in the last ' + u.days + ' days with nothing recorded. '
     + 'At the prices on the menu they add up to ' + rcMoney(u.total_suggested_cents)
-    + ' — which is a guess, not a figure. Only what you type is real.</div>'
+    + ' — which is a guess, not a figure. Only what you type is real.'
+    + (u.covered_by_membership
+        ? ' <b>' + u.covered_by_membership + ' more</b> were covered by a membership and are not '
+          + 'listed — that money already came in through Stripe, so writing it down again '
+          + 'would count the same visit twice.'
+        : '')
+    + (u.price_unknown
+        ? ' ' + u.price_unknown + ' of these have a service that is not on the price list, so their '
+          + 'box starts empty — type what you took.'
+        : '')
+    + '</div>'
     + u.visits.map(rcSettleRow).join('');
 }
 
@@ -10417,11 +10427,20 @@ function rcSettleRow(v){
           + (v.deposit_taken_cents ? ' · ' + rcMoney(v.deposit_taken_cents) + ' deposit in' : '')
           + (v.covered_by_membership ? ' · ' + rcMoney(v.covered_by_membership) + ' on their membership' : '')
         + '</div>'
+        + (!v.list_cents
+            ? '<div style="font-size:0.72rem;color:#B54708;margin-top:0.15rem">'
+              + 'This service is not on the price list, so there is no figure to suggest '
+              + '— type what you took.</div>'
+            : '')
       + '</div>'
       + '<div class="chg-take" style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">'
         + '<span style="font-size:0.85rem;color:var(--muted)">$</span>'
+        /* An empty box when there is no figure to suggest. A box prefilled
+           with 0.00 reads as "this visit was free", which is a different
+           claim from "nobody has told me the price". */
         + '<input class="chg-amt-in" inputmode="decimal" value="'
-          + (Math.round(Number(v.suggested_cents)||0)/100).toFixed(2) + '" '
+          + (v.suggested_cents ? (Math.round(Number(v.suggested_cents)||0)/100).toFixed(2) : '') + '" '
+          + 'placeholder="0.00" '
           + 'oninput="chgSync(this)" onfocus="this.select()" '
           + 'style="width:72px;padding:0.3rem 0.4rem;border:1px solid var(--line);border-radius:6px;'
           + 'font-size:0.85rem;text-align:right" />'
@@ -10430,7 +10449,7 @@ function rcSettleRow(v){
           + RC_METHODS.map(m => '<option value="' + m[0] + '">' + m[1] + '</option>').join('')
         + '</select>'
         + '<button class="btn btn-gold btn-sm" data-verb="Paid" onclick="rcMarkPaid(' + v.id + ',this)">'
-          + 'Paid ' + rcMoney(v.suggested_cents) + '</button>'
+          + (v.suggested_cents ? 'Paid ' + rcMoney(v.suggested_cents) : 'Paid') + '</button>'
       + '</div>'
     + '</div></div>';
 }

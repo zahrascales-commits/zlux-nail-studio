@@ -397,8 +397,19 @@ async function unsettled({ days, limit } = {}) {
   } catch (_) {}
 
   const visits = [];
+  let covered = 0, unknownPrice = 0;
   for (const r of rows || []) {
     const b = await billOf(r);
+
+    /* Their membership already paid for this one, through Stripe, and the
+       recap counts that payment. Offering to write a second payment
+       against it is offering to count the same visit twice. */
+    const list = money(b && b.list_cents);
+    const remainder = money(b && b.remainder_cents);
+    const byMembership = money(b && b.covered_by_membership);
+    if (byMembership > 0 && remainder === 0) { covered++; continue; }
+    if (!list) unknownPrice++;
+
     visits.push({
       id: Number(r.id),
       client: r.client_name || '',
@@ -419,6 +430,13 @@ async function unsettled({ days, limit } = {}) {
     visits,
     total_suggested_cents: visits.reduce((s, v) => s + v.suggested_cents, 0),
     days: back,
+    /* Said out loud rather than quietly dropped. A list that silently
+       hides rows is a list she cannot trust the length of. */
+    covered_by_membership: covered,
+    /* Visits whose service is not on the price list, so there is no figure
+       to suggest and she has to type what she took. */
+    price_unknown: unknownPrice,
+    capped: visits.length >= cap,
   };
 }
 
