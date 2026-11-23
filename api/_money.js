@@ -40,6 +40,8 @@ async function stripeCollected(sk, sinceSec, LIST) {
   let gross = 0, refunded = 0, count = 0;
   const byMonth = {};
   const bySource = { memberships: 0, appointments: 0, other: 0 };
+  // The same split, month by month, so one month's page can show its own.
+  const byMonthSource = {};
 
   for (let page = 0; page < 40; page++) {
     const params = new URLSearchParams({ limit: '100', 'created[gte]': String(sinceSec) });
@@ -70,9 +72,11 @@ async function stripeCollected(sk, sinceSec, LIST) {
       const desc = String(ch.description || '').toLowerCase();
       const isMembership = !!ch.invoice || /subscription|membership/.test(desc);
       if (LIST) LIST.push({ id: ch.id, amount: ch.amount, refunded: ch.amount_refunded, invoice: ch.invoice || null, desc: ch.description || "", created: ch.created });
-      if (isMembership) bySource.memberships += net;
-      else if (/deposit|checkout|balance|tip|appointment/.test(desc)) bySource.appointments += net;
-      else bySource.other += net;
+      const bucket = isMembership ? 'memberships'
+        : (/deposit|checkout|balance|tip|appointment/.test(desc) ? 'appointments' : 'other');
+      bySource[bucket] += net;
+      const ms = byMonthSource[key] || (byMonthSource[key] = { memberships: 0, appointments: 0, other: 0 });
+      ms[bucket] += net;
     }
 
     if (!j.has_more) break;
@@ -81,7 +85,7 @@ async function stripeCollected(sk, sinceSec, LIST) {
     starting_after = last.id;
   }
 
-  return { gross, refunded, net: gross - refunded, count, byMonth, bySource };
+  return { gross, refunded, net: gross - refunded, count, byMonth, bySource, byMonthSource };
 }
 
 /* Money that never went through Stripe: cash, Zelle, Venmo, Cash App, her

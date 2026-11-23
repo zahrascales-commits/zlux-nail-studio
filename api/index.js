@@ -102,6 +102,7 @@ app.all('/api/cards',            require('./_cards'));
 app.all('/api/charge',           require('./_charge'));
 app.all('/api/settle',           require('./_settle'));
 app.all('/api/recap',            require('./_recap'));
+app.all('/api/social',           require('./_social'));
 app.all('/api/reconcile',        require('./_reconcile'));
 
 /* Anything her rules have queued and is now due. Runs at most once a

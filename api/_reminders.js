@@ -81,6 +81,16 @@ module.exports = async (req, res) => {
 
   // ── APPOINTMENTS: owner-scheduled (team_appointments, worker-linked) ──
   const today = new Date().toISOString().slice(0,10);
+
+  /* Porterville's clock, not the server's. The cron fires at 08:00 and
+     17:00 UTC, which is midnight and 9am here, and a daily nudge sent on
+     the server's idea of a day arrives in the middle of her night. */
+  const LA = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+  const pad2 = n => String(n).padStart(2, '0');
+  const laDay = LA.getFullYear() + '-' + pad2(LA.getMonth() + 1) + '-' + pad2(LA.getDate());
+  const laHour = LA.getHours();
+  const laShift = (ymd, n) =>
+    new Date(Date.parse(ymd + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10);
   const y = new Date(now-2*86400000).toISOString().slice(0,10);
   const t2 = new Date(now+2*86400000).toISOString().slice(0,10);
 
@@ -205,11 +215,96 @@ module.exports = async (req, res) => {
   let arrivalMail = null;
   try { arrivalMail = await require('./_arrival-mail').sweep({ limit: 25 }); } catch (_) {}
 
+  /* ── POST THE LINK TODAY ──
+     One text each morning to whoever is meant to be posting, carrying the
+     link and a caption to paste. Only to people who have not already
+     ticked today, so doing it early means no nudge at all. */
+  let postNudge = null;
+  try {
+    const social = require('./_social');
+    const cfg = await social.settings();
+    const BOOK = 'https://zolanailstudio.com/booking.html';
+
+    /* Seven openers, so a daily habit does not become the same sentence
+       every day. Each one is something a client could act on. */
+    const CAPTIONS = [
+      'New set from today — booking link in bio. Porterville ✨',
+      'Still have slots this week. Tap the link and pick your time ✨',
+      'This is what a structured manicure looks like 3 weeks in. Link to book ✨',
+      'Taking bookings for this week — link in bio, deposit holds your spot ✨',
+      'Send this to whoever does your nails — or come to us. Link in bio ✨',
+      'Before and after. Book yours at the link ✨',
+      'Your nails do not have to grow out ugly. Link in bio ✨',
+    ];
+
+    const onlyIds = String(process.env.POSTING_NUDGE_IDS || '4')
+      .split(',').map(x => Number(x.trim())).filter(Boolean);
+
+    if (laHour >= 8 && laHour < 20) {
+      const streak = await social.postingStreak({ days: 30 });
+      for (const p of streak.people) {
+        if (onlyIds.indexOf(p.member_id) < 0) continue;
+        if (p.posted_today) continue;
+        if (!(await fresh('postnudge:' + p.member_id + ':' + laDay))) continue;
+
+        const who = await queryOne('SELECT id, name, phone, email FROM team_members WHERE id=?', [p.member_id])
+          .catch(() => null);
+        if (!who) continue;
+
+        const caption = CAPTIONS[LA.getDay() % CAPTIONS.length];
+        const run = p.streak > 1 ? (' You are ' + p.streak + ' days in a row — keep it.') : '';
+        await toWorker(who.id, who.phone, who.email,
+          'Post the booking link today ✦',
+          'Post one thing today and put this link on it — story, caption or bio. '
+          + 'Even on a day off.' + run + '\n\n' + BOOK + '\n\nCaption you can paste:\n'
+          + caption + '\n\nThen tick it off in your portal so Zahra can see it.');
+        postNudge = (postNudge || 0) + 1;
+      }
+    }
+
+    /* The end of the Pacific day. A single missed day is life; three in a
+       row is a habit coming apart, and that is worth telling her once
+       rather than her finding out a month later. */
+    if (laHour < 6) {
+      const yday = laShift(laDay, -1);
+      const streak = await social.postingStreak({ days: 30 });
+      for (const p of streak.people) {
+        if (onlyIds.indexOf(p.member_id) < 0) continue;
+        const missedYesterday = !(p.recent || []).some(r => r.day === yday && r.done);
+        if (!missedYesterday) continue;
+        const run = (p.recent || []).slice(1, 4).filter(r => !r.done).length;
+        if (run >= 3 && await fresh('postmiss:' + p.member_id + ':' + yday)) {
+          await toOwner('No posts from ' + (p.name || 'the team') + ' for 3 days',
+            (p.name || 'She') + ' has not ticked the daily booking-link post since '
+            + (p.last_posted || 'we started counting')
+            + '. The text goes out every morning at 9. Worth a word today — '
+            + 'Studio Manager → Social media → who posted.');
+        }
+      }
+    }
+  } catch (_) {}
+
+  /* ── THE MONTHLY RECAP, ON THE 1st ──
+     Last month's money and clients, the change either way, and what to do
+     this month. Sent once, keyed on the month, so a second cron run on the
+     1st cannot send it twice. */
+  let recapMail = null;
+  try {
+    if (LA.getDate() === 1 && laHour >= 8) {
+      const recap = require('./_recap');
+      const ym = recap.prevMonth(laDay.slice(0, 7));
+      if (await fresh('recapmail:' + ym)) {
+        recapMail = await recap.emailRecap({ month: ym, dry: false });
+        sent++;
+      }
+    }
+  } catch (_) {}
+
   // ── ANYTHING BROKEN ──
   // The same list as the dashboard's "Needs attention", but only the things
   // worth a text, and each at most once every three days.
   let alerts = [];
   try { alerts = await require('./_dashboard').notifyOwner(toOwner, fresh); } catch (_) {}
 
-  return res.json({ ok: true, sent, deposit_chase: depositChase, alerts, stripe_sweep: stripeSweep, deposit_audit: depositAudit, arrival_mail: arrivalMail, at: new Date().toISOString() });
+  return res.json({ ok: true, sent, deposit_chase: depositChase, alerts, stripe_sweep: stripeSweep, deposit_audit: depositAudit, arrival_mail: arrivalMail, post_nudge: postNudge, recap_mail: recapMail && { to: recapMail.to, subject: recapMail.subject }, at: new Date().toISOString() });
 };

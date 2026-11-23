@@ -1370,6 +1370,7 @@
         <button class="tab" data-tab="sales" onclick="showTab('sales')"><span class="nl">Membership sales</span></button>
         <button class="tab" data-tab="memberships" onclick="showTab('memberships')"><span class="nl">Memberships</span></button>
         <button class="tab" data-tab="payouts" onclick="showTab('payouts')"><span class="nl">Payouts</span></button>
+        <button class="tab" data-tab="recap" onclick="showTab('recap')"><span class="nl">Monthly recap</span><span class="nav-new">New</span></button>
         <button class="tab" data-tab="records" onclick="showTab('records')"><span class="nl">Records</span></button>
         <button class="tab" data-tab="goals" onclick="showTab('goals')"><span class="nl">Goals</span></button>
       </div>
@@ -1379,6 +1380,7 @@
       <button class="nav-head" onclick="toggleNavGroup('marketing')"><span class="ni" data-i="megaphone"></span><span class="nl">Marketing</span><span class="gdot"></span><span class="chev" data-i="chev"></span></button>
       <div class="nav-kids">
         <button class="tab" data-tab="mkt" onclick="showTab('mkt')"><span class="nl">Marketing home</span></button>
+        <button class="tab" data-tab="social" onclick="showTab('social')"><span class="nl">Social media</span><span class="nav-new">New</span></button>
         <button class="tab" data-tab="marketing" onclick="showTab('marketing')"><span class="nl">Email &amp; text campaigns</span></button>
         <button class="tab" data-tab="autoemail" onclick="showTab('autoemail')"><span class="nl">Automated emails</span></button>
         <button class="tab" data-tab="maillog" onclick="showTab('maillog')"><span class="nl">Emails sent</span></button>
@@ -1542,6 +1544,39 @@
         <button class="btn btn-ghost btn-sm" onclick="loadCharge()">↻ Refresh</button>
       </div>
       <div id="chg-body"><div class="ny-sub" style="padding:1rem;">Loading…</div></div>
+    </section>
+
+    <section class="panel" id="panel-social">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Social Media</div>
+          <div class="page-desc">
+            Your TikTok and Instagram, what every post actually did, and what to change on the next one.
+            Log a post in about fifteen seconds and it gets diagnosed against your own normal &mdash;
+            not against somebody else's account.
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadSocial()">&#8635; Refresh</button>
+      </div>
+      <div id="sc-body"><div class="ny-sub" style="padding:1rem;">Loading&hellip;</div></div>
+    </section>
+
+    <section class="panel" id="panel-recap">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Monthly Recap</div>
+          <div class="page-desc">
+            What last month was worth, who came, and what changed &mdash; in money and in people, up or down.
+            Underneath, the things worth doing about it, each with how often, to tick off as you go.
+            Emailed to you on the 1st of every month.
+          </div>
+        </div>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <select id="rc-month" onchange="loadRecap()" style="padding:0.4rem 0.5rem;border:1px solid var(--line);border-radius:6px;font-size:0.82rem"></select>
+          <button class="btn btn-ghost btn-sm" onclick="loadRecap()">&#8635; Refresh</button>
+        </div>
+      </div>
+      <div id="rc-body"><div class="ny-sub" style="padding:1rem;">Loading&hellip;</div></div>
     </section>
 
     <section class="panel" id="panel-memberships">
@@ -3675,6 +3710,8 @@ const TAB_LOADERS = {
   sales:      () => loadShowcaseCfg().then(loadSales),
   memberships: () => loadMemberships(false),
   charge:     () => loadCharge(),
+  recap:      () => loadRecap(),
+  social:     () => loadSocial(),
   deposits:   () => loadDeposits(),
   inventory:  () => loadInventory(),
   messages:   () => loadThreads(),
@@ -9704,6 +9741,721 @@ let MAILLOG = [];
    only ever reaches the names already on it. */
 let AE = { rules: [], triggers: [], audiences: [], fields: [], editing: null };
 
+
+/* ── SOCIAL MEDIA ────────────────────────────────────────────────────────
+   Every post, measured against her own median, with what to do next. */
+let SC = { data: null, streak: null, open: 0, platform: '', days: 90 };
+
+const SC_BAND_COLOUR = {
+  flop: '#B42318', under: '#B54708', normal: '#8B7355',
+  climbing: '#067647', nearly: '#067647', hit: '#8B6A3E',
+};
+
+function scNum(n){ return Number(n||0).toLocaleString('en-US'); }
+
+async function loadSocial(){
+  const el = document.getElementById('sc-body');
+  if(!el) return;
+  el.innerHTML = '<div class="empty">Loading\u2026</div>';
+  try{
+    const [d, s] = await Promise.all([
+      api('/api/social?action=analytics&days=' + SC.days
+        + (SC.platform ? '&platform=' + SC.platform : '')).then(x => x.json()),
+      api('/api/social?action=streak&days=30').then(x => x.json()),
+    ]);
+    if(d.error) throw new Error(d.error);
+    SC.data = d; SC.streak = s;
+  }catch(err){
+    el.innerHTML = emptyBox('\u26a0\ufe0f','Could not load: ' + esc(err.message));
+    return;
+  }
+  renderSocial();
+}
+
+function renderSocial(){
+  const el = document.getElementById('sc-body');
+  if(!el || !SC.data) return;
+  const d = SC.data, cfg = d.settings, b = d.baseline, p = d.plan;
+
+  el.innerHTML =
+    // ── the accounts ──
+    '<div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">'
+      + scAccount('TikTok', cfg.tiktok, 'tt')
+      + scAccount('Instagram', cfg.instagram, 'ig')
+      + '<div class="stat-card" style="text-align:left">'
+        + '<div class="stat-label" style="margin-bottom:0.35rem">Your normal</div>'
+        + '<div class="stat-num" style="font-size:1.7rem">' + scNum(b.median_views) + '</div>'
+        + '<div style="font-size:0.8rem;line-height:1.6;margin-top:0.35rem;color:var(--muted)">'
+          + 'views, median of ' + b.measured + ' logged post' + (b.measured === 1 ? '' : 's')
+          + (b.best_views ? '<br>best so far: ' + scNum(b.best_views) : '')
+        + '</div>'
+      + '</div>'
+    + '</div>'
+
+    // ── the honest note ──
+    + '<div style="margin:1rem 0">' + rcNote('<b>Before anything else:</b> ' + esc(cfg.honest_note)) + '</div>'
+
+    // ── the goal, as arithmetic ──
+    + '<div class="page-head" style="margin-top:1.6rem"><div>'
+      + '<div class="page-title" style="font-size:1.05rem">' + scNum(p.goal) + ' followers by ' + esc(p.goal_by) + '</div>'
+      + '<div class="page-desc">What the goal costs, in views and in volume. '
+        + 'Volume is the part you fully control, and it is what this is most sensitive to.</div>'
+    + '</div></div>'
+    + '<div style="margin-bottom:0.9rem">' + rcNote('<b>' + esc(p.said) + '</b><br>'
+        + '<span style="font-size:0.78rem">Worked out from ' + esc(p.rate_source) + '.</span>') + '</div>'
+    + '<div class="stat-grid">'
+      + rcStat(scNum(p.followers_now), 'Followers now')
+      + rcStat(scNum(p.need), 'Still to get')
+      + rcStat(p.days + ' days', 'Time left')
+      + rcStat(scNum(p.views_per_day), 'Views needed a day')
+    + '</div>'
+    + '<div style="overflow-x:auto;margin-top:0.8rem"><table class="tbl"><thead><tr>'
+      + '<th>If you post\u2026</th><th style="text-align:right">views needed per post</th>'
+      + '<th style="text-align:right">posts in ' + p.days + ' days</th></tr></thead><tbody>'
+      + p.options.map(o => '<tr' + (o.posts_per_day === p.posts_per_day ? ' style="background:#FFFBF5"' : '') + '>'
+          + '<td>' + o.posts_per_day + ' a day</td>'
+          + '<td style="text-align:right">' + scNum(o.views_per_post) + '</td>'
+          + '<td style="text-align:right">' + scNum(o.posts_total) + '</td></tr>').join('')
+    + '</tbody></table></div>'
+
+    // ── your numbers, kept honest ──
+    + '<div class="page-head" style="margin-top:1.8rem"><div>'
+      + '<div class="page-title" style="font-size:1.05rem">Tell me where you are</div>'
+      + '<div class="page-desc">I cannot see your accounts, so these come from you. '
+        + 'Update them whenever \u2014 everything above is worked out from them.</div>'
+    + '</div></div>'
+    + '<div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:0.5rem">'
+      + scField('sc-tt-f', 'TikTok followers', cfg.tiktok.followers, 110)
+      + scField('sc-ig-f', 'Instagram followers', cfg.instagram.followers, 110)
+      + scField('sc-goal', 'Follower goal', p.goal, 110)
+      + scField('sc-ppd', 'Posts a day you will do', cfg.posts_per_day, 90)
+      + '<div class="field" style="margin:0"><label class="fld-label">Goal date</label>'
+        + '<input id="sc-goalby" type="date" value="' + esc(p.goal_by) + '" /></div>'
+      + '<button class="btn btn-gold" onclick="scSaveSettings(this)">Save</button>'
+    + '</div>'
+    + (cfg.followers_asof
+        ? '<div class="ny-sub" style="padding:0 0 0.5rem">Follower counts last updated ' + esc(cfg.followers_asof) + '.</div>'
+        : '')
+
+    // ── log a post ──
+    + '<div class="page-head" style="margin-top:1.8rem"><div>'
+      + '<div class="page-title" style="font-size:1.05rem">Log a post</div>'
+      + '<div class="page-desc">Fifteen seconds. The ticks at the end are what make the advice '
+        + 'specific instead of generic, so they are worth the extra two seconds.</div>'
+    + '</div></div>'
+    + scLogForm()
+
+    // ── what works for you ──
+    + (d.findings && d.findings.length
+        ? '<div class="page-head" style="margin-top:1.8rem"><div>'
+          + '<div class="page-title" style="font-size:1.05rem">What works on your account</div>'
+          + '<div class="page-desc">Not what works generally \u2014 what your own logged posts show. '
+            + 'Only shown once there are at least 3 posts either side of the line.</div>'
+          + '</div></div>'
+          + '<div style="overflow-x:auto"><table class="tbl"><thead><tr>'
+            + '<th>Doing this</th><th style="text-align:right">average views with</th>'
+            + '<th style="text-align:right">without</th><th style="text-align:right">difference</th>'
+          + '</tr></thead><tbody>'
+          + d.findings.map(x => {
+              const up = x.lift_pct !== null && x.lift_pct > 0;
+              return '<tr><td>' + esc(x.name) + '</td>'
+                + '<td style="text-align:right">' + scNum(x.with_it) + ' <span class="ny-sub">(' + x.n_with + ')</span></td>'
+                + '<td style="text-align:right">' + scNum(x.without_it) + ' <span class="ny-sub">(' + x.n_without + ')</span></td>'
+                + '<td style="text-align:right;color:' + (up ? '#067647' : '#B42318') + '">'
+                + (x.lift_pct === null ? '\u2014' : (up ? '+' : '') + x.lift_pct + '%') + '</td></tr>';
+            }).join('')
+          + '</tbody></table></div>'
+        : '')
+
+    // ── rhythm ──
+    + '<div class="page-head" style="margin-top:1.8rem"><div>'
+      + '<div class="page-title" style="font-size:1.05rem">Rhythm</div>'
+      + '<div class="page-desc">Consistency is the single thing the follower goal is most sensitive to.</div>'
+    + '</div></div>'
+    + '<div class="stat-grid">'
+      + rcStat(d.rhythm.posts, 'Posts logged')
+      + rcStat(d.rhythm.days_with_a_post + ' of ' + d.rhythm.window_days, 'Days with a post')
+      + rcStat(d.rhythm.consistency_pct + '%', 'Consistency')
+      + rcStat(scNum(b.total_views), 'Views, all logged posts')
+    + '</div>'
+
+    // ── who posted the link ──
+    + '<div class="page-head" style="margin-top:1.8rem"><div>'
+      + '<div class="page-title" style="font-size:1.05rem">Who posted the booking link</div>'
+      + '<div class="page-desc">A text goes out every morning at 9 with the link and a caption to paste. '
+        + 'They tick it in their portal; this is what you see.</div>'
+    + '</div></div>'
+    + scStreakHtml()
+
+    // ── every post ──
+    + '<div class="page-head" style="margin-top:1.8rem"><div>'
+      + '<div class="page-title" style="font-size:1.05rem">Every post</div>'
+      + '<div class="page-desc">Tap one for what it did and what to do about it.</div>'
+    + '</div></div>'
+    + '<div class="seg" style="margin-bottom:0.9rem">'
+      + [['','Both'],['tiktok','TikTok'],['instagram','Instagram']].map(x =>
+          '<button class="' + (SC.platform === x[0] ? 'on' : '') + '" onclick="scPlatform(\'' + x[0] + '\')">'
+          + x[1] + '</button>').join('')
+      + '</div> <div class="seg" style="margin:0 0 0.9rem 0.5rem">'
+      + [[30,'30 days'],[90,'90 days'],[365,'A year']].map(x =>
+          '<button class="' + (SC.days === x[0] ? 'on' : '') + '" onclick="scDays(' + x[0] + ')">'
+          + x[1] + '</button>').join('')
+    + '</div>'
+    + '<div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:1rem">'
+      + d.bands.filter(x => x.count).map(x => rcStat(x.count, x.label)).join('')
+    + '</div>'
+    + (d.posts.length ? d.posts.map(scPostRow).join('')
+        : '<div class="empty">Nothing logged yet. Log your last 5 posts above and the advice starts working.</div>');
+}
+
+function scAccount(name, acct, which){
+  return '<div class="stat-card" style="text-align:left">'
+    + '<div class="stat-label" style="margin-bottom:0.35rem">' + name + '</div>'
+    + '<div class="stat-num" style="font-size:1.7rem">' + scNum(acct.followers) + '</div>'
+    + '<div style="font-size:0.8rem;margin-top:0.35rem">'
+      + '<a href="' + esc(acct.url) + '" target="_blank" rel="noopener" style="color:var(--gold)">'
+      + esc(acct.handle) + ' \u2197</a>'
+    + '</div>'
+  + '</div>';
+}
+
+function scField(id, label, value, width){
+  return '<div class="field" style="margin:0;width:' + (width || 100) + 'px">'
+    + '<label class="fld-label">' + label + '</label>'
+    + '<input id="' + id + '" inputmode="numeric" value="' + esc(value) + '" /></div>';
+}
+
+async function scSaveSettings(btn){
+  if(!btn || btn.disabled) return;
+  const v = id => { const e = document.getElementById(id); return e ? e.value : ''; };
+  btn.disabled = true; btn.textContent = 'Saving\u2026';
+  try{
+    await api('/api/social?action=save_settings', { method:'POST', body: JSON.stringify({
+      action:'save_settings',
+      tt_followers: Number(String(v('sc-tt-f')).replace(/[^0-9]/g,'')) || 0,
+      ig_followers: Number(String(v('sc-ig-f')).replace(/[^0-9]/g,'')) || 0,
+      goal_followers: Number(String(v('sc-goal')).replace(/[^0-9]/g,'')) || 10000,
+      posts_per_day: Number(String(v('sc-ppd')).replace(/[^0-9]/g,'')) || 1,
+      goal_by: v('sc-goalby'),
+    }) });
+    toast('Saved \u2726');
+    loadSocial();
+  }catch(err){
+    btn.disabled = false; btn.textContent = 'Save';
+    toast('Could not save: ' + err.message);
+  }
+}
+
+/* ── LOGGING ONE ─────────────────────────────────────────────────────── */
+
+function scLogForm(){
+  const d = SC.data;
+  return '<div style="border:1px solid var(--border);border-radius:8px;padding:1rem;background:var(--card)">'
+    + '<div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:flex-end">'
+      + '<div class="field" style="margin:0;width:120px"><label class="fld-label">Where</label>'
+        + '<select id="sp-platform">'
+        + d.platforms.map(x => '<option value="' + x.key + '">' + x.label + '</option>').join('')
+        + '</select></div>'
+      + '<div class="field" style="margin:0;width:140px"><label class="fld-label">Day posted</label>'
+        + '<input id="sp-day" type="date" /></div>'
+      + '<div class="field" style="margin:0;width:95px"><label class="fld-label">Time</label>'
+        + '<input id="sp-at" type="time" /></div>'
+      + '<div class="field" style="margin:0;width:80px"><label class="fld-label">Seconds</label>'
+        + '<input id="sp-len" inputmode="numeric" placeholder="8" /></div>'
+      + '<div class="field" style="margin:0;flex:1;min-width:170px"><label class="fld-label">Hook (the words on screen)</label>'
+        + '<input id="sp-hook" placeholder="Watch this grow out" /></div>'
+      + '<div class="field" style="margin:0;flex:1;min-width:150px"><label class="fld-label">What it was about</label>'
+        + '<input id="sp-topic" placeholder="structured mani, celebrity set\u2026" /></div>'
+    + '</div>'
+    + '<div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:flex-end;margin-top:0.7rem">'
+      + ['views','likes','comments','shares','saves','follows'].map(k =>
+          '<div class="field" style="margin:0;width:88px"><label class="fld-label">'
+          + (k === 'follows' ? 'New follows' : k.charAt(0).toUpperCase() + k.slice(1)) + '</label>'
+          + '<input id="sp-' + k + '" inputmode="numeric" placeholder="0" /></div>').join('')
+    + '</div>'
+    + '<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:0.8rem;font-size:0.82rem">'
+      + [['sp-result','Finished nails in the first frame'],
+         ['sp-face','My face or voice is in it'],
+         ['sp-sound','Trending sound'],
+         ['sp-link','Booking link on it']].map(x =>
+          '<label style="display:flex;align-items:center;gap:0.35rem;cursor:pointer">'
+          + '<input type="checkbox" id="' + x[0] + '" style="width:16px;height:16px;accent-color:#8B6A3E" /> '
+          + x[1] + '</label>').join('')
+    + '</div>'
+    + '<div style="display:flex;gap:0.6rem;align-items:center;margin-top:0.9rem">'
+      + '<button class="btn btn-gold" onclick="scSavePost(this)">Save &amp; diagnose</button>'
+      + '<span id="sp-msg" style="font-size:0.8rem;color:var(--muted)"></span>'
+    + '</div>'
+  + '</div>';
+}
+
+async function scSavePost(btn){
+  if(!btn || btn.disabled) return;
+  const v = id => { const e = document.getElementById(id); return e ? e.value : ''; };
+  const ck = id => { const e = document.getElementById(id); return !!(e && e.checked); };
+  const n = id => Number(String(v(id)).replace(/[^0-9]/g,'')) || 0;
+  const msg = document.getElementById('sp-msg');
+
+  if(!n('sp-views')){ if(msg) msg.textContent = 'How many views? That is the one number this needs.'; return; }
+
+  btn.disabled = true; btn.textContent = 'Saving\u2026';
+  if(msg) msg.textContent = '';
+  try{
+    const d = await (await api('/api/social?action=save_post', { method:'POST', body: JSON.stringify({
+      action:'save_post',
+      platform: v('sp-platform'), day: v('sp-day'), posted_at: v('sp-at'),
+      length_sec: n('sp-len'), hook: v('sp-hook'), topic: v('sp-topic'),
+      views: n('sp-views'), likes: n('sp-likes'), comments: n('sp-comments'),
+      shares: n('sp-shares'), saves: n('sp-saves'), follows: n('sp-follows'),
+      showed_result_first: ck('sp-result'), face_or_voice: ck('sp-face'),
+      trending_sound: ck('sp-sound'), had_link: ck('sp-link'),
+    }) })).json();
+    if(d.post && d.post.id) SC.open = d.post.id;
+    toast('Logged \u2726 scroll down for what it says');
+    loadSocial();
+  }catch(err){
+    btn.disabled = false; btn.textContent = 'Save & diagnose';
+    if(msg) msg.textContent = 'Could not save: ' + err.message;
+  }
+}
+
+/* ── ONE POST, AND WHAT TO DO ABOUT IT ───────────────────────────────── */
+
+function scPostRow(p){
+  const open = String(SC.open) === String(p.id);
+  const col = SC_BAND_COLOUR[p.band] || '#8B7355';
+  return '<div class="member-card" id="scp-' + p.id + '" style="--mc:' + col + '">'
+    + '<div class="mc-top" style="cursor:pointer" onclick="scOpen(' + p.id + ')">'
+      + '<div style="flex:1;min-width:0">'
+        + '<div class="mc-name">' + scNum(p.views) + ' views'
+          + (p.hook ? ' \u00b7 \u201c' + esc(p.hook) + '\u201d' : '') + '</div>'
+        + '<div style="font-size:0.76rem;color:var(--muted);margin-top:0.15rem">'
+          + esc(p.platform_label) + ' \u00b7 ' + esc(chgDay(p.day))
+          + (p.posted_at ? ' at ' + esc(p.posted_at) : '')
+          + (p.length_sec ? ' \u00b7 ' + p.length_sec + 's' : '')
+          + ' \u00b7 ' + p.engagement_pct + '% engaged'
+          + (p.follows ? ' \u00b7 ' + p.follows + ' follows' : '')
+        + '</div>'
+      + '</div>'
+      + '<span class="status-pill" style="background:' + col + '1a;color:' + col + '">'
+        + esc(p.band_label) + '</span>'
+      + '<span style="color:var(--muted);margin-left:0.6rem">' + (open ? '\u2212' : '+') + '</span>'
+    + '</div>'
+    + (open ? '<div style="padding:0.2rem 0 0.4rem">' + scCoachHtml(p) + '</div>' : '')
+  + '</div>';
+}
+
+function scOpen(id){
+  SC.open = String(SC.open) === String(id) ? 0 : id;
+  renderSocial();
+}
+
+function scCoachHtml(p){
+  const c = p.coaching;
+  if(!c) return '<div class="ny-sub" style="padding:0.4rem 0">Reading it\u2026</div>';
+  return '<div style="font-size:0.86rem;line-height:1.7;color:var(--ink);margin:0.3rem 0 0.8rem">'
+      + esc(c.verdict) + '</div>'
+    + '<div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(110px,1fr));margin-bottom:0.9rem">'
+      + rcStat(p.engagement_pct + '%', 'Engaged')
+      + rcStat(p.save_rate_pct + '%', 'Saved')
+      + rcStat(p.share_rate_pct + '%', 'Shared')
+      + rcStat(p.follows_per_1k, 'Follows / 1k views')
+    + '</div>'
+    + (c.fixes && c.fixes.length
+        ? '<div style="font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);'
+          + 'margin:0 0 0.5rem">Do this next</div>'
+          + c.fixes.map((x, i) =>
+              '<div style="border-left:2px solid ' + (x.size === 'big' ? '#8B6A3E' : 'var(--line)')
+              + ';padding:0 0 0 0.7rem;margin-bottom:0.7rem">'
+              + '<div style="font-size:0.88rem;color:var(--ink);font-weight:600">'
+                + (i + 1) + '. ' + esc(x.what) + '</div>'
+              + '<div style="font-size:0.79rem;color:var(--muted);line-height:1.6;margin-top:0.2rem">'
+                + esc(x.why) + '</div>'
+            + '</div>').join('')
+        : '')
+    + (c.to_goal
+        ? '<div class="ny-sub" style="padding:0.2rem 0 0.5rem">'
+          + scNum(c.to_goal) + ' short of 10,000 on this one.</div>'
+        : '')
+    + '<button class="btn btn-ghost btn-sm" onclick="scDelete(' + p.id + ',this)">Delete this log</button>';
+}
+
+async function scDelete(id, btn){
+  if(!btn || btn.disabled) return;
+  btn.disabled = true; btn.textContent = 'Deleting\u2026';
+  try{
+    await api('/api/social?action=delete_post', { method:'POST',
+      body: JSON.stringify({ action:'delete_post', id: id }) });
+    SC.open = 0;
+    loadSocial();
+  }catch(err){
+    btn.disabled = false; btn.textContent = 'Delete this log';
+    toast('Could not delete: ' + err.message);
+  }
+}
+
+function scPlatform(p){ SC.platform = p; loadSocial(); }
+function scDays(n){ SC.days = n; loadSocial(); }
+
+/* ── WHO POSTED ──────────────────────────────────────────────────────── */
+
+function scStreakHtml(){
+  const s = SC.streak;
+  if(!s || !s.people || !s.people.length) return '<div class="empty">No team on the roster.</div>';
+  return s.people.map(p => {
+    const dots = (p.recent || []).slice().reverse().map(x =>
+      '<i title="' + x.day + '" style="display:inline-block;width:10px;height:10px;border-radius:50%;'
+      + 'margin-right:3px;background:' + (x.done ? '#067647' : '#E4E7EC') + '"></i>').join('');
+    return '<div class="member-card" style="--mc:' + (p.posted_today ? '#067647' : '#B54708') + '">'
+      + '<div class="mc-top">'
+        + '<div style="flex:1;min-width:0">'
+          + '<div class="mc-name">' + esc(p.name || 'Someone') + '</div>'
+          + '<div style="font-size:0.76rem;color:var(--muted);margin-top:0.15rem">'
+            + (p.posted_today ? 'Posted today' : 'Not yet today')
+            + (p.streak ? ' \u00b7 ' + p.streak + ' day' + (p.streak === 1 ? '' : 's') + ' running' : '')
+            + ' \u00b7 ' + p.days_posted + ' of the last ' + p.window_days + ' days'
+            + (p.last_posted ? ' \u00b7 last ' + esc(chgDay(p.last_posted)) : '')
+          + '</div>'
+          + '<div style="margin-top:0.45rem">' + dots + '</div>'
+        + '</div>'
+      + '</div></div>';
+  }).join('');
+}
+
+/* ── THE MONTHLY RECAP ───────────────────────────────────────────────────
+   Money that actually moved, people who actually came, and the difference
+   either way. Nothing here is a projection. */
+let RC = { recap: null, actions: [], unsettled: null, month: '', scope: 'revenue' };
+
+function rcMoney(c){ return '$' + (Math.round(Number(c)||0)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function rcMoneyShort(c){ return '$' + Math.round((Number(c)||0)/100).toLocaleString('en-US'); }
+function rcNum(n){ return Number(n||0).toLocaleString('en-US'); }
+
+/* Up is green, down is red, level is grey. The arrow and the colour say
+   the same thing as the words, so the direction survives a glance. */
+function rcTrend(ch, said){
+  const up = ch.direction === 'up', down = ch.direction === 'down';
+  const col = up ? '#067647' : (down ? '#B42318' : 'var(--muted)');
+  const arrow = up ? '\u2191' : (down ? '\u2193' : '\u2192');
+  return '<span style="color:' + col + ';font-weight:600">' + arrow + ' ' + esc(said) + '</span>';
+}
+
+async function loadRecap(){
+  const el = document.getElementById('rc-body');
+  if(!el) return;
+  el.innerHTML = '<div class="empty">Reading Stripe and both booking books — a few seconds…</div>';
+  const sel = document.getElementById('rc-month');
+  const want = (sel && sel.value) || '';
+  try{
+    const [r, a, u] = await Promise.all([
+      api('/api/recap?action=month' + (want ? '&month=' + encodeURIComponent(want) : '')).then(x => x.json()),
+      api('/api/recap?action=actions').then(x => x.json()),
+      api('/api/settle?action=unsettled&days=90&limit=40').then(x => x.json()),
+    ]);
+    if(r.error) throw new Error(r.error);
+    RC.recap = r; RC.actions = a.actions || []; RC.unsettled = u; RC.month = r.month;
+  }catch(err){
+    el.innerHTML = emptyBox('\u26a0\ufe0f','Could not load: ' + esc(err.message));
+    return;
+  }
+  rcFillMonths();
+  renderRecap();
+}
+
+function rcFillMonths(){
+  const sel = document.getElementById('rc-month');
+  if(!sel || !RC.recap) return;
+  const hist = (RC.recap.history || []).slice().reverse();
+  sel.innerHTML = hist.map(h =>
+    '<option value="' + h.month + '"' + (h.month === RC.month ? ' selected' : '') + '>'
+    + esc(h.label) + '</option>').join('');
+}
+
+function renderRecap(){
+  const el = document.getElementById('rc-body');
+  if(!el || !RC.recap) return;
+  const r = RC.recap, rev = r.revenue, cl = r.clients, mem = r.memberships;
+
+  el.innerHTML =
+    (r.partial
+      ? '<div style="margin-bottom:1rem">' + rcNote(esc(r.label) + ' is still running — '
+        + 'these are the numbers up to ' + esc(r.through) + '.') + '</div>'
+      : '')
+
+    // ── THE TWO NUMBERS SHE ASKED FOR ──
+    + '<div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">'
+      + rcBig('Money collected', rcMoney(rev.total_cents),
+          rcTrend(rev.change, rev.said) + '<br><span class="ny-sub">'
+          + esc(r.previous_label) + ' was ' + rcMoney(rev.change.before) + '</span>')
+      + rcBig('Clients', rcNum(cl.people) + (cl.people === 1 ? ' person' : ' people'),
+          rcTrend(cl.change, cl.said) + '<br><span class="ny-sub">'
+          + rcNum(cl.visits) + ' visits · ' + rcNum(cl.new_people) + ' new · '
+          + rcNum(cl.returning_people) + ' returning</span>')
+      + rcBig('Guaranteed every month', rcMoney(mem.mrr_cents),
+          '<span class="ny-sub">' + mem.live + ' membership' + (mem.live === 1 ? '' : 's')
+          + ' billing, whether anybody books or not</span>')
+    + '</div>'
+
+    // ── THE CAVEAT, WHERE SHE READS THE NUMBER ──
+    + (rev.recorded.missing
+        ? '<div style="margin:1rem 0">' + rcNote(
+            '<b>' + rev.recorded.missing + ' of ' + rev.recorded.kept_visits + ' visits this month '
+            + 'have no payment written down</b> (' + rev.recorded.pct + '% recorded). So the figure above '
+            + 'is a floor, not the truth — it is missing every balance you took at the desk. '
+            + 'The list at the bottom of this page fixes it in one tap each.', true) + '</div>'
+        : '')
+    + (!rev.stripe_ok && rev.stripe_why
+        ? '<div style="margin:1rem 0">' + rcNote(esc(rev.stripe_why), true) + '</div>' : '')
+
+    // ── WHERE THE MONEY CAME FROM ──
+    + '<div class="page-head" style="margin-top:1.8rem"><div>'
+      + '<div class="page-title" style="font-size:1.05rem">Where it came from</div>'
+      + '<div class="page-desc">Memberships arrive whether or not anybody books. '
+        + 'Everything else had to be earned in the chair.</div>'
+    + '</div></div>'
+    + '<div class="stat-grid">'
+      + rcStat(rcMoneyShort((rev.by_source||{}).memberships), 'Memberships')
+      + rcStat(rcMoneyShort((rev.by_source||{}).appointments), 'Appointments')
+      + rcStat(rcMoneyShort(rev.cash_cents), 'Cash, Zelle &amp; the rest')
+      + rcStat(rev.per_visit_cents ? rcMoney(rev.per_visit_cents) : '—', 'Collected per visit')
+    + '</div>'
+    + (mem.cancelled_count
+        ? '<div style="margin-top:0.8rem">' + rcNote(
+            mem.cancelled_count + ' membership' + (mem.cancelled_count === 1 ? ' has' : 's have')
+            + ' been cancelled: ' + mem.cancelled.map(c => esc(c.name) + ' ('
+            + rcMoney(c.price_cents) + '/mo, ' + esc(c.cancelled_at) + ')').join(', ')
+            + '. A win-back is the cheapest membership you will ever sell.') + '</div>'
+        : '')
+    + (mem.not_billing
+        ? '<div style="margin-top:0.8rem">' + rcNote(mem.not_billing
+            + ' on the roster ' + (mem.not_billing === 1 ? 'has' : 'have') + ' no Stripe subscription '
+            + 'behind ' + (mem.not_billing === 1 ? 'it' : 'them') + ', so '
+            + (mem.not_billing === 1 ? 'it is' : 'they are')
+            + ' not counted above. Guaranteed money that is not arriving is not guaranteed money.', true) + '</div>'
+        : '')
+
+    // ── MONTH BY MONTH ──
+    + '<div class="page-head" style="margin-top:1.8rem"><div>'
+      + '<div class="page-title" style="font-size:1.05rem">Month by month</div>'
+      + '<div class="page-desc">Money that moved, and the people who came for it.</div>'
+    + '</div></div>'
+    + rcHistoryTable()
+
+    // ── THE THINGS TO DO ──
+    + '<div class="page-head" style="margin-top:1.8rem"><div>'
+      + '<div class="page-title" style="font-size:1.05rem">What to do about it</div>'
+      + '<div class="page-desc">Every line below came out of your own numbers, and says which number. '
+        + 'Tick it when you do it — a daily one wants a tick every day, and the run is counted.</div>'
+    + '</div></div>'
+    + '<div class="seg" style="margin-bottom:0.9rem">'
+      + ['revenue','clients','social'].map(s =>
+          '<button class="' + (RC.scope === s ? 'on' : '') + '" onclick="rcScope(\'' + s + '\')">'
+          + (s === 'revenue' ? 'More money' : (s === 'clients' ? 'More clients' : 'Social'))
+          + ' (' + RC.actions.filter(a => a.scope === s).length + ')</button>').join('')
+    + '</div>'
+    + '<div id="rc-actions">' + rcActionsHtml() + '</div>'
+
+    // ── THE FIX FOR THE CAVEAT ──
+    + '<div class="page-head" style="margin-top:2rem"><div>'
+      + '<div class="page-title" style="font-size:1.05rem">Write down what you took</div>'
+      + '<div class="page-desc">Visits with no payment recorded against them. The amount is what the '
+        + 'booking page and the front desk price them at — <b>change it to what you actually '
+        + 'collected</b>, pick how it arrived, and it is on the books. This is the single thing that '
+        + 'makes every other number on this page true.</div>'
+    + '</div></div>'
+    + rcUnsettledHtml();
+}
+
+/* The house style for a figure: white, bordered, gold number. Note that
+   statCard() elsewhere in this file emits .stat and .stat-lbl, neither of
+   which this stylesheet defines — so these use .stat-card / .stat-num /
+   .stat-label, which it does. */
+function rcBig(label, value, note){
+  return '<div class="stat-card" style="text-align:left">'
+    + '<div class="stat-label" style="margin:0 0 0.35rem">' + label + '</div>'
+    + '<div class="stat-num" style="font-size:1.7rem">' + value + '</div>'
+    + '<div style="font-size:0.82rem;line-height:1.6;margin-top:0.35rem">' + note + '</div>'
+  + '</div>';
+}
+
+function rcStat(value, label){
+  return '<div class="stat-card">'
+    + '<div class="stat-num">' + value + '</div>'
+    + '<div class="stat-label">' + label + '</div>'
+  + '</div>';
+}
+
+/* A quiet callout. There is no note-box class in this stylesheet, so the
+   style is inline rather than silently unstyled. */
+function rcNote(html, warn){
+  return '<div style="border:1px solid ' + (warn ? '#FEDF89' : 'var(--border)') + ';'
+    + 'background:' + (warn ? '#FFFAEB' : 'var(--card)') + ';border-radius:8px;'
+    + 'padding:0.8rem 1rem;font-size:0.84rem;line-height:1.65;'
+    + 'color:' + (warn ? '#93370D' : 'var(--ink-2)') + '">' + html + '</div>';
+}
+
+function rcHistoryTable(){
+  const h = (RC.recap.history || []).slice().reverse().filter(x => x.total_cents || x.visits);
+  if(!h.length) return '<div class="empty">Nothing to compare yet.</div>';
+  return '<div style="overflow-x:auto"><table class="tbl"><thead><tr>'
+    + '<th>Month</th><th style="text-align:right">Collected</th><th style="text-align:right">Change</th>'
+    + '<th style="text-align:right">People</th><th style="text-align:right">Visits</th><th style="text-align:right">New</th>'
+    + '</tr></thead><tbody>'
+    + h.map((x, i) => {
+        const prev = h[i + 1];
+        const diff = prev ? x.total_cents - prev.total_cents : null;
+        const pct = prev && prev.total_cents ? Math.round((diff / prev.total_cents) * 1000) / 10 : null;
+        const col = diff === null ? 'var(--muted)' : (diff > 0 ? '#067647' : (diff < 0 ? '#B42318' : 'var(--muted)'));
+        const txt = diff === null ? '—'
+          : (diff === 0 ? 'level'
+            : (diff > 0 ? '↑' : '↓') + ' ' + rcMoney(Math.abs(diff))
+              + (pct === null ? '' : ' (' + Math.abs(pct) + '%)'));
+        return '<tr' + (x.month === RC.month ? ' style="background:#FFFBF5"' : '') + '>'
+          + '<td>' + esc(x.label) + '</td>'
+          + '<td style="text-align:right">' + rcMoney(x.total_cents) + '</td>'
+          + '<td style="text-align:right;color:' + col + '">' + txt + '</td>'
+          + '<td style="text-align:right">' + rcNum(x.people) + '</td>'
+          + '<td style="text-align:right">' + rcNum(x.visits) + '</td>'
+          + '<td style="text-align:right">' + rcNum(x.new_people) + '</td>'
+        + '</tr>';
+      }).join('')
+    + '</tbody></table></div>';
+}
+
+function rcScope(s){
+  RC.scope = s;
+  renderRecap();
+}
+
+function rcActionsHtml(){
+  const list = RC.actions.filter(a => a.scope === RC.scope);
+  if(!list.length){
+    return '<div class="empty">Nothing here yet'
+      + (RC.scope === 'social' ? ' — the social playbook lives on the Social media tab.' : '.')
+      + '</div>';
+  }
+  const worth = list.reduce((s, a) => s + (a.worth_cents || 0), 0);
+  return (worth
+      ? '<div class="ny-sub" style="padding:0 0 0.7rem">Done, this list is worth roughly '
+        + rcMoneyShort(worth) + ' a year. Each line says where that figure comes from.</div>'
+      : '')
+    + list.map(rcActionRow).join('');
+}
+
+function rcActionRow(a){
+  const done = a.complete;
+  const col = done ? '#067647' : (a.frequency === 'once' ? '#8B6A3E' : '#B6A588');
+  const prog = a.target > 1
+    ? a.done_this_period + ' of ' + a.target + ' this ' + (a.frequency === 'monthly' ? 'month' : 'week')
+    : (done ? 'done' : 'not yet');
+  return '<div class="member-card" style="--mc:' + col + '">'
+    + '<div class="mc-top" style="align-items:flex-start">'
+      + '<label style="display:flex;align-items:center;cursor:pointer;padding:0.1rem 0.7rem 0 0">'
+        + '<input type="checkbox"' + (a.done_today || (a.frequency === 'once' && done) ? ' checked' : '')
+          + ' onchange="rcTick(' + a.id + ',this.checked,this)" '
+          + 'style="width:20px;height:20px;cursor:pointer;accent-color:#8B6A3E" />'
+      + '</label>'
+      + '<div style="flex:1;min-width:0">'
+        + '<div class="mc-name">' + esc(a.title) + '</div>'
+        + '<div style="font-size:0.78rem;color:var(--muted);margin-top:0.15rem">'
+          + '<b>' + esc(a.frequency_label) + '</b> · ' + esc(prog)
+          + (a.streak > 1 ? ' · <b style="color:#067647">' + a.streak + ' days running</b>' : '')
+          + (a.ticks_this_month ? ' · ' + a.ticks_this_month + ' this month' : '')
+          + (a.worth_cents ? ' · worth about ' + rcMoneyShort(a.worth_cents) + '/yr' : '')
+        + '</div>'
+        + (a.detail ? '<div style="font-size:0.84rem;color:var(--ink);margin-top:0.4rem;line-height:1.6">'
+            + esc(a.detail) + '</div>' : '')
+        + (a.why ? '<div style="font-size:0.78rem;color:var(--muted);margin-top:0.4rem;line-height:1.6;'
+            + 'border-left:2px solid var(--line);padding-left:0.6rem">'
+            + '<b>Why:</b> ' + esc(a.why) + '</div>' : '')
+      + '</div>'
+    + '</div></div>';
+}
+
+async function rcTick(id, on, box){
+  if(box) box.disabled = true;
+  try{
+    await api('/api/recap?action=tick', { method:'POST',
+      body: JSON.stringify({ action:'tick', action_id: id, on: !!on }) });
+    const a = await (await api('/api/recap?action=actions')).json();
+    RC.actions = a.actions || [];
+    const host = document.getElementById('rc-actions');
+    if(host) host.innerHTML = rcActionsHtml();
+  }catch(err){
+    toast('Could not save that: ' + err.message);
+    if(box){ box.disabled = false; box.checked = !on; }
+  }
+}
+
+/* ── WRITING DOWN WHAT SHE TOOK ──────────────────────────────────────── */
+
+const RC_METHODS = [['cash','Cash'],['zelle','Zelle'],['card','Card reader'],
+  ['venmo','Venmo'],['cashapp','Cash App'],['applepay','Apple Cash'],['other','Other']];
+
+function rcUnsettledHtml(){
+  const u = RC.unsettled;
+  if(!u || !u.visits || !u.visits.length){
+    return '<div class="empty">✦ Every visit in the last 90 days has a payment recorded. '
+      + 'That is the number this whole page depends on.</div>';
+  }
+  return '<div class="ny-sub" style="padding:0 0 0.7rem">' + u.visits.length
+    + ' visits in the last ' + u.days + ' days with nothing recorded. '
+    + 'At the prices on the menu they add up to ' + rcMoney(u.total_suggested_cents)
+    + ' — which is a guess, not a figure. Only what you type is real.</div>'
+    + u.visits.map(rcSettleRow).join('');
+}
+
+function rcSettleRow(v){
+  return '<div class="member-card" id="rcu-' + v.id + '" style="--mc:#B42318">'
+    + '<div class="mc-top" style="flex-wrap:wrap;gap:0.5rem">'
+      + '<div style="flex:1;min-width:160px">'
+        + '<div class="mc-name">' + esc(v.client || 'Someone') + '</div>'
+        + '<div style="font-size:0.76rem;color:var(--muted);margin-top:0.15rem">'
+          + esc(v.service || 'Visit') + ' · ' + esc(chgDay(v.date))
+          + (v.time ? ' at ' + esc(v.time) : '')
+          + (v.artist ? ' · ' + esc(v.artist) : '')
+          + (v.deposit_taken_cents ? ' · ' + rcMoney(v.deposit_taken_cents) + ' deposit in' : '')
+          + (v.covered_by_membership ? ' · ' + rcMoney(v.covered_by_membership) + ' on their membership' : '')
+        + '</div>'
+      + '</div>'
+      + '<div class="chg-take" style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">'
+        + '<span style="font-size:0.85rem;color:var(--muted)">$</span>'
+        + '<input class="chg-amt-in" inputmode="decimal" value="'
+          + (Math.round(Number(v.suggested_cents)||0)/100).toFixed(2) + '" '
+          + 'oninput="chgSync(this)" onfocus="this.select()" '
+          + 'style="width:72px;padding:0.3rem 0.4rem;border:1px solid var(--line);border-radius:6px;'
+          + 'font-size:0.85rem;text-align:right" />'
+        + '<select id="rcm-' + v.id + '" style="padding:0.32rem 0.4rem;border:1px solid var(--line);'
+          + 'border-radius:6px;font-size:0.8rem">'
+          + RC_METHODS.map(m => '<option value="' + m[0] + '">' + m[1] + '</option>').join('')
+        + '</select>'
+        + '<button class="btn btn-gold btn-sm" data-verb="Paid" onclick="rcMarkPaid(' + v.id + ',this)">'
+          + 'Paid ' + rcMoney(v.suggested_cents) + '</button>'
+      + '</div>'
+    + '</div></div>';
+}
+
+async function rcMarkPaid(apptId, btn){
+  if(!btn || btn.disabled) return;
+  const was = btn.textContent;
+  const cents = chgAmountBy(btn);
+  if(!cents){ toast('How much did you take?'); return; }
+  const sel = document.getElementById('rcm-' + apptId);
+  const method = (sel && sel.value) || 'cash';
+
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    const d = await (await api('/api/settle?action=paid', { method:'POST',
+      body: JSON.stringify({ action:'paid', appointment_id: apptId, amount_cents: cents, method: method }) })).json();
+    if(!d.ok){ btn.disabled = false; btn.textContent = was; toast(d.message || d.error || 'That did not save'); return; }
+    btn.textContent = d.already ? 'Already down' : 'On the books ✦';
+    toast(d.message || 'Recorded');
+    setTimeout(loadRecap, 900);
+  }catch(err){
+    btn.disabled = false; btn.textContent = was;
+    toast('Could not save: ' + err.message);
+  }
+}
 
 /* ── CHARGING A CARD ON FILE ─────────────────────────────────────────────
    There is no confirm dialog here, by her choice. What stands in its place:

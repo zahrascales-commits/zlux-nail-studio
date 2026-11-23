@@ -101,6 +101,44 @@ module.exports = async function (req, res) {
       return res.json({ shifts: rows });
     }
 
+    /* ── DID YOU POST TODAY? ──
+       One tap, and Zahra sees it on the Social media tab. The streak comes
+       back with it because a run of days is the only part of this that
+       makes anybody want to keep going. */
+    if (method === 'GET' && action === 'posting') {
+      const social = require('./_social');
+      const all = await social.postingStreak({ days: 30 });
+      const mine = all.people.find(p => String(p.member_id) === String(member.id))
+        || { posted_today: false, streak: 0, days_posted: 0, window_days: 30, recent: [] };
+      return res.json({
+        today: all.today,
+        posted_today: mine.posted_today,
+        streak: mine.streak,
+        days_posted: mine.days_posted,
+        window_days: mine.window_days,
+        recent: mine.recent,
+        book_link: 'https://zolanailstudio.com/booking.html',
+      });
+    }
+
+    if (method === 'POST' && action === 'posted') {
+      const social = require('./_social');
+      const on = (req.body && req.body.on) !== false;
+      if (on) {
+        await social.markPosted({
+          member_id: member.id, who: member.name,
+          day: req.body && req.body.day,
+          platform: req.body && req.body.platform,
+          link: req.body && req.body.link,
+        });
+      } else {
+        await social.unmarkPosted({ member_id: member.id, day: req.body && req.body.day });
+      }
+      const all = await social.postingStreak({ days: 30 });
+      const mine = all.people.find(p => String(p.member_id) === String(member.id)) || {};
+      return res.json({ ok: true, posted_today: !!mine.posted_today, streak: mine.streak || 0 });
+    }
+
     // ── OPEN APPOINTMENTS: first to confirm takes it ──
     // Only ever lists what this artist could genuinely take — the filtering
     // happened when the booking was dispatched, so anything here is hers to

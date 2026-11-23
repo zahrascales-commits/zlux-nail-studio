@@ -262,6 +262,71 @@ const SEED = [
       + 'chair while they are still looking at their hands it works, while asked by text the '
       + 'next day it mostly does not.' },
 
+  // ── SOCIAL ──
+  /* Her goal is 10,000 followers in three months and 10,000 views a video.
+     None of these promise that, because nobody can. What they do is the
+     arithmetic and the mechanics, which are the parts she controls. */
+  { scope: 'social', frequency: 'daily', target: 2, worth_cents: 0,
+    title: 'Post twice a day',
+    detail: 'Two posts, not one. A re-cut of the same set counts — different first frame, '
+      + 'different hook. You do not need twice the nails, you need twice the videos.',
+    why: '10,000 followers needs roughly 500,000 to 1,000,000 views, because a strong account turns '
+      + '1–2% of viewers into followers. Over 90 days that is 5,500–11,000 views a day. '
+      + 'At one post a day every post has to average 10,000 — brutal. At two a day it is 5,000. '
+      + 'At three, 3,300. Volume is the only part of this arithmetic you fully control, and it is the '
+      + 'part the answer is most sensitive to.' },
+
+  { scope: 'social', frequency: 'daily', target: 1, worth_cents: 0,
+    title: 'Finished nails in the very first frame',
+    detail: 'Open on the result. Then the process. Never the other way round.',
+    why: 'Nobody waits to find out whether a video is worth watching, and what the algorithm actually '
+      + 'measures is whether people finish and re-watch. This is the most common single reason a '
+      + 'beautiful set gets 300 views. The Social media tab measures the lift on your own posts — '
+      + 'so you will not have to take my word for it.' },
+
+  { scope: 'social', frequency: 'daily', target: 1, worth_cents: 0,
+    title: 'Keep it under 10 seconds',
+    detail: 'If it runs long, cut it. Two short videos beat one long one, and you get two posts out of it.',
+    why: 'A 7-second clip watched twice scores better than a 40-second one people leave at 3 seconds, '
+      + 'because completion and re-watch are what get measured. Nail content is the easiest thing in '
+      + 'the world to cut short.' },
+
+  { scope: 'social', frequency: 'daily', target: 1, worth_cents: 0,
+    title: 'Log yesterday’s post numbers',
+    detail: 'Social media tab → Log a post. Views, likes, comments, shares, saves, follows. '
+      + 'About fifteen seconds.',
+    why: 'Nothing on the Social media tab can diagnose a post it cannot see, and after 8 logged posts '
+      + 'the follower plan stops using a conservative guess and starts using your real conversion rate. '
+      + 'Right now every piece of advice you get is generic because there is no data to make it specific.' },
+
+  { scope: 'social', frequency: 'daily', target: 1, worth_cents: 0,
+    title: 'Answer every comment in the first hour',
+    detail: 'And reply to the best one with a video — that reply is a new post that inherits '
+      + 'the attention of the first.',
+    why: 'Comments are a distribution signal, not just manners. The first hour is when a video is '
+      + 'being tested on strangers, and replies are the cheapest way to keep that test running.' },
+
+  { scope: 'social', frequency: 'weekly', target: 1, worth_cents: 0,
+    title: 'Follow up anything that beat your normal — within 24 hours',
+    detail: 'Part 2, same shape, same hook pattern, different nails. Today, not next week.',
+    why: 'When a video is travelling, the next one goes out to the audience it just found. '
+      + 'This is the single biggest thing people get wrong with a video that nearly took off: '
+      + 'they celebrate, wait a week, and post something unrelated.' },
+
+  { scope: 'social', frequency: 'weekly', target: 1, worth_cents: 0,
+    title: 'One celebrity-angle post a week',
+    detail: 'No name needed. "What she asked for", "what I packed", "what it is like backstage".',
+    why: 'You do celebrity nails. Almost nobody posting nail content can say that, and it is the one '
+      + 'thing on your account that cannot be copied. A set on a known person is a different category '
+      + 'of reach from a set on an anonymous hand.' },
+
+  { scope: 'social', frequency: 'daily', target: 1, worth_cents: 0,
+    title: 'Ask for the save and the share out loud',
+    detail: '"Save this for your next appointment." "Send it to whoever does your nails."',
+    why: 'Likes do almost nothing. Saves tell the algorithm it has lasting value and shares reach '
+      + 'people who do not follow you at all — which is where new followers actually come from. '
+      + 'A post that is not asked to be shared mostly is not.' },
+
   { scope: 'clients', frequency: 'weekly', target: 1, worth_cents: 0,
     title: 'Check Brianna actually posted every day',
     detail: 'Her streak is on the Monthly recap tab. If she missed days, say so the same week.',
@@ -328,7 +393,7 @@ async function collectedByMonth(months) {
      answered, because an invoice is the only thing that proves it. */
   const data = {
     stripe_ok: stripeOk, stripe_why: stripeWhy,
-    by_month: {}, by_source: stripe.bySource || {},
+    by_month: {}, by_month_source: stripe.byMonthSource || {},
     refunded_cents: money(stripe.refunded),
     cash_by_method: cash.byMethod || {},
   };
@@ -526,7 +591,11 @@ async function recapFor(ym) {
       stripe_ok: cash.stripe_ok,
       stripe_why: cash.stripe_why,
       refunded_cents: cash.refunded_cents,
-      by_source: cash.by_source,
+      /* This month's split, not the sweep's. Memberships are the money
+         that arrives whether anybody books; appointments are the money
+         somebody had to be in the chair for. Knowing which is which is
+         the difference between a quiet month and a broken one. */
+      by_source: (cash.by_month_source || {})[month] || { memberships: 0, appointments: 0, other: 0 },
       cash_by_method: cash.cash_by_method,
       recorded: rec,
     },

@@ -497,6 +497,7 @@
   </nav>
   <div class="wrap">
     <section class="panel active" id="panel-schedule">
+      <div id="posting-card"></div>
       <div id="today-card"></div>
       <div id="open-jobs"></div>
       <div id="push-setup" style="margin-bottom:1.75rem;"></div>
@@ -929,7 +930,75 @@ function mountPush(){
 function startJobPolling(){
   if(jobsTimer) clearInterval(jobsTimer);
   loadJobs();
+  loadPosting();
   jobsTimer = setInterval(loadJobs, 30000);
+}
+
+/* ── POST THE BOOKING LINK TODAY ──
+   Zahra's ask: every artist posts the link every day, working or not. The
+   nudge arrives as a text at 9am; this is where it gets ticked. */
+let POSTING = null;
+async function loadPosting(){
+  const el = document.getElementById('posting-card'); if(!el) return;
+  try{
+    const r = await fetch('/api/team?action=posting&member_id=' + MID + '&pin=' + PIN);
+    POSTING = await r.json();
+  }catch(_){ el.innerHTML = ''; return; }
+  renderPosting();
+}
+
+function renderPosting(){
+  const el = document.getElementById('posting-card'); if(!el || !POSTING) return;
+  const p = POSTING;
+  const done = !!p.posted_today;
+  const link = p.book_link || 'https://zolanailstudio.com/booking.html';
+
+  const dots = (p.recent || []).slice(0, 14).reverse().map(d =>
+    '<i title="' + d.day + '" style="display:inline-block;width:9px;height:9px;border-radius:50%;'
+    + 'margin-right:3px;background:' + (d.done ? 'var(--gold)' : 'rgba(255,255,255,0.14)') + '"></i>'
+  ).join('');
+
+  el.innerHTML =
+    '<div class="today-card" style="margin-bottom:1.5rem;padding:1.2rem 1.3rem;'
+      + 'border:1px solid ' + (done ? 'rgba(182,165,136,0.5)' : 'rgba(220,120,90,0.45)') + '">'
+    + '<div class="label-sm" style="margin:0 0 0.5rem">' + (done ? 'Posted today ✦' : 'Post the booking link today') + '</div>'
+    + '<p style="font-family:\'Josefin Sans\',sans-serif;font-size:0.8rem;color:var(--muted);line-height:1.7;margin:0 0 0.8rem">'
+      + (done
+          ? 'Thank you — Zahra can see it. ' + (p.streak > 1 ? '<b style="color:var(--gold)">' + p.streak + ' days in a row.</b>' : '')
+          : 'One post, anywhere — story, caption or bio — with this link on it. '
+            + 'Even on a day you are not in. ' + (p.streak > 0 ? 'You are on ' + p.streak + ' day' + (p.streak === 1 ? '' : 's') + ' — do not break it.' : ''))
+    + '</p>'
+    + '<div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-bottom:0.7rem">'
+      + '<input id="posting-link" readonly value="' + link + '" '
+        + 'style="flex:1;min-width:170px;background:var(--card);border:1px solid var(--border);'
+        + 'color:var(--cream);font-size:0.72rem;padding:0.45rem 0.55rem;border-radius:4px" />'
+      + '<button class="mini" onclick="copyPostingLink(this)">Copy</button>'
+    + '</div>'
+    + '<button class="mini" style="padding:0.5rem 1rem;' + (done ? '' : 'border-color:var(--gold);color:var(--gold)') + '" '
+      + 'onclick="tapPosted(' + (done ? 'false' : 'true') + ',this)">'
+      + (done ? 'Undo' : 'I posted it ✓') + '</button>'
+    + '<div style="margin-top:0.8rem">' + dots
+      + '<span style="font-family:\'Josefin Sans\',sans-serif;font-size:0.68rem;color:var(--muted);margin-left:0.4rem">'
+      + 'last 14 days · ' + (p.days_posted || 0) + ' of ' + (p.window_days || 30) + ' posted</span></div>'
+    + '</div>';
+}
+
+function copyPostingLink(btn){
+  const i = document.getElementById('posting-link'); if(!i) return;
+  i.select();
+  try{ navigator.clipboard.writeText(i.value); }catch(_){ try{ document.execCommand('copy'); }catch(__){} }
+  const was = btn.textContent; btn.textContent = 'Copied ✓';
+  setTimeout(() => { btn.textContent = was; }, 1400);
+}
+
+async function tapPosted(on, btn){
+  if(!btn || btn.disabled) return;
+  btn.disabled = true; btn.textContent = on ? 'Saving…' : 'Undoing…';
+  try{
+    await fetch('/api/team?action=posted', { method:'POST', headers: hdrN(),
+      body: JSON.stringify({ action:'posted', on: on }) });
+  }catch(_){}
+  await loadPosting();
 }
 
 /* ── POST-APPOINTMENT CHECK-INS ("how did it go?" + notes) ── */
