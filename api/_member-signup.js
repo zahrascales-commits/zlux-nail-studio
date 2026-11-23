@@ -19,16 +19,16 @@ const TIER_CENTS = {
   SIGNATURE: 9900, LUXE: 19900, BLACK_CARD: 29900, TEST: 158,
 };
 
-// Paying for the year. Roughly two months free on every tier — the saving is
-// the difference between these and twelve monthly payments, not a made-up
-// percentage.
-const TIER_YEARLY_CENTS = {
-  // Ten cycles' money for thirteen cycles of membership — the saving is
-  // exactly three visits, which is the only way it is ever described.
-  // Eleven cycles for thirteen — exactly two visits free.
-  ESSENTIAL: 8500 * 11, ELITE: 11000 * 11,
-  SIGNATURE: 99900, LUXE: 199900, BLACK_CARD: 299900, TEST: 1580,
-};
+/* Paying for the year, on whichever rhythm she chose. Asked of _plans.js
+   rather than kept here: this used to be a second hand-typed copy of
+   every annual price, which is the exact thing the header of that file
+   warns about. TEST is the one amount that is genuinely local, because
+   it is not a real membership. */
+const TEST_YEARLY_CENTS = 1580;
+function yearlyCentsFor(tier, weeks) {
+  if (tier === 'TEST') return TEST_YEARLY_CENTS;
+  try { return require('./_plans').annualCentsAt(tier, weeks) || 0; } catch (_) { return 0; }
+}
 
 // The yearly Stripe price, created the first time somebody buys one so she
 // never has to set anything up by hand. Looked up by lookup_key so a second
@@ -83,10 +83,15 @@ async function rhythmPriceFor(stripe, tier, weeks) {
   return created.id;
 }
 
-async function yearlyPriceFor(stripe, tier) {
-  const amount = TIER_YEARLY_CENTS[tier];
+/* A year costs a different amount on each rhythm, because a year holds a
+   different number of visits on each. So the rhythm is in the lookup key
+   as well as the amount — otherwise the first person to buy a fortnightly
+   year would have minted a price that every later rhythm reused. */
+async function yearlyPriceFor(stripe, tier, weeks) {
+  const amount = yearlyCentsFor(tier, Number(weeks) || 4);
   if (!amount) return null;
-  const lookupKey = ('zola_' + tier + '_yearly_' + amount).toLowerCase();
+  const w = Number(weeks) || 4;
+  const lookupKey = ('zola_' + tier + '_yearly_' + w + 'week_' + amount).toLowerCase();
   try {
     const found = await stripe.prices.list({ lookup_keys: [lookupKey], limit: 1 });
     if (found && found.data && found.data[0]) return found.data[0].id;
@@ -96,9 +101,46 @@ async function yearlyPriceFor(stripe, tier) {
     currency: 'usd',
     recurring: { interval: 'year' },
     lookup_key: lookupKey,
-    product_data: { name: 'ZOLA ' + tier.replace('_', ' ') + ' — yearly' },
+    product_data: { name: 'ZOLA ' + tier.replace('_', ' ') + ' \u2014 a year, one visit every ' + w + ' weeks' },
+    metadata: { tier, rhythm_weeks: String(w) },
   });
   return created.id;
+}
+
+/* The sale, decided here and nowhere else. The browser says which tier
+   and which rhythm; what that costs is this server's business. */
+async function blackFridayFor(tier, weeks, yearly) {
+  try {
+    const plans = require('./_plans');
+    const win = await plans.blackFridayWindow();
+    if (!win.live) return null;
+    const s = plans.saleFor(tier, Number(weeks) || 4, yearly ? 'annual' : 'cycle');
+    if (!s) return null;
+    return Object.assign({ window: win }, s);
+  } catch (_) { return null; }
+}
+
+/* A coupon worth exactly the difference, lasting exactly as long as the
+   page said. The subscription itself stays on the regular price, so when
+   the discount runs out the membership returns to normal on its own
+   rather than renewing at a sale price for ever. */
+async function blackFridayCoupon(stripe, tier, weeks, sale) {
+  const off = Math.max(0, sale.was_cents - sale.now_cents);
+  if (!off) return null;
+  const repeating = sale.mode === 'cycle';
+  const id = ('zola_bf26_' + tier + '_' + weeks + (repeating ? 'w' : 'y') + '_' + off)
+    .toLowerCase().replace(/[^a-z0-9_]/g, '');
+  try {
+    try { const c = await stripe.coupons.retrieve(id); if (c) return c.id; } catch (_) {}
+    const made = await stripe.coupons.create(Object.assign({
+      id, amount_off: off, currency: 'usd',
+      name: 'ZOLA Black Friday \u2014 ' + tier.replace('_', ' ')
+        + (repeating ? ' first 2 months' : ' first year'),
+    }, repeating
+      ? { duration: 'repeating', duration_in_months: 2 }
+      : { duration: 'once' }));
+    return made.id;
+  } catch (_) { return null; }
 }
 
 // Turns a code into a Stripe coupon that repeats every month.
@@ -200,7 +242,10 @@ module.exports = async (req, res) => {
   // is only offered at four weeks. Checked before anything is created, so a
   // bad value never leaves a half-made customer behind.
   const yearly = String(billing || 'monthly') === 'yearly';
-  const weeks = yearly ? 4 : (Number(rhythm) || 4);
+  /* A year used to mean four weeks, because four weeks was the only
+     rhythm a year could be bought on. Now the rhythm she picked is the
+     rhythm she gets, whichever way she pays for it. */
+  const weeks = [2, 3, 4, 5].indexOf(Number(rhythm)) >= 0 ? Number(rhythm) : 4;
   if (![2, 3, 4, 5].includes(weeks)) {
     return res.status(400).json({ error: 'Please choose how often you would like to come.' });
   }
@@ -247,17 +292,27 @@ module.exports = async (req, res) => {
     }
     // What one payment is before any code or early-bird seat comes off.
     const plansLib = require('./_plans');
-    const listCents = yearly ? (TIER_YEARLY_CENTS[tier] || 0)
+    const listCents = yearly ? yearlyCentsFor(tier, weeks)
       : (tier === 'TEST' ? TIER_CENTS.TEST : plansLib.rhythmCents(tier, weeks));
 
     // Paying for the year swaps the price entirely. Done after the monthly
     // lookup so a studio that has set its own monthly prices keeps them.
     if (yearly) {
       try {
-        const yid = await yearlyPriceFor(stripe, tier);
+        const yid = await yearlyPriceFor(stripe, tier, weeks);
         if (yid) priceId = yid;
       } catch (_) { /* fall back to monthly rather than lose the signup */ }
     }
+
+    /* ── Black Friday ─────────────────────────────────────────────────
+       Worked out here, from the same file that drew the page, so the two
+       cannot disagree. It replaces a code and an early-bird seat rather
+       than stacking with them: the sale price is already the deepest
+       discount available, and three discounts on one visit can take it
+       under what the nails cost. The seat is left unclaimed so it is
+       still there for somebody else, and the response says which
+       discount was used. */
+    const bfSale = await blackFridayFor(tier, weeks, yearly);
 
     /* ── Discount code ─────────────────────────────────────────────────
        Validated server-side against the tier being bought. The browser
@@ -265,8 +320,33 @@ module.exports = async (req, res) => {
        request cannot talk its way to a cheaper membership. A bad code
        stops the signup rather than quietly charging full price to
        somebody who thinks they are on a founding rate.               */
-    let couponId = null, appliedPromo = null;
-    if (promoCode && String(promoCode).trim()) {
+    let couponId = null, appliedPromo = null, bfApplied = null, promoSetAside = null;
+
+    if (bfSale) {
+      const id = await blackFridayCoupon(stripe, tier, weeks, bfSale);
+      if (id) {
+        couponId = id;
+        bfApplied = {
+          mode: bfSale.mode,
+          was_cents: bfSale.was_cents,
+          now_cents: bfSale.now_cents,
+          saved_cents: bfSale.saved_cents,
+          pct_off: bfSale.pct_off,
+          weeks,
+          /* What happens when it ends, said in the answer as well as on
+             the page, because this is the sentence people say they were
+             never told. */
+          then_cents: bfSale.was_cents,
+          lasts: bfSale.mode === 'cycle' ? 'your first 2 months' : 'your first year',
+          saved_vs_monthly_cents: bfSale.saved_vs_monthly_cents || 0,
+        };
+        if (promoCode && String(promoCode).trim()) {
+          promoSetAside = String(promoCode).trim().toUpperCase().slice(0, 32);
+        }
+      }
+    }
+
+    if (!bfApplied && promoCode && String(promoCode).trim()) {
       const promoLib = require('./_promo');
       await promoLib.ensure();
       const p = await promoLib.lookup(promoCode);
@@ -300,10 +380,13 @@ module.exports = async (req, res) => {
        was just promised on screen.                                      */
     const eb = require('./_earlybird');
     let ebResult = null, ebCents = 0;
-    try {
-      const s = await eb.state();
-      if (s.available) ebCents = s.amount_cents;
-    } catch (_) {}
+    /* Not offered on top of a sale price. The seat stays unclaimed. */
+    if (!bfApplied) {
+      try {
+        const s = await eb.state();
+        if (s.available) ebCents = s.amount_cents;
+      } catch (_) {}
+    }
 
     if (ebCents > 0) {
       let listPrice = listCents;
@@ -338,6 +421,12 @@ module.exports = async (req, res) => {
         tier, memberEmail: email, billing: yearly ? 'yearly' : 'monthly',
         rhythm_weeks: String(weeks),
         ...(appliedPromo ? { promo_code: appliedPromo.code } : {}),
+        ...(bfApplied ? {
+          black_friday: '1',
+          bf_mode: bfApplied.mode,
+          bf_was_cents: String(bfApplied.was_cents),
+          bf_now_cents: String(bfApplied.now_cents),
+        } : {}),
       },
     });
 
@@ -441,10 +530,22 @@ module.exports = async (req, res) => {
       early_bird: (ebResult && ebResult.claimed)
         ? { amount_cents: ebResult.amount_cents, seat_number: ebResult.seat_number, label: ebResult.label }
         : null,
+      /* The sale, so the confirmation can say what was saved and when the
+         price returns to normal. Both of those belong on the screen she
+         sees at the moment she pays, not only in an email. */
+      black_friday: bfApplied,
+      /* A code she typed that the sale beat. Said rather than silently
+         dropped, and deliberately not redeemed — it is still hers. */
+      promo_set_aside: promoSetAside,
       nextBillingDate: nextBilling,
       rhythm_weeks: weeks,
       yearly,
-      charge_cents: listCents,
+      /* What actually leaves her card today. listCents is the regular
+         price; with a sale coupon on the subscription the first invoice is
+         lower, and putting the regular figure on a confirmation screen
+         tells her she paid more than she did. */
+      charge_cents: bfApplied ? bfApplied.now_cents : listCents,
+      list_cents: listCents,
       clientSecret: subscription.latest_invoice?.payment_intent?.client_secret || null,
     });
 
@@ -521,3 +622,9 @@ async function sendWelcome({ fullName, email, phone, memberId, tier }) {
 module.exports.cyclePriceFor = cyclePriceFor;
 module.exports.rhythmPriceFor = rhythmPriceFor;
 module.exports.yearlyPriceFor = yearlyPriceFor;
+
+/* Exported so a test can prove the checkout and the membership page
+   quote the same yearly figure, rather than both being asked to trust
+   the same assumption. */
+module.exports.yearlyCentsFor = yearlyCentsFor;
+module.exports.blackFridayFor = blackFridayFor;

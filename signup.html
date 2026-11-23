@@ -755,6 +755,38 @@ setTimeout(function(){
     { weeks: 5, pct_off: 0,  add_cents: 1000, note: 'The longest stretch between visits' },
   ];
   let rhythm = 4;
+
+  /* Everything the server said about this tier, kept exactly as sent.
+     PLANS below is a local convenience table for the first paint; these
+     three helpers only ever answer from the live payload, so a figure
+     that is not on the server is not shown at all. */
+  let SU_PLANS = null;
+  function suRhythm(tier, weeks){
+    if(!SU_PLANS) return null;
+    const p = (SU_PLANS.plans || []).concat(SU_PLANS.legacy || [])
+      .find(function(x){ return x.key === tier; });
+    if(!p) return null;
+    return (p.rhythms || []).find(function(x){ return x.weeks === Number(weeks); }) || null;
+  }
+  function suBfLive(){ return !!(SU_PLANS && SU_PLANS.black_friday && SU_PLANS.black_friday.live); }
+  function suSaleAt(tier, weeks, mode){
+    if(!suBfLive()) return null;
+    const r = suRhythm(tier, weeks);
+    if(!r) return null;
+    return (mode === 'annual' ? r.annual_sale : r.sale) || null;
+  }
+  function suYearCents(tier, weeks){
+    const r = suRhythm(tier, weeks);
+    if(r && Number(r.annual_cents) > 0) return Number(r.annual_cents);
+    /* Before the payload lands, four weeks is the only figure this page
+       can be sure of. */
+    return Number(weeks) === 4 && PLANS[tier] ? Number(PLANS[tier].yearly) || 0 : 0;
+  }
+  function suYearFree(tier, weeks){
+    const r = suRhythm(tier, weeks);
+    return r ? Number(r.annual_free_visits) || 0 : 0;
+  }
+
   function rhythmCents(tier, weeks) {
     const p = PLANS[tier];
     const r = RHYTHMS.find(function (x) { return x.weeks === Number(weeks); });
@@ -769,6 +801,11 @@ setTimeout(function(){
   (async function syncPlanPrices() {
     try {
       const d = await (await fetch('/api/plans')).json();
+      /* Kept whole. The per-rhythm yearly price and the sale both live on
+         each rhythm rather than on the plan, so flattening the payload
+         into the local table would throw away the two things this page
+         now needs most. */
+      SU_PLANS = d;
       for (const p of (d.plans || []).concat(d.legacy || [])) {
         if (!PLANS[p.key]) continue;
         if (Number(p.cycle_cents) > 0) PLANS[p.key].monthly = Number(p.cycle_cents);
@@ -839,9 +876,13 @@ setTimeout(function(){
   const urlTier = (qs.get('tier') || '').toUpperCase();
   const urlRhythm = Number(qs.get('rhythm'));
   if ([2, 3, 4, 5].includes(urlRhythm)) rhythm = urlRhythm;
-  const urlBilling = (qs.get('billing') || '').toLowerCase();
-  if (urlBilling === 'cycle') billing = 'monthly';
-  if (urlBilling === 'annual' || urlBilling === 'yearly') { billing = 'yearly'; rhythm = 4; }
+  /* The membership page links with ?term=, the older links with
+     ?billing=. Both are honoured, and neither moves the rhythm any more:
+     a year exists on all four rhythms now, so forcing four weeks would
+     quietly change the thing she just chose. */
+  const urlBilling = (qs.get('billing') || qs.get('term') || '').toLowerCase();
+  if (urlBilling === 'cycle' || urlBilling === 'visit') billing = 'monthly';
+  if (urlBilling === 'annual' || urlBilling === 'yearly' || urlBilling === 'year') billing = 'yearly';
   // The $1.58 test tier only appears with ?tier=TEST (owner test runs)
   if (urlTier === 'TEST') { const t = document.getElementById('test-tier-opt'); if (t) t.style.display = 'block'; }
   if (PLANS[urlTier]) { selectTier(urlTier); }
@@ -911,24 +952,54 @@ setTimeout(function(){
     // The saving, said as money on every visit — never left to arithmetic.
     const r = RHYTHMS.find(function (x) { return x.weeks === rhythm; });
     const saved = p.monthly - rhythmCents(selectedTier, rhythm);
-    document.getElementById('rh-save').innerHTML = (billing !== 'yearly' && r && r.pct_off)
-      ? '<div class="rh-save">✦ Coming every ' + rhythm + ' weeks saves you <b>' + planMoney(saved) + '</b> on every visit.</div>'
-      : '';
 
-    // The year is only offered at four weeks — a quieter choice beneath.
-    const yearOfCycles = p.monthly * CYCLES_PER_YEAR;
-    const freeVisits = Math.max(0, Math.floor((yearOfCycles - p.yearly) / p.monthly));
-    document.getElementById('rh-year').innerHTML = (rhythm === 4 && p.yearly)
+    /* Whatever the server says is on sale for this exact tier, rhythm and
+       way of paying. Nothing here decides it. */
+    const sale = suSaleAt(selectedTier, rhythm, billing === 'yearly' ? 'annual' : 'cycle');
+    const yearCents = suYearCents(selectedTier, rhythm);
+
+    document.getElementById('rh-save').innerHTML = sale
+      ? '<div class="rh-save" style="background:#0D0D0D;color:#F5EEE8;border-color:#0D0D0D">'
+        + '\u2726 <b>Black Friday</b> \u2014 '
+        + (sale.mode === 'annual'
+            ? planMoney(sale.now_cents) + ' instead of ' + planMoney(sale.was_cents)
+              + ', which is <b>' + planMoney(sale.saved_vs_monthly_cents) + ' less</b> than paying '
+              + planMoney(rhythmCents(selectedTier, rhythm)) + ' every ' + rhythm + ' weeks for a year.'
+            : planMoney(sale.now_cents) + ' instead of ' + planMoney(sale.was_cents)
+              + ' for your first 2 months, then ' + planMoney(sale.was_cents) + '.')
+        + '</div>'
+      : ((billing !== 'yearly' && r && r.pct_off)
+        ? '<div class="rh-save">\u2726 Coming every ' + rhythm + ' weeks saves you <b>' + planMoney(saved) + '</b> on every visit.</div>'
+        : '');
+
+    /* The year, now offered on every rhythm. The figure and the saving
+       both come from the server's own numbers for THIS rhythm. */
+    const yearSale = suSaleAt(selectedTier, rhythm, 'annual');
+    const yearFree = suYearFree(selectedTier, rhythm);
+    document.getElementById('rh-year').innerHTML = yearCents
       ? '<label class="rh-year' + (billing === 'yearly' ? ' on' : '') + '">'
         + '<input type="checkbox" ' + (billing === 'yearly' ? 'checked ' : '') + 'onchange="pickBilling(this.checked ? \'yearly\' : \'monthly\')" />'
-        + '<span><b>Pay for the year instead — ' + planMoney(p.yearly) + '.</b> '
-        + (freeVisits ? freeVisits + ' visits free, ' : '') + 'every four weeks for a year.</span></label>'
+        + '<span><b>Pay for the year instead \u2014 '
+        + planMoney(yearSale ? yearSale.now_cents : yearCents) + '.</b> '
+        + (yearSale
+            ? 'Black Friday price, ' + planMoney(yearSale.saved_vs_monthly_cents)
+              + ' less than paying every ' + rhythm + ' weeks.'
+            : (yearFree ? yearFree + ' visit' + (yearFree === 1 ? '' : 's') + ' free, ' : '')
+              + 'one visit every ' + rhythm + ' weeks for a year.')
+        + '</span></label>'
       : '';
 
     // What she is charged, and when — plainly, in the small type.
+    const firstCharge = sale ? sale.now_cents
+      : (billing === 'yearly' ? yearCents : rhythmCents(selectedTier, rhythm));
     document.getElementById('rh-fine').textContent = billing === 'yearly'
-      ? 'Billed ' + planMoney(p.yearly) + ' once a year, starting today. Three-month minimum, then cancel any time.'
-      : 'Billed ' + planMoney(rhythmCents(selectedTier, rhythm)) + ' every ' + rhythm + ' weeks, starting today. Three-month minimum, then cancel any time.';
+      ? 'Billed ' + planMoney(firstCharge) + ' today'
+        + (sale ? ', then ' + planMoney(yearCents) + ' a year from now' : ' and once a year after that')
+        + '. Three-month minimum, then cancel any time.'
+      : 'Billed ' + planMoney(firstCharge) + ' every ' + rhythm + ' weeks, starting today'
+        + (sale ? ', then ' + planMoney(sale.was_cents) + ' every ' + rhythm
+            + ' weeks after your first 2 months' : '')
+        + '. Three-month minimum, then cancel any time.';
 
     // Everything that comes with it, the loudest thing on the page after the price.
     const inc = (p.includes || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
@@ -1268,7 +1339,11 @@ setTimeout(function(){
           referralCode: signupData.referralCode || undefined,
           promoCode: (document.getElementById('promo-code') || {}).value || undefined,
           billing: billing,
-          rhythm: billing === 'yearly' ? 4 : rhythm,
+          /* The rhythm she chose, whichever way she is paying. This used
+             to send 4 for anybody buying a year, because a year only
+             existed at four weeks — sending it now would charge her for a
+             rhythm she did not pick. */
+          rhythm: rhythm,
           stripePaymentMethodId: paymentMethodId,
         })
       });
