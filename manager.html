@@ -2756,6 +2756,24 @@
               <span id="po-apply-msg" style="font-size:0.8rem;color:var(--muted)"></span>
             </div>
           </div>
+          <!-- Many photos at once. Each becomes a set with no price, and
+               a set with no price is hidden from the shop until you give
+               it one — so nothing half-finished can be bought. -->
+          <div style="border:1px solid var(--border);padding:0.9rem 1rem;margin:0.4rem 0 1rem">
+            <div style="font-size:0.9rem;margin-bottom:0.15rem">Add a batch of photos</div>
+            <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.6rem">
+              Pick as many as you like. Each one becomes a set named after the file, with no price yet
+              &mdash; they stay out of the shop until you price them below.</div>
+            <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+              <input type="file" id="po-bulk" accept="image/*" multiple
+                onchange="poBulkPick(this)" style="font-size:0.8rem" />
+              <span id="po-bulk-msg" style="font-size:0.8rem;color:var(--muted)"></span>
+            </div>
+          </div>
+
+          <!-- Everything waiting for a price, in one list. -->
+          <div id="po-needprice"></div>
+
           <div class="ai-tag" style="margin-top:1.1rem;">Sets</div>
           <div id="po-admin-products" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:0.8rem;margin-top:0.6rem;"></div>
           <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--border)">
@@ -4181,12 +4199,156 @@ async function loadPressons(){
   try{
     const r=await api('/api/pressons?action=admin');const d=await r.json();
     poAdmin={categories:d.categories||[],products:d.products||[],orders:d.orders||[]};
+    /* The sale depth, so the pricing list can show what Black Friday
+       makes each set before she commits to a price. Its own request
+       because the admin payload predates the sale. */
+    try{ poAdmin.bf=await (await api('/api/pressons?action=bf')).json(); }catch(_){ poAdmin.bf=null; }
     renderPoAdmin();
     loadPoApplyPrice();
   }catch{}
 }
+/* ── MANY AT ONCE ────────────────────────────────────────────────────
+   One photo per set, compressed in the browser the same way the single
+   modal does it, saved with no price so nothing appears in the shop
+   half-finished. */
+function poShrink(file){
+  return new Promise(function(resolve){
+    const img=new Image(), reader=new FileReader();
+    reader.onload=function(e){ img.src=e.target.result; };
+    img.onload=function(){
+      const scale=Math.min(1,1000/Math.max(img.width,img.height));
+      const cv=document.createElement('canvas');
+      cv.width=Math.round(img.width*scale); cv.height=Math.round(img.height*scale);
+      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      let q=0.8,url=cv.toDataURL('image/jpeg',q);
+      while(url.length>820000&&q>0.3){ q-=0.12; url=cv.toDataURL('image/jpeg',q); }
+      resolve(url);
+    };
+    img.onerror=function(){ resolve(''); };
+    reader.onerror=function(){ resolve(''); };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* "IMG_4821.jpg" is a worse name than nothing, but she can rename in the
+   list below, and a recognisable photo beats a blank card. Anything that
+   looks like a camera filename becomes a plain numbered draft instead. */
+function poNameFromFile(name, i){
+  const base=String(name||'').replace(/\.[a-z0-9]+$/i,'').replace(/[_-]+/g,' ').trim();
+  if(!base || /^(img|dsc|photo|image|pxl|screenshot)[\s0-9]*$/i.test(base)) return 'New set ' + i;
+  return base.slice(0,60);
+}
+
+async function poBulkPick(input){
+  const msg=document.getElementById('po-bulk-msg');
+  const files=Array.prototype.slice.call((input&&input.files)||[]);
+  if(!files.length) return;
+  if(msg) msg.textContent='Adding '+files.length+'\u2026';
+
+  let made=0, failed=0;
+  for(let i=0;i<files.length;i++){
+    if(msg) msg.textContent='Adding '+(i+1)+' of '+files.length+'\u2026';
+    try{
+      const photo=await poShrink(files[i]);
+      if(!photo){ failed++; continue; }
+      const r=await api('/api/pressons?action=product_add',{method:'POST',body:JSON.stringify({
+        action:'product_add',
+        name:poNameFromFile(files[i].name,i+1),
+        price_cents:0, category:'', photo:photo,
+        new_drop:false, best_seller:false,
+      })});
+      if(r.ok) made++; else failed++;
+    }catch(_){ failed++; }
+  }
+  input.value='';
+  if(msg) msg.textContent=made+' added'+(failed?', '+failed+' could not be read':'')
+    +'. Give them prices below and they go live.';
+  await loadPressons();
+}
+
+/* ── PRICING THEM ────────────────────────────────────────────────────
+   Everything with no price, in one list. One box each, one Save All.
+   Also shows what Black Friday would make it, so she can see what she is
+   agreeing to before it goes on sale. */
+function renderPoNeedPrice(){
+  const el=document.getElementById('po-needprice'); if(!el) return;
+  const waiting=(poAdmin.products||[]).filter(function(p){ return !Number(p.price_cents); });
+  if(!waiting.length){ el.innerHTML=''; return; }
+
+  const pct=(poAdmin.bf&&poAdmin.bf.pct)||0;
+  el.innerHTML=
+    '<div style="border:2px solid var(--gold);padding:0.9rem 1rem;margin:0.4rem 0 1rem">'
+    + '<div style="font-size:0.9rem;margin-bottom:0.15rem">'
+      + waiting.length + ' set' + (waiting.length===1?'':'s') + ' waiting for a price</div>'
+    + '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.7rem">'
+      + 'These are not in the shop yet. Type a price and tap Save all \u2014 that is all it takes.'
+      + (pct?' The Black Friday column shows what each one sells for while the sale is on.':'')
+    + '</div>'
+    + waiting.map(function(p){
+        return '<div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;'
+          + 'padding:0.5rem 0;border-bottom:1px solid var(--border)">'
+          + '<div style="width:48px;height:48px;background:var(--bg);overflow:hidden;flex:0 0 auto">'
+            + (p.photo?'<img src="'+p.photo+'" style="width:100%;height:100%;object-fit:cover">':'')
+          + '</div>'
+          + '<input id="pnp-name-'+p.id+'" value="'+esc(p.name)+'" '
+            + 'style="flex:1;min-width:140px;font-size:0.85rem" />'
+          + '<span style="color:var(--muted)">$</span>'
+          + '<input id="pnp-price-'+p.id+'" inputmode="decimal" placeholder="0.00" '
+            + 'oninput="poNeedPriceSync('+p.id+','+pct+')" '
+            + 'style="width:84px;font-size:0.85rem;text-align:right" />'
+          + '<span id="pnp-bf-'+p.id+'" style="font-size:0.76rem;color:var(--gold);min-width:120px"></span>'
+        + '</div>';
+      }).join('')
+    + '<div style="display:flex;gap:0.6rem;align-items:center;margin-top:0.8rem">'
+      + '<button class="btn btn-gold" onclick="poSaveAllPrices(this)">Save all</button>'
+      + '<span id="pnp-msg" style="font-size:0.8rem;color:var(--muted)"></span>'
+    + '</div>'
+  + '</div>';
+}
+
+function poNeedPriceSync(id,pct){
+  const box=document.getElementById('pnp-price-'+id);
+  const out=document.getElementById('pnp-bf-'+id);
+  if(!box||!out) return;
+  const n=parseFloat(String(box.value).replace(/[^0-9.]/g,''));
+  if(!(n>0)||!pct){ out.textContent=''; return; }
+  const cents=Math.round(n*100);
+  const sale=Math.max(50,cents-Math.round(cents*pct/100));
+  out.textContent='Black Friday: $'+(sale/100).toFixed(2);
+}
+
+async function poSaveAllPrices(btn){
+  if(!btn||btn.disabled) return;
+  const waiting=(poAdmin.products||[]).filter(function(p){ return !Number(p.price_cents); });
+  const msg=document.getElementById('pnp-msg');
+  let saved=0, skipped=0;
+  btn.disabled=true; btn.textContent='Saving\u2026';
+  for(const p of waiting){
+    const pb=document.getElementById('pnp-price-'+p.id);
+    const nb=document.getElementById('pnp-name-'+p.id);
+    const n=parseFloat(String((pb&&pb.value)||'').replace(/[^0-9.]/g,''));
+    const name=String((nb&&nb.value)||p.name).trim().slice(0,120);
+    /* No price typed means she is not ready for that one. Left alone and
+       still hidden, rather than guessed at. */
+    if(!(n>0)){ skipped++; continue; }
+    try{
+      await api('/api/pressons?action=product_update',{method:'PUT',body:JSON.stringify({
+        action:'product_update', id:p.id, name:name,
+        price_cents:Math.round(n*100), category:p.category||'',
+        new_drop:!!Number(p.new_drop), best_seller:!!Number(p.best_seller), active:true,
+      })});
+      saved++;
+    }catch(_){}
+  }
+  if(msg) msg.textContent=saved+' now in the shop'
+    +(skipped?', '+skipped+' left for later':'')+'.';
+  toast(saved+' set'+(saved===1?'':'s')+' live \u2726');
+  await loadPressons();
+}
+
 function renderPoAdmin(){
   const catEl=document.getElementById('po-admin-cats');if(!catEl)return;
+  renderPoNeedPrice();
   catEl.innerHTML=poAdmin.categories.length?poAdmin.categories.map(c=>
     `<span style="display:inline-flex;align-items:center;gap:0.4rem;border:1px solid var(--border-hi);border-radius:999px;padding:0.3rem 0.4rem 0.3rem 0.8rem;font-size:0.75rem;color:var(--cream)">${esc(c.name)}
       <button onclick="delPoCat(${c.id})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:0.85rem;line-height:1;">×</button></span>`).join('')

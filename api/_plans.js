@@ -375,13 +375,27 @@ function shapeOne(p, taken) {
 async function publicShape() {
   const taken = await counts();
   const bf = await blackFridayWindow();
+
+  /* rhythmsFor always works the sale out, because it is a price table and
+     price tables do not have opinions about dates. The ANSWER does: a
+     price nobody is being offered today has no business leaving the
+     server, so outside the window every sale block is stripped. */
+  const shape = p => {
+    const s = shapeOne(p, taken);
+    if (!bf.live) {
+      s.rhythms = (s.rhythms || []).map(r =>
+        Object.assign({}, r, { sale: null, annual_sale: null }));
+    }
+    return s;
+  };
+
   return {
     cycles_per_year: CYCLES_PER_YEAR,
     cycles_at: CYCLES_AT,
     rhythms: RHYTHMS,
     addon: ADDON,
-    legacy: LEGACY.map(p => shapeOne(p, taken)),
-    plans: PLANS.map(p => shapeOne(p, taken)),
+    legacy: LEGACY.map(shape),
+    plans: PLANS.map(shape),
     /* The sale, and whether it is running. Every price above already
        carries its own sale block, so a page never has to work out which
        cell is discounted — it asks. */
