@@ -70,6 +70,46 @@ async function applyPriceCents() {
   } catch (_) {}
   return 500;
 }
+/* Is the sale running, and how deep is it on press-ons? The window is
+   the same one the memberships use — one sale, one set of dates — and the
+   depth is hers to set. */
+const BF_PRESSON_PCT_DEFAULT = 25;
+
+async function blackFriday() {
+  let win = { live: false, from: '', to: '' };
+  try { win = await require('./_plans').blackFridayWindow(); } catch (_) {}
+  let pct = BF_PRESSON_PCT_DEFAULT;
+  try {
+    const row = await queryOne("SELECT value FROM site_settings WHERE key='bf_presson_pct'");
+    if (row && row.value !== null && row.value !== undefined && String(row.value) !== '') {
+      pct = Math.max(0, Math.min(80, Math.round(Number(row.value) || 0)));
+    }
+  } catch (_) {}
+  return { live: !!win.live && pct > 0, from: win.from, to: win.to, pct, name: 'Black Friday' };
+}
+
+/* The sale on one set, or null. Rounded so the price reads cleanly, and
+   never below fifty cents, which is the least Stripe will take. */
+function saleOn(p, bf) {
+  if (!bf || !bf.live) return null;
+  const was = Math.max(0, Math.round(Number(p && p.price_cents) || 0));
+  if (!was) return null;
+  const off = Math.round(was * bf.pct / 100);
+  const now = Math.max(50, was - off);
+  if (!(now < was)) return null;
+  return {
+    pct_off: bf.pct,
+    was_cents: was,
+    now_cents: now,
+    off_cents: was - now,
+  };
+}
+
+function ownerOk(req) {
+  const pwd = req.headers['x-ceo-password'] || (req.query && req.query.pwd);
+  return pwd === (process.env.CEO_PASSWORD || 'ZOLA2026');
+}
+
 module.exports = async function (req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -82,7 +122,14 @@ module.exports = async function (req, res) {
     if (req.method === 'GET' && (action === 'catalog' || !action)) {
       const cats = await query('SELECT * FROM presson_categories ORDER BY name');
       const products = await query('SELECT * FROM presson_products WHERE active=1 ORDER BY created_ts DESC');
-      return res.json({ categories: cats, products });
+      /* Every set carries its own sale price, worked out here, so the page
+         never has to apply a percentage itself. */
+      const bf = await blackFriday();
+      return res.json({
+        categories: cats,
+        products: products.map(p => Object.assign({}, p, { sale: saleOn(p, bf) })),
+        black_friday: bf,
+      });
     }
 
     // ── PUBLIC: does this buyer have sizes on file / kit already claimed? ──
@@ -109,6 +156,19 @@ module.exports = async function (req, res) {
       return res.json({ ok: true, apply_cents: cents });
     }
 
+    /* What she can change about the sale, from Studio Manager. */
+    if (req.method === 'GET' && action === 'bf') {
+      return res.json(await blackFriday());
+    }
+    if (req.method === 'POST' && action === 'bf') {
+      if (!ownerOk(req)) return res.status(401).json({ error: 'Unauthorized' });
+      const pct = Math.max(0, Math.min(80, Math.round(Number((req.body || {}).pct) || 0)));
+      await execute(
+        'INSERT INTO site_settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+        ['bf_presson_pct', String(pct)]);
+      return res.json(Object.assign({ ok: true }, await blackFriday()));
+    }
+
     if (req.method === 'POST' && action === 'purchase_intent') {
       const p = await queryOne('SELECT * FROM presson_products WHERE id=? AND active=1', [Number((req.body || {}).product_id)]);
       if (!p) return res.status(404).json({ error: 'Set not found' });
@@ -116,30 +176,41 @@ module.exports = async function (req, res) {
       const sk = await require('./_pay').getStripeSecret();
       if (!sk) return res.status(400).json({ error: 'Payments not configured' });
 
-      // Ten dollars off the first ten people applies here too. Worked out
-      // server-side in the same request that creates the charge, so what is
-      // taken and what was promised on screen cannot disagree.
+      /* The sale first, because it decides whether the early-bird seat is
+         offered at all. Worked out in the same request that creates the
+         charge, so what is taken and what was promised cannot disagree. */
+      const bf = await blackFriday();
+      const sale = saleOn(p, bf);
+      const bfOff = sale ? sale.off_cents : 0;
+
+      // Ten dollars off the first ten people — but not on top of the sale.
+      // A set at 25% off with $10 more off could go under what it costs to
+      // make, and the seat is better spent on somebody paying full price.
       let ebOff = 0, ebLabel = '';
-      try {
-        const s = await require('./_earlybird').state();
-        if (s.available) { ebOff = Math.min(s.amount_cents, Math.max(0, p.price_cents - 50)); ebLabel = s.label; }
-      } catch (_) {}
+      if (!sale) {
+        try {
+          const s = await require('./_earlybird').state();
+          if (s.available) { ebOff = Math.min(s.amount_cents, Math.max(0, p.price_cents - 50)); ebLabel = s.label; }
+        } catch (_) {}
+      }
       /* Applying it in the studio, if they asked for it. Read here rather
          than trusted from the browser — a price the page sends is a price
          anybody can edit. */
       const wantsApply = (req.body || {}).apply === true;
       const applyCents = wantsApply ? await applyPriceCents() : 0;
 
-      const charge = Math.max(50, p.price_cents - ebOff + applyCents);
+      const charge = Math.max(50, p.price_cents - ebOff - bfOff + applyCents);
 
       const r = await fetch('https://api.stripe.com/v1/payment_intents', {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + sk, 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
           amount: String(charge), currency: 'usd', 'automatic_payment_methods[enabled]': 'true',
-          description: ('ZOLA Press-Ons — ' + p.name + (ebOff ? ' (early bird)' : '')
+          description: ('ZOLA Press-Ons \u2014 ' + p.name
+            + (bfOff ? ' (Black Friday)' : (ebOff ? ' (early bird)' : ''))
             + (applyCents ? ' + application' : '')).slice(0, 300),
           'metadata[apply_cents]': String(applyCents),
+          'metadata[black_friday_cents]': String(bfOff),
           /* Keep the card. Read straight off the request: the buyer fields
              are destructured in a different action, not this one. */
           ...(await (async () => {
@@ -159,6 +230,9 @@ module.exports = async function (req, res) {
         client_secret: pi.client_secret, payment_intent_id: pi.id,
         price_cents: p.price_cents,
         early_bird_cents: ebOff, early_bird_label: ebLabel,
+        black_friday_cents: bfOff,
+        black_friday: sale ? Object.assign({}, sale, { name: p.name }) : null,
+        apply_cents: applyCents,
         charge_cents: charge,
       });
     }
@@ -177,8 +251,15 @@ module.exports = async function (req, res) {
       // The place is taken only now, once the payment has cleared — never
       // when the intent was created. An abandoned checkout must not burn one
       // of the ten.
+      /* Read off the payment rather than the request. The metadata is what
+         the studio actually charged; anything the browser says about a
+         discount is a claim. */
+      let bfOffCents = 0, paidCents = 0, paidApplyCents = 0;
       try {
         const pay = await require('./_pay').verifyPaymentIntent(payment_intent_id);
+        paidCents = Math.max(0, Math.round(Number(pay && pay.amount) || 0));
+        bfOffCents = Math.max(0, Math.round(Number((pay && pay.metadata && pay.metadata.black_friday_cents) || 0)));
+        paidApplyCents = Math.max(0, Math.round(Number((pay && pay.metadata && pay.metadata.apply_cents) || 0)));
         const off = Number((pay && pay.metadata && pay.metadata.early_bird_cents) || 0);
         if (off > 0) {
           await require('./_earlybird').claim({
@@ -245,6 +326,26 @@ module.exports = async function (req, res) {
           + (!typedSizes && sizes ? '<p>We have your sizes on file and they\'re applied to this order automatically. ✦</p>' : '')
           + '<p>— ZOLA ✦</p>');
       } catch (_) {}
+
+      /* And, on top of that, the Black Friday one — what they saved and
+         that we want them in. Its own email rather than a line bolted
+         onto the order confirmation, because this is the one she forwards
+         to a friend. */
+      if (bfOffCents > 0 && email) {
+        try {
+          const applyCents = paidApplyCents;
+          const setPaid = Math.max(0, (paidCents || p.price_cents) - applyCents);
+          await require('./_bf-mail').sendPressons({
+            email, name: buyer_name,
+            items: [{ name: p.name, qty: 1, cents: setPaid }]
+              .concat(applyCents ? [{ name: 'Applied in the studio', qty: 1, cents: applyCents }] : []),
+            was_cents: setPaid + bfOffCents + applyCents,
+            total_cents: paidCents || (setPaid + applyCents),
+            saved_cents: bfOffCents,
+            dry: false,
+          });
+        } catch (_) {}
+      }
       return res.json({ ok: true, kit: kitGranted, kit_note: kitNote, had_sizes: !!sizes, sizes_saved: !!typedSizes });
     }
 

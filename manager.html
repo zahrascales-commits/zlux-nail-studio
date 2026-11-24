@@ -1380,6 +1380,7 @@
       <button class="nav-head" onclick="toggleNavGroup('marketing')"><span class="ni" data-i="megaphone"></span><span class="nl">Marketing</span><span class="gdot"></span><span class="chev" data-i="chev"></span></button>
       <div class="nav-kids">
         <button class="tab" data-tab="mkt" onclick="showTab('mkt')"><span class="nl">Marketing home</span></button>
+        <button class="tab" data-tab="bf" onclick="showTab('bf')"><span class="nl">Black Friday</span><span class="nav-new">New</span></button>
         <button class="tab" data-tab="social" onclick="showTab('social')"><span class="nl">Social media</span><span class="nav-new">New</span></button>
         <button class="tab" data-tab="marketing" onclick="showTab('marketing')"><span class="nl">Email &amp; text campaigns</span></button>
         <button class="tab" data-tab="autoemail" onclick="showTab('autoemail')"><span class="nl">Automated emails</span></button>
@@ -1544,6 +1545,21 @@
         <button class="btn btn-ghost btn-sm" onclick="loadCharge()">↻ Refresh</button>
       </div>
       <div id="chg-body"><div class="ny-sub" style="padding:1rem;">Loading…</div></div>
+    </section>
+
+    <section class="panel" id="panel-bf">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Black Friday</div>
+          <div class="page-desc">
+            The whole sale, yours to run. Move the dates, switch it on or off, set how much comes off
+            press-ons &mdash; and see every price exactly as a client sees it, so you never have to
+            open the shop in another tab to check.
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadBF()">&#8635; Refresh</button>
+      </div>
+      <div id="bf-body"><div class="ny-sub" style="padding:1rem;">Loading&hellip;</div></div>
     </section>
 
     <section class="panel" id="panel-social">
@@ -3712,6 +3728,7 @@ const TAB_LOADERS = {
   charge:     () => loadCharge(),
   recap:      () => loadRecap(),
   social:     () => loadSocial(),
+  bf:         () => loadBF(),
   deposits:   () => loadDeposits(),
   inventory:  () => loadInventory(),
   messages:   () => loadThreads(),
@@ -9741,6 +9758,178 @@ let MAILLOG = [];
    only ever reaches the names already on it. */
 let AE = { rules: [], triggers: [], audiences: [], fields: [], editing: null };
 
+
+/* ── BLACK FRIDAY ────────────────────────────────────────────────────────
+   Every figure comes from /api/bf, which builds it with the same
+   functions that price the real thing. Nothing here does arithmetic on
+   money. */
+let BF = { state: null, results: null };
+
+function bfMoney(c){ return '$' + (Math.round(Number(c)||0)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+async function loadBF(){
+  const el = document.getElementById('bf-body');
+  if(!el) return;
+  el.innerHTML = '<div class="empty">Loading\u2026</div>';
+  try{
+    const [s, r] = await Promise.all([
+      api('/api/bf?action=state').then(x => x.json()),
+      api('/api/bf?action=results').then(x => x.json()).catch(() => null),
+    ]);
+    if(s.error) throw new Error(s.error);
+    BF.state = s; BF.results = r;
+  }catch(err){
+    el.innerHTML = emptyBox('\u26a0\ufe0f','Could not load: ' + esc(err.message));
+    return;
+  }
+  renderBF();
+}
+
+function renderBF(){
+  const el = document.getElementById('bf-body');
+  if(!el || !BF.state) return;
+  const s = BF.state, r = BF.results;
+
+  el.innerHTML =
+    // ── is it on? ──
+    '<div style="border:2px solid ' + (s.live ? '#067647' : 'var(--border)') + ';border-radius:8px;'
+      + 'padding:1.1rem 1.3rem;margin-bottom:1.2rem;background:' + (s.live ? '#F0FDF4' : 'var(--card)') + '">'
+      + '<div style="display:flex;align-items:center;gap:0.7rem;flex-wrap:wrap">'
+        + '<span class="status-pill" style="background:' + (s.live ? '#067647' : '#667085') + ';color:#fff">'
+          + (s.live ? 'LIVE NOW' : 'NOT RUNNING') + '</span>'
+        + '<span style="font-size:0.9rem;color:var(--ink)">' + esc(s.why) + '</span>'
+      + '</div>'
+      + '<div style="font-size:0.8rem;color:var(--muted);margin-top:0.5rem">'
+        + esc(s.from) + ' to ' + esc(s.to) + ' \u00b7 ' + s.days.length + ' days'
+        + (s.days.starts_in > 0 ? ' \u00b7 starts in ' + s.days.starts_in + ' day' + (s.days.starts_in === 1 ? '' : 's') : '')
+        + (s.live && s.days.ends_in >= 0 ? ' \u00b7 ' + (s.days.ends_in === 0 ? 'last day' : s.days.ends_in + ' days left') : '')
+        + ' \u00b7 studio clock says ' + esc(s.today)
+      + '</div>'
+    + '</div>'
+
+    // ── the controls ──
+    + '<div class="page-head"><div>'
+      + '<div class="page-title" style="font-size:1.05rem">The switch</div>'
+      + '<div class="page-desc">Changes take effect the moment you save \u2014 on the website, in the '
+        + 'checkout and in the pop-up, all at once. No deploy, nothing to ask me for.</div>'
+    + '</div></div>'
+    + '<div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:0.4rem">'
+      + '<div class="field" style="margin:0"><label class="fld-label">Starts</label>'
+        + '<input id="bf-from" type="date" value="' + esc(s.from) + '" /></div>'
+      + '<div class="field" style="margin:0"><label class="fld-label">Ends (inclusive)</label>'
+        + '<input id="bf-to" type="date" value="' + esc(s.to) + '" /></div>'
+      + '<div class="field" style="margin:0;width:150px"><label class="fld-label">Override</label>'
+        + '<select id="bf-force">'
+          + '<option value=""' + (s.forced === '' ? ' selected' : '') + '>Follow the dates</option>'
+          + '<option value="on"' + (s.forced === 'on' ? ' selected' : '') + '>Force ON</option>'
+          + '<option value="off"' + (s.forced === 'off' ? ' selected' : '') + '>Force OFF</option>'
+        + '</select></div>'
+      + '<div class="field" style="margin:0;width:130px"><label class="fld-label">Press-ons, % off</label>'
+        + '<input id="bf-pct" inputmode="numeric" value="' + Number(s.presson_pct) + '" /></div>'
+      + '<button class="btn btn-gold" onclick="saveBF(this)">Save</button>'
+    + '</div>'
+    + '<div id="bf-msg" style="font-size:0.82rem;color:var(--muted);margin-bottom:1.4rem"></div>'
+
+    // ── the grid, as a client sees it ──
+    + '<div class="page-head"><div>'
+      + '<div class="page-title" style="font-size:1.05rem">Every price, as a client sees it</div>'
+      + '<div class="page-desc">Membership prices are set in code and under test, because a wrong one '
+        + 'costs real money. This is the whole grid so you can check it at a glance.</div>'
+    + '</div></div>'
+    + bfGridTable()
+
+    // ── the scoreboard ──
+    + '<div class="page-head" style="margin-top:1.8rem"><div>'
+      + '<div class="page-title" style="font-size:1.05rem">What it sold</div>'
+      + '<div class="page-desc">Counted from what actually happened \u2014 the members table and '
+        + 'Stripe \u2014 not from a tally anybody has to remember to update.</div>'
+    + '</div></div>'
+    + bfResultsHtml();
+}
+
+function bfGridTable(){
+  const g = (BF.state.grid || []);
+  const rows = ['cycle','annual'].map(function(mode){
+    const mine = g.filter(function(x){ return x.mode === mode; });
+    return '<div style="font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);'
+      + 'margin:1rem 0 0.5rem">' + (mode === 'cycle' ? 'Paying each visit' : 'Paying for the year') + '</div>'
+      + '<div style="overflow-x:auto"><table class="tbl"><thead><tr>'
+        + '<th>Membership</th><th>Rhythm</th><th style="text-align:right">Regular</th>'
+        + '<th style="text-align:right">Black Friday</th><th style="text-align:right">Off</th>'
+        + '<th>What a client is told</th></tr></thead><tbody>'
+      + mine.map(function(x){
+          return '<tr' + (x.on_sale ? ' style="background:#FFFBF5"' : '') + '>'
+            + '<td>' + esc(x.tier) + '</td>'
+            + '<td>every ' + x.weeks + ' wks</td>'
+            + '<td style="text-align:right">' + bfMoney(x.regular_cents) + '</td>'
+            + '<td style="text-align:right">' + (x.on_sale
+                ? '<b>' + bfMoney(x.sale_cents) + '</b>' : '<span style="color:var(--muted)">\u2014</span>') + '</td>'
+            + '<td style="text-align:right">' + (x.on_sale
+                ? '<span style="color:#067647">' + (mode === 'annual' ? x.pct_off_vs_monthly : x.pct_off) + '%</span>'
+                : '<span style="color:var(--muted)">\u2014</span>') + '</td>'
+            + '<td style="font-size:0.8rem;color:var(--muted)">' + (x.on_sale
+                ? 'saves ' + bfMoney(x.saved_cents) + ' \u00b7 ' + esc(x.lasts)
+                  + (mode === 'annual' ? ' \u00b7 ' + x.visits + ' visits' : '')
+                : 'regular price') + '</td>'
+          + '</tr>';
+        }).join('')
+      + '</tbody></table></div>';
+  }).join('');
+
+  return rows
+    + '<div style="margin-top:0.9rem">' + rcNote('<b>Press-ons:</b> '
+      + Number(BF.state.presson_pct) + '% off every set while the sale is on, set above. '
+      + 'The retired Signature, Luxe and Black Card memberships are not in the sale at all.') + '</div>';
+}
+
+function bfResultsHtml(){
+  const r = BF.results;
+  if(!r) return '<div class="empty">Could not read the results just now.</div>';
+  const mem = r.memberships || [];
+  return '<div class="stat-grid">'
+      + rcStat(mem.length, 'Memberships sold')
+      + rcStat(r.pressons_count || 0, 'Press-on orders')
+      + rcStat(bfMoney(r.pressons_cents || 0), 'Press-on takings')
+      + rcStat(r.stripe_since_start_cents != null ? bfMoney(r.stripe_since_start_cents) : '\u2014',
+          'Into Stripe since it opened')
+    + '</div>'
+    + (mem.length
+        ? '<div style="overflow-x:auto;margin-top:0.9rem"><table class="tbl"><thead><tr>'
+          + '<th>Who</th><th>Membership</th><th>Joined</th><th>Billing</th></tr></thead><tbody>'
+          + mem.map(function(m){
+              return '<tr><td>' + esc(m.name || m.member_id) + '</td>'
+                + '<td>' + esc(m.tier) + '</td><td>' + esc(m.joined) + '</td>'
+                + '<td>' + (m.billing === 'billing'
+                    ? '<span style="color:#067647">billing</span>'
+                    : '<span style="color:#B42318">' + esc(m.billing) + '</span>') + '</td></tr>';
+            }).join('')
+          + '</tbody></table></div>'
+        : '<div class="ny-sub" style="padding:0.7rem 0">Nobody has joined inside the sale window yet.</div>');
+}
+
+async function saveBF(btn){
+  if(!btn || btn.disabled) return;
+  const v = function(id){ const e = document.getElementById(id); return e ? e.value : ''; };
+  const msg = document.getElementById('bf-msg');
+  btn.disabled = true; btn.textContent = 'Saving\u2026';
+  if(msg) msg.textContent = '';
+  try{
+    const d = await (await api('/api/bf?action=save', { method:'POST', body: JSON.stringify({
+      action: 'save', from: v('bf-from'), to: v('bf-to'), force: v('bf-force'),
+      presson_pct: Number(String(v('bf-pct')).replace(/[^0-9]/g,'')) || 0,
+    }) })).json();
+    if(d.ok === false){
+      btn.disabled = false; btn.textContent = 'Save';
+      if(msg){ msg.style.color = '#B42318'; msg.textContent = d.why || 'That did not save.'; }
+      return;
+    }
+    toast('Saved \u2726 the website is already using it');
+    loadBF();
+  }catch(err){
+    btn.disabled = false; btn.textContent = 'Save';
+    if(msg){ msg.style.color = '#B42318'; msg.textContent = 'Could not save: ' + err.message; }
+  }
+}
 
 /* ── SOCIAL MEDIA ────────────────────────────────────────────────────────
    Every post, measured against her own median, with what to do next. */

@@ -33,6 +33,21 @@
     .po-body { padding:1.1rem 1.2rem 1.3rem; display:flex; flex-direction:column; gap:0.35rem; flex:1; }
     .po-name { font-family:'Cinzel',serif; font-size:1.05rem; color:var(--espresso); }
     .po-price { font-family:'Cinzel',serif; font-size:1.25rem; color:var(--champagne); }
+    /* On sale. Espresso and gold, the same treatment as the membership
+       page, so one sale looks like one sale across the site. */
+    .po-was { font-family:'Josefin Sans',sans-serif; font-size:0.86rem; color:var(--latte);
+      text-decoration:line-through; margin-left:0.4rem; }
+    .po-bf { display:inline-block; background:#0D0D0D; color:#B6A588;
+      font-family:'Josefin Sans',sans-serif; font-size:0.56rem; letter-spacing:0.2em;
+      text-transform:uppercase; padding:0.22rem 0.5rem; margin-bottom:0.35rem; }
+    .po-card.onsale { border-color:#0D0D0D; }
+    .po-bfband { background:#0D0D0D; color:#F5EEE8; text-align:center; padding:1.3rem 1.1rem;
+      position:relative; overflow:hidden; }
+    .po-bfband .k { font-family:'Josefin Sans',sans-serif; font-size:0.6rem; letter-spacing:0.42em;
+      text-transform:uppercase; color:#B6A588; margin-bottom:0.45rem; }
+    .po-bfband .h { font-family:'Cinzel',serif; font-size:clamp(1.3rem,5vw,1.9rem); line-height:1.15; }
+    .po-bfband .s { font-family:'Josefin Sans',sans-serif; font-size:0.84rem; line-height:1.7;
+      color:rgba(245,238,232,0.82); margin-top:0.5rem; }
     .po-empty { grid-column:1/-1; text-align:center; padding:3rem 1rem; font-family:'Josefin Sans',sans-serif; color:var(--latte); }
     .section-label-strip { font-family:'Josefin Sans',sans-serif; font-size:0.68rem; letter-spacing:0.3em; text-transform:uppercase; color:var(--champagne); margin:2.5rem 0 0; text-align:center; }
     .kit-banner { max-width:640px; margin:2rem auto 0; background:rgba(182,165,136,0.08); border:1px solid rgba(182,165,136,0.3); padding:1.1rem 1.4rem; text-align:center; font-family:'Josefin Sans',sans-serif; font-size:0.85rem; color:var(--espresso); line-height:1.7; }
@@ -198,6 +213,10 @@
 <section class="section section-soft" id="po-shop" style="display:none;">
   <div class="container" style="max-width:1050px;">
 
+    <!-- The sale band. Empty outside the sale window, so there is nothing
+         to take down when it ends. -->
+    <div id="po-bfband" style="margin-bottom:1.3rem;"></div>
+
     <div class="kit-banner">🎁 <strong>First order?</strong> Add your <strong>free sizing kit</strong> at checkout. Send us your sizes once and we keep them on file forever — you'll never size again.</div>
 
     <div class="po-chips" id="po-chips"></div>
@@ -286,6 +305,8 @@ async function poLoad(){
   try{
     const r=await fetch('/api/pressons?action=catalog'); const d=await r.json();
     PO_CATS=d.categories||[]; PO_PRODUCTS=(d.products||[]).filter(p=>Number(p.price_cents)>0);
+    PO_BF=d.black_friday||null;
+    poRenderBand();
   }catch{ PO_CATS=[]; PO_PRODUCTS=[]; }
 
   // No sets priced yet → show the Coming Soon page. The moment Zahra adds
@@ -365,14 +386,38 @@ function poRenderChips(){
     PO_CATS.map(c=>'<button class="po-chip'+(PO_FILTER===c.name?' on':'')+'" onclick="poFilter(\''+pesc(c.name).replace(/'/g,"\\'")+'\')">'+pesc(c.name)+'</button>').join('');
 }
 function poFilter(c){ PO_FILTER=c; poRenderChips(); poRender(); }
+let PO_BF=null;
+
+/* The band, only while the sale is on. Outside the window this renders
+   nothing, so there is no stale banner to take down afterwards. */
+function poRenderBand(){
+  const host=document.getElementById('po-bfband');
+  if(!host) return;
+  if(!PO_BF||!PO_BF.live){ host.innerHTML=''; return; }
+  const cheapest=PO_PRODUCTS.reduce((a,p)=>(p.sale&&(!a||p.sale.now_cents<a.sale.now_cents)?p:a),null);
+  host.innerHTML='<div class="po-bfband">'
+    +'<div class="k">Black Friday</div>'
+    +'<div class="h">'+PO_BF.pct+'% off every set</div>'
+    +'<div class="s">'
+      +(cheapest?'Sets from <b>'+pomoney(cheapest.sale.now_cents)+'</b>. ':'')
+      +'Every price below is already the sale price \u2014 nothing to enter.'
+    +'</div>'
+  +'</div>';
+}
+
 function poCard(p){
+  /* The sale, as the server reported it for this set. Never worked out
+     here — a percentage the page applies is a percentage anybody can
+     edit, and the charge is computed server-side anyway, so the two
+     would simply disagree. */
   return `<div class="po-card">
     <div class="po-photo">${p.photo?`<img src="${p.photo}" alt="${pesc(p.name)}" loading="lazy">`:'💅'}
       ${Number(p.new_drop)?'<span class="po-flag">New Drop</span>':(Number(p.best_seller)?'<span class="po-flag love">Most Loved</span>':'')}
     </div>
     <div class="po-body">
+      ${p.sale?'<div class="po-bf">Black Friday &middot; '+p.sale.pct_off+'% off</div>':''}
       <div class="po-name">${pesc(p.name)}</div>
-      <div class="po-price">${pomoney(p.price_cents)}</div>
+      <div class="po-price">${pomoney(p.sale?p.sale.now_cents:p.price_cents)}${p.sale?'<span class="po-was">'+pomoney(p.sale.was_cents)+'</span>':''}</div>
       ${p.category?`<div style="font-family:'Josefin Sans',sans-serif;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--latte);">${pesc(p.category)}</div>`:''}
       <button class="btn-gold" style="animation:none;margin-top:auto;font-size:0.68rem;" onclick="poOpen(${p.id})">Add to Order</button>
     </div>
@@ -415,7 +460,17 @@ async function poOpen(id){
   document.getElementById('po-form').style.display='block';
   document.getElementById('po-success').style.display='none';
   document.getElementById('po-co-name').textContent=PO_ACTIVE.name;
-  document.getElementById('po-co-price').textContent=pomoney(PO_ACTIVE.price_cents);
+  /* What they will actually be charged for the set, before any
+     application fee. The intent below returns the authoritative figure;
+     this is the same number, shown before the card form loads so the
+     price never appears to change under them. */
+  document.getElementById('po-co-price').innerHTML = PO_ACTIVE.sale
+    ? pomoney(PO_ACTIVE.sale.now_cents)
+      + '<span class="po-was">' + pomoney(PO_ACTIVE.sale.was_cents) + '</span>'
+      + '<div style="font-family:\'Josefin Sans\',sans-serif;font-size:0.72rem;letter-spacing:0.14em;'
+      + 'text-transform:uppercase;color:#B6A588;margin-top:0.3rem">Black Friday &middot; '
+      + PO_ACTIVE.sale.pct_off + '% off, saving ' + pomoney(PO_ACTIVE.sale.off_cents) + '</div>'
+    : pomoney(PO_ACTIVE.price_cents);
   document.getElementById('po-err').style.display='none';
   document.getElementById('po-overlay').classList.add('open');
   try{

@@ -262,7 +262,7 @@ function saleFor(plan, weeks, mode) {
 async function blackFridayWindow() {
   let from = BF_DEFAULT_FROM, to = BF_DEFAULT_TO, forced = '';
   try {
-    const rows = await query(
+    const rows = await require('./_team-db').query(
       "SELECT key, value FROM site_settings WHERE key IN ('bf_from','bf_to','bf_force')");
     for (const r of rows || []) {
       if (r.key === 'bf_from' && r.value) from = String(r.value).slice(0, 10);
