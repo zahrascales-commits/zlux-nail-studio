@@ -501,6 +501,23 @@ module.exports = async (req, res) => {
 
     try { await sendWelcome({ fullName, email, phone, memberId, tier }); } catch (_) {}
 
+    /* Bought on Black Friday: a second, separate email that says what was
+       saved and — the part that matters in eight weeks' time — when the
+       price returns to normal. Its own email rather than a paragraph
+       bolted onto the welcome, because this is the one she will go back
+       and look for. */
+    if (bfApplied) {
+      try {
+        const plan = require('./_plans').byKey(tier);
+        await require('./_bf-mail').sendMembership({
+          email, name: fullName, memberId,
+          tier: plan ? plan.name : tier,
+          bf: Object.assign({ vs_monthly_cents: bfSale && bfSale.vs_monthly_cents }, bfApplied),
+          dry: false,
+        });
+      } catch (_) {}
+    }
+
     /* Her own welcome, in her words, on her timing. Separate from the
        built-in one above so she can write whatever she likes without
        anybody losing their membership number. */

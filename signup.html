@@ -622,6 +622,11 @@
       <h1 class="signup-heading" style="text-align:center;">Your Member ID</h1>
       <p class="signup-sub" style="text-align:center;">This is your permanent identifier at Zola. Screenshot it, write it down — it is also in the welcome email we just sent you.</p>
 
+      <!-- What she saved, when there was a sale. Above the member ID
+           because it is the thing she wants to see first, and empty the
+           rest of the year. -->
+      <div id="saved-box" style="margin:0 0 1.5rem;"></div>
+
       <div class="member-id-display">
         <div style="font-family:'Josefin Sans',sans-serif;font-size:0.62rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--latte);margin-bottom:0.5rem;">Your Member ID</div>
         <span class="member-id-code" id="display-member-id">—</span>
@@ -715,6 +720,9 @@ setTimeout(function(){
 <script src="js/search.js"></script>
 <script src="js/analytics.js?v=2"></script>
 <script src="js/confetti.js"></script>
+<!-- The saving, counted up. Shared with the press-on cart and the gift
+     card redemption so the same moment feels the same everywhere. -->
+<script src="js/saved.js?v=1"></script>
 <script>
   // ─── State ───
   let selectedTier = '';
@@ -1376,6 +1384,12 @@ setTimeout(function(){
       signupData.nextBilling = data.nextBillingDate;
       signupData.appliedPromo = data.promo || null;
       signupData.earlyBird = data.early_bird || null;
+      /* The sale, exactly as the server reported it: what was charged,
+         what it was instead of, and when it returns to normal. */
+      signupData.blackFriday = data.black_friday || null;
+      signupData.promoSetAside = data.promo_set_aside || null;
+      signupData.chargedCents = Number(data.charge_cents) || 0;
+      signupData.listCents = Number(data.list_cents) || 0;
       signupData.referralCodeGenerated = data.referralCode;
 
       // Auto-login so portal opens without re-entering credentials
@@ -1395,6 +1409,7 @@ setTimeout(function(){
       document.getElementById('display-tier').textContent = tierName(signupData.tier);
       document.getElementById('display-email').textContent = signupData.email;
       renderLockIn();
+      renderSaved();
       goToStep(3);
       throwConfetti();
       return true;
@@ -1493,6 +1508,52 @@ setTimeout(function(){
       });
     } catch (_) {}
     alert('Your Member ID has been emailed to ' + signupData.email);
+  }
+
+  /* What she saved, counted up, with the two things she must be told:
+     how long the price lasts and what it becomes. Drawn only when the
+     server said there was a sale — never assembled from guesses. */
+  function renderSaved(){
+    const host = document.getElementById('saved-box');
+    if(!host) return;
+    const bf = signupData.blackFriday;
+    if(!bf || !window.zolaSaved){ host.innerHTML = ''; return; }
+
+    const m = window.zolaSaved.money;
+    const yearly = bf.mode === 'annual';
+    /* For a year, the saving worth celebrating is against paying as you
+       go for that same year — the comparison she was actually making.
+       For a recurring membership it is the difference per visit, because
+       the total depends on how many visits fall inside two months and
+       promising a total we cannot guarantee would overstate it. */
+    const amount = yearly
+      ? (Number(bf.saved_vs_monthly_cents) || Number(bf.saved_cents) || 0)
+      : (Number(bf.saved_cents) || 0);
+
+    const note = yearly
+      ? '<b>' + m(bf.now_cents) + '</b> paid today instead of ' + m(bf.was_cents)
+        + '. A year of nails, settled \u2014 and nothing to pay at any appointment.'
+        + '<br>Renews at ' + m(bf.then_cents) + ' a year from now.'
+      : '<b>' + m(bf.now_cents) + '</b> every ' + bf.weeks + ' weeks instead of '
+        + m(bf.was_cents) + ', for ' + bf.lasts + '.'
+        + '<br>Then ' + m(bf.then_cents) + ' every ' + bf.weeks + ' weeks. Cancel any time.';
+
+    window.zolaSaved(host, amount, {
+      label: yearly ? 'You saved' : 'You save, every visit',
+      note: note,
+      confetti: false,     // the signup already throws its own
+    });
+
+    /* A code she typed that the sale beat. Said plainly, and it is still
+       hers to use another time. */
+    if(signupData.promoSetAside){
+      const p = document.createElement('div');
+      p.style.cssText = 'font-family:\'Josefin Sans\',sans-serif;font-size:0.78rem;'
+        + 'line-height:1.65;color:var(--latte);margin-top:0.7rem;text-align:center';
+      p.innerHTML = 'Your code <b>' + esc(signupData.promoSetAside) + '</b> was not used \u2014 '
+        + 'the Black Friday price was the better of the two. The code is still yours.';
+      host.appendChild(p);
+    }
   }
 
   function goToStep(n) {
