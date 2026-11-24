@@ -316,38 +316,75 @@ async function confirmBuy(body) {
 
 /* ── GIVING IT ──────────────────────────────────────────────────────── */
 
-const BOW = '\u{1F380}';
+/* Her mark, used in the subject lines. It was \u{1F380} — the bow emoji —
+   which she said looked fake, so it is the same \u2726 the rest of her
+   email already uses. */
+const MARK = '\u2726';
+
+/* The satin, as solid colours. Seven stops across the width of the
+   ribbon: the light one in the middle is the sheen. */
+const SATIN = ['#6E5F47', '#8C7A5E', '#B6A588', '#E4D9C2', '#B6A588', '#8C7A5E', '#6B5C45'];
+const CARD_H = 210;
 
 /* The card itself, drawn in the email. Table-based and inline-styled
    because an email client will strip a stylesheet, an SVG and anything
    clever — and a gift card that arrives as a broken image is worse than
-   one that arrives as plain text. The bow is an emoji for the same
-   reason: it renders everywhere. */
-function cardArt(amount, toName) {
+   one that arrives as plain text. Which is also why the ribbon is made
+   of table cells rather than a gradient: Outlook renders neither
+   gradients nor pseudo elements, and would have shown a flat grey box
+   where the ribbon should be. */
+function cardArt(amount, toName, code) {
+  /* The ribbon: one cell per stop, each a solid colour, each the full
+     height of the card. */
+  const ribbon = '<table role="presentation" cellpadding="0" cellspacing="0" border="0" '
+      + 'width="100%" height="' + CARD_H + '" style="border-collapse:collapse">'
+    + '<tr>'
+      + SATIN.map(c => '<td height="' + CARD_H + '" bgcolor="' + c + '" '
+          + 'style="background-color:' + c + ';width:14.2%;font-size:0;line-height:0">&nbsp;</td>').join('')
+    + '</tr></table>';
+
   return ''
     + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" '
-      + 'style="max-width:380px;margin:0 auto;border-collapse:separate">'
-    + '<tr><td style="background:#0D0D0D;padding:0;border:1px solid #B6A588">'
-      /* The ribbon across the top. */
-      + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">'
-        + '<tr><td style="background:#9B1B22;height:34px;text-align:center;'
-          + 'font-size:22px;line-height:34px">' + BOW + '</td></tr>'
-      + '</table>'
-      + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">'
-        + '<tr><td style="padding:26px 22px 24px;text-align:center">'
-          + '<div style="font-family:Georgia,serif;font-size:24px;letter-spacing:9px;color:#F5EEE8">ZOLA</div>'
-          + '<div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#B6A588;'
-            + 'margin-top:6px">Nail Studio &middot; Porterville</div>'
-          + '<div style="height:1px;background:rgba(182,165,136,0.35);margin:18px 0"></div>'
-          + '<div style="font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#B6A588">Gift card</div>'
-          + '<div style="font-family:Georgia,serif;font-size:42px;line-height:1.1;color:#F5EEE8;'
-            + 'margin:6px 0 2px">' + dollars(amount) + '</div>'
+      + 'style="max-width:384px;margin:0 auto;border-collapse:collapse">'
+    + '<tr><td bgcolor="#121110" style="background-color:#121110;padding:0;'
+      + 'border:1px solid #8C7A5E">'
+
+      + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" '
+        + 'style="border-collapse:collapse">'
+      + '<tr>'
+
+        /* The lettering, in its own column. Left-aligned: a real gift
+           card is read like a bank card, not like a greetings card. */
+        + '<td width="62%" height="' + CARD_H + '" valign="top" '
+          + 'style="padding:22px 0 20px 22px">'
+          + '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:19px;'
+            + 'letter-spacing:7px;color:#F4EFE6;line-height:1">ZOLA</div>'
+          + '<div style="font-family:Helvetica,Arial,sans-serif;font-size:8px;letter-spacing:2.5px;'
+            + 'text-transform:uppercase;color:#C8B795;margin-top:7px">Nail Studio &middot; Porterville</div>'
+
+          + '<div style="height:' + (CARD_H - 132) + 'px;font-size:0;line-height:0">&nbsp;</div>'
+
+          + '<div style="font-family:Helvetica,Arial,sans-serif;font-size:8px;letter-spacing:2.5px;'
+            + 'text-transform:uppercase;color:#C8B795">Gift card</div>'
+          + '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:38px;line-height:1.05;'
+            + 'color:#F4EFE6;margin-top:3px">' + dollars(amount) + '</div>'
           + (toName
-              ? '<div style="font-size:13px;color:rgba(245,238,232,0.8);margin-top:8px">for '
-                + esc(toName) + '</div>'
+              ? '<div style="font-family:Helvetica,Arial,sans-serif;font-size:12px;'
+                + 'color:#CFC7BA;margin-top:5px">for ' + esc(toName) + '</div>'
               : '')
-        + '</td></tr>'
-      + '</table>'
+          + (code
+              ? '<div style="font-family:Helvetica,Arial,sans-serif;font-size:10px;'
+                + 'letter-spacing:2px;color:#C8B795;margin-top:8px">' + esc(code) + '</div>'
+              : '')
+        + '</td>'
+
+        + '<td width="22%" height="' + CARD_H + '" valign="top" style="padding:0">'
+          + ribbon
+        + '</td>'
+
+        + '<td width="16%" height="' + CARD_H + '" style="font-size:0;line-height:0">&nbsp;</td>'
+
+      + '</tr></table>'
     + '</td></tr></table>';
 }
 
@@ -379,7 +416,7 @@ function giftEmail(c) {
     '<p style="font-size:17px;line-height:1.7;color:#3a3027;margin:0 0 20px;text-align:center">'
       + (first ? 'Hi ' + esc(first) + ' — s' : 'S') + 'omebody has treated you.</p>'
 
-    + cardArt(money(c.amount_cents), c.to_name)
+    + cardArt(money(c.amount_cents), c.to_name, c.code)
 
     + '<p style="font-size:16px;line-height:1.75;color:#3a3027;margin:24px 0 0">'
       + (from ? '<b>' + esc(from) + '</b> has' : 'Someone has')
@@ -413,7 +450,7 @@ function giftEmail(c) {
 
   return {
     subject: (from ? from + ' sent you' : 'You have been sent') + ' a '
-      + dollars(c.amount_cents) + ' ZOLA gift card ' + BOW,
+      + dollars(c.amount_cents) + ' ZOLA gift card ' + MARK,
     html: SHELL(body),
   };
 }
@@ -429,7 +466,7 @@ function buyerReceiptEmail(c, sentNow) {
     + '<p style="font-size:16px;line-height:1.75;color:#3a3027;margin:0 0 20px">'
       + 'Thank you — your ' + dollars(c.amount_cents) + ' gift card'
       + (c.to_name ? ' for ' + esc(c.to_name) : '') + ' is paid for. ' + when + '</p>'
-    + cardArt(money(c.amount_cents), c.to_name)
+    + cardArt(money(c.amount_cents), c.to_name, c.code)
     + (c.note
         ? '<p style="font-size:14px;line-height:1.7;color:#8C7A5E;margin:20px 0 0">'
           + 'Your note: &ldquo;' + esc(c.note) + '&rdquo;</p>'
@@ -437,7 +474,7 @@ function buyerReceiptEmail(c, sentNow) {
     + '<p style="font-size:13px;line-height:1.7;color:#8C7A5E;margin:18px 0 0">'
       + 'The code is ' + esc(c.code) + ', in case you would rather hand it over yourself.</p>';
   return {
-    subject: 'Your ' + dollars(c.amount_cents) + ' ZOLA gift card is paid for ' + BOW,
+    subject: 'Your ' + dollars(c.amount_cents) + ' ZOLA gift card is paid for ' + MARK,
     html: SHELL(body),
   };
 }
@@ -477,7 +514,7 @@ async function deliver(cardId) {
   } catch (_) {}
   try {
     await require('./_notify').notifyInApp('owner', null,
-      BOW + ' Gift card delivered — ' + dollars(row.amount_cents),
+      MARK + ' Gift card delivered — ' + dollars(row.amount_cents),
       (row.buyer_name || 'Someone') + ' → ' + (row.to_name || row.to_email));
   } catch (_) {}
   return { sent: true, to: row.to_email, subject: built.subject, mail: sent };
@@ -519,7 +556,7 @@ async function redeem(code) {
   const after = await byCode(code);
   try {
     await require('./_notify').notifyInApp('owner', null,
-      BOW + ' Gift card opened — ' + dollars(card.amount_cents),
+      MARK + ' Gift card opened — ' + dollars(card.amount_cents),
       (card.to_name || card.to_email) + ' has ' + dollars(card.amount_cents) + ' to spend.');
   } catch (_) {}
   return { ok: true, card: after, balance: await balanceFor(card.to_email) };
