@@ -10204,7 +10204,7 @@ async function saveBF(btn){
 
 /* ── SOCIAL MEDIA ────────────────────────────────────────────────────────
    Every post, measured against her own median, with what to do next. */
-let SC = { data: null, streak: null, open: 0, platform: '', days: 90 };
+let SC = { data: null, streak: null, conn: null, open: 0, platform: '', days: 90 };
 
 const SC_BAND_COLOUR = {
   flop: '#B42318', under: '#B54708', normal: '#8B7355',
@@ -10218,13 +10218,16 @@ async function loadSocial(){
   if(!el) return;
   el.innerHTML = '<div class="empty">Loading\u2026</div>';
   try{
-    const [d, s] = await Promise.all([
+    const [d, s, c] = await Promise.all([
       api('/api/social?action=analytics&days=' + SC.days
         + (SC.platform ? '&platform=' + SC.platform : '')).then(x => x.json()),
       api('/api/social?action=streak&days=30').then(x => x.json()),
+      /* Its own endpoint, and allowed to fail: a connection problem must
+         not take the whole tab down with it. */
+      api('/api/social-connect?action=status').then(x => x.json()).catch(() => null),
     ]);
     if(d.error) throw new Error(d.error);
-    SC.data = d; SC.streak = s;
+    SC.data = d; SC.streak = s; SC.conn = c;
   }catch(err){
     el.innerHTML = emptyBox('\u26a0\ufe0f','Could not load: ' + esc(err.message));
     return;
@@ -10254,6 +10257,9 @@ function renderSocial(){
 
     // ── the honest note ──
     + '<div style="margin:1rem 0">' + rcNote('<b>Before anything else:</b> ' + esc(cfg.honest_note)) + '</div>'
+
+    // ── connecting the accounts ──
+    + '<div id="sc-connect"></div>'
 
     // ── the goal, as arithmetic ──
     + '<div class="page-head" style="margin-top:1.6rem"><div>'
@@ -10366,6 +10372,151 @@ function renderSocial(){
     + '</div>'
     + (d.posts.length ? d.posts.map(scPostRow).join('')
         : '<div class="empty">Nothing logged yet. Log your last 5 posts above and the advice starts working.</div>');
+
+  renderSocialConnect();
+}
+
+/* ── LINKING THE REAL ACCOUNTS ───────────────────────────────────────── */
+
+function renderSocialConnect(){
+  const host = document.getElementById('sc-connect');
+  if(!host) return;
+  const c = SC.conn;
+  if(!c){ host.innerHTML = ''; return; }
+
+  const both = c.instagram.connected && c.tiktok.connected;
+
+  host.innerHTML =
+    '<div class="page-head" style="margin-top:1.6rem"><div>'
+      + '<div class="page-title" style="font-size:1.05rem">'
+        + (both ? 'Your accounts are linked' : 'Link your accounts') + '</div>'
+      + '<div class="page-desc">'
+        + (both
+            ? 'Posts and their numbers arrive on their own. Press Pull in the numbers any time.'
+            : 'So the numbers arrive on their own and you never type one in again.')
+      + '</div>'
+    + '</div></div>'
+    + (both ? '' : '<div style="margin-bottom:1rem">' + rcNote(esc(c.honest_note), true) + '</div>')
+    + [c.instagram, c.tiktok].map(scConnectCard).join('')
+    + '<div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;margin-top:0.9rem">'
+      + '<button class="btn ' + (both ? 'btn-gold' : 'btn-ghost') + '" onclick="scSync(this)">'
+        + 'Pull in the numbers now</button>'
+      + '<span id="sc-sync-msg" style="font-size:0.8rem;color:var(--muted)">'
+        + (c.last_sync_note ? esc(c.last_sync_note) : '') + '</span>'
+    + '</div>';
+}
+
+function scConnectCard(p){
+  const col = p.connected ? '#067647' : '#B54708';
+  return '<div class="member-card" style="--mc:' + col + '">'
+    + '<div class="mc-top" style="flex-wrap:wrap;gap:0.5rem">'
+      + '<div style="flex:1;min-width:190px">'
+        + '<div class="mc-name">' + esc(p.label) + ' \u00b7 ' + esc(p.handle) + '</div>'
+        + '<div style="font-size:0.78rem;color:var(--muted);margin-top:0.15rem">'
+          + (p.connected
+              ? 'Connected' + (p.token_expires ? ' \u00b7 needs renewing by ' + esc(p.token_expires) : '')
+              : (p.needs.length ? 'Still needs: ' + esc(p.needs.join(', ')) : 'Not connected'))
+        + '</div>'
+      + '</div>'
+      + (p.connected
+          ? '<button class="btn btn-ghost btn-sm" onclick="scDisconnect(\'' + p.platform + '\',this)">Unlink</button>'
+          : (p.has_app
+              ? '<button class="btn btn-gold btn-sm" onclick="scStart(\'' + p.platform + '\',this)">Connect '
+                + esc(p.label) + '</button>'
+              : '<span class="status-pill" style="background:#FEF0C7;color:#93370D">needs your app details</span>'))
+    + '</div>'
+    + (p.connected ? '' :
+      '<div style="padding:0.2rem 0 0.5rem">'
+        /* Numbered, in order, in her words rather than Meta's. */
+        + '<ol style="font-size:0.82rem;line-height:1.7;color:var(--ink-2);margin:0.3rem 0 0.8rem;'
+          + 'padding-left:1.2rem">'
+          + p.steps.map(function(s){ return '<li style="margin-bottom:0.3rem">' + esc(s) + '</li>'; }).join('')
+        + '</ol>'
+        + '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:flex-end">'
+          + (p.platform === 'instagram'
+              ? '<div class="field" style="margin:0;width:190px"><label class="fld-label">Meta App ID</label>'
+                + '<input id="sc-ig-id" placeholder="from developers.facebook.com" /></div>'
+                + '<div class="field" style="margin:0;width:190px"><label class="fld-label">Meta App Secret</label>'
+                + '<input id="sc-ig-secret" type="password" placeholder="kept on the server only" /></div>'
+              : '<div class="field" style="margin:0;width:190px"><label class="fld-label">TikTok Client Key</label>'
+                + '<input id="sc-tt-key" placeholder="from developers.tiktok.com" /></div>'
+                + '<div class="field" style="margin:0;width:190px"><label class="fld-label">TikTok Client Secret</label>'
+                + '<input id="sc-tt-secret" type="password" placeholder="kept on the server only" /></div>')
+          + '<button class="btn btn-gold" onclick="scSaveApp(\'' + p.platform + '\',this)">Save</button>'
+        + '</div>'
+        + '<div style="font-size:0.74rem;color:var(--muted);margin-top:0.5rem;line-height:1.6">'
+          + 'Redirect URL to paste into the app, exactly: <b>'
+          + esc(p.platform === 'instagram' ? (SC.conn.redirect_ig || '') : (SC.conn.redirect_tt || ''))
+          + '</b></div>'
+      + '</div>');
+}
+
+async function scSaveApp(platform, btn){
+  if(!btn || btn.disabled) return;
+  const v = function(id){ const e = document.getElementById(id); return e ? e.value.trim() : ''; };
+  const body = { action: 'save' };
+  if(platform === 'instagram'){ body.ig_app_id = v('sc-ig-id'); body.ig_app_secret = v('sc-ig-secret'); }
+  else { body.tt_client_key = v('sc-tt-key'); body.tt_client_secret = v('sc-tt-secret'); }
+  const missing = Object.keys(body).filter(function(k){ return k !== 'action' && !body[k]; });
+  if(missing.length){ toast('Both boxes are needed'); return; }
+
+  btn.disabled = true; btn.textContent = 'Saving\u2026';
+  try{
+    SC.conn = await (await api('/api/social-connect?action=save', { method:'POST',
+      body: JSON.stringify(body) })).json();
+    toast('Saved \u2726 now press Connect');
+    renderSocialConnect();
+  }catch(err){
+    btn.disabled = false; btn.textContent = 'Save';
+    toast('Could not save: ' + err.message);
+  }
+}
+
+async function scStart(platform, btn){
+  if(!btn || btn.disabled) return;
+  btn.disabled = true; btn.textContent = 'Opening\u2026';
+  try{
+    const d = await (await api('/api/social-connect?action=start&platform=' + platform)).json();
+    if(!d.ok){ btn.disabled = false; btn.textContent = 'Connect'; toast(d.why || 'Could not start'); return; }
+    /* Their page, in this tab, because an approval flow in a popup gets
+       blocked and then she thinks the button is broken. */
+    window.location.href = d.url;
+  }catch(err){
+    btn.disabled = false; btn.textContent = 'Connect';
+    toast('Could not start: ' + err.message);
+  }
+}
+
+async function scDisconnect(platform, btn){
+  if(!btn || btn.disabled) return;
+  if(!confirm('Unlink ' + platform + '? Your logged posts stay \u2014 only the connection goes.')) return;
+  btn.disabled = true; btn.textContent = 'Unlinking\u2026';
+  try{
+    SC.conn = await (await api('/api/social-connect?action=disconnect', { method:'POST',
+      body: JSON.stringify({ action:'disconnect', platform: platform }) })).json();
+    toast('Unlinked');
+    renderSocialConnect();
+  }catch(err){
+    btn.disabled = false; btn.textContent = 'Unlink';
+    toast('Could not unlink: ' + err.message);
+  }
+}
+
+async function scSync(btn){
+  if(!btn || btn.disabled) return;
+  const msg = document.getElementById('sc-sync-msg');
+  btn.disabled = true; btn.textContent = 'Pulling\u2026';
+  if(msg) msg.textContent = '';
+  try{
+    const d = await (await api('/api/social-connect?action=sync', { method:'POST',
+      body: JSON.stringify({ action:'sync', limit: 25 }) })).json();
+    if(msg) msg.textContent = d.note || '';
+    toast(d.added ? d.added + ' posts pulled in \u2726' : 'Nothing came through \u2014 see the note');
+    loadSocial();
+  }catch(err){
+    btn.disabled = false; btn.textContent = 'Pull in the numbers now';
+    if(msg) msg.textContent = 'Could not pull: ' + err.message;
+  }
 }
 
 function scAccount(name, acct, which){
