@@ -614,19 +614,52 @@ module.exports = async function (req, res) {
       });
     }
 
+    /* What a gift card is worth to this person, before anything is
+       charged. Read-only: the booking page calls this to show the line,
+       and deposit_intent below works it out again for itself rather than
+       trusting what came back. */
+    if (req.method === 'GET' && action === 'gift_credit') {
+      try {
+        const b = await require('./_giftcards').balanceFor(req.query.email);
+        return res.json({ balance_cents: b.balance_cents, cards: b.cards.length });
+      } catch (_) { return res.json({ balance_cents: 0, cards: 0 }); }
+    }
+
     if (req.method === 'POST' && action === 'deposit_intent') {
       if (!stripeKey()) return res.status(400).json({ error: 'Payments not configured' });
       const { service_name, addon_names, member_tier, member_id, customer_name, customer_email } = req.body || {};
       const calc = computeDeposit({ service_name, addon_names, member_tier,
         free_service: (await freeServicesLeft(member_id, member_tier)) > 0 });
       if (!calc) return res.status(400).json({ error: 'Unknown service' });
+
+      /* Gift card credit, worked out here and taken off what is charged.
+         It comes off the TOTAL, and the deposit can then never be more
+         than what is left to pay — a card that covers the visit leaves
+         nothing to put down. */
+      let giftOff = 0, giftTotal = calc.total_cents, giftDeposit = calc.deposit_cents, giftUsed = [];
+      try {
+        const gmail = String((req.body || {}).customer_email || '').trim();
+        if (gmail && calc.total_cents > 0) {
+          const gc = require('./_giftcards');
+          const bal = await gc.balanceFor(gmail);
+          if (bal.balance_cents > 0) {
+            giftOff = Math.min(bal.balance_cents, calc.total_cents);
+            giftTotal = Math.max(0, calc.total_cents - giftOff);
+            giftDeposit = Math.min(calc.deposit_cents, giftTotal);
+            giftUsed = bal.cards.filter(c => c.balance_cents > 0).map(c => c.code);
+          }
+        }
+      } catch (_) { /* a gift card problem must never block a booking */ }
+
       const params = {
-        amount: String(calc.deposit_cents),
+        amount: String(giftDeposit),
         currency: 'usd',
         'automatic_payment_methods[enabled]': 'true',
-        description: `ZOLA deposit — ${service_name} (${customer_name || 'client'})`,
+        description: `ZOLA deposit — ${service_name} (${customer_name || 'client'})`
+          + (giftOff ? ' · gift card applied' : ''),
         'metadata[service]': service_name || '',
         'metadata[client]': customer_name || '',
+        'metadata[gift_cents]': String(giftOff),
       };
       if (customer_email && /@/.test(customer_email)) params.receipt_email = customer_email;
 
@@ -636,8 +669,55 @@ module.exports = async function (req, res) {
         params.setup_future_usage = 'off_session';
       }
 
+      /* A deposit of nothing is not a payment. When a gift card covers
+         the whole visit there is no card form to show and nothing to
+         charge, so the credit is drawn down and the page is told to skip
+         straight to booking. */
+      if (giftDeposit <= 0) {
+        let used = { spent_cents: 0, used: [] };
+        try {
+          used = await require('./_giftcards').spend({
+            email: String((req.body || {}).customer_email || ''),
+            amount_cents: giftOff,
+            ref: 'visit:' + (service_name || '') + ':' + Date.now(),
+            note: service_name || '',
+          });
+        } catch (_) {}
+        return res.json({
+          client_secret: null, payment_intent_id: null,
+          deposit_cents: 0, total_cents: giftTotal,
+          gift_cents: used.spent_cents || 0, gift_codes: giftUsed,
+          nothing_to_pay: true,
+        });
+      }
+
       const pi = await stripeApi('payment_intents', params);
-      return res.json({ client_secret: pi.client_secret, payment_intent_id: pi.id, deposit_cents: calc.deposit_cents, total_cents: calc.total_cents });
+
+      /* Drawn down AFTER Stripe accepted the intent, and keyed to it, so
+         the two can always be reconciled. An intent that is created and
+         abandoned has its credit released by the reminder sweep. */
+      let spent = { spent_cents: 0, used: [] };
+      if (giftOff > 0) {
+        try {
+          spent = await require('./_giftcards').spend({
+            email: String((req.body || {}).customer_email || ''),
+            amount_cents: giftOff,
+            ref: 'intent:' + pi.id,
+            note: service_name || '',
+          });
+        } catch (_) {}
+      }
+
+      return res.json({
+        client_secret: pi.client_secret, payment_intent_id: pi.id,
+        deposit_cents: giftDeposit, total_cents: giftTotal,
+        /* Named so the booking page can show the line and the
+           confirmation can repeat it. */
+        gift_cents: spent.spent_cents || 0,
+        gift_codes: (spent.used || []).map(u => u.code),
+        full_deposit_cents: calc.deposit_cents,
+        full_total_cents: calc.total_cents,
+      });
     }
 
     return res.status(400).json({ error: 'Unknown action' });

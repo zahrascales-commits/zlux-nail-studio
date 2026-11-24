@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gift Cards — ZOLA Nail Studio, Porterville CA</title>
+  <link rel="canonical" href="https://zolanailstudio.com/gift.html" />
+  <meta name="description" content="Send a ZOLA gift card by email, on any date you choose, with a note. Nail appointments in Porterville, California — the money lands in their account and comes off whatever they book." />
+  <link rel="icon" href="/img/zola-icon.png" />
+  <link rel="apple-touch-icon" href="/img/zola-icon.png" />
+  <meta name="theme-color" content="#140d07" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="ZOLA Nail Studio" />
+  <meta property="og:title" content="Send a ZOLA gift card" />
+  <meta property="og:description" content="Pick an amount, pick the day it arrives, leave a note. It lands in their inbox with a bow on it." />
+  <meta property="og:image" content="https://zolanailstudio.com/img/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@200;300;400;600;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    /* ── THE CARD ITSELF ──
+       Drawn rather than an image, so it is crisp on every screen and
+       nothing has to be uploaded or can fail to load. The bow is an
+       emoji for the same reason it is one in the email: it renders
+       everywhere. */
+    .gw { max-width: 560px; margin: 0 auto; padding: 0 1.1rem; }
+    .gcard { position: relative; background: #0D0D0D; border: 1px solid rgba(182,165,136,0.5);
+      overflow: hidden; text-align: center; }
+    .gcard .ribbon { background: #9B1B22; height: 40px; display: flex; align-items: center;
+      justify-content: center; font-size: 24px; }
+    .gcard .inner { padding: 2rem 1.4rem 1.9rem; }
+    .gcard .wm { font-family: 'Cinzel', serif; font-size: 1.6rem; letter-spacing: 0.55em;
+      color: #F5EEE8; }
+    .gcard .sub { font-family: 'Josefin Sans', sans-serif; font-size: 0.6rem; letter-spacing: 0.3em;
+      text-transform: uppercase; color: var(--champagne); margin-top: 0.45rem; }
+    .gcard .rule { height: 1px; background: rgba(182,165,136,0.35); margin: 1.2rem 0; }
+    .gcard .k { font-family: 'Josefin Sans', sans-serif; font-size: 0.62rem; letter-spacing: 0.3em;
+      text-transform: uppercase; color: var(--champagne); }
+    .gcard .amt { font-family: 'Cinzel', serif; font-size: clamp(2.4rem, 12vw, 3.4rem);
+      line-height: 1.05; color: #F5EEE8; margin: 0.3rem 0 0.1rem; font-variant-numeric: tabular-nums; }
+    .gcard .for { font-family: 'Josefin Sans', sans-serif; font-size: 0.86rem;
+      color: rgba(245,238,232,0.8); margin-top: 0.5rem; }
+    .gcard .code { font-family: 'Josefin Sans', sans-serif; font-size: 0.72rem; letter-spacing: 0.18em;
+      color: var(--champagne); margin-top: 1rem; }
+    .gcard .sheen { position: absolute; top: 0; left: -60%; width: 60%; height: 100%;
+      background: linear-gradient(100deg, transparent, rgba(182,165,136,0.2), transparent); }
+
+    /* ── UNWRAPPING ──
+       The lid lifts, the ribbon parts, the amount counts up. Three
+       stages, each short, and the whole thing is skippable because
+       somebody who has been sent money should never have to sit through
+       an animation to get at it. */
+    .gbox { position: relative; max-width: 420px; margin: 0 auto; }
+    .glid { position: absolute; inset: 0 0 auto 0; height: 56%; background: #1C1510;
+      border: 1px solid rgba(182,165,136,0.5); border-bottom: none; z-index: 3;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 1s cubic-bezier(.3,.8,.2,1), opacity 1s ease; }
+    .glid .bowbig { font-size: 54px; }
+    .gbox.open .glid { transform: translateY(-120%) rotate(-7deg); opacity: 0; }
+    .gribbon { position: absolute; top: 0; bottom: 0; left: 50%; width: 30px; margin-left: -15px;
+      background: #9B1B22; z-index: 2; transition: transform .85s ease .25s, opacity .85s ease .25s; }
+    .gbox.open .gribbon { transform: scaleY(0); opacity: 0; transform-origin: top; }
+    .gbox .under { opacity: 0; transition: opacity .7s ease .55s; }
+    .gbox.open .under { opacity: 1; }
+
+    .gbtn { display: block; width: 100%; background: var(--champagne); color: #0D0D0D;
+      border: 0; cursor: pointer; font-family: 'Josefin Sans', sans-serif; font-size: 0.8rem;
+      letter-spacing: 0.2em; text-transform: uppercase; padding: 1.05rem 1.2rem;
+      text-align: center; text-decoration: none; transition: background 0.2s; }
+    .gbtn:hover { background: #C9BB9E; }
+    .gbtn[disabled] { opacity: 0.55; cursor: default; }
+    .gquiet { display: block; width: 100%; background: none; border: 0; cursor: pointer;
+      font-family: 'Josefin Sans', sans-serif; font-size: 0.72rem; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--latte); padding: 0.75rem; margin-top: 0.5rem; }
+    .gquiet:hover { color: var(--cream); }
+
+    .gfield { margin-bottom: 1rem; }
+    .gfield label { display: block; font-family: 'Josefin Sans', sans-serif; font-size: 0.66rem;
+      font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--latte);
+      margin-bottom: 0.4rem; }
+    .gfield input, .gfield textarea {
+      width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(182,165,136,0.3);
+      color: var(--cream); font-family: 'Josefin Sans', sans-serif; font-size: 0.95rem;
+      padding: 0.8rem 0.9rem; outline: none; }
+    .gfield input:focus, .gfield textarea:focus { border-color: var(--champagne); }
+    .gfield textarea { min-height: 86px; resize: vertical; line-height: 1.6; }
+    .gfield .hint { font-family: 'Josefin Sans', sans-serif; font-size: 0.72rem;
+      color: var(--latte); margin-top: 0.35rem; line-height: 1.6; }
+
+    .gamts { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 0.5rem; }
+    .gamt { background: rgba(255,255,255,0.03); border: 1px solid rgba(182,165,136,0.3);
+      color: var(--cream); font-family: 'Cinzel', serif; font-size: 1.05rem; padding: 0.85rem 0.3rem;
+      cursor: pointer; transition: all 0.15s; }
+    .gamt.on { background: var(--champagne); color: #0D0D0D; border-color: var(--champagne); }
+
+    .gerr { background: rgba(224,112,112,0.12); border: 1px solid rgba(224,112,112,0.4);
+      color: #e8a0a0; font-family: 'Josefin Sans', sans-serif; font-size: 0.84rem;
+      padding: 0.75rem 0.9rem; margin: 0.9rem 0; line-height: 1.6; }
+    .gnote { font-family: 'Josefin Sans', sans-serif; font-size: 0.9rem; line-height: 1.75;
+      color: var(--cream); background: rgba(182,165,136,0.1);
+      border-left: 3px solid var(--champagne); padding: 1rem 1.1rem; font-style: italic; }
+    .gstep { display: none; }
+    .gstep.on { display: block; animation: gfade 0.4s ease both; }
+    @keyframes gfade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) {
+      .glid, .gribbon, .gbox .under { transition: none; }
+      .gstep.on { animation: none; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav" id="nav">
+  <a href="index.html" class="nav-logo"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span></a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="services.html">Services</a>
+    <a href="memberships.html">Memberships</a>
+    <a href="pressons.html">Press-Ons</a>
+    <a href="classes.html">Classes</a>
+    <a href="about.html">About</a>
+    <a href="contact.html">Contact</a>
+    <a href="booking.html" class="btn-gold" style="animation:none;">Book Now</a>
+  </div>
+  <button class="nav-hamburger" id="hamburger"><span></span><span></span><span></span></button>
+</nav>
+<div class="nav-mobile" id="nav-mobile">
+    <a href="index.html">Home</a>
+    <a href="services.html">Services</a>
+    <a href="memberships.html">Memberships</a>
+    <a href="pressons.html">Press-Ons</a>
+    <a href="classes.html">Classes</a>
+    <a href="about.html">About</a>
+    <a href="contact.html">Contact</a>
+    <a href="booking.html" class="nav-cta">Book Now</a>
+  </div>
+
+<section class="section" style="padding-top:5.5rem;">
+  <div class="gw">
+
+    <!-- ══ BUYING ONE ══ -->
+    <div class="gstep on" id="g-buy">
+      <div style="text-align:center;margin-bottom:1.8rem;">
+        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.62rem;letter-spacing:0.4em;
+          text-transform:uppercase;color:var(--champagne);margin-bottom:0.7rem;">Gift cards</div>
+        <h1 style="font-family:'Cinzel',serif;font-size:clamp(1.8rem,7vw,2.6rem);line-height:1.15;
+          color:var(--cream);margin:0 0 0.8rem;">Give somebody their nails&nbsp;done</h1>
+        <p style="font-family:'Josefin Sans',sans-serif;font-size:1rem;line-height:1.8;
+          color:var(--latte);margin:0;">Pick an amount, pick the day it lands in their inbox, and leave
+          them a note. The money goes straight onto their account and comes off whatever they book.</p>
+      </div>
+
+      <div id="g-preview" style="margin-bottom:1.8rem;"></div>
+
+      <div class="gfield">
+        <label>How much</label>
+        <div class="gamts" id="g-amts"></div>
+        <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.6rem;">
+          <span style="font-family:'Cinzel',serif;color:var(--champagne);">$</span>
+          <input id="g-custom" inputmode="decimal" placeholder="or any amount"
+            oninput="gCustom(this.value)" style="max-width:170px" />
+        </div>
+      </div>
+
+      <div class="gfield">
+        <label>Who is it for</label>
+        <input id="g-to-name" placeholder="Their name" autocomplete="off" />
+      </div>
+      <div class="gfield">
+        <label>Their email</label>
+        <input id="g-to-email" type="email" inputmode="email" placeholder="where the card goes" autocomplete="off" />
+        <div class="hint">This is the address the card arrives at, and the account the money sits in.
+          Double-check it.</div>
+      </div>
+      <div class="gfield">
+        <label>When should it arrive</label>
+        <input id="g-when" type="date" />
+        <div class="hint">Christmas morning, a birthday, or today — it is sent that morning.</div>
+      </div>
+      <div class="gfield">
+        <label>Leave them a note <span style="opacity:0.6">(optional)</span></label>
+        <textarea id="g-note" maxlength="400" placeholder="Merry Christmas! Go and get those nails done."></textarea>
+      </div>
+
+      <div class="rule" style="height:1px;background:rgba(182,165,136,0.25);margin:1.6rem 0;"></div>
+
+      <div class="gfield">
+        <label>Your name</label>
+        <input id="g-from-name" placeholder="so they know who it is from" autocomplete="name" />
+      </div>
+      <div class="gfield">
+        <label>Your email</label>
+        <input id="g-from-email" type="email" inputmode="email" placeholder="for your receipt" autocomplete="email" />
+      </div>
+
+      <div id="g-buy-err" class="gerr" style="display:none;"></div>
+      <button class="gbtn" id="g-go" onclick="gStartPay()">Continue to payment</button>
+    </div>
+
+    <!-- ══ PAYING ══ -->
+    <div class="gstep" id="g-pay">
+      <div style="text-align:center;margin-bottom:1.4rem;">
+        <h1 style="font-family:'Cinzel',serif;font-size:clamp(1.5rem,6vw,2rem);color:var(--cream);margin:0 0 0.5rem;">
+          Nearly there</h1>
+        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.95rem;color:var(--latte);margin:0;"
+          id="g-pay-sub">—</p>
+      </div>
+      <div id="g-payment-el" style="margin-bottom:1.2rem;"></div>
+      <div id="g-pay-err" class="gerr" style="display:none;"></div>
+      <button class="gbtn" id="g-pay-btn" onclick="gPay()">Pay &amp; send</button>
+      <button class="gquiet" onclick="gStep('g-buy')">← Back</button>
+    </div>
+
+    <!-- ══ BOUGHT ══ -->
+    <div class="gstep" id="g-done">
+      <div style="text-align:center;margin-bottom:1.5rem;">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">🎀</div>
+        <h1 style="font-family:'Cinzel',serif;font-size:clamp(1.6rem,6vw,2.2rem);color:var(--cream);margin:0 0 0.7rem;">
+          That is done</h1>
+        <p style="font-family:'Josefin Sans',sans-serif;font-size:1rem;line-height:1.8;color:var(--latte);margin:0;"
+          id="g-done-sub">—</p>
+      </div>
+      <div id="g-done-card" style="margin-bottom:1.5rem;"></div>
+      <a class="gbtn" href="/gift.html">Send another</a>
+      <a class="gquiet" href="/" style="text-align:center;">Back to the studio</a>
+    </div>
+
+    <!-- ══ UNWRAPPING ONE ══ -->
+    <div class="gstep" id="g-open">
+      <div style="text-align:center;margin-bottom:1.5rem;">
+        <div style="font-family:'Josefin Sans',sans-serif;font-size:0.62rem;letter-spacing:0.4em;
+          text-transform:uppercase;color:var(--champagne);margin-bottom:0.7rem;">For you</div>
+        <h1 style="font-family:'Cinzel',serif;font-size:clamp(1.6rem,6vw,2.3rem);line-height:1.2;
+          color:var(--cream);margin:0;" id="g-open-head">Somebody has treated you</h1>
+      </div>
+      <div class="gbox" id="g-box">
+        <div class="glid"><span class="bowbig">🎀</span></div>
+        <div class="gribbon"></div>
+        <div class="under" id="g-open-card"></div>
+      </div>
+      <div id="g-open-note" style="margin-top:1.4rem;"></div>
+      <div id="g-open-err" class="gerr" style="display:none;"></div>
+      <div id="g-open-actions" style="margin-top:1.5rem;">
+        <button class="gbtn" id="g-unwrap" onclick="gUnwrap()">Unwrap it</button>
+      </div>
+    </div>
+
+    <!-- ══ REDEEMED ══ -->
+    <div class="gstep" id="g-redeemed">
+      <div id="g-saved" style="margin-bottom:1.4rem;"></div>
+      <div style="text-align:center;margin-bottom:1.4rem;">
+        <p style="font-family:'Josefin Sans',sans-serif;font-size:1rem;line-height:1.8;color:var(--latte);margin:0;"
+          id="g-redeemed-sub">—</p>
+      </div>
+      <a class="gbtn" href="/booking.html">Book your appointment</a>
+      <a class="gquiet" href="/services.html" style="text-align:center;">See what we do first</a>
+    </div>
+
+    <div class="gstep" id="g-missing">
+      <div style="text-align:center;padding:2rem 0;">
+        <h1 style="font-family:'Cinzel',serif;font-size:1.6rem;color:var(--cream);margin:0 0 0.8rem;">
+          We cannot find that card</h1>
+        <p style="font-family:'Josefin Sans',sans-serif;font-size:0.95rem;line-height:1.8;
+          color:var(--latte);margin:0 0 1.4rem;" id="g-missing-why">
+          Check the link in your email, or get in touch and we will sort it out.</p>
+        <a class="gbtn" href="/gift.html">Send a gift card instead</a>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div><div class="footer-logo">ZOLA</div><p class="footer-desc">Porterville's luxury nail membership studio.</p></div>
+      <div><div class="footer-heading">Studio</div><div class="footer-links"><a href="nails-porterville.html">Nails in Porterville</a><a href="careers.html">Train With Us</a><a href="services.html">Services</a><a href="memberships.html">Memberships</a><a href="pressons.html">Press-Ons</a><a href="classes.html">Classes</a><a href="booking.html">Book Now</a></div></div>
+      <div><div class="footer-heading">Portals</div><div class="footer-links"><a href="client-portal.html">Client Portal</a><a href="team.html">Team Portal</a></div></div>
+      <div><div class="footer-heading">Contact</div><div class="footer-links"><address style="font-style:normal;color:var(--latte);line-height:1.7">ZOLA Nail Studio<br>2037 W Linda Vista Ave #D<br>Porterville, CA 93257</address><span data-biz-hours style="color:var(--latte)">Sunday – Sunday: 6:00 AM – 9:00 PM</span><a href="contact.html">Get in Touch</a><a href="https://instagram.com/zola_officials_" target="_blank">Instagram</a><a href="https://tiktok.com/@zolaofficial" target="_blank">TikTok</a></div></div>
+    </div>
+    <div class="footer-bottom">© 2026 ZOLA Nail Studio · Porterville, CA · <a href="privacy.html" style="color:var(--champagne)">Privacy Policy</a> · <a href="terms.html" style="color:var(--champagne)">Terms &amp; Conditions</a></div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+<script src="js/search.js"></script>
+<script src="js/analytics.js?v=2"></script>
+<script src="js/confetti.js"></script>
+<!-- The saving, counted up. Shared with the membership checkout so the
+     same moment feels the same everywhere. -->
+<script src="js/saved.js?v=1"></script>
+<script>
+(function(){
+  'use strict';
+
+  var G = { amount: 7500, limits: { min_cents: 2500, max_cents: 100000 }, card: null, pi: null, stripe: null, el: null };
+  var PRESETS = [5000, 7500, 9500, 15000];
+
+  function money(c){
+    var v = (Number(c)||0)/100;
+    return '$' + (v % 1 === 0 ? v.toLocaleString('en-US')
+      : v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}));
+  }
+  function esc(s){ return String(s==null?'':s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function el(id){ return document.getElementById(id); }
+  function gStep(id){
+    ['g-buy','g-pay','g-done','g-open','g-redeemed','g-missing'].forEach(function(s){
+      var n = el(s); if(n) n.classList.toggle('on', s === id);
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  window.gStep = gStep;
+
+  function err(id, msg){
+    var n = el(id); if(!n) return;
+    if(!msg){ n.style.display='none'; n.textContent=''; return; }
+    n.textContent = msg; n.style.display = 'block';
+  }
+
+  /* The card, drawn. One function, used on the buy preview, the
+     confirmation and the unwrapping, so all three are the same object. */
+  function cardHtml(amount, forName, code){
+    return '<div class="gcard">'
+      + '<div class="ribbon">🎀</div>'
+      + '<div class="sheen"></div>'
+      + '<div class="inner">'
+        + '<div class="wm">ZOLA</div>'
+        + '<div class="sub">Nail Studio · Porterville</div>'
+        + '<div class="rule"></div>'
+        + '<div class="k">Gift card</div>'
+        + '<div class="amt">' + money(amount) + '</div>'
+        + (forName ? '<div class="for">for ' + esc(forName) + '</div>' : '')
+        + (code ? '<div class="code">' + esc(code) + '</div>' : '')
+      + '</div></div>';
+  }
+
+  /* ── BUYING ── */
+
+  function paintAmounts(){
+    el('g-amts').innerHTML = PRESETS.map(function(a){
+      return '<button type="button" class="gamt' + (G.amount === a ? ' on' : '') + '" '
+        + 'onclick="gPick(' + a + ')">' + money(a) + '</button>';
+    }).join('');
+    paintPreview();
+  }
+  function paintPreview(){
+    el('g-preview').innerHTML = cardHtml(G.amount, (el('g-to-name')||{}).value || '', '');
+  }
+  window.gPick = function(a){
+    G.amount = a;
+    var c = el('g-custom'); if(c) c.value = '';
+    paintAmounts();
+  };
+  window.gCustom = function(v){
+    var n = parseFloat(String(v).replace(/[^0-9.]/g,''));
+    if(n > 0){
+      G.amount = Math.round(n*100);
+      document.querySelectorAll('.gamt').forEach(function(b){ b.classList.remove('on'); });
+      paintPreview();
+    }
+  };
+
+  function readForm(){
+    return {
+      amount_cents: G.amount,
+      to_name: (el('g-to-name').value||'').trim(),
+      to_email: (el('g-to-email').value||'').trim(),
+      deliver_on: (el('g-when').value||'').trim(),
+      note: (el('g-note').value||'').trim(),
+      buyer_name: (el('g-from-name').value||'').trim(),
+      buyer_email: (el('g-from-email').value||'').trim(),
+    };
+  }
+
+  window.gStartPay = async function(){
+    err('g-buy-err','');
+    var b = readForm();
+    var btn = el('g-go');
+    btn.disabled = true; btn.textContent = 'Checking…';
+    try{
+      var cfg = await (await fetch('/api/pay?action=config')).json();
+      if(!cfg.enabled || typeof Stripe === 'undefined'){
+        err('g-buy-err','Card payments are not available right now — message us and we will sort it out.');
+        btn.disabled=false; btn.textContent='Continue to payment'; return;
+      }
+      var r = await fetch('/api/giftcards?action=buy_intent', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(Object.assign({ action:'buy_intent' }, b)),
+      });
+      var d = await r.json();
+      /* Every rule about amounts and dates is the server's. The page just
+         shows what it said, so the two can never disagree. */
+      if(!d.ok){
+        err('g-buy-err', d.why || 'Something was not right there.');
+        btn.disabled=false; btn.textContent='Continue to payment'; return;
+      }
+      G.pi = d.payment_intent_id;
+      G.form = b;
+      G.stripe = Stripe(cfg.publishable_key);
+      G.el = G.stripe.elements({ clientSecret: d.client_secret, appearance: { theme:'flat',
+        variables:{ colorPrimary:'#B6A588', fontFamily:'Josefin Sans, sans-serif' } } });
+      el('g-payment-el').innerHTML = '';
+      G.el.create('payment', { wallets:{ applePay:'auto', googlePay:'auto' }, layout:'tabs' })
+        .mount('#g-payment-el');
+      el('g-pay-sub').textContent = money(d.amount_cents) + ' gift card'
+        + (b.to_name ? ' for ' + b.to_name : '') + ', arriving ' + (b.deliver_on || 'today') + '.';
+      gStep('g-pay');
+    }catch(e){
+      err('g-buy-err','Connection hiccup — try that again.');
+    }
+    btn.disabled=false; btn.textContent='Continue to payment';
+  };
+
+  window.gPay = async function(){
+    err('g-pay-err','');
+    var btn = el('g-pay-btn');
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try{
+      var res = await G.stripe.confirmPayment({ elements: G.el, redirect: 'if_required',
+        confirmParams: { payment_method_data: { billing_details: {
+          name: G.form.buyer_name || undefined, email: G.form.buyer_email || undefined } } } });
+      if(res.error){
+        err('g-pay-err', res.error.message || 'That card did not go through.');
+        btn.disabled=false; btn.textContent='Pay & send'; return;
+      }
+      /* The card is created server-side, after Stripe is asked whether
+         the money actually arrived. */
+      var d = await (await fetch('/api/giftcards?action=confirm', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(Object.assign({ action:'confirm', payment_intent_id: G.pi }, G.form)),
+      })).json();
+      if(!d.ok){
+        err('g-pay-err', d.why || 'The payment went through but the card did not save — message us and we will fix it straight away.');
+        btn.disabled=false; btn.textContent='Pay & send'; return;
+      }
+      el('g-done-card').innerHTML = cardHtml(d.card.amount_cents, d.card.to_name, d.card.code);
+      el('g-done-sub').innerHTML = d.delivered
+        ? 'It has gone to <b>' + esc(G.form.to_email) + '</b> already. Your receipt is on its way to you.'
+        : 'It is scheduled for <b>' + esc(d.card.deliver_on) + '</b> and will land in <b>'
+          + esc(G.form.to_email) + '</b> that morning. Your receipt is on its way to you.';
+      gStep('g-done');
+      if(window.zolaConfetti) try{ window.zolaConfetti(); }catch(_){}
+    }catch(e){
+      err('g-pay-err','Connection hiccup — if your card was charged, message us and we will sort it.');
+      btn.disabled=false; btn.textContent='Pay & send';
+    }
+  };
+
+  /* ── UNWRAPPING ── */
+
+  async function openCard(code){
+    var d;
+    try{ d = await (await fetch('/api/giftcards?action=card&code=' + encodeURIComponent(code))).json(); }
+    catch(_){ gStep('g-missing'); return; }
+    if(!d || !d.ok || !d.card){
+      if(d && d.why) el('g-missing-why').textContent = d.why;
+      gStep('g-missing'); return;
+    }
+    G.card = d.card;
+    var c = d.card;
+
+    el('g-open-head').innerHTML = c.from_name
+      ? esc(c.from_name) + ' sent you something'
+      : 'Somebody has treated you';
+    el('g-open-card').innerHTML = cardHtml(c.amount_cents, c.to_name, c.code);
+    el('g-open-note').innerHTML = c.note
+      ? '<div class="gnote">“' + esc(c.note) + '”'
+        + (c.from_name ? '<div style="font-style:normal;font-size:0.8rem;color:var(--latte);margin-top:0.6rem;">— '
+          + esc(c.from_name) + '</div>' : '') + '</div>'
+      : '';
+
+    /* Already opened, or not openable. Either way the box is shown open
+       rather than inviting her to unwrap something that will not
+       unwrap. */
+    if(c.voided){
+      err('g-open-err','This card was cancelled. Please get in touch and we will sort it out.');
+      el('g-open-actions').innerHTML = '';
+      el('g-box').classList.add('open');
+    } else if(!c.delivered){
+      err('g-open-err','This one is not due yet — it is set to arrive on ' + esc(c.deliver_on) + '.');
+      el('g-open-actions').innerHTML = '';
+      el('g-box').classList.add('open');
+    } else if(c.redeemed){
+      el('g-box').classList.add('open');
+      showRedeemed(c, true);
+      return;
+    }
+    gStep('g-open');
+  }
+
+  window.gUnwrap = async function(){
+    var btn = el('g-unwrap');
+    if(!btn || btn.disabled) return;
+    btn.disabled = true; btn.textContent = 'Opening…';
+    /* The animation runs while the request goes, so the wait is the
+       animation rather than on top of it. */
+    el('g-box').classList.add('open');
+    try{
+      var d = await (await fetch('/api/giftcards?action=redeem', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'redeem', code: G.card.code }),
+      })).json();
+      if(!d.ok){
+        err('g-open-err', d.why || 'That did not open — please get in touch.');
+        btn.disabled=false; btn.textContent='Unwrap it'; return;
+      }
+      setTimeout(function(){ showRedeemed(d.card, false, d.balance); }, 900);
+    }catch(_){
+      err('g-open-err','Connection hiccup — try that again.');
+      btn.disabled=false; btn.textContent='Unwrap it';
+    }
+  };
+
+  function showRedeemed(card, wasAlready, balance){
+    var total = balance && balance.balance_cents != null ? balance.balance_cents : card.balance_cents;
+    if(window.zolaSaved){
+      window.zolaSaved(el('g-saved'), total, {
+        label: wasAlready ? 'On your account' : 'Yours to spend',
+        note: wasAlready
+          ? 'You opened this one already — it is sitting on your account waiting for you.'
+          : 'It is on your account now. It comes off your appointment automatically '
+            + 'when you book with <b>' + esc(card.to_email || 'this email') + '</b>.',
+        confetti: !wasAlready,
+      });
+    }
+    el('g-redeemed-sub').innerHTML = card.balance_cents < card.amount_cents
+      ? 'You have used ' + money(card.spent_cents) + ' of it so far. Whatever is left stays on your '
+        + 'account — it never expires.'
+      : 'Nothing to do now but pick a day. Book with the same email and it comes off the price.';
+    gStep('g-redeemed');
+  }
+
+  /* ── START ── */
+
+  (async function start(){
+    try{
+      var lim = await (await fetch('/api/giftcards?action=limits')).json();
+      if(lim && lim.min_cents) G.limits = lim;
+      var w = el('g-when');
+      if(w && lim && lim.today){ w.value = lim.today; w.min = lim.today; }
+    }catch(_){}
+
+    var code = '';
+    try{ code = new URLSearchParams(location.search).get('code') || ''; }catch(_){}
+    if(code){ openCard(code); return; }
+
+    paintAmounts();
+    var n = el('g-to-name');
+    if(n) n.addEventListener('input', paintPreview);
+    gStep('g-buy');
+  })();
+})();
+</script>
+</body>
+</html>

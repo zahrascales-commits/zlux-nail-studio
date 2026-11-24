@@ -284,6 +284,18 @@ module.exports = async (req, res) => {
     }
   } catch (_) {}
 
+  /* ── GIFT CARDS DUE TODAY ──
+     Dated by the buyer, so this is the only thing that makes the date
+     mean anything. Overdue ones go as well: a cron that did not run must
+     not turn into a present that never arrived. */
+  let gifts = null;
+  try {
+    if (laHour >= 6) gifts = await require('./_giftcards').deliverDue({ limit: 25 });
+    /* And credit taken for a checkout nobody finished, given back. */
+    const freed = await require('./_giftcards').releaseAbandoned({ limit: 25 });
+    if (freed && freed.released) gifts = Object.assign({}, gifts || {}, { released: freed.released });
+  } catch (_) {}
+
   /* ── THE MONTHLY RECAP, ON THE 1st ──
      Last month's money and clients, the change either way, and what to do
      this month. Sent once, keyed on the month, so a second cron run on the
@@ -306,5 +318,5 @@ module.exports = async (req, res) => {
   let alerts = [];
   try { alerts = await require('./_dashboard').notifyOwner(toOwner, fresh); } catch (_) {}
 
-  return res.json({ ok: true, sent, deposit_chase: depositChase, alerts, stripe_sweep: stripeSweep, deposit_audit: depositAudit, arrival_mail: arrivalMail, post_nudge: postNudge, recap_mail: recapMail && { to: recapMail.to, subject: recapMail.subject }, at: new Date().toISOString() });
+  return res.json({ ok: true, sent, deposit_chase: depositChase, alerts, stripe_sweep: stripeSweep, deposit_audit: depositAudit, arrival_mail: arrivalMail, post_nudge: postNudge, gift_cards: gifts, recap_mail: recapMail && { to: recapMail.to, subject: recapMail.subject }, at: new Date().toISOString() });
 };

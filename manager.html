@@ -1877,8 +1877,14 @@
       <div class="page-head">
         <div>
           <div class="page-title">Gift Cards</div>
-          <div class="page-desc">Issued cards and what's left on them.</div>
+          <div class="page-desc">
+            Every card sold, what is left on it, and whether it has actually been opened.
+            People buy these at <b>zolanailstudio.com/gift.html</b> &mdash; they pick the day it
+            arrives, it emails itself that morning, and the money comes off whatever the recipient
+            books with the same email address.
+          </div>
         </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadGiftCards()">&#8635; Refresh</button>
       </div>
       <div id="gc-list"></div>
     </section>
@@ -9369,19 +9375,122 @@ async function loadPayouts(){
   }catch(_){ h.innerHTML = emptyBox('⚠️', 'Could not reach Stripe.'); s.innerHTML=''; }
 }
 
+let GC = null;
+
+function gcMoney(c){ return '$' + (Math.round(Number(c)||0)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
 async function loadGiftCards(){
   const el = document.getElementById('gc-list');
-  el.innerHTML = '<div class="empty">Loading…</div>';
+  if(!el) return;
+  el.innerHTML = '<div class="empty">Loading\u2026</div>';
   try{
-    const d = await ceo('giftcards');
-    const g = d.giftCards || [];
-    el.innerHTML = g.length
-      ? g.map(x => '<div class="member-card" style="--mc:#B6A588"><div class="mc-top"><div style="flex:1">'
-          + '<div class="mc-name">' + esc(x.code || 'Card') + '</div>'
-          + '<div class="mc-role">' + ((x.recipient || x.buyer) ? clientLink(x.recipient || x.buyer) : '') + '</div></div>'
-          + '<span class="status-pill status-on">' + cmoney(x.balance_cents != null ? x.balance_cents : x.amount_cents) + '</span></div></div>').join('')
-      : emptyBox('🎁', 'No gift cards issued yet.');
-  }catch(_){ el.innerHTML = emptyBox('⚠️', 'Could not load gift cards.'); }
+    GC = await (await api('/api/giftcards?action=list&limit=300')).json();
+    if(GC.error) throw new Error(GC.error);
+  }catch(err){
+    el.innerHTML = emptyBox('\u26a0\ufe0f','Could not load gift cards: ' + esc(err.message));
+    return;
+  }
+  renderGiftCards();
+}
+
+function renderGiftCards(){
+  const el = document.getElementById('gc-list');
+  if(!el || !GC) return;
+  const cards = GC.cards || [];
+
+  el.innerHTML =
+    '<div class="stat-grid">'
+      + rcStat(GC.sold_count || 0, 'Cards sold')
+      + rcStat(gcMoney(GC.sold_cents), 'Taken for them')
+      + rcStat(gcMoney(GC.used_cents), 'Used so far')
+      + rcStat(gcMoney(GC.outstanding_cents), 'Still owed in nails')
+    + '</div>'
+
+    /* The sentence that stops a gift card being mistaken for profit. */
+    + '<div style="margin:1rem 0">' + rcNote(
+        '<b>' + gcMoney(GC.outstanding_cents) + '</b> of this is money you have already been paid '
+        + 'for work you have not done yet. It is not takings until somebody sits in the chair, so it '
+        + 'is worth keeping an eye on separately \u2014 especially after Christmas.'
+        + (GC.waiting_count ? '<br>' + GC.waiting_count + ' not sent yet (the date has not come round).' : '')
+        + (GC.unopened_count ? '<br>' + GC.unopened_count + ' delivered but never opened \u2014 '
+            + 'worth resending, they may have gone to spam.' : '')
+      ) + '</div>'
+
+    + (cards.length
+        ? cards.map(gcRow).join('')
+        : emptyBox('\ud83c\udf80','No gift cards yet. The buy page is at /gift.html.'));
+}
+
+function gcRow(c){
+  const col = c.voided ? '#B42318'
+    : !c.delivered ? '#B54708'
+    : !c.redeemed ? '#8B6A3E'
+    : c.balance_cents > 0 ? '#067647' : '#667085';
+  return '<div class="member-card" style="--mc:' + col + '">'
+    + '<div class="mc-top" style="flex-wrap:wrap;gap:0.5rem">'
+      + '<div style="flex:1;min-width:190px">'
+        + '<div class="mc-name">' + gcMoney(c.amount_cents) + ' \u00b7 ' + esc(c.code) + '</div>'
+        + '<div style="font-size:0.76rem;color:var(--muted);margin-top:0.15rem">'
+          + 'to ' + esc(c.to_name || c.to_email || 'someone')
+          + (c.to_email ? ' \u00b7 ' + esc(c.to_email) : '')
+          + (c.from_name ? ' \u00b7 from ' + esc(c.from_name) : '')
+        + '</div>'
+        + '<div style="font-size:0.76rem;color:var(--muted);margin-top:0.15rem">'
+          + esc(c.status)
+          + (c.spent_cents ? ' \u00b7 ' + gcMoney(c.spent_cents) + ' used' : '')
+          + (c.deliver_on ? ' \u00b7 dated ' + esc(c.deliver_on) : '')
+        + '</div>'
+        + (c.note ? '<div style="font-size:0.78rem;color:var(--ink);margin-top:0.4rem;'
+            + 'border-left:2px solid var(--line);padding-left:0.6rem;font-style:italic">'
+            + '\u201c' + esc(c.note) + '\u201d</div>' : '')
+      + '</div>'
+      + '<div style="text-align:right">'
+        + '<div style="font-family:Cinzel,serif;font-size:1.1rem;color:var(--gold)">'
+          + gcMoney(c.balance_cents) + '</div>'
+        + '<div style="font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">left</div>'
+      + '</div>'
+    + '</div>'
+    + (c.voided ? '' :
+      '<div style="display:flex;gap:0.4rem;flex-wrap:wrap;padding:0.2rem 0 0.1rem">'
+      + '<button class="btn btn-ghost btn-sm" onclick="gcResend(' + c.id + ',this)">'
+        + (c.delivered ? 'Send again' : 'Send now') + '</button>'
+      + '<button class="btn btn-ghost btn-sm" onclick="gcVoid(' + c.id + ',\'' + esc(c.code) + '\',this)">Cancel it</button>'
+      + '</div>')
+  + '</div>';
+}
+
+async function gcResend(id, btn){
+  if(!btn || btn.disabled) return;
+  const was = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Sending\u2026';
+  try{
+    const d = await (await api('/api/giftcards?action=resend', { method:'POST',
+      body: JSON.stringify({ action:'resend', id: id }) })).json();
+    if(!d.ok){ btn.disabled = false; btn.textContent = was; toast(d.why || 'Could not send it'); return; }
+    toast('Sent to ' + d.to + ' \u2726');
+    setTimeout(loadGiftCards, 700);
+  }catch(err){
+    btn.disabled = false; btn.textContent = was;
+    toast('Could not send: ' + err.message);
+  }
+}
+
+/* Cancelling takes money off somebody's account, so this is the one
+   place in the gift card screen that asks first. */
+async function gcVoid(id, code, btn){
+  if(!btn || btn.disabled) return;
+  if(!confirm('Cancel ' + code + '? Whoever has it will not be able to use it, and you should '
+    + 'refund them yourself if they already paid.')) return;
+  btn.disabled = true; btn.textContent = 'Cancelling\u2026';
+  try{
+    await api('/api/giftcards?action=void', { method:'POST',
+      body: JSON.stringify({ action:'void', id: id, why: 'cancelled in Studio Manager' }) });
+    toast('Cancelled');
+    setTimeout(loadGiftCards, 700);
+  }catch(err){
+    btn.disabled = false; btn.textContent = 'Cancel it';
+    toast('Could not cancel: ' + err.message);
+  }
 }
 
 async function loadFaq(){
