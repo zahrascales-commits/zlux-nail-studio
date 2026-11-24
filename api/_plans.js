@@ -259,6 +259,30 @@ function saleFor(plan, weeks, mode) {
   };
 }
 
+/* WHO THE SALE IS FOR.
+ *
+ * Her rule, in her words: "This cannot be for members that are already
+ * paying." So these are joining prices.
+ *
+ * Kept here, beside the price table, and spread into the window object
+ * that every screen reads. A price advertised to somebody who cannot buy
+ * it is a bait, and her copy rules ban those \u2014 so the qualification
+ * has to travel with the number: on the band, in the pop-up, at the
+ * checkout and on her own control panel. One object means it says the
+ * same thing in all five places, and the signup route cannot quietly
+ * disagree with any of them.
+ *
+ * It leads with what a current member KEEPS rather than with what she is
+ * refusing them. The other way round reads as a telling-off, and these
+ * are the people already paying her every month.
+ */
+const BF_AUDIENCE = {
+  new_members_only: true,
+  who: 'New memberships only',
+  who_long: 'These are joining prices, for new memberships. If you are already a member '
+    + 'your price stays exactly as it is \u2014 nothing here changes it.',
+};
+
 async function blackFridayWindow() {
   let from = BF_DEFAULT_FROM, to = BF_DEFAULT_TO, forced = '';
   try {
@@ -282,7 +306,13 @@ async function blackFridayWindow() {
     : forced === 'off' ? false
     : (ymd >= from && ymd <= to);
 
-  return { live, from, to, today: ymd, forced: forced || '', name: 'Black Friday' };
+  return {
+    live, from, to, today: ymd, forced: forced || '', name: 'Black Friday',
+    /* Who it is for \u2014 spread from one object so the rule, the wording
+       on five different screens and the test that checks them cannot
+       drift apart. The signup route is what enforces it. */
+    ...BF_AUDIENCE,
+  };
 }
 
 function rhythmsFor(p) {
@@ -486,6 +516,7 @@ module.exports.annualCentsAt = annualCentsAt;
 module.exports.payAsYouGoYear = payAsYouGoYear;
 module.exports.cyclesAt = cyclesAt;
 module.exports.saleFor = saleFor;
+module.exports.BF_AUDIENCE = BF_AUDIENCE;
 module.exports.blackFridayWindow = blackFridayWindow;
 module.exports.BF_PRICES = BF_PRICES;
 module.exports.BF_INTRO_CYCLES = BF_INTRO_CYCLES;

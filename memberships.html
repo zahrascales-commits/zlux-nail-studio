@@ -487,7 +487,15 @@ function plRenderBand(){
       + 'Four deals, and the rhythm buttons below show you which ones. '
       + 'The price you see is the price you are charged.'
     + '</div>'
-    + '<div class="bf-when">Ends ' + plEsc(plPrettyDate(PL.black_friday.to)) + '</div>'
+    /* Said on the band itself, not buried in small print further down.
+       Somebody who is already a member should learn it here, in one
+       line, rather than at the end of a checkout. */
+    + '<div class="bf-p" style="margin-top:0.5rem;opacity:0.82">'
+      + plEsc(PL.black_friday.who_long || 'New memberships only.')
+    + '</div>'
+    + '<div class="bf-when">'
+      + plEsc(PL.black_friday.who || 'New memberships only') + ' \u00b7 ends '
+      + plEsc(plPrettyDate(PL.black_friday.to)) + '</div>'
   + '</div>';
 }
 

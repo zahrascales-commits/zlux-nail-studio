@@ -149,7 +149,14 @@
       line += 'Or <b>' + Math.round(cyclePct) + '% off</b> your first ' + cycleWeeks
         + ' weeks if you would rather pay as you go.';
     }
-    return { head: head, line: line || 'Memberships and press-ons, on sale.' };
+    /* The pop-up is the first thing anybody sees, members included, so
+       the qualification travels with the claim rather than trailing it.
+       Read from the server's own window object. */
+    return {
+      head: head,
+      line: line || 'Memberships and press-ons, on sale.',
+      who: (d.black_friday && d.black_friday.who) || 'New memberships only',
+    };
   }
 
   function prettyDate(ymd) {
@@ -196,8 +203,10 @@
       + '<p class="bf-l">' + c.line + '</p>'
       + '<a class="bf-go" href="/memberships.html#tiers">See the deals</a>'
       + '<button class="bf-x" type="button">Maybe later</button>'
-      + (d.black_friday && d.black_friday.to
-          ? '<div class="bf-when">Ends ' + prettyDate(d.black_friday.to) + '</div>' : '')
+      + '<div class="bf-when">' + c.who
+          + (d.black_friday && d.black_friday.to
+              ? ' \u00b7 ends ' + prettyDate(d.black_friday.to) : '')
+        + '</div>'
       + '</div>';
     document.body.appendChild(o);
     requestAnimationFrame(function () { o.classList.add('in'); });

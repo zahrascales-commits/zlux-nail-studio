@@ -10076,6 +10076,14 @@ function renderBF(){
         + (s.live && s.days.ends_in >= 0 ? ' \u00b7 ' + (s.days.ends_in === 0 ? 'last day' : s.days.ends_in + ' days left') : '')
         + ' \u00b7 studio clock says ' + esc(s.today)
       + '</div>'
+      /* The rule she asked for, stated on the switch itself so she can
+         see at a glance that it is actually in force. */
+      + '<div style="font-size:0.8rem;color:var(--ink);margin-top:0.6rem;padding-top:0.6rem;'
+        + 'border-top:1px solid var(--border)">'
+        + '<b>New memberships only.</b> Anyone already paying cannot buy these prices \u2014 if '
+        + 'one of them tries, the checkout stops and tells them their membership carries on '
+        + 'as it is. Nothing of theirs gets cancelled and no card gets charged.'
+      + '</div>'
     + '</div>'
 
     // ── the controls ──

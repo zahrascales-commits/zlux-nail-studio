@@ -975,6 +975,10 @@ setTimeout(function(){
               + planMoney(rhythmCents(selectedTier, rhythm)) + ' every ' + rhythm + ' weeks for a year.'
             : planMoney(sale.now_cents) + ' instead of ' + planMoney(sale.was_cents)
               + ' for your first 2 months, then ' + planMoney(sale.was_cents) + '.')
+        + '<div style="font-size:0.72rem;letter-spacing:0.04em;opacity:0.72;margin-top:0.35rem">'
+          + esc((SU_PLANS && SU_PLANS.black_friday && SU_PLANS.black_friday.who)
+              || 'New memberships only')
+        + '</div>'
         + '</div>'
       : ((billing !== 'yearly' && r && r.pct_off)
         ? '<div class="rh-save">\u2726 Coming every ' + rhythm + ' weeks saves you <b>' + planMoney(saved) + '</b> on every visit.</div>'

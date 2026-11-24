@@ -107,6 +107,74 @@ async function yearlyPriceFor(stripe, tier, weeks) {
   return created.id;
 }
 
+/* A subscription in any of these states is one somebody is paying for,
+   or is expected to pay for. 'past_due' and 'unpaid' count deliberately:
+   a card that failed last week is a membership she still holds, not a
+   vacancy to re-sell at a discount. */
+const PAYING_STATES = ['active', 'trialing', 'past_due', 'unpaid', 'incomplete'];
+
+/* Is this person already paying us every month?
+ *
+ * Two questions, because either one alone has a hole in it:
+ *
+ *   · the member row, which can be stale or missing entirely
+ *   · Stripe, which is right, but which we might not reach
+ *
+ * When Stripe cannot be reached and we hold a row with a subscription id
+ * on it, this answers YES. That is on purpose. The cost of being wrong in
+ * that direction is that somebody who had already cancelled misses a sale
+ * price and has to be told; the cost of being wrong the other way is her
+ * giving a year of Elite away at a discount to somebody who was paying
+ * full price for it. Those are not the same size, so the uncertain case
+ * goes the safe way.
+ */
+async function alreadyPayingFor(stripe, email, existingRow) {
+  const addr = String(email || '').toLowerCase().trim();
+
+  // ── the subscription we think they have ──
+  if (existingRow && existingRow.stripe_subscription_id) {
+    try {
+      const sub = await stripe.subscriptions.retrieve(existingRow.stripe_subscription_id);
+      if (sub && PAYING_STATES.indexOf(String(sub.status)) >= 0) {
+        return { paying: true, why: 'stripe_subscription', status: String(sub.status) };
+      }
+      /* Stripe answered and said this one is over — Katelynn cancelled in
+         October and is exactly the person a Black Friday price should win
+         back. Fall through to the email check rather than returning no,
+         in case there is a second, live subscription. */
+    } catch (_) {
+      /* Could not ask. We hold a row with a live-looking subscription id
+         and a status that is not cancelled, so treat it as paying. */
+      const st = String((existingRow && existingRow.status) || 'active').toLowerCase();
+      if (st !== 'cancelled' && st !== 'canceled') {
+        return { paying: true, why: 'unverified_subscription', status: st };
+      }
+    }
+  }
+
+  // ── anything live under this email, row or no row ──
+  try {
+    const found = await stripe.customers.list({ email: addr, limit: 10 });
+    for (const c of (found && found.data) || []) {
+      const subs = await stripe.subscriptions.list({
+        customer: c.id, status: 'all', limit: 20,
+      });
+      for (const s of (subs && subs.data) || []) {
+        if (PAYING_STATES.indexOf(String(s.status)) >= 0) {
+          return { paying: true, why: 'stripe_customer', status: String(s.status) };
+        }
+      }
+    }
+  } catch (_) {
+    /* No row and no answer from Stripe is no evidence of anybody paying.
+       Not guessing yes here: that would refuse the sale to every new
+       customer the moment Stripe had a bad minute, which is the one
+       failure that costs her the whole weekend. */
+  }
+
+  return { paying: false, why: '', status: '' };
+}
+
 /* The sale, decided here and nowhere else. The browser says which tier
    and which rhythm; what that costs is this server's business. */
 async function blackFridayFor(tier, weeks, yearly) {
@@ -253,7 +321,49 @@ module.exports = async (req, res) => {
   try {
     const stripe = Stripe(await require('./_pay').getStripeSecret());
 
-    const existing = await queryOne('SELECT id, stripe_subscription_id FROM members WHERE email = ?', [email.toLowerCase().trim()]);
+    const existing = await queryOne('SELECT id, member_id, tier, status, stripe_subscription_id FROM members WHERE email = ?', [email.toLowerCase().trim()]);
+
+    /* ── WHO THE SALE IS FOR ───────────────────────────────────────────
+       Asked here, at the top, because the block just below cancels their
+       subscription and deletes their row — and then there is nothing left
+       to ask. Everything about the sale hangs off this one answer. */
+    const payer = await alreadyPayingFor(stripe, email, existing);
+    const saleOffered = await blackFridayFor(tier, weeks, yearly);
+    const acceptRegular = req.body.accept_regular === true
+      || String(req.body.accept_regular || '') === 'true';
+
+    /* They came for a price that is not theirs to have. Stop — with the
+       subscription they are paying for still running, their row still
+       there, and their card untouched. Telling somebody the sale is not
+       for them costs nothing; cancelling their membership and charging
+       them $1,210 for a year they thought cost $999.99 costs her the
+       member. */
+    if (payer.paying && saleOffered && !acceptRegular) {
+      const dollars = c => '$' + (Math.round(Number(c) || 0) / 100)
+        .toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return res.status(409).json({
+        error: 'Black Friday is for new memberships, and you are already one of ours \u2014 so '
+          + 'your membership carries on exactly as it is. Nothing has been charged and nothing '
+          + 'has changed. The regular price for this one is ' + dollars(saleOffered.was_cents)
+          + '. If you would like to move to a different rhythm or a different membership, message '
+          + 'the studio and we will sort it for you \u2014 joining again here would start a brand '
+          + 'new membership rather than move the one you have.',
+        already_member: true,
+        new_members_only: true,
+        member_id: existing && existing.member_id ? existing.member_id : '',
+        tier_now: existing && existing.tier ? existing.tier : '',
+        regular_cents: saleOffered.was_cents,
+        sale_cents: saleOffered.now_cents,
+        /* The page may offer this, and if they say yes it comes back with
+           accept_regular. Then they join again at the regular price, with
+           no sale applied, having been told the figure first. */
+        can_continue_at_regular: true,
+      });
+    }
+
+    /* Null for anybody already paying, whatever the calendar says. */
+    const bfSale = payer.paying ? null : saleOffered;
+
     if (existing) {
       // Cancel old Stripe subscription if still active, then remove old record so they can re-subscribe
       if (existing.stripe_subscription_id) {
@@ -311,8 +421,11 @@ module.exports = async (req, res) => {
        discount available, and three discounts on one visit can take it
        under what the nails cost. The seat is left unclaimed so it is
        still there for somebody else, and the response says which
-       discount was used. */
-    const bfSale = await blackFridayFor(tier, weeks, yearly);
+       discount was used.
+
+       The price itself was worked out at the top of this handler, before
+       the old subscription was cancelled, and is already null for anybody
+       who was paying — the sale is for new memberships only. */
 
     /* ── Discount code ─────────────────────────────────────────────────
        Validated server-side against the tier being bought. The browser
@@ -645,3 +758,5 @@ module.exports.yearlyPriceFor = yearlyPriceFor;
    the same assumption. */
 module.exports.yearlyCentsFor = yearlyCentsFor;
 module.exports.blackFridayFor = blackFridayFor;
+module.exports.alreadyPayingFor = alreadyPayingFor;
+module.exports.PAYING_STATES = PAYING_STATES;
