@@ -761,6 +761,50 @@ function customTip(){
 }
 function money(c){ return '$' + ((Number(c)||0)/100).toFixed(2); }
 
+/* ── WRITING THE MONEY DOWN ────────────────────────────────────────────
+   Called after the card has ALREADY been charged, so giving up is not an
+   option: a payment Stripe took and we did not record is a client who gets
+   chased, or charged twice. Safe to repeat — the server re-reads the
+   payment from Stripe and writes the amount rather than adding to it. */
+async function recordCheckout(payload){
+  let lastErr = '';
+  for(let attempt = 0; attempt < 3; attempt++){
+    if(attempt) await new Promise(function(r){ setTimeout(r, 700 * attempt); });
+    try{
+      const r = await fetch('/api/kiosk?action=checkout', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const d = await r.json().catch(function(){ return {}; });
+      if(r.ok && !d.error) return { ok:true };
+      lastErr = d.error || ('HTTP ' + r.status);
+    }catch(e){ lastErr = (e && e.message) || 'connection'; }
+  }
+  return { ok:false, why: lastErr };
+}
+
+/* What the screen says when the card went through and the books did not.
+   Never "payment failed" — it did not fail, and sending somebody away
+   thinking they owe nothing when the studio thinks they owe everything is
+   how this ends in an argument at the next visit. */
+function tellDeskUnrecorded(where, why){
+  const el = document.getElementById(where);
+  if(el){
+    el.style.color = '#E7C07B';
+    el.textContent = 'Paid ✦ but it did not save to your visit — please tell the front desk '
+      + 'before you go, so nobody asks you for it twice.';
+  }
+  /* And she is told, because the client will not remember to pass it on. */
+  try{
+    fetch('/api/kiosk?action=problem', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ code: 'unrecorded_checkout', name: KPERSON || KNAME,
+        message: 'Took the money and did not record it on the visit — ' + (why || '')
+          + '. Check ' + (KPERSON || KNAME) + " against Stripe before asking them for it." })
+    }).catch(function(){});
+  }catch(_){}
+}
+
 /* The sum written out, so nobody has to take the total on trust. A bare
    number gets queried, and queries at the till hold up the next client. */
 function renderBill(){
@@ -1091,14 +1135,18 @@ async function confirmCard(){
   const {error,paymentIntent}=await _st.confirmPayment({elements:_el,redirect:'if_required'});
   btn.disabled=false; btn.textContent='Pay Now';
   if(error){ err.textContent=error.message||'Card declined — try again.'; return; }
-  await fetch('/api/kiosk?action=checkout',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action:'checkout',name:KNAME,q:KNAME,ref:KREF,refs:KREFS,method:'card',payment_intent_id:(paymentIntent&&paymentIntent.id)||_pi,tip_cents:TIP})});
+  /* Charged. From here the money exists whatever happens next, so the only
+     question is whether it reaches the books. */
+  const rec = await recordCheckout({action:'checkout',name:KNAME,q:KNAME,ref:KREF,refs:KREFS,method:'card',payment_intent_id:(paymentIntent&&paymentIntent.id)||_pi,tip_cents:TIP});
+  if(!rec.ok) tellDeskUnrecorded('card-err', rec.why);
+  /* Either way they go on to book the next one — they have paid, and
+     holding them on an error screen helps nobody. */
   offerRebook();
 }
 
 async function payCash(){
-  await fetch('/api/kiosk?action=checkout',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action:'checkout',name:KNAME,q:KNAME,ref:KREF,refs:KREFS,method:'cash',tip_cents:TIP})});
+  const rec = await recordCheckout({action:'checkout',name:KNAME,q:KNAME,ref:KREF,refs:KREFS,method:'cash',tip_cents:TIP});
+  if(!rec.ok) tellDeskUnrecorded('bal-err', rec.why);
   offerRebook();
 }
 

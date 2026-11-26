@@ -907,6 +907,26 @@ module.exports = async function (req, res) {
       return res.json({ ok: true });
     }
 
+    /* ── SOMETHING WENT WRONG AT THE TILL ──────────────────────────────
+       Written down and put in front of her, so "it charged her and then did
+       nothing" is never the first she hears of it from the client. */
+    if (req.method === 'POST' && action === 'problem') {
+      const b = req.body || {};
+      const what = String(b.code || 'problem').slice(0, 40);
+      const detail = String(b.message || '').slice(0, 300);
+      const who = String(b.name || '').slice(0, 80);
+      try {
+        await execute('INSERT INTO kiosk_log (type, name, detail, ts) VALUES (?,?,?,?)',
+          ['problem', who, (what + ': ' + detail).slice(0, 300), Date.now()]);
+      } catch (_) {}
+      try {
+        await notify.notifyInApp('owner', null,
+          '⚠ Something went wrong at the check-out iPad',
+          (detail || what).slice(0, 300));
+      } catch (_) {}
+      return res.json({ ok: true });
+    }
+
     if (req.method === 'POST' && action === 'review') {
       const { name, stars, text, share } = req.body || {};
       const s = Math.max(1, Math.min(5, Number(stars) || 0));
