@@ -184,11 +184,13 @@ function payAsYouGoYear(plan, weeks) {
    makes an $800 sale meaningless. Those are $699 and $875. */
 const BF_PRICES = {
   ESSENTIAL: {
-    cycle:  { 2: 3999, 3: 4999 },
+    /* Set to land on exactly 50% and 40% off, so the page can print a
+       round number without inflating it. */
+    cycle:  { 2: 3825, 3: 4845 },
     annual: { 4: 85000, 5: 69900 },
   },
   ELITE: {
-    cycle:  { 2: 5499, 3: 6499 },
+    cycle:  { 2: 4950, 3: 6270 },
     annual: { 4: 99999, 5: 87500 },
   },
 };

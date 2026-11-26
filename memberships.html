@@ -351,6 +351,7 @@
 </div>
 
 <script src="js/main.js"></script>
+<script src="js/black-friday.js?v=2"></script>
 <script src="js/search.js"></script>
 <script src="js/analytics.js?v=2"></script>
 <script src="js/chatbot.js"></script>
@@ -515,9 +516,9 @@ function plRenderModes(){
     return [2,3,4,5].filter(function(w){ return plAnySaleAt(w, mode); }).length;
   };
   const tabs = [
-    { key: 'cycle', name: 'Pay each visit', sub: bf && dealsIn('cycle')
+    { key: 'cycle', name: 'Monthly', sub: bf && dealsIn('cycle')
         ? dealsIn('cycle') + ' Black Friday deals' : 'Billed on your rhythm' },
-    { key: 'annual', name: 'Pay for the year', sub: bf && dealsIn('annual')
+    { key: 'annual', name: 'Yearly', sub: bf && dealsIn('annual')
         ? dealsIn('annual') + ' Black Friday deals' : 'One payment, visits free' },
   ];
   el.innerHTML = '<div class="pm-row" role="tablist">'
@@ -531,13 +532,42 @@ function plRenderModes(){
     + '</div>';
 }
 
+/* The biggest saving on this rhythm, for the tab being looked at, or 0.
+   Asked of the server's own sale blocks rather than worked out here, so
+   the button cannot disagree with the price under it. A year is measured
+   against paying every cycle for that year, because that is the choice
+   somebody is making. */
+function plSaleCutAt(weeks){
+  let best = 0;
+  (PL.plans || []).forEach(function(p){
+    (p.rhythms || []).forEach(function(r){
+      if(r.weeks !== weeks) return;
+      if(PM === 'annual' && r.annual_sale){
+        best = Math.max(best, r.annual_sale.pct_off_monthly || r.annual_sale.pct_off || 0);
+      }
+      if(PM !== 'annual' && r.sale){
+        best = Math.max(best, r.sale.pct_off || 0);
+      }
+    });
+  });
+  return Math.round(best);
+}
+
 function plRenderRhythms(){
   const row = document.getElementById('rq-row');
   if(!row || !PL) return;
   const rs = PL.rhythms || [{ weeks: 2, pct_off: 10 }, { weeks: 3, pct_off: 5 }, { weeks: 4, pct_off: 0 }, { weeks: 5, pct_off: 0, add_cents: 1000 }];
   row.innerHTML = rs.map(function(r){
-    const tag = r.pct_off ? '<span class="rq-d">Save ' + r.pct_off + '%</span>'
-      : '<span class="rq-d plain">' + (r.weeks === 4 ? 'Regular price' : '+' + plMoney(r.add_cents)) + '</span>';
+    /* While a sale is on this rhythm, the sale is what the button says.
+       It used to show the 10% rhythm discount beside a 50% sale price,
+       and "Regular price" on the four-week button that carries the
+       yearly deal \u2014 which argued against the thing being sold. */
+    const cut = plSaleCutAt(r.weeks);
+    const tag = cut
+      ? '<span class="rq-d">Save ' + cut + '%</span>'
+      : (r.pct_off
+          ? '<span class="rq-d">Save ' + r.pct_off + '%</span>'
+          : '<span class="rq-d plain">' + (r.weeks === 4 ? 'Regular price' : '+' + plMoney(r.add_cents)) + '</span>');
     /* The whole point of the mark: she can see which rhythm the deal is
        on without opening all four. */
     const deal = plAnySaleAt(r.weeks, PM) ? '<span class="rq-bf">Black Friday</span>' : '';

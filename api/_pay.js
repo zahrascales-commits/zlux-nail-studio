@@ -356,14 +356,23 @@ function computeDeposit({ service_name, addon_names = [], member_tier, free_serv
 // itself comes from _perks so the bill, the wallet and the welcome reveal
 // all read the same definition; the counter is the one the booking flow
 // increments, so what is charged and what is spent cannot disagree.
-async function freeServicesLeft(member_id, member_tier) {
+/* How many included services are left in the cycle a given visit falls
+   in. Pass no date and it answers for today, which is what a screen
+   showing "you have one left" wants.
+
+   The date matters: this used to be today-only while the thing that
+   RECORDS a spend used the appointment's cycle, so the two disagreed for
+   any visit outside the current cycle and the allowance was checked
+   against an empty bucket. */
+async function freeServicesLeft(member_id, member_tier, appt_date = null) {
   if (!member_id || !member_tier) return 0;
   const limit = require('./_perks').includedCount(member_tier);
   if (!limit) return 0;
   try {
     const { queryOne } = require('./_db');
-    // Today's cycle for a member on a rhythm, the calendar month otherwise.
-    const monthYear = await require('./_perks').usageKeyFor(member_id, null, null);
+    // The cycle this visit belongs to for a member on a rhythm, the
+    // calendar month otherwise.
+    const monthYear = await require('./_perks').usageKeyFor(member_id, appt_date, null);
     const row = await queryOne('SELECT services_used FROM service_usage WHERE member_id = ? AND month_year = ?', [member_id, monthYear]);
     return Math.max(0, limit - Number((row && row.services_used) || 0));
   } catch (_) { return 0; }
@@ -382,7 +391,9 @@ async function spendIncluded({ member_id, member_tier, service_name, addon_names
     return { spent: false, why: 'not a member' };
   }
   try {
-    const left = await freeServicesLeft(member_id, member_tier);
+    /* Asked about the cycle this visit falls in \u2014 the same one the
+       INSERT below writes to. These were two different cycles. */
+    const left = await freeServicesLeft(member_id, member_tier, appt_date);
     if (left <= 0) return { spent: false, why: 'none left this cycle', left: 0 };
 
     // Priced as though the allowance were being used; used_included says
@@ -491,7 +502,8 @@ module.exports = async function (req, res) {
       let total = 0, deposit = 0, covered = 0;
       // The allowance is spent one service at a time across the cart — a
       // member with one left booking three does not get all three free.
-      let freeLeft = await freeServicesLeft(member_id, member_tier);
+      let freeLeft = await freeServicesLeft(member_id, member_tier,
+        (req.body || {}).appt_date || (req.body || {}).date || null);
       /* Her own rate, looked up once for the whole basket rather than per
          item — it belongs to the person, not to what they picked. */
       let ownRate = 0;
@@ -629,7 +641,8 @@ module.exports = async function (req, res) {
       if (!stripeKey()) return res.status(400).json({ error: 'Payments not configured' });
       const { service_name, addon_names, member_tier, member_id, customer_name, customer_email } = req.body || {};
       const calc = computeDeposit({ service_name, addon_names, member_tier,
-        free_service: (await freeServicesLeft(member_id, member_tier)) > 0 });
+        free_service: (await freeServicesLeft(member_id, member_tier,
+          (req.body || {}).appt_date || (req.body || {}).date || null)) > 0 });
       if (!calc) return res.status(400).json({ error: 'Unknown service' });
 
       /* Gift card credit, worked out here and taken off what is charged.

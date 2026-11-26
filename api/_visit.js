@@ -189,7 +189,10 @@ async function correctDepositFor(appt) {
       const perks = require('./_perks');
       const neverDeposits = (perks.tierPerks(tier) || []).some(p => p.kind === 'deposit');
       if (neverDeposits) return 0;
-      const free = await require('./_pay').freeServicesLeft(member.member_id, tier);
+      /* The cycle the APPOINTMENT falls in, not the cycle today falls
+         in: a visit booked three weeks out belongs to a later cycle and
+         has its own allowance. */
+      const free = await require('./_pay').freeServicesLeft(member.member_id, tier, appt.date || null);
       if (free > 0) return 0;
     } catch (_) { return 0; }   // unsure about a member means do not ask them for money
   }

@@ -167,6 +167,46 @@
     } catch (_) { return ''; }
   }
 
+  /* THE BUTTON.
+     Added to whatever nav this script finds, before "Book Now" so Book
+     Now stays the last and loudest thing in the bar: Black Friday is
+     this week, booking is the business. */
+  function showNavButton() {
+    var links = document.querySelector('.nav-links');
+    if (links && !document.getElementById('bf-nav-btn')) {
+      var a = document.createElement('a');
+      a.id = 'bf-nav-btn';
+      a.href = '/blackfriday.html';
+      a.textContent = 'Shop Black Friday';
+      /* Cream on ink. Deliberately not the gold Book Now treatment: two
+         identical buttons side by side and neither reads as the main one. */
+      a.style.cssText = 'background:#0D0D0D;color:#F4EFE6;padding:0.55rem 0.95rem;'
+        + 'letter-spacing:0.08em;text-decoration:none;white-space:nowrap';
+      var book = links.querySelector('.btn-gold');
+      if (book) links.insertBefore(a, book); else links.appendChild(a);
+    }
+
+    /* The three lines. A separate list from the desktop nav, so it needs
+       its own entry \u2014 and it goes first, because a menu is read from
+       the top and this is the item that is only true for a week. */
+    var m = document.getElementById('nav-mobile');
+    if (m && !document.getElementById('bf-nav-m')) {
+      var b = document.createElement('a');
+      b.id = 'bf-nav-m';
+      b.href = '/blackfriday.html';
+      b.textContent = 'Black Friday Deals';
+      b.style.cssText = 'color:#E4D9C2;font-weight:600';
+      if (m.firstChild) m.insertBefore(b, m.firstChild); else m.appendChild(b);
+    }
+  }
+
+  /* Where the pop-up and the tab are not welcome: the hub itself, and
+     the pages where somebody is already buying one of these things. */
+  function shopping() {
+    var p = (location.pathname || '').toLowerCase();
+    return /blackfriday|memberships|gift|signup|checkout/.test(p);
+  }
+
   var tabEl = null;
 
   function showTab(d) {
@@ -175,7 +215,7 @@
     tabEl = document.createElement('div');
     tabEl.className = 'bft';
     tabEl.innerHTML =
-      '<a href="/memberships.html#tiers" style="display:flex;align-items:center;gap:.6rem;'
+      '<a href="/blackfriday.html" style="display:flex;align-items:center;gap:.6rem;'
       + 'color:inherit;text-decoration:none">'
       + '<i></i><span>Shop Black Friday</span></a>'
       + '<button class="bft-x" type="button" aria-label="Hide">&times;</button>';
@@ -201,7 +241,7 @@
       + '<div class="bf-k">Black Friday</div>'
       + '<h2 class="bf-h">' + c.head + '</h2>'
       + '<p class="bf-l">' + c.line + '</p>'
-      + '<a class="bf-go" href="/memberships.html#tiers">See the deals</a>'
+      + '<a class="bf-go" href="/blackfriday.html">See every deal</a>'
       + '<button class="bf-x" type="button">Maybe later</button>'
       + '<div class="bf-when">' + c.who
           + (d.black_friday && d.black_friday.to
@@ -244,6 +284,10 @@
   function start() {
     fetch(API).then(function (r) { return r.json(); }).then(function (d) {
       if (!d || !d.black_friday || !d.black_friday.live) return;
+      /* The button is navigation, not a once-a-day interruption: it
+         belongs there on every page, every time. */
+      showNavButton();
+      if (shopping()) return;
       if (seenToday()) { showTab(d); return; }
       showOverlay(d);
     }).catch(function () { /* no sale information, no banner */ });
