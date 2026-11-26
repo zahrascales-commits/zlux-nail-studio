@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
 <title>Welcome — ZOLA Nail Studio</title>
 <meta name="robots" content="noindex" />
 <link rel="icon" href="/img/zola-icon.png" />
@@ -16,11 +16,28 @@
 <script src="js/qrcode.min.js"></script>
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%}
-  body{font-family:'Josefin Sans',sans-serif;color:#F2ECE1;overflow:hidden;
-    background:radial-gradient(1200px 900px at 50% 20%,#241a10 0%,#140d07 55%,#0b0705 100%)}
+  html{height:100%}
+  /* NOT height+overflow:hidden. See the note at the top of this file: that
+     pair is what made the card screen unusable on the iPad. */
+  body{font-family:'Josefin Sans',sans-serif;color:#F2ECE1;
+    min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;
+    overflow-y:auto;overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;
+    background:radial-gradient(1200px 900px at 50% 20%,#241a10 0%,#140d07 55%,#0b0705 100%);
+    background-attachment:fixed}
   .frame{position:fixed;inset:22px;border:1px solid rgba(182,165,136,0.30);pointer-events:none;z-index:1}
-  .stage{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center}
+  /* min-height, so a screen taller than the iPad grows the page instead of
+     being clipped at both ends. The safe-area padding keeps the last button
+     clear of the home indicator. */
+  /* The stage takes the room left over rather than claiming a screenful
+     of its own: with the footer in the flow, a stage of exactly 100dvh
+     would leave every screen very slightly scrollable. */
+  .stage{position:relative;z-index:2;flex:1 1 auto;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:2rem 2rem calc(2rem + env(safe-area-inset-bottom,0px));text-align:center}
+  /* Nothing in the flow may be wider than the screen: a sideways scroll at
+     a till reads as a frozen page too. */
+  .stage,.screen{max-width:100vw}
   .kicker{font-size:0.8rem;letter-spacing:0.42em;text-transform:uppercase;color:#B6A588;margin-bottom:0.9rem}
   .logo{font-family:'Cinzel',serif;font-size:clamp(3.2rem,9vw,5.5rem);letter-spacing:0.12em;color:#F2ECE1;line-height:1}
   .logo b{color:#C9B896;font-weight:800}
@@ -65,7 +82,19 @@
   .screen.on{display:flex;animation:fadeUp 0.5s ease}
   @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
   .checkmark{font-size:4.5rem;margin-bottom:0.6rem}
-  .home-link{position:fixed;bottom:34px;left:0;right:0;text-align:center;z-index:2;font-size:0.66rem;letter-spacing:0.3em;text-transform:uppercase;color:rgba(182,165,136,0.45)}
+  .home-link{position:relative;z-index:2;text-align:center;padding:1.4rem 1rem calc(1.4rem + env(safe-area-inset-bottom,0px));
+    font-size:0.66rem;letter-spacing:0.3em;text-transform:uppercase;color:rgba(182,165,136,0.45)}
+  /* Stripe's element is the tallest thing in the flow and the one people
+     type into, so it gets room of its own rather than being squeezed. */
+  #pay-el{min-height:120px}
+  /* Breathing room under the fold on a short screen, so the last button is
+     never the thing half under the keyboard. */
+  @media (max-height:820px){
+    .stage{justify-content:flex-start;padding-top:1.4rem}
+    .logo{font-size:clamp(2.4rem,7vw,3.4rem)}
+    .balance{font-size:2.6rem}
+    h2{margin:0.8rem 0 0.3rem}
+  }
 </style>
 </head>
 <body>
@@ -271,9 +300,9 @@
     <div class="err" id="rb-err"></div>
 
     <div class="row">
-      <button class="big-btn gold" id="rb-go" onclick="rbBook()">Book &amp; pay deposit ✦</button>
+      <button class="big-btn gold" id="rb-go" onclick="rbBook()">Send deposit &amp; book ✦</button>
     </div>
-    <button id="rb-skip" onclick="show('s-review')"
+    <button id="rb-skip" onclick="show('s-review')" hidden
       style="margin-top:0.9rem;background:none;border:none;color:#B6A588;font-family:inherit;
              font-size:0.85rem;text-decoration:underline;cursor:pointer;padding:0.6rem 1rem">
       No thanks, maybe next time</button>
@@ -317,6 +346,7 @@
   <div class="screen" id="s-bye">
     <div class="checkmark">✦</div>
     <h2>Thank you, <span id="bye-name">love</span></h2>
+    <p class="sub" id="bye-rest" style="font-size:1.2rem;color:#DDD0B8;margin-bottom:0.6rem"></p>
     <p class="sub">We can't wait to see you again. Tag us <strong>@zola_officials_</strong> ✦</p>
   </div>
 
@@ -325,13 +355,76 @@
 
 <script>
 let MODE='in', KNAME='', KSTARS=0, _st=null, _el=null, _pi=null, resetTimer=null;
+
+/* ── THE IPAD KEYBOARD ────────────────────────────────────────────────
+   The single most reported problem at this till: tap a card field, the
+   keyboard takes half the screen, and the thing being typed into is behind
+   it. Scrolling now works, but iOS will not do it by itself for a field
+   inside an iframe, which is what every Stripe field is. So the focused
+   thing is put in view by hand, and again when the keyboard finishes
+   animating in. */
+function bringIntoView(el){
+  if(!el || !el.scrollIntoView) return;
+  try{ el.scrollIntoView({ block:'center', behavior:'smooth' }); }
+  catch(_){ try{ el.scrollIntoView(); }catch(__){} }
+}
+document.addEventListener('focusin', function(e){
+  const t = e && e.target;
+  if(!t || !t.tagName) return;
+  if(!/^(INPUT|TEXTAREA|SELECT|IFRAME)$/.test(t.tagName)) return;
+  setTimeout(function(){ bringIntoView(t); }, 250);
+}, true);
+if(window.visualViewport){
+  /* The keyboard opening is a viewport resize, not an event of its own.
+     Whatever has focus is put back in view each time the usable height
+     changes — which also covers rotating the iPad mid-checkout. */
+  let _vvT = null;
+  window.visualViewport.addEventListener('resize', function(){
+    clearTimeout(_vvT);
+    _vvT = setTimeout(function(){
+      const a = document.activeElement;
+      if(a && a !== document.body) bringIntoView(a);
+    }, 180);
+  });
+}
+/* Every screen change starts at the top of that screen. Without this, the
+   page keeps the scroll position of the screen before it and the next one
+   opens half way down. */
+function toTop(){ try{ window.scrollTo({ top:0, behavior:'auto' }); }catch(_){ window.scrollTo(0,0); } }
 // Her Google review link, if she has saved one (Studio Manager → Marketing).
 let GOOGLE_REVIEW_URL='';
 try{ fetch('/api/site-settings').then(r=>r.json()).then(d=>{ GOOGLE_REVIEW_URL=(d&&d.settings&&d.settings.mkt_review_url)||''; }).catch(()=>{}); }catch(_){}
 let BAL=0, TIP=0, SVC='';   // balance owed, tip chosen, service name
+/* The name the appointment is under, which is NOT what they typed — they
+   type a phone number. Everywhere a person is addressed reads this. */
+let KPERSON='';
+function firstName(n){
+  const s = String(n||'').trim();
+  if(!s) return '';
+  /* Never a phone number. If all we have is digits there is no first name
+     in it, and "love" is kinder than reading somebody's number back. */
+  if(/^[0-9s()+.-]+$/.test(s)) return '';
+  return s.split(/s+/)[0];
+}
 
-function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); document.getElementById(id).classList.add('on'); }
-function reset(){ clearTimeout(resetTimer); MODE='in';KNAME='';KSTARS=0;_pi=null;BAL=0;TIP=0;SVC='';
+/* ── THE TIME OF DAY ──────────────────────────────────────────────────
+   Off the studio's clock, not the iPad's, so a tablet left on the wrong
+   timezone cannot wish somebody a good morning at eight at night. */
+function partOfDay(){
+  let h = NaN;
+  try{
+    h = Number(new Intl.DateTimeFormat('en-US',
+      { timeZone:'America/Los_Angeles', hour:'numeric', hour12:false }).format(new Date()));
+  }catch(_){ }
+  if(!(h >= 0 && h <= 23)) h = new Date().getHours();
+  if(h < 12) return 'morning';
+  if(h < 13) return 'noon';
+  if(h < 17) return 'afternoon';
+  return 'night';
+}
+
+function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on')); document.getElementById(id).classList.add('on'); toTop(); }
+function reset(){ clearTimeout(resetTimer); MODE='in';KNAME='';KPERSON='';KSTARS=0;_pi=null;BAL=0;TIP=0;SVC='';
   document.getElementById('kname').value=''; document.getElementById('kreview').value=''; document.getElementById('kshare').checked=false;
   document.querySelectorAll('#kstars span').forEach(s=>s.textContent='☆');
   ['name-err','bal-err','card-err'].forEach(i=>document.getElementById(i).textContent='');
@@ -383,7 +476,9 @@ async function saveAsk(){
 function autoReset(ms){ clearTimeout(resetTimer); resetTimer=setTimeout(reset, ms); }
 
 function go(mode){ MODE=mode;
-  document.getElementById('name-title').textContent = mode==='in' ? 'Welcome ✦ What\'s your name?' : 'What\'s your name?';
+  document.getElementById('name-title').textContent = mode==='in'
+    ? "Welcome ✦ What's your phone number?"
+    : "What's your phone number?";
   show('s-name'); setTimeout(()=>document.getElementById('kname').focus(),150); }
 
 async function nameNext(){
@@ -395,8 +490,16 @@ async function nameNext(){
     try{
       const r=await fetch('/api/kiosk?action=checkin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'checkin',name})});
       const d=await r.json();
-      document.getElementById('in-msg').textContent='You\'re checked in, '+ (d.first||name.split(' ')[0]) +' ✦';
-      document.getElementById('in-sub').textContent = d.matched ? ('We have you down for '+d.service+' — relax, we\'ll be right with you.') : 'Relax — we\'ll be right with you.';
+      KPERSON = d.name || d.full_name || '';
+      /* Her words: say have a good appointment, and say whose name it is
+         under — or the number, when that is all we matched on. */
+      const who = firstName(KPERSON) || d.first || '';
+      document.getElementById('in-msg').textContent = 'Okay, have a good appointment ✦';
+      document.getElementById('in-sub').textContent = d.matched
+        ? ((who ? who : 'Booked under ' + name)
+            + (d.service ? ' — ' + d.service : '')
+            + (d.time ? ', ' + d.time : ''))
+        : ('Checked in under ' + name);
       show('s-in-done');
       // Ask only if we actually cannot reach them, and give them longer on
       // the screen if we did — six seconds is not enough to type an email.
@@ -494,6 +597,7 @@ function payTogether(){
   COVERED = list.reduce((s,x) => s + (Number(x.covered_by_membership)||0), 0);
   DEPOSIT = list.reduce((s,x) => s + (Number(x.deposit_taken_cents)||0), 0);
   SVC     = list.map(x => x.service).filter(Boolean).join(' + ');
+  KPERSON = (list[0] && list[0].name) || '';
   const withCard = list.find(x => x.card_on_file);
   KCARD   = withCard ? withCard.card_on_file : null;
   KMEMBER = list.some(x => !!x.is_member);
@@ -514,6 +618,7 @@ function takeBill(x){
   }
   BAL = Number(x.remainder_cents) || 0;
   SVC = x.service || '';
+  KPERSON = x.name || '';
   KREF = x.ref || '';
   KCARD = x.card_on_file || null;
   KMEMBER = !!x.is_member;
@@ -947,12 +1052,12 @@ async function rbBook(){
       }
     }
 
-    btn.textContent = 'Lovely — see you then';
+    btn.textContent = 'OK';
     btn.disabled = false;
     btn.onclick = function(){ show('s-review'); };
   }catch(e){
     err.textContent = e.message || 'Could not book that — please tell the desk';
-    btn.disabled = false; btn.textContent = 'Book it ✦';
+    btn.disabled = false; btn.textContent = 'Send deposit & book ✦';
   }
 }
 
@@ -1018,7 +1123,9 @@ async function sendReview(){
   finish();
 }
 function finish(){
-  document.getElementById('bye-name').textContent=(KNAME||'love').split(' ')[0];
+  document.getElementById('bye-name').textContent = firstName(KPERSON) || 'love';
+  const rest = document.getElementById('bye-rest');
+  if(rest) rest.textContent = 'Have a good rest of your ' + partOfDay() + ' ✦';
   show('s-bye'); autoReset(6000);
 }
 </script>

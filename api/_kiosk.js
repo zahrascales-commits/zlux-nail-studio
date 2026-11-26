@@ -5,6 +5,17 @@
 const { query, queryOne, execute, ensureTables } = require('./_team-db');
 const notify = require('./_notify');
 
+/* Half past seven rather than 19:30. Borrowed from _visit so the till and
+   the emails read a time the same way; its own fallback keeps the till
+   working if that ever moves. */
+function prettyTime(t) {
+  try { return require('./_visit').time12(t); } catch (_) {}
+  const m = /^(d{1,2}):(d{2})/.exec(String(t || ''));
+  if (!m) return String(t || '');
+  const h = Number(m[1]);
+  return ((h % 12) || 12) + ':' + m[2] + (h < 12 ? ' AM' : ' PM');
+}
+
 let _ready = false;
 async function ensure() {
   await ensureTables();
@@ -235,10 +246,21 @@ module.exports = async function (req, res) {
       // Arrival is the thing that separates a no-show from a client. It has
       // to land on the appointment, not only in the log.
       await stampAppointment(appt, { checked_in_ts: Date.now() });
+      /* The name on the appointment, not what was typed. They type a phone
+         number at the screen now, so the typed value is a last resort and
+         is never anybody's name. */
+      const whoIn = (appt && appt.name) ? String(appt.name).trim() : '';
+      const typedIn = String(name).trim();
       await execute('INSERT INTO kiosk_log (type, name, detail, ts) VALUES (?,?,?,?)',
-        ['checkin', String(name).trim().slice(0, 80), appt ? (appt.service + ' at ' + appt.time) : 'no appointment matched', Date.now()]);
-      try { await notify.notifyInApp('owner', null, '✦ ' + String(name).trim() + ' just checked in', appt ? (appt.service + ' at ' + appt.time) : 'Walk-in / no matched appointment'); } catch (_) {}
-      return res.json({ ok: true, matched: !!appt, service: appt ? appt.service : null, time: appt ? appt.time : null, first: String(name).trim().split(' ')[0] });
+        ['checkin', (whoIn || typedIn).slice(0, 80), appt ? (appt.service + ' at ' + appt.time) : 'no appointment matched', Date.now()]);
+      try { await notify.notifyInApp('owner', null, '✦ ' + (whoIn || typedIn) + ' just checked in', appt ? (appt.service + ' at ' + appt.time) : 'Walk-in / no matched appointment'); } catch (_) {}
+      return res.json({
+        ok: true, matched: !!appt,
+        service: appt ? appt.service : null,
+        time: appt ? prettyTime(appt.time) : null,
+        name: whoIn,
+        first: whoIn ? whoIn.split(/s+/)[0] : '',
+      });
     }
 
     if (req.method === 'GET' && action === 'balance') {
