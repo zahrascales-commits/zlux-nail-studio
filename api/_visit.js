@@ -322,7 +322,13 @@ module.exports = async function (req, res) {
         // Whether the payment keeps the card for the rest of the visit. The
         // page's payment form has to be built with the same answer, or
         // Stripe refuses to take the money.
-        save_card: !!String(appt.client_email || '').trim(),
+        /* Whether the payment will keep the card. The form has to be built
+           with the same answer or Stripe will not take the money, so this
+           asks the question the payment asks: will there be a customer to
+           keep it on? An email or a usable number means yes, because the
+           payment makes the customer if there is not one yet. */
+        save_card: !!(String(appt.client_email || '').trim()
+          || require('./_customer').e164(appt.client_phone || '')),
       });
     }
 
@@ -371,32 +377,19 @@ module.exports = async function (req, res) {
          appointment can be settled at the desk without them getting it out
          again. Told plainly on the page they pay on, and never charged
          without a signature. */
+      /* One customer per person, found by email or by number — or made from
+         whichever we have. An email is no longer the price of having a card
+         kept: a client booked by hand with only a phone number paid her
+         deposit and nothing was saved, so the till had nothing to charge. */
       let customerId = '';
       try {
-        const email = String(appt.client_email || '').trim().toLowerCase();
-        if (email) {
-          // One customer per person, or a client ends up with a row per visit
-          // and the card is on whichever one nobody looks at.
-          const found = await fetch(
-            'https://api.stripe.com/v1/customers?limit=1&email=' + encodeURIComponent(email),
-            { headers: { Authorization: 'Bearer ' + sk } });
-          const list = await found.json();
-          if (list && list.data && list.data[0]) {
-            customerId = list.data[0].id;
-          } else {
-            const made = await fetch('https://api.stripe.com/v1/customers', {
-              method: 'POST',
-              headers: { Authorization: 'Bearer ' + sk, 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: new URLSearchParams({
-                email,
-                name: appt.client_name || '',
-                ...(appt.client_phone ? { phone: String(appt.client_phone) } : {}),
-              }).toString(),
-            });
-            const cust = await made.json();
-            if (cust && cust.id) customerId = cust.id;
-          }
-        }
+        const who = await require('./_customer').resolve({
+          sk,
+          email: appt.client_email || '',
+          phone: appt.client_phone || '',
+          name: appt.client_name || '',
+        });
+        customerId = who.id || '';
       } catch (_) { /* a deposit must still be payable if this fails */ }
 
       const r = await fetch('https://api.stripe.com/v1/payment_intents', {
@@ -415,7 +408,7 @@ module.exports = async function (req, res) {
           // Kept for the rest of this appointment, at the desk — exactly when
           // the page was told so (an email on the booking), whether or not
           // the customer record could be made, so the two always agree.
-          ...(!noSave && String(appt.client_email || '').trim() ? { setup_future_usage: 'off_session' } : {}),
+          ...(!noSave && customerId ? { setup_future_usage: 'off_session' } : {}),
           ...(!noSave && customerId ? { customer: customerId } : {}),
         }).toString(),
       });

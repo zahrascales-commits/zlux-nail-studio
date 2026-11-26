@@ -98,7 +98,7 @@ async function mandateFor(key, customer) {
 /* The card to charge, and the permission behind it. Members carry their
    customer id on the membership, so they are found even when the email on
    the two records differs. */
-async function cardFor({ email, memberId }) {
+async function cardFor({ email, memberId, phone }) {
   const key = await sk();
   if (!key) return { ok: false, why: 'Payments are not configured.' };
 
@@ -113,33 +113,42 @@ async function cardFor({ email, memberId }) {
   for (const id of await customersFor(key, lower(email))) {
     if (!ids.includes(id)) ids.push(id);
   }
+  /* And the one found by number, or remembered on their client row. A card
+     saved under a phone-only client was invisible to this until now, which
+     is why the desk was told "no card" for people who had one. */
+  if (phone) {
+    try {
+      const w = await require('./_customer').resolve({ sk: key, email, phone, create: false });
+      if (w.id && !ids.includes(w.id)) ids.push(w.id);
+    } catch (_) {}
+  }
   if (!ids.length) return { ok: false, why: 'no_customer' };
 
+  const C = require('./_customer');
   for (const customer of ids) {
     let pms = [];
     try {
-      const j = await api(key, 'payment_methods?type=card&limit=10&customer=' + encodeURIComponent(customer));
+      /* Everything saved, not only type=card. A deposit paid through Link
+         saves a 'link' method, which charges off_session exactly like a
+         card; asking for cards alone reported those clients as having
+         nothing on file, and the desk read that as a decline. */
+      const j = await api(key, 'payment_methods?limit=20&customer=' + encodeURIComponent(customer));
       pms = j.data || [];
     } catch (_) { continue; }
-    if (!pms.length) continue;
 
     /* Their default first, where there is one — that is the card they have
        chosen to be charged on. */
-    let pm = pms[0];
+    let def = '';
     try {
       const c = await api(key, 'customers/' + encodeURIComponent(customer));
-      const def = c.invoice_settings && c.invoice_settings.default_payment_method;
-      const hit = def && pms.find(p => p.id === def);
-      if (hit) pm = hit;
+      def = (c.invoice_settings && c.invoice_settings.default_payment_method) || '';
     } catch (_) {}
+    const pm = C.bestPM(pms, def);
+    if (!pm) continue;
 
     return {
-      ok: true, key, customer, payment_method: pm.id,
-      card: {
-        brand: (pm.card && pm.card.brand) || 'card',
-        last4: (pm.card && pm.card.last4) || '',
-        exp: pm.card ? pm.card.exp_month + '/' + String(pm.card.exp_year).slice(-2) : '',
-      },
+      ok: true, key, customer, payment_method: pm.id, kind: pm.type,
+      card: C.describePM(pm),
       mandate: await mandateFor(key, customer),
     };
   }

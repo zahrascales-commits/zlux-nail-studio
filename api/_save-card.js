@@ -35,7 +35,7 @@ module.exports = async function (req, res) {
       const bill = require('./_kiosk-bill');
       let card = null;
       try {
-        const id = await bill.customerIdFor(sk, null, appt.client_email || '');
+        const id = await bill.customerIdFor(sk, null, appt.client_email || '', appt.client_phone || '');
         card = await bill.cardOnFile(sk, id);
       } catch (_) {}
       return res.json({
@@ -50,36 +50,25 @@ module.exports = async function (req, res) {
     /* Stripe needs a customer to attach the card to, and one per person —
        a customer per visit puts the card on a row nobody looks at. */
     if (req.method === 'POST') {
-      const email = String(appt.client_email || '').trim().toLowerCase();
-      if (!email) {
+      /* An email OR a number. This used to refuse outright without an
+         address, which made the link useless to exactly the people who
+         needed it most — the ones booked by hand, by phone, with no email
+         on the row. */
+      const who = await require('./_customer').resolve({
+        sk,
+        email: appt.client_email || '',
+        phone: appt.client_phone || '',
+        name: appt.client_name || '',
+      });
+      if (!who.id) {
         return res.status(400).json({
-          error: 'We need an email on your booking before we can save a card. Message the studio and we will add it.',
+          error: who.how === 'nothing_to_go_on'
+            ? 'We need an email or a phone number on your booking before we can save a card. '
+              + 'Message the studio and we will add it.'
+            : 'We could not start that — message the studio and we will take the card for you.',
         });
       }
-
-      let customerId = '';
-      const found = await fetch(
-        'https://api.stripe.com/v1/customers?limit=1&email=' + encodeURIComponent(email),
-        { headers: { Authorization: 'Bearer ' + sk } });
-      const list = await found.json();
-      if (list && list.data && list.data[0]) {
-        customerId = list.data[0].id;
-      } else {
-        const made = await fetch('https://api.stripe.com/v1/customers', {
-          method: 'POST',
-          headers: { Authorization: 'Bearer ' + sk, 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            email,
-            name: appt.client_name || '',
-            ...(appt.client_phone ? { phone: String(appt.client_phone) } : {}),
-          }).toString(),
-        });
-        const cust = await made.json();
-        if (!cust || !cust.id) {
-          return res.status(400).json({ error: (cust && cust.error && cust.error.message) || 'Could not start that.' });
-        }
-        customerId = cust.id;
-      }
+      const customerId = who.id;
 
       /* off_session, because the charge happens later at the desk rather
          than while they are looking at the screen. This is the record that

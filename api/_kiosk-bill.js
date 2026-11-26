@@ -297,32 +297,37 @@ async function billFor(appt) {
 /* Their Stripe customer, however they came to have one. A member has the
    id on their membership; anybody else who has paid a deposit by card has
    one findable by the email they paid with. */
-async function customerIdFor(sk, stored, email) {
+async function customerIdFor(sk, stored, email, phone) {
   if (stored) return stored;
-  if (!sk || !email || !/@/.test(email)) return null;
+  if (!sk) return null;
+  /* Nothing is created here. This is the read side — drawing the checkout
+     screen must not make a Stripe customer for everybody who walks past. */
   try {
-    const r = await fetch(
-      'https://api.stripe.com/v1/customers?limit=1&email=' + encodeURIComponent(String(email).toLowerCase()),
-      { headers: { Authorization: 'Bearer ' + sk } });
-    const j = await r.json();
-    return (j && j.data && j.data[0]) ? j.data[0].id : null;
+    const who = await require('./_customer').resolve({ sk, email, phone, create: false });
+    return who.id || null;
   } catch (_) { return null; }
 }
 
 async function cardOnFile(sk, customerId) {
   if (!sk || !customerId) return null;
   try {
+    const C = require('./_customer');
     const stripe = require('stripe')(sk);
-    const cust = await stripe.customers.retrieve(customerId);
-    let pmId = cust && cust.invoice_settings && cust.invoice_settings.default_payment_method;
-    if (!pmId) {
-      const list = await stripe.paymentMethods.list({ customer: customerId, type: 'card', limit: 1 });
-      pmId = list && list.data && list.data[0] ? list.data[0].id : null;
-    }
-    if (!pmId) return null;
-    const pm = typeof pmId === 'string' ? await stripe.paymentMethods.retrieve(pmId) : pmId;
-    if (!pm || !pm.card) return null;
-    return { id: pm.id, brand: pm.card.brand, last4: pm.card.last4, exp: pm.card.exp_month + '/' + String(pm.card.exp_year).slice(-2) };
+    /* Everything saved, not only type=card. A deposit paid through Link
+       saves a 'link' method; it charges off_session exactly like a card,
+       and asking for cards alone is why the iPad offered no "one tap" to
+       clients who had in fact left a card with us. */
+    const list = await stripe.paymentMethods.list({ customer: customerId, limit: 20 });
+    let def = '';
+    try {
+      const cust = await stripe.customers.retrieve(customerId);
+      def = (cust && cust.invoice_settings && cust.invoice_settings.default_payment_method) || '';
+      if (def && typeof def !== 'string') def = def.id || '';
+    } catch (_) {}
+    const pm = C.bestPM((list && list.data) || [], def);
+    if (!pm) return null;
+    const d = C.describePM(pm);
+    return { id: pm.id, kind: pm.type, brand: d.brand, last4: d.last4, exp: d.exp, label: d.label || '' };
   } catch (_) { return null; }
 }
 

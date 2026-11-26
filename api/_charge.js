@@ -231,9 +231,12 @@ async function peopleList() {
 
   const cards = await require('./_cards').cardsByEmail(sk);
 
+  /* Anybody we can identify, which is an address OR a number. Selecting on
+     an email alone is what hid every phone-only client from this screen. */
   const clients = await query(
     `SELECT id, name, email, phone, visits, last_visit FROM clients
-      WHERE COALESCE(email,'') <> '' ORDER BY last_visit DESC, name LIMIT 400`)
+      WHERE COALESCE(email,'') <> '' OR COALESCE(phone,'') <> ''
+      ORDER BY last_visit DESC, name LIMIT 400`)
     .catch(() => []);
 
   /* Members hold their customer id on the membership, so a member whose
@@ -300,7 +303,12 @@ async function peopleList() {
   const people = [];
   for (const c of clients) {
     const key = lower(c.email);
-    const hit = cards[key];
+    /* Their card, under their address or under their number. The index
+       holds both, so somebody whose card was saved while she had no email
+       on file is still found. */
+    const pkey = 'p:' + digits(c.phone).slice(-10);
+    const hit = (cards[key] && cards[key].card) ? cards[key]
+      : ((cards[pkey] && cards[pkey].card) ? cards[pkey] : null);
     if (!hit || !hit.card) continue;             // nothing to charge
     const mem = memberByEmail[key];
     /* The membership was found under this email — but the name on it may
@@ -347,7 +355,10 @@ async function toSettle(limit) {
       + "WHERE a.date >= ? AND a.date <= ? "
       + "  AND COALESCE(a.paid_cents,0) = 0 "
       + "  AND LOWER(COALESCE(a.status,'scheduled')) <> 'cancelled' "
-      + "  AND COALESCE(a.client_email,'') <> '' "
+      /* An address or a number. Requiring an address left visits off this
+         list entirely, so money owed by a phone-only client was money
+         nobody was ever reminded about. */
+      + "  AND (COALESCE(a.client_email,'') <> '' OR COALESCE(a.client_phone,'') <> '') "
       + 'ORDER BY a.date, a.time LIMIT ?',
       [todayLA(), shiftDay(todayLA(), 45), cap]);
   } catch (_) { return { visits: [] }; }
@@ -358,6 +369,7 @@ async function toSettle(limit) {
     if (!v.outstanding_cents) continue;
     v.client = r.client_name || '';
     v.email = r.client_email || '';
+    v.phone = r.client_phone || '';
     out.push(v);
   }
   return { visits: out };
@@ -402,7 +414,7 @@ async function personDetail({ email, phone }) {
     if (m) memberId = m.member_id || '';
   } catch (_) {}
 
-  const found = await require('./_deposit-charge').cardFor({ email: e, memberId });
+  const found = await require('./_deposit-charge').cardFor({ email: e, memberId, phone: p });
 
   return {
     ok: true,
@@ -509,6 +521,9 @@ async function doCharge(opts) {
   const apptId = Number(o.appointment_id) || 0;
 
   let email = lower(o.email);
+  /* Her number, which is the only thing some clients have. Kept beside the
+     address rather than instead of it: plenty of people have both. */
+  let phone = digits(o.phone);
   let name = String(o.name || '').trim();
   let base = 0;
   let label = '';
@@ -571,6 +586,7 @@ async function doCharge(opts) {
     }
     label = (appt.service || 'Visit') + ' · ' + (appt.date || '');
     email = email || lower(appt.client_email);
+    phone = phone || digits(appt.client_phone);
     name = name || appt.client_name || '';
     memberId = appt.member_id && appt.member_id !== '-' ? appt.member_id : '';
   } else {
@@ -579,10 +595,14 @@ async function doCharge(opts) {
     if (!base) return { ok: false, why: 'no_amount', message: 'How much?' };
   }
 
-  if (!email) {
+  /* An address or a number is enough to find a card. Only having neither is
+     a reason not to look. */
+  if (!email && !digits(phone)) {
     return {
-      ok: false, why: 'no_email',
-      message: 'There is no email address for them, so there is no card to look for.',
+      ok: false, why: 'no_contact',
+      message: 'There is no email address and no phone number for '
+        + (name || 'them') + ', so there is no card to look for. '
+        + 'Add one to their client record and it will be here.',
     };
   }
 
@@ -615,13 +635,18 @@ async function doCharge(opts) {
     } catch (_) {}
   }
 
-  const found = await require('./_deposit-charge').cardFor({ email, memberId });
+  const found = await require('./_deposit-charge').cardFor({ email, memberId, phone });
   if (!found.ok) {
+    /* Said as what it is. "It did not go through" reads as a decline, and a
+       decline is a thing their bank did — so the desk asks for another
+       card, or tells the client their card was refused, when in fact
+       nothing was ever sent to Stripe. */
     return {
       ok: false, why: found.why,
       message: found.why === 'no_card' || found.why === 'no_customer'
-        ? 'No card saved for ' + (name || 'them') + '. Send them the link from Cards on file — '
-          + 'one tap, and it is there for next time.'
+        ? 'No card is saved for ' + (name || 'them') + ' — so nothing was sent to their bank '
+          + 'and nothing was declined. Send them the link from Cards on file, or take the card '
+          + 'at the desk, and it is there from then on.'
         : (found.why || 'Could not find a card.'),
     };
   }
@@ -632,7 +657,8 @@ async function doCharge(opts) {
      this amount, this visit, this reason, today — so the second press
      finds the first charge rather than making another one. A genuinely
      different charge has a different key and is not blocked. */
-  const idem = ['zola-chg', apptId || 'free', money(total), lower(email).slice(0, 40),
+  const idem = ['zola-chg', apptId || 'free', money(total),
+    (lower(email) || 'p' + digits(phone).slice(-10)).slice(0, 40),
     (label || '').replace(/[^a-zA-Z0-9]+/g, '-').slice(0, 40), todayLA()].join('-').slice(0, 180);
 
   const had = await queryOne('SELECT * FROM card_charges WHERE idem_key = ?', [idem]);

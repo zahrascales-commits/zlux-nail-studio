@@ -15,6 +15,9 @@ const CEO_PASSWORD = process.env.CEO_PASSWORD || 'ZOLA2026';
 const SITE = process.env.PUBLIC_BASE_URL || 'https://zolanailstudio.com';
 
 const lower = s => String(s || '').trim().toLowerCase();
+/* The last ten digits, which is what matches a number typed any of the six
+   ways people type one. Spelled the same way as in _kiosk-bill. */
+const tenDigits = p => String(p || '').replace(/[^0-9]/g, '').slice(-10);
 
 /* Every Stripe customer that actually has a usable card, keyed by email.
    Fetched in one pass rather than a call per client — a studio with three
@@ -34,12 +37,19 @@ async function cardsByEmail(sk) {
     if (!r.ok) break;
 
     for (const c of (j.data || [])) {
-      if (!c.email) continue;
-      const key = lower(c.email);
-      // Keep the first customer we see for an address; a second one for the
-      // same person is a duplicate and its card is the one nobody uses.
-      if (out[key]) continue;
-      out[key] = { customer: c.id, card: null };
+      /* Under their address, and under their number. A customer with
+         neither is a row nobody can match to a client, and is skipped;
+         a customer with both is reachable either way. */
+      const keys = [];
+      if (c.email) keys.push(lower(c.email));
+      const p = tenDigits(c.phone);
+      if (p.length === 10) keys.push('p:' + p);
+      for (const key of keys) {
+        // Keep the first customer we see for a key; a second one for the
+        // same person is a duplicate and its card is the one nobody uses.
+        if (out[key]) continue;
+        out[key] = { customer: c.id, card: null };
+      }
     }
 
     if (!j.has_more) break;
@@ -55,25 +65,35 @@ async function cardsByEmail(sk) {
      clients meant four hundred round trips to Stripe in a row, which is
      most of the "this takes a few seconds" — and two screens now wait on
      it. Stripe's own rate limit is comfortably above this. */
-  const emails = Object.keys(out);
-  const lookup = async (email) => {
+  /* One ask per CUSTOMER, not per key. Somebody listed under both their
+     address and their number is one customer, and asking Stripe twice about
+     the same card is the sort of thing that turns four hundred round trips
+     into eight hundred. */
+  const byCustomer = {};
+  for (const key of Object.keys(out)) {
+    (byCustomer[out[key].customer] = byCustomer[out[key].customer] || []).push(key);
+  }
+  const customers = Object.keys(byCustomer);
+  const lookup = async (customer) => {
+    let card = null;
     try {
       const r = await fetch(
-        'https://api.stripe.com/v1/payment_methods?type=card&limit=1&customer=' + out[email].customer,
+        'https://api.stripe.com/v1/payment_methods?type=card&limit=1&customer=' + customer,
         { headers: { Authorization: 'Bearer ' + sk } });
       const j = await r.json();
       const pm = j && j.data && j.data[0];
       if (pm && pm.card) {
-        out[email].card = {
+        card = {
           brand: pm.card.brand,
           last4: pm.card.last4,
           exp: pm.card.exp_month + '/' + String(pm.card.exp_year).slice(-2),
         };
       }
     } catch (_) {}
+    if (card) for (const key of byCustomer[customer]) out[key].card = card;
   };
-  for (let i = 0; i < emails.length; i += 10) {
-    await Promise.all(emails.slice(i, i + 10).map(lookup));
+  for (let i = 0; i < customers.length; i += 10) {
+    await Promise.all(customers.slice(i, i + 10).map(lookup));
   }
 
   return out;

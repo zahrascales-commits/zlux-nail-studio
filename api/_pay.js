@@ -103,28 +103,14 @@ function includesCategory(tier, category) {
    One per email — a customer per payment puts the card on a record nobody
    ever looks at, which is the same as not saving it. */
 async function keepCardFor(email, name, phone) {
-  const addr = String(email || '').trim().toLowerCase();
-  if (!addr || !/@/.test(addr)) return null;
   const sk = stripeKey();
   if (!sk) return null;
+  /* An email OR a phone number. This returned null the moment there was no
+     address, which is how a hand-booked client paid a deposit and ended up
+     with no card on file. */
   try {
-    const found = await fetch(
-      'https://api.stripe.com/v1/customers?limit=1&email=' + encodeURIComponent(addr),
-      { headers: { Authorization: 'Bearer ' + sk } });
-    const list = await found.json();
-    if (list && list.data && list.data[0]) return list.data[0].id;
-
-    const made = await fetch('https://api.stripe.com/v1/customers', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + sk, 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        email: addr,
-        ...(name ? { name: String(name) } : {}),
-        ...(phone ? { phone: String(phone) } : {}),
-      }).toString(),
-    });
-    const cust = await made.json();
-    return (cust && cust.id) ? cust.id : null;
+    const who = await require('./_customer').resolve({ sk, email, phone, name });
+    return who.id || null;
   } catch (_) { return null; }
 }
 

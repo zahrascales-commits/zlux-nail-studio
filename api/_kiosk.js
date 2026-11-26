@@ -222,7 +222,8 @@ module.exports = async function (req, res) {
       const out = [];
       for (const a of matches.slice(0, 8)) {
         const b = await bill.billFor(a);
-        const card = await bill.cardOnFile(sk, await bill.customerIdFor(sk, b.stripe_customer_id, a.email || ''));
+        const card = await bill.cardOnFile(sk,
+          await bill.customerIdFor(sk, b.stripe_customer_id, a.email || '', a.phone || ''));
         out.push({
           ref: a.src + a.id,
           name: b.name, service: b.service, time: b.time, artist: b.artist,
@@ -418,7 +419,9 @@ module.exports = async function (req, res) {
           const chg = require('./_kiosk-charge');
           const sk = await pay.getStripeSecret();
           const b = await bill.billFor(appt).catch(() => null);
-          const customerId = sk ? await bill.customerIdFor(sk, b && b.stripe_customer_id, appt.email || '') : '';
+          const customerId = sk
+            ? await bill.customerIdFor(sk, b && b.stripe_customer_id, appt.email || '', appt.phone || '')
+            : '';
           const card = customerId ? await bill.cardOnFile(sk, customerId) : null;
 
           if (!sk) deposit.why = 'Card payments are not switched on.';
@@ -552,7 +555,7 @@ module.exports = async function (req, res) {
          A drop-in has no membership to hold a customer id; the card is
          found by the email they paid their deposit with. Whichever way it
          was found, that is the customer the charge goes to. */
-      const customerId = await bill.customerIdFor(sk, b.stripe_customer_id, appt.email || '');
+      const customerId = await bill.customerIdFor(sk, b.stripe_customer_id, appt.email || '', appt.phone || '');
       const card = customerId ? await bill.cardOnFile(sk, customerId) : null;
       if (!card) return res.status(400).json({ error: 'No usable card on file — take payment another way.' });
 
@@ -679,27 +682,24 @@ module.exports = async function (req, res) {
       /* Keep this card too. Somebody who paid their deposit in cash and the
          rest by card was still ending up with nothing on file, and handing
          it over again every visit. */
+      /* Their customer, made if they have not got one. A member's comes off
+         their membership and wins; everybody else is found by email or by
+         number. Somebody who paid their deposit in cash and the rest by card
+         was ending up with nothing on file and handing the card over again
+         every visit — and a client with no email could not have one kept at
+         all. */
       let payCustomer = '';
       try {
         const bill = require('./_kiosk-bill');
         const b2 = appt ? await bill.billFor(appt) : null;
-        payCustomer = await bill.customerIdFor(
-          sk, b2 && b2.stripe_customer_id, (appt && appt.email) || '') || '';
-
-        // No customer yet and an address to make one with.
-        if (!payCustomer && appt && appt.email && /@/.test(appt.email)) {
-          const made = await fetch('https://api.stripe.com/v1/customers', {
-            method: 'POST',
-            headers: { Authorization: 'Bearer ' + sk, 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-              email: String(appt.email).toLowerCase(),
-              name: appt.name || '',
-              ...(appt.phone ? { phone: String(appt.phone) } : {}),
-            }).toString(),
-          });
-          const cust = await made.json();
-          if (cust && cust.id) payCustomer = cust.id;
-        }
+        const who = await require('./_customer').resolve({
+          sk,
+          prefer: (b2 && b2.stripe_customer_id) || '',
+          email: (appt && appt.email) || '',
+          phone: (appt && appt.phone) || '',
+          name: (appt && appt.name) || '',
+        });
+        payCustomer = who.id || '';
       } catch (_) { /* a payment must not fail because the card could not be kept */ }
 
       const resp = await fetch('https://api.stripe.com/v1/payment_intents', {
