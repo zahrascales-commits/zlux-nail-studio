@@ -614,8 +614,36 @@
     }catch(_){}
 
     var code = '';
-    try{ code = new URLSearchParams(location.search).get('code') || ''; }catch(_){}
+    var want = '';
+    try{
+      var qs = new URLSearchParams(location.search);
+      code = qs.get('code') || '';
+      want = qs.get('amount') || '';
+    }catch(_){}
     if(code){ openCard(code); return; }
+
+    /* An amount asked for in the link — the home page offers four of them
+       as one tap each. Dollars or cents, whichever was written: 300 and
+       30000 both mean three hundred dollars, and nobody is buying a
+       three-dollar gift card. Clamped to the studio's own limits, because
+       this came out of a URL and anybody can type one. */
+    if(want){
+      var raw = Math.round(Number(String(want).replace(/[^0-9.]/g, '')) || 0);
+      if(raw > 0){
+        var cents = raw < 1000 ? raw * 100 : raw;
+        var lo = Number(G.limits.min_cents) || 2500;
+        var hi = Number(G.limits.max_cents) || 100000;
+        G.amount = Math.max(lo, Math.min(hi, cents));
+        /* An amount that is not one of the five buttons lights none of
+           them up, so it goes in the box where it can be seen — a total
+           with nothing selected anywhere reads as a page that has not
+           understood you. */
+        if(PRESETS.indexOf(G.amount) < 0){
+          var cf = el('g-custom');
+          if(cf) cf.value = (G.amount / 100).toFixed(2).replace(/.00$/, '');
+        }
+      }
+    }
 
     paintAmounts();
     var n = el('g-to-name');

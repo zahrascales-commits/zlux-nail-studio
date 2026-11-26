@@ -448,11 +448,47 @@ module.exports = async function (req, res) {
   const action = req.query.action || (req.body && req.body.action) || '';
 
   try {
-    if (req.method === 'GET') return res.json(await publicShape());
+    /* Every other GET is the public one. 'truth' is handled below, after
+       the password, because it is hers and not the public's. */
+    if (req.method === 'GET' && action !== 'truth') return res.json(await publicShape());
 
     // ── OWNER: seed a count for members who joined outside this system ──
     const CEO = process.env.CEO_PASSWORD || 'ZOLA2026';
     if (req.headers['x-ceo-password'] !== CEO) return res.status(401).json({ error: 'Unauthorized' });
+
+    /* ── OWNER: the real count, and how much of it was typed in ──────
+       Owner-only and deliberately not part of publicShape: the split
+       between real members and seeded ones is hers to see, not the
+       public's. It exists so she can tell at a glance what is true. */
+    if (req.method === 'GET' && action === 'truth') {
+      await ensureColumns();
+      const real = {}, seed = {};
+      for (const p of ALL()) { real[p.key] = 0; seed[p.key] = 0; }
+      try {
+        const rows = await query(
+          "SELECT tier, COUNT(*) AS n FROM members "
+          + "WHERE COALESCE(demo,0)=0 AND COALESCE(status,'active') <> 'cancelled' GROUP BY tier");
+        for (const r of rows || []) {
+          const k = String(r.tier || '').toUpperCase();
+          if (real[k] !== undefined) real[k] = Number(r.n) || 0;
+        }
+      } catch (_) {}
+      try {
+        const rows = await query('SELECT plan, seed FROM plan_seed');
+        for (const s of rows || []) {
+          const k = String(s.plan || '').toUpperCase();
+          if (seed[k] !== undefined) seed[k] = Number(s.seed) || 0;
+        }
+      } catch (_) {}
+      const sum = o => Object.keys(o).reduce((n, k) => n + o[k], 0);
+      return res.json({
+        members_real: sum(real),
+        members_seeded: sum(seed),
+        by_tier: ALL().map(p => ({
+          key: p.key, name: p.name, real: real[p.key] || 0, seeded: seed[p.key] || 0,
+        })),
+      });
+    }
 
     if (req.method === 'POST' && action === 'seed') {
       await ensureColumns();

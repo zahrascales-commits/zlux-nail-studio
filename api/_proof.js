@@ -34,12 +34,25 @@ function ago(ms, now) {
   return d === 1 ? 'yesterday' : d + ' days ago';
 }
 
-// First name only — exactly what the kiosk tells them we will show.
+/* First name only — exactly what the kiosk tells them we will show.
+ *
+ * And never a phone number. The till asks for a number now rather than a
+ * name, and for a while the review form submitted whatever was typed: a
+ * client's ten-digit number went on the public home page under her own
+ * five-star review. Anything with no letters in it is not a name, whatever
+ * sent it here, and the general greeting is kinder than somebody's number.
+ */
 function shortName(n) {
-  const parts = String(n || '').trim().split(/\s+/).filter(Boolean);
+  const raw = String(n || '').trim();
+  if (!/[a-z]/i.test(raw)) return 'A ZOLA client';
+  const parts = raw.split(/\s+/).filter(Boolean);
   if (!parts.length) return 'A ZOLA client';
-  const first = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
-  return first;
+  /* The first word that is actually a word. "559 Jamie" is nobody's name
+     either, but the name in it is. */
+  const word = parts.find(p => /[a-z]/i.test(p)) || '';
+  const clean = word.replace(/[^a-z'\-]/gi, '');
+  if (clean.length < 2) return 'A ZOLA client';
+  return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
 }
 
 // The first service of a booking, as the menu names it.

@@ -9849,9 +9849,28 @@ async function loadProofNote(s){
   const el=document.getElementById('site-proof-note');
   if(!el) return;
   try{
-    const [p,pr]=await Promise.all([fetch('/api/plans').then(r=>r.json()),fetch('/api/proof').then(r=>r.json())]);
+    const [p,pr,tr]=await Promise.all([
+      fetch('/api/plans').then(r=>r.json()),
+      fetch('/api/proof').then(r=>r.json()),
+      api('/api/plans?action=truth').then(r=>r.json()).catch(()=>null),
+    ]);
     const all=(p.plans||[]).concat(p.legacy||[]).reduce((n,x)=>n+(Number(x.joined)||0),0);
-    let t='Counted right now: <b>'+all+' members</b> (every membership) · <b>'+(pr.week_bookings||0)+' booked</b> on the website in the last 7 days.';
+    /* Three different numbers, named. The one on the page, the one in the
+       memberships table, and the part of the count that was typed in rather
+       than counted — which used to be invisible and made "counted right
+       now" read as the truth when most of it was not. */
+    const shownM=String(s.proof_members||'').trim()!==''?Number(s.proof_members):all;
+    let t='<b>Your homepage is showing '+shownM+' members · '
+      +((String(s.proof_week||'').trim()!==''&&Number(s.proof_week_ts)&&Date.now()-Number(s.proof_week_ts)<7*86400000)
+        ?Number(s.proof_week):(pr.week_bookings||0))
+      +' booked this week.</b>';
+    if(tr&&typeof tr.members_real==='number'){
+      t+='<br>Actually in the memberships table: <b>'+tr.members_real+'</b>'
+        +(tr.members_seeded?' · plus <b>'+tr.members_seeded+'</b> you seeded for members who predate the system'
+          +' <span class="muted">(Memberships → seed a count)</span>':'');
+    }
+    t+='<br>Counted on the website: <b>'+(pr.week_bookings||0)+' booked</b> in the last 7 days.'
+      +' Leave a box empty and the site shows the counted figure.';
     const ts=Number(s.proof_week_ts)||0;
     if(String(s.proof_week||'')!==''&&ts){
       const left=7*86400000-(Date.now()-ts);

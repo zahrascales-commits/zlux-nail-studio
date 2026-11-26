@@ -195,11 +195,14 @@ function memberTierOf(m) {
 /* How many of their included services are still unspent this cycle. The
    booking flow already answers this; asking it again here means the till and
    the calendar can never disagree about whether something is covered. */
-async function freeLeftFor(member) {
+async function freeLeftFor(member, apptDate) {
   const tier = memberTierOf(member);
   if (!member || !tier) return 0;
   try {
-    return await require('./_pay').freeServicesLeft(member.member_id, tier);
+    /* The visit's own cycle, not today's. Checking one cycle's allowance
+       and spending it against another is how the same included service was
+       given away twice — see _pay.spendIncluded. */
+    return await require('./_pay').freeServicesLeft(member.member_id, tier, apptDate || null);
   } catch (_) { return 0; }
 }
 
@@ -208,7 +211,7 @@ async function billFor(appt) {
   const pay = require('./_pay');
   const member = await memberFor(appt);
   const tier = memberTierOf(member);
-  const freeLeft = await freeLeftFor(member);
+  const freeLeft = await freeLeftFor(member, appt.date || appt.appointment_date || null);
 
   /* Her own rate, so the desk quotes the same number the booking page
      did. Two screens disagreeing about what somebody owes is the bug this

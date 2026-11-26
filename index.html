@@ -435,6 +435,18 @@
 <div class="cursor-dot" id="cursor-dot"></div>
 <div class="cursor-ring" id="cursor-ring"></div>
 
+<style>
+  /* The quick amounts on the gift band. Cream on ink: a border alone on a
+     dark section leaves the figure unreadable, which is the mistake the
+     gift page itself had to be rescued from. */
+  .gift-chip{display:inline-block;font-family:'Josefin Sans',sans-serif;font-size:0.95rem;
+    letter-spacing:0.06em;color:#F2ECE1;background:rgba(182,165,136,0.16);
+    border:1px solid rgba(182,165,136,0.45);padding:0.6rem 1.15rem;border-radius:999px;
+    text-decoration:none;transition:background 0.18s,border-color 0.18s,transform 0.18s}
+  .gift-chip:hover,.gift-chip:focus{background:rgba(182,165,136,0.3);border-color:#B6A588;transform:translateY(-2px)}
+  .gift-chip:active{transform:translateY(0)}
+</style>
+
 <!-- NAV -->
 <nav class="nav" id="nav">
   <a href="index.html" class="nav-logo"><span style="font-weight:200">Z</span><span style="font-weight:400">O</span><span style="font-weight:600">L</span><span style="font-weight:800">A</span></a>
@@ -738,6 +750,32 @@
     <div style="text-align:center;margin-top:1.5rem;">
       <a href="memberships.html" class="btn-gold" style="animation:none;">Buy a ZOLA Membership</a>
     </div>
+  </div>
+</section>
+
+<!-- GIFT CARDS — placed straight after the memberships, because this is
+     the moment somebody thinks "that is what I should get her". Ink
+     background so the gold type has something to be read against. -->
+<section class="section section-espresso" id="gift-cards">
+  <div class="container container-sm" style="text-align:center;">
+    <div class="section-label" style="color:rgba(182,165,136,0.6);">ZOLA Gift Cards</div>
+    <h2 class="light" style="margin:1rem 0 1.25rem;font-size:clamp(1.9rem,3.6vw,2.8rem);line-height:1.3;">
+      Give her the appointment<br>she keeps putting off.</h2>
+    <p style="font-family:'Josefin Sans',sans-serif;font-size:1rem;color:var(--latte);line-height:2;max-width:520px;margin:0 auto 1.75rem;">
+      Any amount from $25. It arrives by email on whatever day you choose — so you can buy it
+      tonight and have it land on her birthday morning.
+    </p>
+    <div style="display:flex;flex-wrap:wrap;gap:0.6rem;justify-content:center;margin:0 auto 2rem;max-width:460px;">
+      <a href="gift.html?amount=150" class="gift-chip">$150</a>
+      <a href="gift.html?amount=200" class="gift-chip">$200</a>
+      <a href="gift.html?amount=250" class="gift-chip">$250</a>
+      <a href="gift.html?amount=300" class="gift-chip">$300</a>
+      <a href="gift.html" class="gift-chip">Any amount</a>
+    </div>
+    <a href="gift.html" class="btn-gold" style="animation:none;">Buy a Gift Card&nbsp; →</a>
+    <p style="font-family:'Josefin Sans',sans-serif;font-size:0.72rem;color:var(--latte);margin-top:1.1rem;">
+      Never expires · Spends on anything in the studio · Sent as a card with your note on it
+    </p>
   </div>
 </section>
 

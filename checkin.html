@@ -1110,8 +1110,11 @@ document.getElementById('kstars').addEventListener('click',e=>{
 
 async function sendReview(){
   if(KSTARS){
+    /* The name on the appointment, never what was typed — what was typed
+       is a phone number, and one went onto the public home page as a
+       reviewer's name. */
     await fetch('/api/kiosk?action=review',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'review',name:KNAME,stars:KSTARS,text:document.getElementById('kreview').value.trim(),
+      body:JSON.stringify({action:'review',name:(KPERSON||'Guest'),stars:KSTARS,text:document.getElementById('kreview').value.trim(),
         share:document.getElementById('kshare').checked})}).catch(()=>{});
   }
   // Four or five stars, and a review link saved: ask. Anything less goes

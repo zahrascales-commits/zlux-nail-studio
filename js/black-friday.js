@@ -203,7 +203,8 @@
   /* Where the pop-up and the tab are not welcome: the hub itself, and
      the pages where somebody is already buying one of these things. */
   function shopping() {
-    var p = (location.pathname || '').toLowerCase();
+    var p = '';
+    try { p = String((location && location.pathname) || '').toLowerCase(); } catch (_) {}
     return /blackfriday|memberships|gift|signup|checkout/.test(p);
   }
 
@@ -285,9 +286,22 @@
     fetch(API).then(function (r) { return r.json(); }).then(function (d) {
       if (!d || !d.black_friday || !d.black_friday.live) return;
       /* The button is navigation, not a once-a-day interruption: it
-         belongs there on every page, every time. */
-      showNavButton();
-      if (shopping()) return;
+         belongs there on every page, every time.
+
+         Guarded on its own. It runs first, and the catch below is empty,
+         so anything it threw — an unfamiliar nav, a nav another script
+         rebuilt after load — took the pop-up and the tab down with it and
+         said nothing. The sale would be live on the server and invisible
+         on the page. */
+      try { showNavButton(); } catch (_) {}
+
+      /* And the same for deciding where we are. A page is only "already
+         shopping" if we can read the path; if we cannot, the sale is shown
+         rather than silently suppressed. */
+      var quiet = false;
+      try { quiet = shopping(); } catch (_) {}
+      if (quiet) return;
+
       if (seenToday()) { showTab(d); return; }
       showOverlay(d);
     }).catch(function () { /* no sale information, no banner */ });
