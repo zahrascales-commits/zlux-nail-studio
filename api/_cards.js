@@ -112,22 +112,71 @@ module.exports = async function (req, res) {
     // ── send somebody the link ──
     if (req.method === 'POST' && action === 'ask') {
       const email = lower((req.body || {}).email);
+      const phone = String((req.body || {}).phone || '');
       const name = String((req.body || {}).name || '').trim();
-      if (!email || !/@/.test(email)) return res.status(400).json({ error: 'No email for that client.' });
+      /* Nothing leaves until somebody has read it. */
+      const preview = (req.body || {}).preview === true;
+
+      if ((!email || !/@/.test(email)) && tenDigits(phone).length !== 10) {
+        return res.status(400).json({
+          error: 'No email address and no phone number for that client, so there is nowhere to send it. '
+            + 'Add one to their client record first.',
+        });
+      }
 
       /* The link is their appointment token, so it identifies them without
          anybody logging in. Their next appointment, or their last — either
-         is theirs. */
-      const appt = await queryOne(
-        `SELECT chat_token FROM team_appointments
-          WHERE lower(client_email) = ? AND COALESCE(chat_token,'') <> ''
-          ORDER BY date DESC LIMIT 1`, [email]);
+         is theirs. Found by address where there is one, and otherwise by
+         number, which is the whole point of this. */
+      let appt = null;
+      if (email && /@/.test(email)) {
+        appt = await queryOne(
+          `SELECT chat_token FROM team_appointments
+            WHERE lower(client_email) = ? AND COALESCE(chat_token,'') <> ''
+            ORDER BY date DESC LIMIT 1`, [email]);
+      }
+      if (!appt && tenDigits(phone).length === 10) {
+        /* Matched in here rather than in SQL: the column holds every format
+           anybody has ever typed, and only the last ten digits are reliably
+           the same number. */
+        const rows = await query(
+          `SELECT chat_token, client_phone FROM team_appointments
+            WHERE COALESCE(chat_token,'') <> '' AND COALESCE(client_phone,'') <> ''
+            ORDER BY date DESC LIMIT 400`).catch(() => []);
+        const hit = (rows || []).find(r => tenDigits(r.client_phone) === tenDigits(phone));
+        if (hit) appt = { chat_token: hit.chat_token };
+      }
       if (!appt || !appt.chat_token) {
         return res.status(400).json({ error: 'No appointment on file to build a link from.' });
       }
 
       const link = SITE + '/card.html?t=' + encodeURIComponent(appt.chat_token);
       const first = name.split(/\s+/)[0] || 'there';
+
+      /* By text, when there is no address to send it to. Short, because a
+         text that needs scrolling gets ignored, and it says plainly that
+         nothing is being charged — this arrives unannounced on somebody's
+         phone and "add your card" is otherwise exactly what a scam says. */
+      if (!email || !/@/.test(email)) {
+        const sms = 'ZOLA Nail Studio: hi ' + first + ' — you can save your card for next time so '
+          + 'checking out is one tap. Nothing is charged now, and nothing is ever charged '
+          + 'without your signature at the desk. ' + link;
+        if (preview) {
+          return res.json({ preview: true, channel: 'sms', to: phone, body: sms, link });
+        }
+        const out = await require('./_notify').sendSMS(phone, sms);
+        /* Same shape as the email branch below — the button reads d.ok, so
+           two different answers means one of them always reads as a
+           failure after succeeding. */
+        return res.json({ ok: !!(out && out.sent), channel: 'sms', why: (out && out.why) || '', link });
+      }
+
+      if (preview) {
+        return res.json({
+          preview: true, channel: 'email', to: email,
+          subject: 'Save your card for next time ✦ ZOLA', link,
+        });
+      }
 
       const out = await require('./_notify').sendEmail(
         email,
@@ -168,9 +217,13 @@ module.exports = async function (req, res) {
     // ── who has one ──
     const cards = await cardsByEmail(sk);
 
+    /* An address OR a number. Selecting on an address alone kept the
+       phone-only clients off the one screen built to find people with no
+       card — which is most of the people with no card. */
     const clients = await query(
       `SELECT id, name, email, phone, visits, last_visit FROM clients
-        WHERE COALESCE(email,'') <> '' ORDER BY last_visit DESC, name LIMIT 400`)
+        WHERE COALESCE(email,'') <> '' OR COALESCE(phone,'') <> ''
+        ORDER BY last_visit DESC, name LIMIT 400`)
       .catch(() => []);
 
     // Members hold their customer id on the membership, so they are known
@@ -185,7 +238,13 @@ module.exports = async function (req, res) {
 
     const rows = clients.map(c => {
       const key = lower(c.email);
-      const hit = cards[key];
+      /* Their card, under their address or under their number. The index
+         holds both now, so a client whose card was saved while she had no
+         email on file still reads as having one — otherwise this screen
+         offers to ask her for a card she has already given us. */
+      const pkey = 'p:' + tenDigits(c.phone);
+      const hit = (cards[key] && cards[key].card) ? cards[key]
+        : ((cards[pkey] && cards[pkey].card) ? cards[pkey] : cards[key]);
       return {
         id: Number(c.id),
         name: c.name || '',

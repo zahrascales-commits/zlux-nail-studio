@@ -11647,8 +11647,10 @@ async function askForCard(id){
   const btn = row && row.querySelector('button');
   if(btn){ btn.disabled = true; btn.textContent = 'Sending…'; }
   try{
+    /* The number as well as the address. Somebody with no email is asked
+       by text instead, and they are the ones who most need asking. */
     const d = await (await api('/api/cards?action=ask', {
-      method: 'POST', body: JSON.stringify({ action: 'ask', email: c.email, name: c.name })
+      method: 'POST', body: JSON.stringify({ action: 'ask', email: c.email, phone: c.phone, name: c.name })
     })).json();
     if(d.error) throw new Error(d.error);
     if(btn){ btn.textContent = d.ok ? 'Sent ✦' : 'Did not send'; }
