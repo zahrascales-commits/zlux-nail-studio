@@ -109,6 +109,77 @@ module.exports = async function (req, res) {
     const sk = await pay.getStripeSecret();
     const action = req.query.action || (req.body && req.body.action) || '';
 
+    /* ── IS THERE A CARD FOR THIS PERSON ANYWHERE ──────────────────────
+       By name, by email, by number — whatever is given. Read-only: nothing
+       is created and nothing is charged. This exists so "she has no card"
+       is a thing we have checked rather than a thing we assumed. */
+    if (req.method === 'GET' && action === 'lookup') {
+      const q = String(req.query.q || '').trim();
+      if (!q) return res.status(400).json({ error: 'Who?' });
+      if (!sk) return res.json({ error: 'Payments are not configured.' });
+
+      const digitsOf = s => String(s || '').replace(/[^0-9]/g, '');
+      const found = [];
+      const seen = new Set();
+
+      const add = async (c, how) => {
+        if (!c || !c.id || seen.has(c.id)) return;
+        seen.add(c.id);
+        let card = null, kinds = [];
+        try {
+          const r = await fetch(
+            'https://api.stripe.com/v1/payment_methods?limit=20&customer=' + encodeURIComponent(c.id),
+            { headers: { Authorization: 'Bearer ' + sk } });
+          const j = await r.json();
+          kinds = (j.data || []).map(p => p.type);
+          const C = require('./_customer');
+          const pm = C.bestPM(j.data || [], (c.invoice_settings || {}).default_payment_method || '');
+          if (pm) card = Object.assign({ id: pm.id, type: pm.type }, C.describePM(pm));
+        } catch (_) {}
+        found.push({
+          customer: c.id, found_by: how,
+          name: c.name || '', email: c.email || '', phone: c.phone || '',
+          created: c.created ? new Date(c.created * 1000).toISOString().slice(0, 10) : '',
+          saved_methods: kinds, card,
+        });
+      };
+
+      /* Stripe's search, which is the only way to ask by name or number.
+         Quoted through JSON.stringify so a name with an apostrophe in it
+         cannot break the query. */
+      for (const [field, value] of [
+        ['email', /@/.test(q) ? lower(q) : ''],
+        ['name', /[a-z]/i.test(q) ? q : ''],
+        ['phone', digitsOf(q).length >= 10 ? '+1' + digitsOf(q).slice(-10) : ''],
+        ['phone', digitsOf(q).length >= 10 ? digitsOf(q).slice(-10) : ''],
+      ]) {
+        if (!value) continue;
+        try {
+          const r = await fetch('https://api.stripe.com/v1/customers/search?limit=10&query='
+            + encodeURIComponent(field + ':' + JSON.stringify(String(value))),
+            { headers: { Authorization: 'Bearer ' + sk } });
+          const j = await r.json();
+          for (const c of (j.data || [])) await add(c, 'stripe_' + field);
+        } catch (_) { /* search not enabled, or nothing indexed */ }
+      }
+
+      /* And the plain list by email, which works without search being on. */
+      if (/@/.test(q)) {
+        try {
+          const r = await fetch('https://api.stripe.com/v1/customers?limit=10&email=' + encodeURIComponent(lower(q)),
+            { headers: { Authorization: 'Bearer ' + sk } });
+          const j = await r.json();
+          for (const c of (j.data || [])) await add(c, 'email_list');
+        } catch (_) {}
+      }
+
+      return res.json({
+        q,
+        customers: found,
+        chargeable: found.some(x => x.card),
+      });
+    }
+
     // ── send somebody the link ──
     if (req.method === 'POST' && action === 'ask') {
       const email = lower((req.body || {}).email);
