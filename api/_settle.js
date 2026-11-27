@@ -227,6 +227,158 @@ async function settleVisit(apptId) {
   return { paid_cents: paid, tip_cents: tip, pay_method: fields.pay_method || '' };
 }
 
+/* ── CORRECTING WHAT THE TILL WROTE ──────────────────────────────────────
+ *
+ * What money on this visit is actually accounted for by a payment somebody
+ * can point at, and what is just a number on the row.
+ */
+async function moneyOn(apptId) {
+  const id = Number(apptId) || 0;
+  await ensure();
+  const r = await apptRow(id);
+  if (!r) return null;
+
+  let desk = [];
+  try { desk = await query('SELECT * FROM desk_payments WHERE appointment_id = ? ORDER BY id', [id]); } catch (_) {}
+  let cards = [];
+  try {
+    cards = await query(
+      `SELECT id, base_cents, tip_cents, refunded_cents, prior_paid_cents, ts
+         FROM card_charges WHERE appointment_id = ? AND outcome = 'paid' ORDER BY id`, [id]);
+  } catch (_) {}
+
+  const liveDesk = (desk || []).filter(x => !money(x.voided_ts));
+  const accounted =
+    liveDesk.reduce((s, x) => s + money(x.amount_cents), 0)
+    + (cards || []).reduce((s, x) => s + Math.max(0, money(x.base_cents) - money(x.refunded_cents)), 0);
+
+  const onRow = money(r.paid_cents);
+  return {
+    appointment_id: id,
+    client: r.client_name || '',
+    date: r.date || '',
+    service: r.service || '',
+    paid_cents: onRow,
+    pay_method: r.pay_method || '',
+    /* Money a real payment accounts for. Voiding or refunding is the way to
+       change this, not a correction. */
+    accounted_cents: accounted,
+    /* Money nothing explains. This is what the till stamped on, and the
+       only part a correction is allowed to touch. */
+    unexplained_cents: Math.max(0, onRow - accounted),
+    desk_payments: liveDesk.length,
+    card_charges: (cards || []).length,
+  };
+}
+
+/* Set what this visit was actually paid.
+ *
+ * Only ever moves the part no payment accounts for. Below that it stops and
+ * says which payments are in the way, because erasing a real one silently
+ * is how a book stops being worth reading. */
+async function correctVisit(apptId, wantCents, reason) {
+  const id = Number(apptId) || 0;
+  const now = await moneyOn(id);
+  if (!now) return { ok: false, why: 'gone', message: 'No appointment with that id.' };
+
+  const want = Math.max(0, Math.round(Number(wantCents) || 0));
+  if (want === now.paid_cents) {
+    return { ok: true, unchanged: true, paid_cents: want,
+      message: 'That is already what it says.' };
+  }
+  if (want < now.accounted_cents) {
+    return {
+      ok: false, why: 'real_payments',
+      message: 'There are real payments of ' + dollars(now.accounted_cents) + ' on this visit, so it '
+        + 'cannot be set to ' + dollars(want) + '. Void the desk payment or refund the card charge '
+        + 'instead — a correction must not erase a payment somebody can point at.',
+      accounted_cents: now.accounted_cents,
+    };
+  }
+
+  await execute(`CREATE TABLE IF NOT EXISTS payment_corrections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    appointment_id INTEGER,
+    was_cents INTEGER DEFAULT 0,
+    now_cents INTEGER DEFAULT 0,
+    was_method TEXT DEFAULT '',
+    accounted_cents INTEGER DEFAULT 0,
+    reason TEXT DEFAULT '',
+    ts INTEGER
+  )`).catch(() => {});
+  await execute(
+    `INSERT INTO payment_corrections
+       (appointment_id, was_cents, now_cents, was_method, accounted_cents, reason, ts)
+     VALUES (?,?,?,?,?,?,?)`,
+    [id, now.paid_cents, want, now.pay_method, now.accounted_cents,
+     String(reason || '').slice(0, 300), Date.now()]).catch(() => {});
+
+  /* The baseline, which is the only part a correction owns. With payment
+     rows present it lives on the earliest of them; with none it is the
+     figure on the appointment itself. */
+  const newBaseline = want - now.accounted_cents;
+
+  let moved = false;
+  if (now.desk_payments || now.card_charges) {
+    const rows = [];
+    try {
+      for (const r of await query(
+        'SELECT id, ts FROM desk_payments WHERE appointment_id = ? ORDER BY id', [id])) {
+        rows.push({ table: 'desk_payments', id: r.id, ts: Number(r.ts) || 0 });
+      }
+    } catch (_) {}
+    try {
+      for (const r of await query(
+        "SELECT id, ts FROM card_charges WHERE appointment_id = ? AND outcome = 'paid' ORDER BY id", [id])) {
+        rows.push({ table: 'card_charges', id: r.id, ts: Number(r.ts) || 0 });
+      }
+    } catch (_) {}
+    rows.sort((a, b) => a.ts - b.ts);
+    if (rows.length) {
+      try {
+        await execute('UPDATE ' + rows[0].table + ' SET prior_paid_cents = ? WHERE id = ?',
+          [newBaseline, rows[0].id]);
+        moved = true;
+      } catch (_) {}
+    }
+    // And let the ordinary re-sum write the visit from the corrected baseline.
+    await settleVisit(id);
+  }
+
+  if (!moved) {
+    /* Nothing in either book, so the figure on the row IS the baseline —
+       which is exactly the case this was built for. */
+    const fields = { paid_cents: want };
+    if (!want) {
+      /* Not paid means not paid: the method goes too, or the visit still
+         claims to have been settled in cash. The status is left alone on
+         purpose — she did the nails, the visit happened. */
+      fields.pay_method = '';
+    }
+    const keys = Object.keys(fields);
+    try {
+      await execute('UPDATE team_appointments SET ' + keys.map(k => k + '=?').join(', ') + ' WHERE id=?',
+        keys.map(k => fields[k]).concat([id]));
+    } catch (_) {
+      for (const k of keys) {
+        try { await execute('UPDATE team_appointments SET ' + k + '=? WHERE id=?', [fields[k], id]); } catch (_) {}
+      }
+    }
+    try { await mirrorToWebsite(id, fields); } catch (_) {}
+  }
+
+  const after = await moneyOn(id);
+  return {
+    ok: true,
+    appointment_id: id,
+    was_cents: now.paid_cents,
+    paid_cents: after ? after.paid_cents : want,
+    accounted_cents: now.accounted_cents,
+    message: 'This visit now reads ' + dollars(after ? after.paid_cents : want)
+      + ' paid, was ' + dollars(now.paid_cents) + '.',
+  };
+}
+
 /* The twin row in the website book, matched on the same day, the same time
    and the same first name — the rule the kiosk already uses, kept the same
    here on purpose. Only ever written when exactly one row matches, because
@@ -511,6 +663,23 @@ module.exports = async function (req, res) {
       const out = await markPaid(body);
       return res.status(out.ok ? 200 : 400).json(out);
     }
+    /* What this visit's money is made of — and how much of it nothing
+       explains. Read-only. */
+    if (req.method === 'GET' && action === 'money_on') {
+      const out = await moneyOn(req.query.appointment_id);
+      return res.status(out ? 200 : 404).json(out || { error: 'No appointment with that id.' });
+    }
+
+    /* Correcting a figure the till stamped on a visit. */
+    if (req.method === 'POST' && action === 'correct') {
+      const b = req.body || {};
+      if (b.paid_cents === undefined || b.paid_cents === null || b.paid_cents === '') {
+        return res.status(400).json({ error: 'What should it say?' });
+      }
+      const out = await correctVisit(b.appointment_id, b.paid_cents, b.reason);
+      return res.status(out.ok ? 200 : 400).json(out);
+    }
+
     if (req.method === 'POST' && action === 'void') {
       const out = await voidPayment(body.payment_id);
       return res.status(out.ok ? 200 : 400).json(out);
@@ -522,6 +691,8 @@ module.exports = async function (req, res) {
 };
 
 module.exports.settleVisit = settleVisit;
+module.exports.moneyOn = moneyOn;
+module.exports.correctVisit = correctVisit;
 module.exports.markPaid = markPaid;
 module.exports.voidPayment = voidPayment;
 module.exports.unsettled = unsettled;

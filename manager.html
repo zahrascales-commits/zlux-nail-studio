@@ -11616,12 +11616,21 @@ function renderCards(){
         return '<div class="member-card" id="cardrow-' + c.id + '" style="--mc:#8B7355">'
           + '<div class="mc-top"><div style="flex:1;min-width:0">'
             + '<div class="mc-name">' + (c.name ? clientLink(c.name, { id: c.id, email: c.email || '' }) : '(no name)') + '</div>'
+            /* Their address, or their number when that is all we have.
+               Printing an empty email left a line ending in a dot. */
             + '<div style="font-size:0.78rem;color:var(--muted);margin-top:0.15rem">'
               + c.visits + ' visit' + (c.visits === 1 ? '' : 's')
               + (c.last_visit ? ' · last ' + esc(c.last_visit) : '')
-              + ' · ' + esc(c.email)
+              + (c.email ? ' · ' + esc(c.email)
+                 : (c.phone ? ' · ' + esc(c.phone) + ' · no email' : ' · no email, no number'))
             + '</div></div>'
-            + '<button class="btn btn-ghost btn-sm" onclick="askForCard(' + c.id + ')">Send the link</button>'
+            /* Which way it goes, before she taps it. A text to a client is
+               not the same decision as an email. */
+            + (c.email || c.phone
+                ? '<button class="btn btn-ghost btn-sm" onclick="askForCard(' + c.id + ')">'
+                  + (c.email ? 'Email the link' : 'Text the link') + '</button>'
+                : '<span class="status-pill" title="Add an email or a number to their client record first">'
+                  + 'no way to reach them</span>')
           + '</div></div>';
       }).join('') : '<div class="empty">Everybody has one ✦</div>')
 
@@ -11645,6 +11654,7 @@ async function askForCard(id){
   if(!c) return;
   const row = document.getElementById('cardrow-' + id);
   const btn = row && row.querySelector('button');
+  const channel = c.email ? 'Email the link' : 'Text the link';
   if(btn){ btn.disabled = true; btn.textContent = 'Sending…'; }
   try{
     /* The number as well as the address. Somebody with no email is asked
@@ -11653,10 +11663,10 @@ async function askForCard(id){
       method: 'POST', body: JSON.stringify({ action: 'ask', email: c.email, phone: c.phone, name: c.name })
     })).json();
     if(d.error) throw new Error(d.error);
-    if(btn){ btn.textContent = d.ok ? 'Sent ✦' : 'Did not send'; }
+    if(btn){ btn.textContent = d.ok ? (d.channel === 'sms' ? 'Texted ✦' : 'Emailed ✦') : 'Did not send'; }
     if(!d.ok) toast(d.why || 'That did not send');
   }catch(err){
-    if(btn){ btn.disabled = false; btn.textContent = 'Send the link'; }
+    if(btn){ btn.disabled = false; btn.textContent = channel; }
     toast('Could not send: ' + err.message);
   }
 }
